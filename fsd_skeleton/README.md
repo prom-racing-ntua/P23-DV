@@ -1,8 +1,9 @@
-# FS Driverless 2019
+# FS Driverless Skeletonn
 
-This is a skeleton repository for the autonomous code of a driverless FS race car. This README contains some information to get you started.
+This is a skeleton for the autonomous code of a driverless FS race car. 
+This README contains some information to get you started.
 
-The use of **Ubuntu 16.04 and ROS Kinetic** is assumed everywhere on this repository.
+The use of **Ubuntu 20.04 and ROS Noetic** is assumed everywhere on this folder.
 
 This repository contains a framework for the architecture of an autonomous FS race car, with basic dummy nodes to illustrate how to organise code. Some helpful tools are also included.
 
@@ -139,12 +140,4 @@ Google Style (http://wiki.ros.org/CppStyleGuide)
 ### ROS Python
 PEP-8 style (http://wiki.ros.org/PyStyleGuide)
 
-### README files
-Markdown syntax (https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
 
-# Future improvements
-
-* Better dependency management example and documentation
-* Jenkins setup
-* RVIZ setup
-* ...
