@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/control_pure_pursuit/lib/pkgconfig/control_pure_pursuit.pc

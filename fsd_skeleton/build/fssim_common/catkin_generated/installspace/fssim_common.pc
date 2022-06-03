@@ -1,0 +1,8 @@
+prefix=/home/andva/PromRacing/fsd_skeleton/install
+
+Name: fssim_common
+Description: Description of fssim_common
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: message_runtime

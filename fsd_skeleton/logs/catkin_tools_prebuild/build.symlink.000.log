@@ -1,0 +1,12 @@
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./setup.zsh
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./_setup_util.py
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./env.sh
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./setup.bash
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./local_setup.bash
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./cmake.lock
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./local_setup.zsh
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./local_setup.sh
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/./setup.sh
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/catkin_tools_prebuild.pc

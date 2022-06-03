@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/perception_meta/lib/pkgconfig/perception_meta.pc

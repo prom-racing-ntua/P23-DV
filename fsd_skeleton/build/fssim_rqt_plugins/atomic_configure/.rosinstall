@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/setup.sh

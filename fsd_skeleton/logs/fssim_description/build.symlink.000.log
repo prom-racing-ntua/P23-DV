@@ -1,0 +1,5 @@
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_description/cmake/fssim_descriptionConfig.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_description/cmake/fssim_descriptionConfig-version.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/fssim_description/cmake.lock
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/fssim_description/load_vehicle.py
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/fssim_description.pc

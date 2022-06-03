@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/vision_cone_detector/share/vision_cone_detector/cmake/vision_cone_detectorConfig-version.cmake

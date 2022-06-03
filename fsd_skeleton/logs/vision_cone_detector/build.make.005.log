@@ -1,0 +1,9 @@
+[35m[1mScanning dependencies of target vision_cone_detector[0m
+[ 25%] [32mBuilding CXX object CMakeFiles/vision_cone_detector.dir/src/cone_detector.cpp.o[0m
+[01m[K/home/andva/PromRacing/fsd_skeleton/src/1_perception/vision_cone_detector/src/cone_detector.cpp:[m[K In member function ‘[01m[Kvoid ns_cone_detector::ConeDetector::createConeDetections()[m[K’:
+[01m[K/home/andva/PromRacing/fsd_skeleton/src/1_perception/vision_cone_detector/src/cone_detector.cpp:44:9:[m[K [01;31m[Kerror: [m[K‘[01m[Ktest[m[K’ was not declared in this scope
+   44 |         [01;31m[Ktest[m[K
+      |         [01;31m[K^~~~[m[K
+make[2]: *** [CMakeFiles/vision_cone_detector.dir/build.make:76: CMakeFiles/vision_cone_detector.dir/src/cone_detector.cpp.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:570: CMakeFiles/vision_cone_detector.dir/all] Error 2
+make: *** [Makefile:141: all] Error 2

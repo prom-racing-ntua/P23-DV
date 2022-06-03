@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/fsd_common_msgs/lib/python3/dist-packages/fsd_common_msgs/msg/_Map.py

@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/control_pure_pursuit/share/control_pure_pursuit/cmake/control_pure_pursuitConfig-version.cmake

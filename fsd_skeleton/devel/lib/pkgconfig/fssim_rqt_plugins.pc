@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/lib/pkgconfig/fssim_rqt_plugins.pc

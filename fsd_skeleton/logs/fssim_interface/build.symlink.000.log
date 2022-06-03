@@ -1,0 +1,4 @@
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_interface/cmake/fssim_interfaceConfig-version.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_interface/cmake/fssim_interfaceConfig.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/fssim_interface/fssim_interface_node
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/fssim_interface.pc

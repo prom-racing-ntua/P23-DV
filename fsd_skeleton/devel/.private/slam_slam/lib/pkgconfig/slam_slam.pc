@@ -1,0 +1,8 @@
+prefix=/home/andva/PromRacing/fsd_skeleton/devel/.private/slam_slam
+
+Name: slam_slam
+Description: Description of slam_slam
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

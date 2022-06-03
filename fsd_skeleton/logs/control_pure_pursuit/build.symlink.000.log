@@ -1,0 +1,4 @@
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/control_pure_pursuit/cmake/control_pure_pursuitConfig-version.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/share/control_pure_pursuit/cmake/control_pure_pursuitConfig.cmake
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/control_pure_pursuit/control_pure_pursuit
+Symlinking /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/control_pure_pursuit.pc

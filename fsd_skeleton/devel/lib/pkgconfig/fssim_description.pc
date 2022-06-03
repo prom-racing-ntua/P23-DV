@@ -1,0 +1,1 @@
+/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_description/lib/pkgconfig/fssim_description.pc

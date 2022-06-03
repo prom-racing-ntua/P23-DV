@@ -1,0 +1,8 @@
+prefix=/home/andva/PromRacing/fsd_skeleton/install
+
+Name: fssim_description
+Description: Description of fssim_description
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib -lmodels
+Requires: gazebo_ros
