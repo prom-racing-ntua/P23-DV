@@ -39,7 +39,7 @@ void Slam::initializeState() {
   slam_state_.y = 0;
   slam_state_.theta = 0;
 }
-
+// file to be changed
 void Slam::updateMap(const fsd_common_msgs::ConeDetections &cones) {
   ROS_INFO("Map size is %d", (int) cone_map_.size());
   int excess_cone_length = cone_map_.size() + cones.cone_detections.size() - max_map_size_;
