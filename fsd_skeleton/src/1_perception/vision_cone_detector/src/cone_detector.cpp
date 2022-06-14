@@ -38,8 +38,8 @@ namespace ns_cone_detector {
       fsd_common_msgs::Cone cone;
       // Create 3 random blue cones
       for (int i = 0; i < 3; i++) {
-        cone.position.x = 10; //((double) rand() / (RAND_MAX));
-        cone.position.y = 10; //((double) rand() / (RAND_MAX));
+        cone.position.x = 10 * ((double) rand() / (RAND_MAX));
+        cone.position.y = 10 * ((double) rand() / (RAND_MAX));
         cone.color.data = "b";
         cones.push_back(cone);
       }

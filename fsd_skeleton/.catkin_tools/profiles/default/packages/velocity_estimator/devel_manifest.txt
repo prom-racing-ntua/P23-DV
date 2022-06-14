@@ -1,6 +1,0 @@
-2_estimation/velocity_estimator
-/home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/cmake.lock /home/andva/PromRacing/fsd_skeleton/devel/./cmake.lock
-/home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/share/velocity_estimator/cmake/velocity_estimatorConfig-version.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/velocity_estimator/cmake/velocity_estimatorConfig-version.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/share/velocity_estimator/cmake/velocity_estimatorConfig.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/velocity_estimator/cmake/velocity_estimatorConfig.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/lib/pkgconfig/velocity_estimator.pc /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/velocity_estimator.pc
-/home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/lib/velocity_estimator/velocity_estimator /home/andva/PromRacing/fsd_skeleton/devel/lib/velocity_estimator/velocity_estimator

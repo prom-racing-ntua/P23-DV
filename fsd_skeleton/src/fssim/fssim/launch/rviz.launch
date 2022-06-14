@@ -1,3 +1,0 @@
-<launch>
-     <node name="fssim_rviz" pkg="rviz" type="rviz" args="-d $(find fssim)/rviz/fssim.rviz -s $(find fssim)/icon/logo_fssim.png"/>
-</launch>
