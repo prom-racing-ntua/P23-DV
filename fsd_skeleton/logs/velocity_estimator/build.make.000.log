@@ -1,6 +1,0 @@
-[35m[1mScanning dependencies of target velocity_estimator[0m
-[ 25%] [32mBuilding CXX object CMakeFiles/velocity_estimator.dir/src/main.cpp.o[0m
-[ 50%] [32mBuilding CXX object CMakeFiles/velocity_estimator.dir/src/velocity_estimator.cpp.o[0m
-[ 75%] [32mBuilding CXX object CMakeFiles/velocity_estimator.dir/src/velocity_estimator_handle.cpp.o[0m
-[100%] [32m[1mLinking CXX executable /home/andva/PromRacing/fsd_skeleton/devel/.private/velocity_estimator/lib/velocity_estimator/velocity_estimator[0m
-[100%] Built target velocity_estimator

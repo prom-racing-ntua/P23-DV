@@ -1,6 +1,0 @@
-devel_space: /home/andva/PromRacing/fsd_skeleton/devel
-install: false
-install_space: /home/andva/PromRacing/fsd_skeleton/install
-profile: default
-source_space: /home/andva/PromRacing/fsd_skeleton/src
-workspace: /home/andva/PromRacing/fsd_skeleton

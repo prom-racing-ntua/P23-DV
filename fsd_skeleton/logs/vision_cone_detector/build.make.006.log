@@ -1,4 +1,0 @@
-[35m[1mScanning dependencies of target vision_cone_detector[0m
-[ 25%] [32mBuilding CXX object CMakeFiles/vision_cone_detector.dir/src/cone_detector.cpp.o[0m
-[ 50%] [32m[1mLinking CXX executable /home/andva/PromRacing/fsd_skeleton/devel/.private/vision_cone_detector/lib/vision_cone_detector/vision_cone_detector[0m
-[100%] Built target vision_cone_detector

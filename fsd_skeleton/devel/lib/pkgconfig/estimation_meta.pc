@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/estimation_meta/lib/pkgconfig/estimation_meta.pc

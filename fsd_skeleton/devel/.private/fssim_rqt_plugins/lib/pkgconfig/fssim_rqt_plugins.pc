@@ -1,8 +1,0 @@
-prefix=/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins
-
-Name: fssim_rqt_plugins
-Description: Description of fssim_rqt_plugins
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

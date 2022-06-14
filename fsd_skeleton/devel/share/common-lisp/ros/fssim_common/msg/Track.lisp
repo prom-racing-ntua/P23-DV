@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_common/share/common-lisp/ros/fssim_common/msg/Track.lisp

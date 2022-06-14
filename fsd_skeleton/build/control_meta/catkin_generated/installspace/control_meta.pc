@@ -1,8 +1,0 @@
-prefix=/home/andva/PromRacing/fsd_skeleton/install
-
-Name: control_meta
-Description: Description of control_meta
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

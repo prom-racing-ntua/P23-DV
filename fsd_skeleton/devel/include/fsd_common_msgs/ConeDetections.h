@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fsd_common_msgs/include/fsd_common_msgs/ConeDetections.h

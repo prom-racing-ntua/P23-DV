@@ -1,6 +1,0 @@
-[35m[1mScanning dependencies of target lidar_cone_detector[0m
-[ 25%] [32mBuilding CXX object CMakeFiles/lidar_cone_detector.dir/src/cone_detector_handle.cpp.o[0m
-[ 50%] [32mBuilding CXX object CMakeFiles/lidar_cone_detector.dir/src/cone_detector.cpp.o[0m
-[ 75%] [32mBuilding CXX object CMakeFiles/lidar_cone_detector.dir/src/main.cpp.o[0m
-[100%] [32m[1mLinking CXX executable /home/andva/PromRacing/fsd_skeleton/devel/.private/lidar_cone_detector/lib/lidar_cone_detector/lidar_cone_detector[0m
-[100%] Built target lidar_cone_detector

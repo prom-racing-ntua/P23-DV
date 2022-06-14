@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fsd_common_msgs/share/roseus/ros/fsd_common_msgs/msg/Mission.l

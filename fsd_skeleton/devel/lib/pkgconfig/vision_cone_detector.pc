@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/vision_cone_detector/lib/pkgconfig/vision_cone_detector.pc

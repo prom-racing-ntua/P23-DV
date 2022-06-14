@@ -1,8 +1,0 @@
-prefix=/home/andva/PromRacing/fsd_skeleton/install
-
-Name: rqt_fssim_track_editor
-Description: Description of rqt_fssim_track_editor
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

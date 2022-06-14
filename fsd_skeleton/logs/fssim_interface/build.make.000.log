@@ -1,4 +1,0 @@
-[35m[1mScanning dependencies of target fssim_interface_node[0m
-[ 50%] [32mBuilding CXX object CMakeFiles/fssim_interface_node.dir/src/fssim_interface_node.cpp.o[0m
-[100%] [32m[1mLinking CXX executable /home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/lib/fssim_interface/fssim_interface_node[0m
-[100%] Built target fssim_interface_node

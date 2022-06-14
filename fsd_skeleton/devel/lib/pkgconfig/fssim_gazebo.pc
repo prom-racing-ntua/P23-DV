@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_gazebo/lib/pkgconfig/fssim_gazebo.pc
