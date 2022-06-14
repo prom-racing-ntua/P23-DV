@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/lidar_cone_detector/share/lidar_cone_detector/cmake/lidar_cone_detectorConfig.cmake

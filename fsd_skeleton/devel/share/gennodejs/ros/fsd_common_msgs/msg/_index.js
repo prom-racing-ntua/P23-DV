@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fsd_common_msgs/share/gennodejs/ros/fsd_common_msgs/msg/_index.js

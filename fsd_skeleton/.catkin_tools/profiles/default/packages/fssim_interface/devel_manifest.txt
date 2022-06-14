@@ -1,6 +1,0 @@
-fssim_interface
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/cmake.lock /home/andva/PromRacing/fsd_skeleton/devel/./cmake.lock
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/share/fssim_interface/cmake/fssim_interfaceConfig-version.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_interface/cmake/fssim_interfaceConfig-version.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/share/fssim_interface/cmake/fssim_interfaceConfig.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_interface/cmake/fssim_interfaceConfig.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/lib/fssim_interface/fssim_interface_node /home/andva/PromRacing/fsd_skeleton/devel/lib/fssim_interface/fssim_interface_node
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_interface/lib/pkgconfig/fssim_interface.pc /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/fssim_interface.pc

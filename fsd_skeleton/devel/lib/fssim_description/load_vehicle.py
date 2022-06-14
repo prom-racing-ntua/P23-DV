@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_description/lib/fssim_description/load_vehicle.py

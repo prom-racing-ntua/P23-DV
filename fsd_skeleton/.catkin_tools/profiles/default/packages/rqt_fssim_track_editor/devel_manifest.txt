@@ -1,8 +1,0 @@
-fssim/fssim_rqt_plugins/rqt_fssim_track_editor
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/cmake.lock /home/andva/PromRacing/fsd_skeleton/devel/./cmake.lock
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/share/rqt_fssim_track_editor/cmake/rqt_fssim_track_editorConfig-version.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/rqt_fssim_track_editor/cmake/rqt_fssim_track_editorConfig-version.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/share/rqt_fssim_track_editor/cmake/rqt_fssim_track_editorConfig.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/rqt_fssim_track_editor/cmake/rqt_fssim_track_editorConfig.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/lib/python3/dist-packages/rqt_fssim_track_editor/__init__.py /home/andva/PromRacing/fsd_skeleton/devel/lib/python3/dist-packages/rqt_fssim_track_editor/__init__.py
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/lib/rqt_fssim_track_editor/rqt_fssim_track_editor /home/andva/PromRacing/fsd_skeleton/devel/lib/rqt_fssim_track_editor/rqt_fssim_track_editor
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/lib/rqt_fssim_track_editor/cmake.lock /home/andva/PromRacing/fsd_skeleton/devel/lib/rqt_fssim_track_editor/cmake.lock
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/lib/pkgconfig/rqt_fssim_track_editor.pc /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/rqt_fssim_track_editor.pc

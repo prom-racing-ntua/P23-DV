@@ -1,8 +1,0 @@
-prefix=/home/andva/PromRacing/fsd_skeleton/install
-
-Name: lidar_cone_detector
-Description: Description of lidar_cone_detector
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

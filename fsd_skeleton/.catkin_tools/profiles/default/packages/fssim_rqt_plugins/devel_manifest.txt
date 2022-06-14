@@ -1,5 +1,0 @@
-fssim/fssim_rqt_plugins/fssim_rqt_plugins
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/cmake.lock /home/andva/PromRacing/fsd_skeleton/devel/./cmake.lock
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/share/fssim_rqt_plugins/cmake/fssim_rqt_pluginsConfig-version.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_rqt_plugins/cmake/fssim_rqt_pluginsConfig-version.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/share/fssim_rqt_plugins/cmake/fssim_rqt_pluginsConfig.cmake /home/andva/PromRacing/fsd_skeleton/devel/share/fssim_rqt_plugins/cmake/fssim_rqt_pluginsConfig.cmake
-/home/andva/PromRacing/fsd_skeleton/devel/.private/fssim_rqt_plugins/lib/pkgconfig/fssim_rqt_plugins.pc /home/andva/PromRacing/fsd_skeleton/devel/lib/pkgconfig/fssim_rqt_plugins.pc

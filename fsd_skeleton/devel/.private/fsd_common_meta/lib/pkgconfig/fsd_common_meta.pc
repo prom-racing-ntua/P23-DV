@@ -1,8 +1,0 @@
-prefix=/home/andva/PromRacing/fsd_skeleton/devel/.private/fsd_common_meta
-
-Name: fsd_common_meta
-Description: Description of fsd_common_meta
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

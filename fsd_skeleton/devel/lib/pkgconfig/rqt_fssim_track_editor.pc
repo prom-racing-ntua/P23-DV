@@ -1,1 +1,0 @@
-/home/andva/PromRacing/fsd_skeleton/devel/.private/rqt_fssim_track_editor/lib/pkgconfig/rqt_fssim_track_editor.pc

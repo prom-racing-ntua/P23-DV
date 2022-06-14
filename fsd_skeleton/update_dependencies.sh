@@ -10,8 +10,8 @@ WSTOOL_PACKAGE="python-wstool"
 CHECKINSTALL_PACKAGE="checkinstall"
 
 ROS_PACKAGE=(
-    "ros-noetic-desktop-full"
-    "ros-noetic-ros-base"
+    "ros-kinetic-desktop-full"
+    "ros-kinetic-ros-base"
 )
 
 FSD_WORKPACKAGES=(
@@ -35,7 +35,7 @@ printf "FSSIM is..."
 if [ -z $FSSIM ]; then
     echo "DISABLED"
     BLACKLIST_PACKAGES='fssim_interface fssim'
-else
+else 
     echo "ENABLED"
     FSD_WORKPACKAGES=("${FSD_WORKPACKAGES[@]}" 'fssim_interface')
 fi
@@ -77,7 +77,7 @@ package_OK=$(dpkg-query -W --showformat='${Status}\n' "${ROS_PACKAGE[1]}"  2> /d
 fi
 if [ "" == "$package_OK" ]; then
     printf "[${red}NO${end}]\n"
-    printf "Please install the ROS using: 'sudo apt install ros-noetic-desktop-full' or 'sudo apt install ros-noetic-ros-base'\n"
+    printf "Please install the ROS using: 'sudo apt install ros-kinetic-desktop-full' or 'sudo apt install ros-kinetic-ros-base'\n"
     exit 1
 fi
 printf "[${green}YES${end}]\n"
@@ -115,7 +115,7 @@ if [ -z "$FSD_ROOT" ]; then
 else
 	printf "Aliases and Environment variables has been set... "
 fi
-printf "[${green}YES${end}]\n"
+printf "[${green}YES${end}]\n"  
 printf "ALL CHECKS PASSED [${green}YES${end}]\n"
 
 ############################################
@@ -152,7 +152,7 @@ if [[ $REPLY =~ ^[Yy]$ ]] || [ -z $REPLY ]; then
 fi
 
 ###################################################
-# 	 Update the binary dependencies using rosdep  #
+# 	 Update the binary dependencies using rosdep  #	
 ###################################################
 read -p "Do you want to install/update the projects dependencies (Y/n)? " -n 1 -r
 echo
@@ -173,7 +173,7 @@ if [[ $REPLY =~ ^[Yy]$ ]] || [ -z $REPLY ]; then
 
     # Install the dependencies
     rosdep install --from-paths "${ABSOLUTE_PATH}/" -r -i -y || { printf "[${red}ROSDEP FAILED${end}]\n" ;}
-
+    
 fi
 
 #################################################

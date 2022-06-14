@@ -37,13 +37,13 @@ namespace ns_cone_detector {
       std::vector<fsd_common_msgs::Cone> cones;
       fsd_common_msgs::Cone cone;
       // Create 3 random yellow cones
-      // for (int i = 0; i < 3; i++)
-      // {
-      //   cone.position.x = 15 * ((double) rand() / (RAND_MAX));
-      //   cone.position.y = 15 * ((double) rand() / (RAND_MAX));
-      //   cone.color.data = "y";
-      //   cones.push_back(cone);
-      // }
+      for (int i = 0; i < 3; i++)
+      {
+        cone.position.x = 15 * ((double) rand() / (RAND_MAX));
+        cone.position.y = 15 * ((double) rand() / (RAND_MAX));
+        cone.color.data = "y";
+        cones.push_back(cone);
+      }
       coneDetections_.cone_detections = cones;
     }
 
