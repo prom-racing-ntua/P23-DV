@@ -1,4 +1,0 @@
-
-velocity_estimation_topic_name: /estimation/velocity_estimation/velocity_estimate
-
-node_rate: 5   # [Herz]

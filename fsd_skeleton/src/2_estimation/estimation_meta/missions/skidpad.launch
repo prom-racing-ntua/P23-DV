@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-
-  <include file="$(find velocity_estimator)/launch/velocity_estimator.launch"/>
-  <include file="$(find slam_slam)/launch/slam.launch"/>
-
-</launch>
