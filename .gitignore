@@ -1,7 +1,6 @@
 
 YOLO neural network/.idea/inspectionProfiles/profiles_settings.xml
 YOLO neural network/.idea/inspectionProfiles/Project_Default.xml
-*.xml
 *.json
 *.jpg
 *.png
