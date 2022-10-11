@@ -5,6 +5,6 @@ YOLO neural network/.idea/inspectionProfiles/Project_Default.xml
 *.json
 *.jpg
 *.png
-YOLO neural network/test.ipynb
-YOLO neural network/test.py
-YOLO neural network/.idea/.name
+YOLO_neural_network/test.ipynb
+YOLO_neural_network/test.py
+YOLO_neural_network/.idea/.name

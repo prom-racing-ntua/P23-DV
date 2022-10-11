@@ -1,0 +1,4 @@
+slam_map_topic_name: /estimation/slam/map
+center_line_topic_name: /control/pure_pursuit/center_line
+
+node_rate: 10   # [Hz]
