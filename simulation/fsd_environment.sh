@@ -2,11 +2,8 @@
 
 CATKIN_SHELL=bash
 
-export FSD_ROOT=$( cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)
-
 printf "Make sure you have sourced this file and not run it\n"
 printf "Sourcing ./devel/setup.bash\n"
-printf "Variable FSD_ROOT set to:\n${FSD_ROOT}\n"
 
 # check whether devel folder exists
 if [ -f "${FSD_ROOT}/devel/setup.bash" ]; then

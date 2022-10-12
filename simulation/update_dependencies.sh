@@ -102,7 +102,7 @@ if [ -z "$FSD_ROOT" ]; then
     if ! grep -Fxq "export FSD_ROOT=$FSD_ROOT_VAR" ~/.bashrc; then
         printf "\nAdding export FSD_ROOT to ~/.bashrc... "
         echo "" >> ~/.bashrc
-        echo "# FSD 2019 Environment variables" >> ~/.bashrc
+        echo "# FSD 2023 Environment variables" >> ~/.bashrc
         echo "export FSD_ROOT=$FSD_ROOT_VAR" >> ~/.bashrc
     fi
 
@@ -110,7 +110,7 @@ if [ -z "$FSD_ROOT" ]; then
 	FSD_ROOT=${FSD_ROOT_VAR}
         printf "\nAdding alias commands to ~/.bashrc... "
         echo "" >> ~/.bashrc
-        echo "source ${FSD_ROOT}/fsd_environment.sh" >> ~/.bashrc
+        echo "source ${FSD_ROOT}/fsd_aliases.sh" >> ~/.bashrc
     fi
 else
 	printf "Aliases and Environment variables has been set... "

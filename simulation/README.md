@@ -4,11 +4,12 @@ This is a skeleton repository for the autonomous code of a driverless FS race ca
 
 The use of **Ubuntu 20.04 and ROS Noetic** is assumed everywhere on this repository.
 
-This repository contains a framework for the architecture of an autonomous FS race car, with basic dummy nodes to illustrate how to organise code. Some helpful tools are also included.
+This repository contains a framework for the architecture of an autonomous FS race car, with basic dummy nodes to illustrate how to organize code. Some helpful tools are also included.
 
-# Repository organisation
+- - - -
+# Repository organization
 
-The code is organised in several top level packages/directories. The top level should adhere to the following subdivision of functionality (a more detailed description can be found in the folders themselves):
+The code is organized in several top level packages/directories. The top level should adhere to the following subdivision of functionality (a more detailed description can be found in the folders themselves):
 
 **fsd_common/** - top-level launchfiles, and other files used by many packages
 
@@ -45,7 +46,9 @@ ROS Packages should be added in one of the top level work-package folders. The t
       |   |__ estimation_meta
       |   |__ velocity_estimator
       |
-      |__ 3_control
+      |__ 3_path_planning
+      |
+      |__ 4_control
 ```
 - - - -
 
@@ -66,23 +69,23 @@ Look at`fsd_aliases` to see full list, or add more custom aliases.
 
 ```
 cd ~
-git clone git@github.com:AMZ-Driverless/fsd_skeleton.git
+git clone https://github.com/prom-racing-ntua/P23-DV.git
 ```
 **2 Install dependencies**
 ```
-cd ~/fsd_skeleton
+cd ~/P23-DV/simulation
 ./update_dependencies.sh
 ```
 
 **3 Build workspace**
 ```
-cd ~/fsd_skeleton
+cd ~/P23-DV/simulation
 catkin build
 ```
 
 **4 Source environment**
 
-Assuming you've run `./update_dependencies.sh` succesfully and restarted the terminal.
+Assuming you've run `./update_dependencies.sh` successfully and restarted the terminal.
 ```
 FSD_source
 ```
@@ -104,10 +107,20 @@ You should see all the nodes int the pipeline running
 - - - -
 
 # Run the workspace with FSSIM
-* see https://github.com/AMZ-Driverless/fssim#combine-it-with-simple-fsd-skeleton-framework-and-drive-a-lap
-
-# Conventions
+In two different terminals source the FSD environment
+```
+FSD_source
+```
+In the first terminal initialize the fssim interface with the command
+```
+roslaunch fssim_interface fssim.launch
+```
+In the second terminal run the parts of the autonomous system you want to simulate. For example, to run the path planning and control simulation execute the command
+```
+roslaunch path_planning_meta trackdrive.launch
+```
 - - - -
+# Conventions
 ## ROS naming conventions
 We use the naming conventions defined at http://wiki.ros.org/ROS/Patterns/Conventions
 ### Work packages:
@@ -144,6 +157,7 @@ PEP-8 style (http://wiki.ros.org/PyStyleGuide)
 ### README files
 Markdown syntax (https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
 
+- - - -
 # Future improvements
 
 * Better dependency management example and documentation
