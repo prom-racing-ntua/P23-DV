@@ -128,8 +128,8 @@ def pipe(img):
                  [-7.4, 2.7, 0],
                  [7.4, 2.7, 0]])
 
-    cameraMatrix= np.load('./pnp/cameraMatrix.npy')
-    distCoeffs = np.load('./pnp/distCoeffs.npy')
+    cameraMatrix= np.load('../pnp/cameraMatrix.npy')
+    distCoeffs = np.load('../pnp/distCoeffs.npy')
 
     imgs = [img]
 
@@ -168,8 +168,8 @@ def main():
                  [-7.4, 2.7, 0],
                  [7.4, 2.7, 0]])
 
-    cameraMatrix= np.load('./pnp/cameraMatrix.npy')
-    distCoeffs = np.load('./pnp/distCoeffs.npy')
+    cameraMatrix= np.load('../pnp/cameraMatrix.npy')
+    distCoeffs = np.load('../pnp/distCoeffs.npy')
 
     #img = cv2.imread(imgpath)
     monoimg = cv2.imread(monopath)
