@@ -1,0 +1,189 @@
+#ifndef LOCALIZATION_H
+#define LOCALIZATION_H
+
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <unordered_map>
+#include <cmath>
+
+// GTSAM Stuff
+#include <gtsam/geometry/Pose2.h>
+#include <gtsam/base/Vector.h>
+#include <gtsam/base/Matrix.h>
+
+// Each variable in the system (poses and landmarks) must be identified with a unique key.
+// We can either use simple integer keys (1, 2, 3, ...) or symbols (X1, X2, L1).
+// Here we will use Symbols
+#include <gtsam/inference/Symbol.h>
+
+// We want to use iSAM2 to solve the structure-from-motion problem incrementally, so
+// include iSAM2 here
+#include <gtsam/nonlinear/ISAM2.h>
+
+// iSAM2 requires as input a set set of new factors to be added stored in a factor graph,
+// and initial guesses for any new variables used in the added factors
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/nonlinear/NonlinearFactor.h>
+#include <gtsam/nonlinear/Values.h>
+
+// Once the optimized values have been calculated, we can also calculate the marginal covariance
+// of desired variables
+#include <gtsam/nonlinear/Marginals.h>
+
+// In GTSAM, measurement functions are represented as 'factors'. Several common factors
+// have been provided with the library for solving robotics/SLAM/Bundle Adjustment problems.
+// Also, we will initialize the robot at some location using a Prior factor.
+#include <gtsam/slam/PriorFactor.h>
+#include <gtsam/sam/BetweenFactor.h>
+#include <gtsam/slam/BearingRangeFactor.h>
+
+namespace slam {
+
+// Factor with only one moving end
+class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
+  private:
+    double m_range, m_theta; ///< Range and Theta measurements
+    double cone_x, cone_y;
+
+  public:
+    UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model): gtsam::NoiseModelFactor1<gtsam::Pose2> (model, j), m_range(range), m_theta(theta), cone_x(x), cone_y(y) {}
+
+    gtsam::Vector evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const
+    {
+      if (H) (*H) = (gtsam::Matrix(2,3)<< (q.x()-cone_x)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), (q.y()-cone_y)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), 0, 
+                                   (q.y()-cone_y)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -pow((q.x()-cone_x),2)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -1).finished();
+      return (gtsam::Vector(2) << sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)) - m_range, std::atan2(cone_y-q.y(), cone_x-q.x()) - q.theta() - m_theta).finished();
+    }
+};
+
+class Localization
+{
+	public:
+    // Constructors
+    Localization();
+    // Destructor
+    ~Localization();
+
+    // 2D Pose Struct
+    struct Pose2D {
+      double x;
+      double y;
+      double theta;
+    };
+
+    // Landmark Info for HashMap
+    struct LandmarkInfo {
+      // Seen second time?
+      bool verified;
+      // Passed optimization?
+      bool optimized;
+      // Cone color
+      int color;
+      // Symbol of the landmark
+      gtsam::Symbol land_sym;
+      // Symbol of the robot pose at obs time
+      gtsam::Symbol robot_pose_sym;
+      // Measured transform from the robot (at obs time) to landmark (range, theta)
+      double first_range;
+      double first_theta; //in radians
+      // Estimated pose of landmark in world
+      gtsam::Matrix12 est_pos;
+      // Pose variance matrix
+      gtsam::Matrix2 land_var;
+      // First observation variance matrix
+      gtsam::Matrix2 first_obs_var;
+    };
+
+    struct PerceptionMeasurement {
+      int color; // or enum
+      double range;
+      double theta; //in radians
+      gtsam::Matrix2 land_obs_noise_;
+    };
+
+    struct Cone {
+      int color;
+      double x;
+      double y;
+    };
+
+    // Initializes localization
+    void init_localization(double isam2_relinearize_thresh, double isam2_relinearize_skip, double dist_threshold, double dt);
+
+    // Returns the estimated robot pose
+    Localization::Pose2D get_est_robot_pose();
+
+    // Returns the estimated map
+    std::vector<Localization::Cone> get_est_map();
+
+    // Adds an odometry measurement to iSAM2 
+    void add_odom_measurement(double odom_Ux, double odom_Uy, double odom_omega, gtsam::Matrix3 odom_noise_);
+
+    // Adds/stores a landmark measurement to iSAM2
+    void add_landmark_measurements(std::vector<PerceptionMeasurement> land_rel, bool localization_only_mode);
+
+    // Optimizes the factor graph
+    void optimize_factor_graph();
+
+	private:
+
+    // Initialize iSAM2 with parameters
+    void initialize_isam2();
+
+    // Initialize the factor graph
+    void initialize_factor_graph();
+
+    // Initialize the noise models
+    void initialize_noise_models();
+
+    // Map of the landmark ids to LandmarkInfo
+    std::unordered_map<int, Localization::LandmarkInfo> landmark_id_map_;
+
+    gtsam::Symbol current_robot_sym_;
+
+    // Counters for the robot pose and landmarks
+    int robot_pose_counter_;
+    int landmark_obs_counter_;
+
+    // Only relinearize variables whose linear delta magnitude is greater than this threshold (default: 0.1). 
+    double isam2_relinearize_thresh_;
+    // Only relinearize any variables every relinearizeSkip calls to ISAM2::update (default: 10) 
+    int isam2_relinearize_skip_;
+
+    // isam2 solver
+    gtsam::ISAM2* isam2_;
+
+    // The iSAM2 estimated state
+    gtsam::Values est_state_;
+    // The estimated pose of the robot
+    gtsam::Pose2 est_robot_pose_;
+
+    // Create a Factor Graph and Values to hold the new data
+    gtsam::NonlinearFactorGraph* factor_graph_;
+    gtsam::Values init_est_;
+
+    // Noise model of the prior pose noise
+    gtsam::noiseModel::Diagonal::shared_ptr prior_pose_noise_;
+    // Noise model of the robot odometry
+    gtsam::noiseModel::Diagonal::shared_ptr odom_noise_;
+    // Noise model of the landmark observations
+    gtsam::noiseModel::Diagonal::shared_ptr land_obs_noise_;
+
+    // Variance matrix of car's position (x,y,theta)
+    gtsam::Matrix3 pos_var;
+    // Template of pos_var's covariance matrix's Jacobian
+    gtsam::Matrix36 J_odom;
+    // Template of land_pos_var's covariance matrix's Jacobian
+    gtsam::Matrix25 J_land;
+
+    // Distance above which it is considered to be a different cone
+    double dist_threshold;
+
+    // Time quantum
+    double dt;
+};
+
+}  // namespace slam
+
+#endif // LOCALIZATION_H
