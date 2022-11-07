@@ -24,12 +24,7 @@
 // iSAM2 requires as input a set set of new factors to be added stored in a factor graph,
 // and initial guesses for any new variables used in the added factors
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/NonlinearFactor.h>
 #include <gtsam/nonlinear/Values.h>
-
-// Once the optimized values have been calculated, we can also calculate the marginal covariance
-// of desired variables
-#include <gtsam/nonlinear/Marginals.h>
 
 // In GTSAM, measurement functions are represented as 'factors'. Several common factors
 // have been provided with the library for solving robotics/SLAM/Bundle Adjustment problems.
