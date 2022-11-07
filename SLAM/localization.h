@@ -35,8 +35,8 @@
 // have been provided with the library for solving robotics/SLAM/Bundle Adjustment problems.
 // Also, we will initialize the robot at some location using a Prior factor.
 #include <gtsam/slam/PriorFactor.h>
-#include <gtsam/sam/BetweenFactor.h>
-#include <gtsam/slam/BearingRangeFactor.h>
+#include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/sam/BearingRangeFactor.h>
 
 namespace slam {
 
@@ -49,7 +49,7 @@ class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
   public:
     UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model): gtsam::NoiseModelFactor1<gtsam::Pose2> (model, j), m_range(range), m_theta(theta), cone_x(x), cone_y(y) {}
 
-    gtsam::Vector evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const
+    gtsam::Vector evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const override
     {
       if (H) (*H) = (gtsam::Matrix(2,3)<< (q.x()-cone_x)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), (q.y()-cone_y)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), 0, 
                                    (q.y()-cone_y)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -pow((q.x()-cone_x),2)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -1).finished();
@@ -172,10 +172,12 @@ class Localization
 
     // Variance matrix of car's position (x,y,theta)
     gtsam::Matrix3 pos_var;
-    // Template of pos_var's covariance matrix's Jacobian
-    gtsam::Matrix36 J_odom;
-    // Template of land_pos_var's covariance matrix's Jacobian
+    // Pos_var's covariance matrix's Jacobian
+    gtsam::Matrix36 J_pose;
+    // Land_pos_var's covariance matrix's Jacobian
     gtsam::Matrix25 J_land;
+    // Odometry's covariance matrix's Jacobian
+    gtsam::Matrix34 J_odom;
 
     // Distance above which it is considered to be a different cone
     double dist_threshold;

@@ -55,15 +55,6 @@ void Localization::initialize_factor_graph()
   init_est_.insert(current_robot_sym_, est_robot_pose_);
 
   pos_var.setConstant(0);
-  
-  // Jacobian templates
-
-  J_odom << 1,0,0,0,0,0, 
-            0,1,0,0,0,0, 
-            0,0,1,0,0,dt;
-
-  J_land << 1,0,0,0,0, 
-            0,1,0,0,0;
 }
 
 
@@ -75,9 +66,23 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
 
   // Update the factor graph with the transformation (need to increment the counter too)
   gtsam::Pose2 robot_odometry((odom_Ux*std::cos(est_robot_pose_.theta()) - odom_Uy*std::sin(est_robot_pose_.theta()))*dt, (odom_Ux*std::sin(est_robot_pose_.theta()) + odom_Uy*std::cos(est_robot_pose_.theta()))*dt, odom_omega*dt);
+  J_odom << std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 0,  - odom_Ux*std::sin(est_robot_pose_.theta())*dt - odom_Uy*std::cos(est_robot_pose_.theta())*dt,
+            std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt,  0,  odom_Ux*std::cos(est_robot_pose_.theta())*dt - odom_Uy*std::sin(est_robot_pose_.theta())*dt,
+            0,                                    0,                                     dt, 0;
   factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(odom_noise_)));
 
   current_robot_sym_ = next_robot_sym;
+  
+  // Calculate position variance 3x3 matrix (x,y,theta)
+  gtsam::Matrix6 pos_vel_var;
+  pos_vel_var.setConstant(0);
+  J_pose << 1, 0, 0, -std::sin(est_robot_pose_.theta())*odom_Ux*dt-std::cos(est_robot_pose_.theta())*odom_Uy*dt, std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 
+            0, 1, 0, std::cos(est_robot_pose_.theta())*odom_Ux*dt-std::sin(est_robot_pose_.theta())*odom_Uy*dt,  std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt, 
+            0, 0, 1, 0,                                                                                          0,                                    dt;
+  pos_vel_var.block(0, 0, 3, 3) = pos_var;
+  pos_vel_var.block(3, 3, 3, 3) = odom_noise_;
+  pos_var = J_pose*pos_vel_var*J_pose.transpose();
+
 
   double pos_x = est_robot_pose_.x() + (odom_Ux*std::cos(est_robot_pose_.theta()) - odom_Uy*std::sin(est_robot_pose_.theta()))*dt;
   double pos_y = est_robot_pose_.y() + (odom_Ux*std::sin(est_robot_pose_.theta()) + odom_Uy*std::cos(est_robot_pose_.theta()))*dt;
@@ -87,18 +92,6 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   gtsam::Pose2 est(pos_x, pos_y, pos_theta);
   init_est_.insert(current_robot_sym_, est);
   est_robot_pose_ = est;
-  
-
-  // Calculate position variance 3x3 matrix (x,y,theta)
-  gtsam::Matrix6 pos_vel_var;
-  pos_vel_var.setConstant(0);
-  gtsam::Matrix23 J_block;
-  J_block << -std::sin(pos_theta)*odom_Ux*dt-std::cos(pos_theta)*odom_Uy*dt, std::cos(pos_theta)*dt, -std::sin(pos_theta)*dt,
-             std::cos(pos_theta)*odom_Ux*dt-std::sin(pos_theta)*odom_Uy*dt, std::sin(pos_theta)*dt, std::cos(pos_theta)*dt;
-  J_odom.block(0, 2, 2, 3) = J_block;
-  pos_vel_var.block(0, 0, 3, 3) = pos_var;
-  pos_vel_var.block(3, 3, 3, 3) = odom_noise_;
-  pos_var = J_odom*pos_vel_var*J_odom.transpose();
 
 
 }
@@ -122,10 +115,8 @@ void Localization::add_landmark_measurements(std::vector<PerceptionMeasurement> 
       gtsam::Matrix2 land_var;
       gtsam::Matrix5 land_pos_var;
       land_pos_var.setConstant(0);
-      gtsam::Matrix23 J_block;
-      J_block << -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()),
-                 land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta());
-      J_land.block(0, 2, 2, 3) = J_block;
+      J_land << 1, 0, -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), 
+                0, 1, land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta()),  std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta());
       land_pos_var.block(0, 0, 3, 3) = pos_var;
       land_pos_var.block(3, 3, 2, 2) = land_rel.at(i).land_obs_noise_;
       land_var = J_land*land_pos_var*J_land.transpose(); // variance matrix of landmark's position which takes into account perception+position variance
@@ -163,10 +154,8 @@ void Localization::add_landmark_measurements(std::vector<PerceptionMeasurement> 
       gtsam::Matrix2 land_var;
       gtsam::Matrix5 land_pos_var;
       land_pos_var.setConstant(0);
-      gtsam::Matrix23 J_block;
-      J_block << -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()),
-                 land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta());
-      J_land.block(0, 2, 2, 3) = J_block;
+      J_land << 1, 0, -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), std::cos(land_rel.at(i).theta+est_robot_pose_.theta()), -land_rel.at(i).range*std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), 
+                0, 1, land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta()),  std::sin(land_rel.at(i).theta+est_robot_pose_.theta()), land_rel.at(i).range*std::cos(land_rel.at(i).theta+est_robot_pose_.theta());
       land_pos_var.block(0, 0, 3, 3) = pos_var;
       land_pos_var.block(3, 3, 2, 2) = land_rel.at(i).land_obs_noise_;
       land_var = J_land*land_pos_var*J_land.transpose(); // variance matrix of landmark's position which takes into account perception+position variance
@@ -259,6 +248,10 @@ void Localization::optimize_factor_graph()
 {
   // Update iSAM with the new factors
   isam2_->update(*factor_graph_, init_est_);
+  // Each call to iSAM2 update(*) performs one iteration of the iterative
+  // nonlinear solver. If accuracy is desired at the expense of time,
+  // update(*) can be called additional times to perform multiple optimizer
+  // iterations every step.
   isam2_->update();
 
   // Get the current iSAM2 estimate
@@ -309,7 +302,7 @@ std::vector<Localization::Cone> Localization::get_est_map(){
 
 }
 
-// An example
+
 int main(){
   slam::Localization loca;
   loca.init_localization(0.1, 10, 0.1, 1);
@@ -420,6 +413,12 @@ int main(){
   }
 
   loca.optimize_factor_graph();
-  
+
+
+
+  // std::vector<slam::Localization::Cone> est_map = loca.get_est_map();
+  // int length = est_map.size();
+  // for (int i=0; i<length; i++) std::cout << est_map[i].color << std::endl;
+
   return 0;
 }
