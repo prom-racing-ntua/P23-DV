@@ -69,8 +69,13 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   J_odom << std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 0,  - odom_Ux*std::sin(est_robot_pose_.theta())*dt - odom_Uy*std::cos(est_robot_pose_.theta())*dt,
             std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt,  0,  odom_Ux*std::cos(est_robot_pose_.theta())*dt - odom_Uy*std::sin(est_robot_pose_.theta())*dt,
             0,                                    0,                                     dt, 0;
-  factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_odom*odom_noise_*J_odom.transpose())));
 
+  gtsam::Matrix4 odom_theta_var;
+  odom_theta_var.setConstant(0);
+  odom_theta_var.block(0, 0, 3, 3) = odom_noise_;
+  odom_theta_var(15) = pos_var(8); // Variance of theta (orientation)
+  factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_odom*odom_theta_var*J_odom.transpose())));
+ 
   current_robot_sym_ = next_robot_sym;
   
   // Calculate position variance 3x3 matrix (x,y,theta)
