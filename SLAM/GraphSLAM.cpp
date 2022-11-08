@@ -69,7 +69,7 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   J_odom << std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 0,  - odom_Ux*std::sin(est_robot_pose_.theta())*dt - odom_Uy*std::cos(est_robot_pose_.theta())*dt,
             std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt,  0,  odom_Ux*std::cos(est_robot_pose_.theta())*dt - odom_Uy*std::sin(est_robot_pose_.theta())*dt,
             0,                                    0,                                     dt, 0;
-  factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(odom_noise_)));
+  factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_odom*odom_noise_*J_odom.transpose())));
 
   current_robot_sym_ = next_robot_sym;
   
