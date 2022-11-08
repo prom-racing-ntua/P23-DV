@@ -1,0 +1,35 @@
+import os
+
+from ament_index_python.packages import get_package_share_directory
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+
+    this_dir = get_package_share_directory('vectornav')
+    
+    # Vectornav
+    start_vectornav_cmd = Node(
+        name='node',
+        package='vectornav', 
+        executable='vectornav',
+        output='screen',
+        parameters=[os.path.join(this_dir, 'config', 'vectornav.yaml')],
+        namespace='vectornav')
+    
+    start_vectornav_sensor_msgs_cmd = Node(
+        name='node_custom_msgs',
+        package='vectornav', 
+        executable='vn_sensor_msgs',
+        output='screen',
+        parameters=[os.path.join(this_dir, 'config', 'vectornav.yaml')],
+        namespace='vectornav')
+
+    # Create the launch description and populate
+    ld = LaunchDescription()
+
+    ld.add_action(start_vectornav_cmd)
+    ld.add_action(start_vectornav_sensor_msgs_cmd)
+
+    return ld

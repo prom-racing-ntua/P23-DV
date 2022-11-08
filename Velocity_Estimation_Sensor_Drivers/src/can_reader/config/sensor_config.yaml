@@ -1,0 +1,29 @@
+front_halls:
+  id: 0x310
+  topic: '/front_hall_sensors'
+  msg_type: 'hall_msg'
+  parser: 'hall_parser'
+
+rear_halls:
+  id: 0x4D1
+  topic: '/rear_hall_sensors'
+  msg_type: 'hall_msg'
+  parser: 'hall_parser'
+
+steering:
+  id: 0x4D2
+  topic: '/steering_angle'
+  msg_type: 'steering_msg'
+  parser: 'steering_parser'
+
+brakes:
+  id: 0x301
+  topic: '/brake_pressure'
+  msg_type: 'brake_pressure_msg'
+  parser: 'brakes_parser'
+
+trash:
+  id: 0x521
+  topic: '/trash'
+  msg_type: 'trash_msg'
+  parser: 'parse_trash'

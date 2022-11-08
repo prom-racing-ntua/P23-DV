@@ -1,0 +1,9 @@
+can_listener:
+  ros__parameters:
+    # Configure Port
+    port: '/dev/ttyACM0'
+    baudrate: 115200
+    timeout: 10
+
+    # Sensor Configuration
+    enabled_sensors: ['trash']
