@@ -19,9 +19,12 @@ from helpers import *
 
 from cnn import *
 
-def initYOLOModel(modelpath):
+def initYOLOModel(modelpath, conf=0.25, iou=0.45):
 
   yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath)
+  yolo_model.agnostic = True
+  yolo_model.conf = conf
+  yolo_model.iou = iou
   return yolo_model
 
 def inferenceYOLO(model, imgpath, res):
@@ -95,14 +98,14 @@ def finalCoordinates(cones_list, or_dimensions, predictions, imgs, cameraMatrix,
   for i in range(len(imgs)):
     keypoints_image = []
     pnp_image = []
-    print(cones_list)
-    print(len(cones_list[0]))
+    #print(cones_list)
+    #print(len(cones_list[0]))
     for j in range(len(cones_list[i])):
       keypoints_cone = []
       for k in range(7):
         x = predictions[curr+j][k][0]*(or_dimensions[i][j][2] - or_dimensions[i][j][0])/48 + or_dimensions[i][j][0]
         y = predictions[curr+j][k][1]*(or_dimensions[i][j][3] - or_dimensions[i][j][1])/64 + or_dimensions[i][j][1]
-        print(x,y)
+        #print(x,y)
         
         monoimg[int(y)-4:int(y)+4,int(x)-4:int(x)+4] = np.array([0,255,0])
 
@@ -155,7 +158,8 @@ def pipe(img):
 
 def main():
     #imgpath = "/home/vasilis/Projects/Prom/Perception/gfr_00554.jpg"
-    monopath = "../data/mono 500 50.bmp"
+    monopath = "../data/52310296366_46561cba17_o.jpg"
+    #monopath = "../data/mono 500 50.bmp"
     #stereopath = "/home/vasilis/Projects/Prom/Perception/test_images/stereo l 200 0.bmp"
     modelpath = "../models/best.pt"
     keypoints_modelpath = "../models/KeypointsModelComplex.pt"
@@ -181,6 +185,12 @@ def main():
 
     # Get YOLO results
     results = inferenceYOLO(model, imgs, 1280)
+    #results.pred[0][0] -> (x,y,x,y,conf,cls)
+    print((results.pandas().xyxy))
+
+    #results = non_max_suppression(results, agnostic=True)
+
+    #print(len(results.pred[0]))
 
     # Load Keypoints Model
     keypoints_model = initKeypoint(keypoints_modelpath)
@@ -193,7 +203,7 @@ def main():
 
     final_coordinates = finalCoordinates(cones_list, or_dimensions, keypoints_predictions, imgs, cameraMatrix, distCoeffs, objp_orange, monoimg)
 
-    print(final_coordinates)
+    #print(final_coordinates)
     
 
 
