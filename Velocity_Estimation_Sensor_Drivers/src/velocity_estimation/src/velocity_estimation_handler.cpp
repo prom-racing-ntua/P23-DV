@@ -1,8 +1,10 @@
 #include <rmw/qos_profiles.h>
 #include <rclcpp/qos.hpp>
+#include "custom_msgs/msg/vel_estimation.hpp"
 #include "velocity_estimation_handler.h"
 
 // TODO: detect when vectornav goes into mode 2: INS Tracking
+// TODO: subscribe to master to receive counter
 
 namespace ns_vel_est
 {
@@ -23,7 +25,7 @@ VelocityEstimationHandler::VelocityEstimationHandler()
 
     setSubscribers();
 
-    pub_ = create_publisher<geometry_msgs::msg::TwistStamped>("state_estimation/twist", 10);
+    pub_ = create_publisher<custom_msgs::msg::VelEstimation>("state_estimation/vel_est", 10);
 
     // We dont' care about the lost precision of int division, wall_timer gets int values anyway...
     timer_ = create_wall_timer(std::chrono::milliseconds(1000 / node_frequency_), std::bind(&VelocityEstimationHandler::timerCallback, this));
@@ -53,18 +55,18 @@ void VelocityEstimationHandler::setSubscribers() {
 void VelocityEstimationHandler::publishResults() {
     const StateVector pub_state{ estimator_.getState() };
     const StateMatrix pub_cov{ estimator_.getStateCovariance() };
-    geometry_msgs::msg::TwistStamped msg;
+    custom_msgs::msg::VelEstimation msg;
 
-    msg.header.stamp = now();
-    // TODO: set a valid frame id
-    msg.header.frame_id = "car?";
-
-    msg.twist.linear.x = pub_state(StateVx);
-    msg.twist.linear.y = pub_state(StateVy);
-    msg.twist.linear.z = 0;
-    msg.twist.angular.x = 0;
-    msg.twist.angular.y = 0;
-    msg.twist.angular.z = pub_state(StateVyaw);
+    msg.counter = 24; // to be changed to master's counter
+    msg.u_x = pub_state(StateVx);
+    msg.u_y = pub_state(StateVy);
+    msg.u_yaw = pub_state(StateVyaw);
+    //msg.var_matrix = pub_cov.block(0,0,3,3);
+    for (int i=0; i<3; i++) {
+	for (int j=0; j<3; j++) {
+		msg.var_matrix[i*3+j] = pub_cov((i+StateVx)*6+(j+StateVx));
+	}
+    }    // this will not work properly if Vx, Vy, Vyaw are separated
 
     pub_->publish(msg);
 }

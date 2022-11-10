@@ -23,6 +23,7 @@ endif()
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/HallSensors.msg"
   "msg/Trash.msg"
+  "msg/VelEstimation.msg"
   DEPENDENCIES std_msgs
   ADD_LINTER_TESTS
 )

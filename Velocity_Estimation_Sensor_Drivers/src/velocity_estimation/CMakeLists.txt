@@ -10,11 +10,11 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(vectornav_msgs REQUIRED)
-
+find_package(custom_msgs REQUIRED)
 
 # executable commands
 add_executable(${PROJECT_NAME} src/main.cpp src/velocity_estimation.cpp src/velocity_estimation_handler.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp vectornav_msgs)
+ament_target_dependencies(${PROJECT_NAME} rclcpp vectornav_msgs custom_msgs)
 
 # install
 install(TARGETS

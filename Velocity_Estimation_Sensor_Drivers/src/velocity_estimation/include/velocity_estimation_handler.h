@@ -10,7 +10,7 @@
 #include "vectornav_msgs/msg/attitude_group.hpp"
 #include "vectornav_msgs/msg/imu_group.hpp"
 #include "vectornav_msgs/msg/ins_group.hpp"
-#include "geometry_msgs/msg/twist_stamped.hpp"
+#include "custom_msgs/msg/vel_estimation.hpp"
 
 #include "velocity_estimation.h"
 
@@ -21,6 +21,7 @@ class VelocityEstimator;
 
 class VelocityEstimationHandler : public rclcpp::Node {
 private:
+    // TODO master's counter as int
     int node_frequency_;
     VelocityEstimator estimator_;
 
@@ -34,7 +35,7 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
 
     // ROS Publisher to output results to the velocity estimation topic
-    rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pub_;
+    rclcpp::Publisher<custom_msgs::msg::VelEstimation>::SharedPtr pub_;
 
     std::array<bool, ObservationSize> update_vector_;
     ObservationVector measurement_vector_;
