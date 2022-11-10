@@ -42,14 +42,8 @@ class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
     double cone_x, cone_y;
 
   public:
-    UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model): gtsam::NoiseModelFactor1<gtsam::Pose2> (model, j), m_range(range), m_theta(theta), cone_x(x), cone_y(y) {}
-
-    gtsam::Vector evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const override
-    {
-      if (H) (*H) = (gtsam::Matrix(2,3)<< (q.x()-cone_x)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), (q.y()-cone_y)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), 0, 
-                                   (q.y()-cone_y)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -pow((q.x()-cone_x),2)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -1).finished();
-      return (gtsam::Vector(2) << sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)) - m_range, std::atan2(cone_y-q.y(), cone_x-q.x()) - q.theta() - m_theta).finished();
-    }
+    UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model);
+    gtsam::Vector evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H) const override;
 };
 
 class Localization

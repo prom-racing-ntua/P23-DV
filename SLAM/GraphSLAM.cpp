@@ -1,6 +1,17 @@
 #include "localization.h"
+#include <chrono>
+
 
 namespace slam {
+
+UnaryFactor::UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model): gtsam::NoiseModelFactor1<gtsam::Pose2> (model, j), m_range(range), m_theta(theta), cone_x(x), cone_y(y) {}
+
+gtsam::Vector UnaryFactor::evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const 
+{
+      if (H) (*H) = (gtsam::Matrix(2,3)<< (q.x()-cone_x)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), (q.y()-cone_y)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), 0, 
+                                   (q.y()-cone_y)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -pow((q.x()-cone_x),2)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -1).finished();
+      return (gtsam::Vector(2) << sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)) - m_range, std::atan2(cone_y-q.y(), cone_x-q.x()) - q.theta() - m_theta).finished();
+}
 
 Localization::Localization():robot_pose_counter_ (0), landmark_obs_counter_(0)
 {
@@ -75,7 +86,7 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   odom_theta_var.block(0, 0, 3, 3) = odom_noise_;
   odom_theta_var(15) = pos_var(8); // Variance of theta (orientation)
   factor_graph_->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym_, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_odom*odom_theta_var*J_odom.transpose())));
- 
+
   current_robot_sym_ = next_robot_sym;
   
   // Calculate position variance 3x3 matrix (x,y,theta)
@@ -251,6 +262,10 @@ void Localization::add_landmark_measurements(std::vector<PerceptionMeasurement> 
 // Optimizes the factor graph
 void Localization::optimize_factor_graph()
 {
+
+
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
   // Update iSAM with the new factors
   isam2_->update(*factor_graph_, init_est_);
   // Each call to iSAM2 update(*) performs one iteration of the iterative
@@ -258,6 +273,10 @@ void Localization::optimize_factor_graph()
   // update(*) can be called additional times to perform multiple optimizer
   // iterations every step.
   isam2_->update();
+
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
 
   // Get the current iSAM2 estimate
   est_state_ = isam2_->calculateEstimate();
@@ -278,7 +297,7 @@ void Localization::optimize_factor_graph()
     }
   }
   pos_var.setConstant(0);
-  est_state_.print();
+  //est_state_.print();
 }
 
 // Returns the estimated robot pose
