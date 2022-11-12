@@ -49,11 +49,6 @@ class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
 class Localization
 {
 	public:
-    // Constructors
-    Localization();
-    // Destructor
-    ~Localization();
-
     // 2D Pose Struct
     struct Pose2D {
       double x;
@@ -67,20 +62,22 @@ class Localization
       bool verified;
       // Passed optimization?
       bool optimized;
-      // Cone color
-      int color;
+
       // Symbol of the landmark
       gtsam::Symbol land_sym;
-      // Symbol of the robot pose at obs time
+      // Cone color
+      int color;
+      // Estimated pose of landmark in world
+      gtsam::Matrix12 est_pos;
+      // Pose variance matrix (x,y)
+      gtsam::Matrix2 land_var;
+
+      // Symbol of the robot pose at first observation
       gtsam::Symbol robot_pose_sym;
       // Measured transform from the robot (at obs time) to landmark (range, theta)
       double first_range;
       double first_theta; //in radians
-      // Estimated pose of landmark in world
-      gtsam::Matrix12 est_pos;
-      // Pose variance matrix
-      gtsam::Matrix2 land_var;
-      // First observation variance matrix
+      // First observation variance matrix (range, theta)
       gtsam::Matrix2 first_obs_var;
     };
 
@@ -97,6 +94,11 @@ class Localization
       double y;
     };
 
+    // Constructor
+    Localization();
+    // Destructor
+    ~Localization();
+
     // Initializes localization
     void init_localization(double isam2_relinearize_thresh, double isam2_relinearize_skip, double dist_threshold, double dt);
 
@@ -109,8 +111,11 @@ class Localization
     // Adds an odometry measurement to iSAM2 
     void add_odom_measurement(double odom_Ux, double odom_Uy, double odom_omega, gtsam::Matrix3 odom_noise_);
 
-    // Adds/stores a landmark measurement to iSAM2
-    void add_landmark_measurements(std::vector<PerceptionMeasurement> land_rel, bool localization_only_mode);
+    // Adds/stores a landmark measurement to iSAM2 in localization mode
+    void add_landmark_measurements_loc(std::vector<PerceptionMeasurement> land_rel);
+
+    // Adds/stores a landmark measurement to iSAM2 in slam mode
+    void add_landmark_measurements_slam(std::vector<PerceptionMeasurement> land_rel);
 
     // Optimizes the factor graph
     void optimize_factor_graph();
@@ -126,9 +131,13 @@ class Localization
     // Initialize the noise models
     void initialize_noise_models();
 
+    // Find nearest neighbor
+    int findNN(int color, gtsam::Matrix12 land_pos, gtsam::Matrix2 land_var, int no_of_land);
+
     // Map of the landmark ids to LandmarkInfo
     std::unordered_map<int, Localization::LandmarkInfo> landmark_id_map_;
 
+    // Symbol (e.g. "x4") of current robot pose
     gtsam::Symbol current_robot_sym_;
 
     // Counters for the robot pose and landmarks
@@ -161,12 +170,6 @@ class Localization
 
     // Variance matrix of car's position (x,y,theta)
     gtsam::Matrix3 pos_var;
-    // Pos_var's covariance matrix's Jacobian
-    gtsam::Matrix36 J_pose;
-    // Land_pos_var's covariance matrix's Jacobian
-    gtsam::Matrix25 J_land;
-    // Odometry's covariance matrix's Jacobian
-    gtsam::Matrix34 J_odom;
 
     // Distance above which it is considered to be a different cone
     double dist_threshold;
