@@ -60,8 +60,6 @@ class Localization
     struct LandmarkInfo {
       // Seen second time?
       bool verified;
-      // Passed optimization?
-      bool optimized;
 
       // Symbol of the landmark
       gtsam::Symbol land_sym;

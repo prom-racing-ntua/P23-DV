@@ -53,9 +53,9 @@ void Localization::initialize_factor_graph()
   est_robot_pose_ = gtsam::Pose2(0,0,0);
   gtsam::Matrix3 prior_pose_noise_;
   // TODO: Decide what noise to set as prior pose noise
-  prior_pose_noise_ << 1,0,0,
-                       0,1,0,
-                       0,0,1;
+  prior_pose_noise_ << 0.01,0,0,
+                       0,0.01,0,
+                       0,0,0.01;
 
   // Start a new factor graph and add the starting point using PriorFactor
   factor_graph_ = new gtsam::NonlinearFactorGraph();
@@ -63,7 +63,9 @@ void Localization::initialize_factor_graph()
   init_est_.insert(current_robot_sym_, est_robot_pose_);
 
   // In the beginning we are certain of our pose
-  pos_var.setConstant(0);
+  pos_var << 0.01,0,0,
+             0,0.01,0,
+             0,0,0.01;;
 }
 
 
@@ -86,9 +88,9 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   gtsam::Matrix6 pos_vel_var;
   pos_vel_var.setConstant(0);
   gtsam::Matrix36 J_pose;
-  J_pose << 1, 0, 0, -std::sin(est_robot_pose_.theta())*odom_Ux*dt-std::cos(est_robot_pose_.theta())*odom_Uy*dt, std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 
-            0, 1, 0, std::cos(est_robot_pose_.theta())*odom_Ux*dt-std::sin(est_robot_pose_.theta())*odom_Uy*dt,  std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt, 
-            0, 0, 1, 0,                                                                                          0,                                    dt;
+  J_pose << 1, 0, -std::sin(est_robot_pose_.theta())*odom_Ux*dt-std::cos(est_robot_pose_.theta())*odom_Uy*dt, std::cos(est_robot_pose_.theta())*dt, -std::sin(est_robot_pose_.theta())*dt, 0, 
+            0, 1, std::cos(est_robot_pose_.theta())*odom_Ux*dt-std::sin(est_robot_pose_.theta())*odom_Uy*dt,  std::sin(est_robot_pose_.theta())*dt, std::cos(est_robot_pose_.theta())*dt, 0,
+            0, 0, 1,                                                                                          0,                                    0,                                    dt;
   pos_vel_var.block(0, 0, 3, 3) = pos_var;
   pos_vel_var.block(3, 3, 3, 3) = odom_noise_;
   pos_var = J_pose*pos_vel_var*J_pose.transpose();
@@ -97,6 +99,7 @@ void Localization::add_odom_measurement(double odom_Ux, double odom_Uy, double o
   gtsam::Pose2 new_pos = gtsam::Pose2(est_robot_pose_.x()+(odom_Ux*std::cos(est_robot_pose_.theta())-odom_Uy*std::sin(est_robot_pose_.theta()))*dt, est_robot_pose_.y()+(odom_Ux*std::sin(est_robot_pose_.theta())+odom_Uy*std::cos(est_robot_pose_.theta()))*dt, est_robot_pose_.theta()+odom_omega*dt);
   init_est_.insert(current_robot_sym_, new_pos);
   est_robot_pose_ = new_pos;
+
 }
 
 
@@ -174,26 +177,18 @@ void Localization::add_landmark_measurements_slam(std::vector<PerceptionMeasurem
         init_est_.insert(landmark_id_map_.at(best_match).land_sym, gtsam::Point2(landmark_id_map_.at(best_match).est_pos[0], landmark_id_map_.at(best_match).est_pos[1]));
       }
 
-      // If the landmark has not yet gone through an optimization step, update the mean and variance of its global position (x,y) using a Kalman filter
-      if (landmark_id_map_.at(best_match).optimized == false)
-      {
-        // Innovation Covariance
-        gtsam::Matrix2 S = landmark_id_map_.at(best_match).land_var + obs_var;
-
-        // Near-optimal Kalman gain
-        gtsam::Matrix2 K = landmark_id_map_.at(best_match).land_var*S.inverse();
-
-        // Updated covariance estimate 
-        gtsam::Matrix2 new_land_var = landmark_id_map_.at(best_match).land_var - K*landmark_id_map_.at(best_match).land_var;
-        landmark_id_map_.at(best_match).land_var = new_land_var;
-
-        // Updated state estimate 
-        gtsam::Matrix12 new_est_pos = landmark_id_map_.at(best_match).est_pos.transpose() + K*(obs_pos - landmark_id_map_.at(best_match).est_pos).transpose();
-        landmark_id_map_.at(best_match).est_pos = new_est_pos;
-
-        // Improve initial estimate
-        init_est_.update(landmark_id_map_.at(best_match).land_sym, gtsam::Point2(new_est_pos[0], new_est_pos[1]));
-      }
+      // Innovation Covariance
+      gtsam::Matrix2 S = landmark_id_map_.at(best_match).land_var + obs_var;
+      // Near-optimal Kalman gain
+      gtsam::Matrix2 K = landmark_id_map_.at(best_match).land_var*S.inverse();
+      // Updated covariance estimate 
+      gtsam::Matrix2 new_land_var = landmark_id_map_.at(best_match).land_var - K*landmark_id_map_.at(best_match).land_var;
+      landmark_id_map_.at(best_match).land_var = new_land_var;
+      // Updated state estimate 
+      gtsam::Matrix12 new_est_pos = landmark_id_map_.at(best_match).est_pos.transpose() + K*(obs_pos - landmark_id_map_.at(best_match).est_pos).transpose();
+      landmark_id_map_.at(best_match).est_pos = new_est_pos;
+      // Improve initial estimate
+      init_est_.update(landmark_id_map_.at(best_match).land_sym, gtsam::Point2(new_est_pos[0], new_est_pos[1]));
 
       // Construct the current landmark measurement
       factor_graph_->add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(current_robot_sym_, landmark_id_map_.at(best_match).land_sym, land_rel.at(i).theta, land_rel.at(i).range, gtsam::noiseModel::Gaussian::Covariance(land_rel.at(i).land_obs_noise_)));
@@ -209,7 +204,6 @@ void Localization::add_landmark_measurements_slam(std::vector<PerceptionMeasurem
       Localization::LandmarkInfo landmark_info;
       
       landmark_info.verified = false;
-      landmark_info.optimized = false;
 
       landmark_info.land_sym = next_landmark_sym;
       landmark_info.color = land_rel.at(i).color;
@@ -229,16 +223,18 @@ void Localization::add_landmark_measurements_slam(std::vector<PerceptionMeasurem
 
 int Localization::findNN(int color, gtsam::Matrix12 obs_pos, gtsam::Matrix2 obs_var, int no_of_land) {
   // Check already known cones for closest observed cone (Mahalanobis distance), best_match is the index of the closest neighbor, if best_match==-1 then it is a phantom cone
-  // TODO: If we find a way to compute the variance of the position of a landmark after optimization we can take that into account as well when calculating distances
   int best_match = -1;
   double curr_best_dist = dist_threshold;
   for (int j=0; j<no_of_land; j++){
     if (landmark_id_map_.at(j).color == color)
     {
-      double dist = (landmark_id_map_.at(j).est_pos - obs_pos)*obs_var.inverse()*(landmark_id_map_.at(j).est_pos - obs_pos).transpose();
-      if (dist < curr_best_dist) 
+      // Mahalanobis distance with the observation as a distribution
+      double dist1 = sqrt((landmark_id_map_.at(j).est_pos - obs_pos)*obs_var.inverse()*(landmark_id_map_.at(j).est_pos - obs_pos).transpose());
+      // Mahalanobis distance with the cone's position as a distribution
+      double dist2 = sqrt((landmark_id_map_.at(j).est_pos - obs_pos)*landmark_id_map_.at(j).land_var.inverse()*(landmark_id_map_.at(j).est_pos - obs_pos).transpose());
+      if ((dist1+dist2)/2 < curr_best_dist) 
       {
-        curr_best_dist = dist;
+        curr_best_dist = (dist1+dist2)/2;
         best_match = j;
       }
     }
@@ -270,13 +266,13 @@ void Localization::optimize_factor_graph()
   {
     if (landmark_id_map_.at(i).verified == true)
     {
-      landmark_id_map_.at(i).optimized = true;
       landmark_id_map_.at(i).est_pos = est_state_.at<gtsam::Point2>(landmark_id_map_.at(i).land_sym);
+      landmark_id_map_.at(i).land_var = isam2_->marginalCovariance(landmark_id_map_.at(i).land_sym);
     }
   }
 
   // After optimization positional variance is hard to determine so it is declared to be zero
-  pos_var.setConstant(0);
+  pos_var = isam2_->marginalCovariance(current_robot_sym_);
 
   // Clear the factor graph and values for the next iteration
   factor_graph_->resize(0);
@@ -316,44 +312,44 @@ std::vector<Localization::Cone> Localization::get_est_map(){
 
 int main(){
   slam::Localization loca;
-  loca.init_localization(0.1, 10, 0.1, 1);
+  loca.init_localization(0.1, 10, 0.1, 0.025);
 
   gtsam::Matrix3 odom_noise;
-  odom_noise << 1,0,0,
-                0,1,0,
-                0,0,1;
+  odom_noise << 0.15,0,0,
+                0,0.15,0,
+                0,0,0.1;
   gtsam::Matrix2 obs_noise;
-  obs_noise << 1,0,
-               0,1;
+  obs_noise << 0.05,0,
+               0,0.05;
 
   for (int i=0; i<5; i++){
     std::vector<slam::Localization::PerceptionMeasurement> measurements;
     slam::Localization::PerceptionMeasurement meas1;
     meas1.color = 0;
-    meas1.range = 1;
-    meas1.theta = 3.14/2;
+    meas1.range = 0.99;
+    meas1.theta = 3.1416/2;
     meas1.land_obs_noise_ = obs_noise;
     measurements.push_back(meas1);
     slam::Localization::PerceptionMeasurement meas2;
     meas2.color = 1;
-    meas2.range = 1;
-    meas2.theta = -3.14/2;    
+    meas2.range = 1.01;
+    meas2.theta = -3.1416/2;    
     meas2.land_obs_noise_ = obs_noise;
     measurements.push_back(meas2);
     slam::Localization::PerceptionMeasurement meas3;
     meas3.color = 0;
-    meas3.range = 1.414;
-    meas3.theta = 3.14/4;    
+    meas3.range = 1.42;
+    meas3.theta = 3.1416/4;    
     meas3.land_obs_noise_ = obs_noise;
     measurements.push_back(meas3);
     slam::Localization::PerceptionMeasurement meas4;
     meas4.color = 1;
-    meas4.range = 1.414;
-    meas4.theta = -3.14/4;    
+    meas4.range = 1.41;
+    meas4.theta = -3.1416/4;    
     meas4.land_obs_noise_ = obs_noise;
     measurements.push_back(meas4);
     loca.add_landmark_measurements_slam(measurements);
-    loca.add_odom_measurement(1, 0, 0,  odom_noise);
+    loca.add_odom_measurement(40, 0, 0,  odom_noise);
   }
 
   loca.optimize_factor_graph();
@@ -362,30 +358,30 @@ int main(){
     std::vector<slam::Localization::PerceptionMeasurement> measurements;
     slam::Localization::PerceptionMeasurement meas1;
     meas1.color = 0;
-    meas1.range = 1;
-    meas1.theta = 3.14/2;
+    meas1.range = 0.99;
+    meas1.theta = 3.1416/2;
     meas1.land_obs_noise_ = obs_noise;
     measurements.push_back(meas1);
     slam::Localization::PerceptionMeasurement meas2;
     meas2.color = 1;
-    meas2.range = 1;
-    meas2.theta = -3.14/2;    
+    meas2.range = 1.01;
+    meas2.theta = -3.1416/2;    
     meas2.land_obs_noise_ = obs_noise;
     measurements.push_back(meas2);
     slam::Localization::PerceptionMeasurement meas3;
     meas3.color = 0;
-    meas3.range = 1.414;
-    meas3.theta = 3.14/4;    
+    meas3.range = 1.42;
+    meas3.theta = 3.1416/4;    
     meas3.land_obs_noise_ = obs_noise;
     measurements.push_back(meas3);
     slam::Localization::PerceptionMeasurement meas4;
     meas4.color = 1;
-    meas4.range = 1.414;
-    meas4.theta = -3.14/4;    
+    meas4.range = 1.41;
+    meas4.theta = -3.1416/4;    
     meas4.land_obs_noise_ = obs_noise;
     measurements.push_back(meas4);
     loca.add_landmark_measurements_slam(measurements);
-    loca.add_odom_measurement(1, 0, 0,  odom_noise);
+    loca.add_odom_measurement(40, 0, 0,  odom_noise);
   }
 
   loca.optimize_factor_graph();
