@@ -176,7 +176,8 @@ void Localization::add_landmark_measurements_slam(std::vector<PerceptionMeasurem
         // Add the initial estimate
         init_est_.insert(landmark_id_map_.at(best_match).land_sym, gtsam::Point2(landmark_id_map_.at(best_match).est_pos[0], landmark_id_map_.at(best_match).est_pos[1]));
       }
-
+      
+      // We will use the new observation of the cone to update its estimated position (and variance), what follows is a simple Kalman filter
       // Innovation Covariance
       gtsam::Matrix2 S = landmark_id_map_.at(best_match).land_var + obs_var;
       // Near-optimal Kalman gain
