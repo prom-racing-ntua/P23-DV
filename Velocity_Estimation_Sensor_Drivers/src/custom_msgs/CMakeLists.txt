@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake_auto REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 ament_auto_find_build_dependencies()
 
 if(BUILD_TESTING)
@@ -27,5 +28,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES std_msgs
   ADD_LINTER_TESTS
 )
+
+ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()

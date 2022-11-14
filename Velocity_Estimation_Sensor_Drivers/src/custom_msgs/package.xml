@@ -7,7 +7,7 @@
   <maintainer email="d.papailiopoulos.promracing@gmail.com">dimitris</maintainer>
   <license>TODO: License declaration</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <build_depend>rosidl_default_generators</build_depend>
 
   <depend>std_msgs</depend>
@@ -15,7 +15,6 @@
   <exec_depend>rosidl_default_runtime</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
 
   <member_of_group>rosidl_interface_packages</member_of_group>
 
