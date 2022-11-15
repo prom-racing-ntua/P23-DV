@@ -231,9 +231,9 @@ int Localization::findNN(int color, gtsam::Matrix12 obs_pos, gtsam::Matrix2 obs_
     {
       // Mahalanobis distance with both the observation and the position-in-the-map as a distribution
       double dist = sqrt((landmark_id_map_.at(j).est_pos - obs_pos)*(obs_var+landmark_id_map_.at(j).land_var).inverse()*(landmark_id_map_.at(j).est_pos - obs_pos).transpose());
-      if (dist/2 < curr_best_dist) 
+      if (dist < curr_best_dist) 
       {
-        curr_best_dist = dist/2;
+        curr_best_dist = dist;
         best_match = j;
       }
     }
