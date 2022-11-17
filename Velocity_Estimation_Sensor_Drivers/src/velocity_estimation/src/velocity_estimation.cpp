@@ -1,8 +1,10 @@
 #include "velocity_estimation.h"
 #include "velocity_estimation_handler.h"
 
-// TODO: wrap state angles (if you add angles in the state vector)
-// TODO: mahalanobis threshold
+// NOTE: wrap state angles in (-pi, pi) range. (only if we add angles in the state vector)
+// NOTE: If we do dynamic measurement covariance, we should check for negative and very small values.
+
+// IDEA: sort of a measurement object for each sensor containing measurement values, thresholds and other info
 
 namespace ns_vel_est
 {
@@ -38,6 +40,18 @@ void VelocityEstimator::init() {
     vn_300_rx_ = node_handler_->get_parameter("vectornav-vn-300.x").as_double();
     vn_300_ry_ = node_handler_->get_parameter("vectornav-vn-300.y").as_double();
 
+    // A hash map of all the sensors used for the Kalman Filter with their respective measurements as defined in
+    // the velocity_estimation_common.h file. New measurements and sensors must be added here in order to pass
+    // through the mahalanobis threshold for outlier detection.
+    sensor_map.clear();
+    sensor_map.insert(std::make_pair(VelocitySensor, std::vector<int>{ObservationVx, ObservationVy}));
+    sensor_map.insert(std::make_pair(Gyroscope, std::vector<int>{ObservationVyaw}));
+    sensor_map.insert(std::make_pair(Accelerometer, std::vector<int>{ObservationAx, ObservationAy}));
+    sensor_map.insert(std::make_pair(FrHall, std::vector<int>{ObservationVhall_fr}));
+    sensor_map.insert(std::make_pair(FlHall, std::vector<int>{ObservationVhall_fl}));
+    sensor_map.insert(std::make_pair(RrHall, std::vector<int>{ObservationVhall_rr}));
+    sensor_map.insert(std::make_pair(RlHall, std::vector<int>{ObservationVhall_rl}));
+
     // Initialize the transfer and measurement function jacobian matrices
     transfer_function_jacobian_ <<
         1, 0, 0, delta_time_, 0, 0,
@@ -59,6 +73,47 @@ void VelocityEstimator::init() {
         0, 0, 0, 0, 0, 0;
 
     identity_.setIdentity();
+}
+
+std::vector<int> VelocityEstimator::mahalanobisThreshold() {
+    std::vector<int> passed_idx{};
+    // Iterate through all sensors in the sensor map. Note that all the keys of the map are actually ints
+    for (int i{ 0 }; i < SensorSize; ++i)
+    {
+        // Check if sensor has output a measurement and is to be tested for outliers
+        if (!updated_sensors_[i]) { continue; }
+
+        // Get the observations that correspond to current sensor set their number and the matrices needed for 
+        // the execution of the algorithm.
+        std::vector<int> idx{ sensor_map[i] };
+        size_t idx_size{ idx.size() };
+        Eigen::VectorXd r(idx_size);
+        Eigen::MatrixXd S_inv(idx_size, idx_size);
+
+        // Sample the innovation and covariance matrices created in the update function to get the corresponding
+        // values of the current sensor.
+        for (size_t i{ 0 }; i < idx_size; ++i)
+        {
+            r(i) = innovation_(idx[i]);
+            for (size_t j{ 0 }; j < idx_size; ++j)
+            {
+                S_inv(i, j) = innovation_cov_inverse_(idx[i], idx[j]);
+            }
+        }
+        // Compute the mahalanobis distance of the measurements from the distribution of the prediction
+        double mahalanobis_dist{ r.transpose() * S_inv * r };
+
+        // TODO: ros parameter method to get each of the threshold values
+        double thresh{ 100 };
+
+        // Compare distance to threshold. If distance is smaller the measurement is accepted and the observation indices
+        // are appended to the output vector.
+        if (mahalanobis_dist < thresh)
+        {
+            std::move(idx.begin(), idx.end(), std::back_inserter(passed_idx));
+        }
+    }
+    return passed_idx;
 }
 
 // The state equations of the filter can be modified through this function
@@ -107,7 +162,7 @@ bool VelocityEstimator::predict() {
     return true;
 }
 
-bool VelocityEstimator::update(const std::vector<size_t>& indices) {
+bool VelocityEstimator::update() {
     // Set the measurement function jacobian variables according to the current state
     measurement_function_jacobian_(ObservationAx, StateVyaw) = -2 * vn_200_rx_ * state_(StateVyaw);
     measurement_function_jacobian_(ObservationAy, StateVyaw) = -2 * vn_200_ry_ * state_(StateVyaw);
@@ -116,76 +171,62 @@ bool VelocityEstimator::update(const std::vector<size_t>& indices) {
     // Get predicted observations
     predictObservations();
 
-    // Set subset matrices to execute the algorithm
-    size_t update_size{ indices.size() };
+    // In order to pass through the mahalanobis threshold the measurement residual or innovation from the predicted
+    // measurements is needed along with its covariance. We calculate the whole vector and matrix for now even with
+    // measurements we didn't get and later we'll subset said objects with only the ones that passed the threshold.
+    innovation_ = measurements_ - observations_;
+    pht_ = state_covariance_ * measurement_function_jacobian_.transpose();
+    innovation_cov_inverse_ = (measurement_function_jacobian_ * pht_ + measurement_noise_cov_).inverse();
 
-    Eigen::VectorXd measurement_subset(update_size);
-    Eigen::VectorXd observation_subset(update_size);
-    Eigen::MatrixXd measurement_cov_subset(update_size, update_size);
+    // Pass measurements through the mahalanobis threshold, only the indices in the returned vector are going to be
+    // used for the update of the estimation.
+    std::vector<int> passed_indices{ mahalanobisThreshold() };
+
+    // Set subset matrices to execute the update algorithm
+    size_t update_size{ passed_indices.size() };
+
+    Eigen::VectorXd innovation_subset(update_size);
+    Eigen::MatrixXd pht_subset(static_cast<int>(StateSize), update_size);
+    Eigen::MatrixXd innovation_cov_inv_subset(update_size, update_size);
     Eigen::MatrixXd measurement_jacobian_subset(update_size, static_cast<int>(StateSize));
-
+    Eigen::MatrixXd measurement_cov_subset(update_size, update_size);
     Eigen::MatrixXd kalman_gain(static_cast<int>(StateSize), update_size);
-    Eigen::VectorXd innovation(update_size);
 
+    // Fill them with the correct values
     for (size_t i{ 0 }; i < update_size; ++i)
     {
-        measurement_subset(i) = measurements_(indices[i]);
-        observation_subset(i) = observations_(indices[i]);
-        measurement_jacobian_subset.row(i) = measurement_function_jacobian_.row(indices[i]);
-
-        // If we do dynamic measurement covariance, we should check for negative and very small values
+        innovation_subset(i) = innovation_(passed_indices[i]);
+        pht_subset.col(i) = pht_.col(passed_indices[i]);
+        measurement_jacobian_subset.row(i) = measurement_function_jacobian_.row(passed_indices[i]);
         for (size_t j{ 0 }; j < update_size; ++j)
         {
-            measurement_cov_subset(i, j) = measurement_noise_cov_(indices[i], indices[j]);
+            innovation_cov_inv_subset(i, j) = innovation_cov_inverse_(passed_indices[i], passed_indices[j]);
+            measurement_cov_subset(i, j) = measurement_noise_cov_(passed_indices[i], passed_indices[j]);
         }
     }
-
-    // Compute innovation
-    innovation = measurement_subset - observation_subset;
-
     // Compute the Kalman Gain
-    // pht has size (StateSize, update_size)
-    Eigen::MatrixXd pht = state_covariance_ * measurement_jacobian_subset.transpose();
-    // hphr_inverse has size (update_size, update_size)
-    Eigen::MatrixXd hphr_inverse = (measurement_jacobian_subset * pht + measurement_cov_subset).inverse();
-    kalman_gain = pht * hphr_inverse;
+    // We set no aliasing because the matrices multiplied are different and element wise multiplication can be done 
+    // directly into the kalman gain.
+    kalman_gain.noalias() = pht_subset * innovation_cov_inv_subset;
 
-    // Mahalanobis threshold
-    // TODO: (...)
+    // Compute state estimate and state covariance.
+    state_.noalias() += kalman_gain * innovation_subset;
 
-    // Compute state estimate and state covariance
-
-    // we set no aliasing because the matrices multiplied are different and 
-    // element wise multiplication can be done directly into the state vector
-    state_.noalias() += kalman_gain * innovation;
-
-    // consider changing the covariance update formula to the Joseph form (I - KH)P(I - KH)' + KRK'
-    state_covariance_ = (identity_ - kalman_gain * measurement_jacobian_subset) * state_covariance_;
+    StateMatrix A{ identity_ - kalman_gain * measurement_jacobian_subset };
+    state_covariance_ = A * state_covariance_ * A.transpose() + kalman_gain * measurement_cov_subset * kalman_gain.transpose();
 
     return true;
 }
 
 /* Runs both steps of the EKF algorithm (predict and update) and takes care of vector subsets based on the update vector
- * input. The arguments are passed in by value although they are computationally expensive to copy. This is done in case
- * we use multithreading to run this node, where passing by reference would possibly be a problem. Research is actually
- * needed to optimize this part of the algorithm in either case.
+ * input. All incoming measurements are passed through a mahalanobis threshold to reject outliers.
  */
 void VelocityEstimator::runAlgorithm() {
-    // Create an array with the indices of the measurements to be updated
-    // !size_t (unsigned long) might be too big, maybe we can use just uint
-    std::vector<size_t> update_indices;
-    for (size_t i{ 0 }; i < ObservationSize; ++i)
-    {
-        // Maybe check for nan or inf values in the measurements?  
-        if (update_vector_[i])
-        {
-            update_indices.push_back(i);
-        }
-    }
-    // Run predict step
+    // Run predict step.
     predict();
-    // Pass the indices in the update function so subsets can be created
-    update(update_indices);
+    // Run the update step where the threshold is applied and subsets are created.
+    update();
+    // Publish the new estimated state.
     node_handler_->publishResults();
 }
 } // namespace ns_vel_est

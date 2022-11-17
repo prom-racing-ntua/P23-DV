@@ -1,9 +1,13 @@
-can_listener:
-  ros__parameters:
-    # Configure Port
-    port: '/dev/ttyACM0'
-    baudrate: 115200
-    timeout: 10
+canbus:
+  can_interface:
+    ros__parameters:
+      # Configure Port
+      port: '/dev/ttyACM0'
+      baudrate: 115200
+      timeout: 0.1
 
-    # Sensor Configuration
-    enabled_sensors: ['trash']
+      read_frequency: 50
+
+      # Sensor Configuration - Incoming Messages
+      enabled_sensors: ['front_halls', 'rear_halls', 'steering', 'brakes']
+      # outgoing_messages: ['simple_pub']

@@ -22,7 +22,9 @@ if(BUILD_TESTING)
 endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/HallSensors.msg"
+  "msg/WheelSpeed.msg"
+  "msg/SteeringAngle.msg"
+  "msg/BrakePressure.msg"
   "msg/Trash.msg"
   "msg/VelEstimation.msg"
   DEPENDENCIES std_msgs

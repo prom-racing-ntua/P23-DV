@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <array>
+#include <vector>
 #include <eigen3/Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
 
@@ -32,7 +33,12 @@ private:
     ObservationVector observations_;
 
     ObservationVector measurements_;
-    std::array<bool, ObservationSize> update_vector_;
+    std::array<bool, SensorSize> updated_sensors_;
+
+    // Innovation and stuff for update
+    ObservationVector innovation_;
+    Eigen::Matrix<double, StateSize, ObservationSize> pht_;
+    MeasurementNoiseMatrix innovation_cov_inverse_;
 
     // Jacobian Matrices
     StateMatrix transfer_function_jacobian_;
@@ -45,11 +51,18 @@ private:
     // Identity Matrix  used for covariance update
     StateMatrix identity_;
 
+    // Map of Sensors to Observations
+    std::unordered_map<int, std::vector<int>> sensor_map;
+
     // Sensor parameters
     double vn_200_rx_;
     double vn_200_ry_;
     double vn_300_rx_;
     double vn_300_ry_;
+
+    // Pass all current measurements through the mahalanobis threshold in order to reject outliers. Returns
+    // a vector with the observation indices that passed the threshold.
+    std::vector<int> mahalanobisThreshold();
 
     // Projects the state vector forward
     void getNextState();
@@ -63,7 +76,13 @@ private:
      */
     bool predict();
 
-    bool update(const std::vector<size_t>& indices);
+    /* --- Executes the update step of the algorithm ---
+     * The expected measurements are calculated from the prediction of the current state
+     * and the error and its covariance are found. The outlier measurements are rejected
+     * and the rest are used to update the predicted state. For the state covariance update
+     * the Joseph form is used to ensure the stability of the solution.
+     */
+    bool update();
 
 public:
     explicit VelocityEstimator(Handle nh);
@@ -77,7 +96,7 @@ public:
     // Setters
     void setDeltaTime(const double dt) { delta_time_ = dt; }
     void setMeasurements(const ObservationVector& meas) { measurements_ = meas; }
-    void setUpdateVector(const std::array<bool, ObservationSize>& update) { update_vector_ = update; }
+    void setUpdateVector(const std::array<bool, SensorSize>& update) { updated_sensors_ = update; }
 
     // Getters
     StateVector getState() { return state_; }

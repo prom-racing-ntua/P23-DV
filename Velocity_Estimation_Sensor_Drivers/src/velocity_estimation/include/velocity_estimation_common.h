@@ -1,6 +1,8 @@
 #ifndef VELOCITY_ESTIMATION_COMMON_H
 #define VELOCITY_ESTIMATION_COMMON_H
 
+#include <unordered_map>
+
 namespace ns_vel_est
 {
 
@@ -31,6 +33,16 @@ enum ObservationVectorEnum {
     ObservationSize,
 };
 
+enum SensorEnum {
+    VelocitySensor,
+    Gyroscope,
+    Accelerometer,
+    FrHall,
+    FlHall,
+    RrHall,
+    RlHall,
+    SensorSize,
+};
 
 } // namespace ns_vel_est
 

@@ -1,6 +1,6 @@
 velocity_estimation_node:
   ros__parameters:
-    frequency: 40         # [Hz]
+    frequency: 20         # [Hz]
 
     initial_state_vector: [0.0, 0.0, 1.0, 0.5, 0.5, -0.5]
 

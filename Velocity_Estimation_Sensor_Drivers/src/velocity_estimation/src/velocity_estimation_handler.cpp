@@ -21,7 +21,8 @@ VelocityEstimationHandler::VelocityEstimationHandler()
 
     // Initialize the measurement and update vector with zeros
     measurement_vector_.setZero();
-    update_vector_ = { 1, 1, 1, 1, 1, 0, 0, 0, 0 };
+    // Should be all zeros...
+    updated_sensors_ = { 1, 1, 1, 0, 0, 0, 0 };
 
     setSubscribers();
 
@@ -43,13 +44,12 @@ void VelocityEstimationHandler::setSubscribers() {
     // overwritten afterwards, it is necessary for the QoSInitialization argument.
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
 
-    // TODO: change the topic names according to the new namespaces of each vectornav unit
-    vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vectornav2/raw/ins",
-        sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1)); // vn-300
-    // vn_attitude_sub_ = create_subscription<vectornav_msgs::msg::AttitudeGroup>("vectornav2/raw/attitude",
-    // sensor_qos, std::bind(&VelocityEstimationHandler::attitudeCallback, this, _1)); // vn-300
-    vn_imu_sub_ = create_subscription<vectornav_msgs::msg::ImuGroup>("vectornav/raw/imu",
-        sensor_qos, std::bind(&VelocityEstimationHandler::imuCallback, this, _1)); // vn-200
+    vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vn_300/raw/ins",
+        sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1));
+    // vn_attitude_sub_ = create_subscription<vectornav_msgs::msg::AttitudeGroup>("vn_300/raw/attitude",
+    // sensor_qos, std::bind(&VelocityEstimationHandler::attitudeCallback, this, _1));
+    vn_imu_sub_ = create_subscription<vectornav_msgs::msg::ImuGroup>("vn_200/raw/imu",
+        sensor_qos, std::bind(&VelocityEstimationHandler::imuCallback, this, _1));
 }
 
 void VelocityEstimationHandler::publishResults() {
@@ -62,21 +62,24 @@ void VelocityEstimationHandler::publishResults() {
     msg.u_y = pub_state(StateVy);
     msg.u_yaw = pub_state(StateVyaw);
     //msg.var_matrix = pub_cov.block(0,0,3,3);
-    for (int i=0; i<3; i++) {
-	for (int j=0; j<3; j++) {
-		msg.var_matrix[i*3+j] = pub_cov((i+StateVx)*6+(j+StateVx));
-	}
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            msg.var_matrix[i * 3 + j] = pub_cov((i + StateVx) * 6 + (j + StateVx));
+        }
     }    // this will not work properly if Vx, Vy, Vyaw are separated
 
     pub_->publish(msg);
 }
+
 // ROS Callback Functions
 
 void VelocityEstimationHandler::timerCallback() {
     // TODO: timing of the execution and warn if greater than clock cycle
-    estimator_.setUpdateVector(update_vector_);
+    estimator_.setUpdateVector(updated_sensors_);
     estimator_.setMeasurements(measurement_vector_);
-    update_vector_ = { 1, 1, 1, 1, 1, 0, 0, 0, 0 };
+    updated_sensors_ = { 1, 1, 1, 0, 0, 0, 0 };
     estimator_.runAlgorithm();
 }
 
@@ -85,8 +88,7 @@ void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsG
     measurement_vector_(ObservationVx) = static_cast<double>(msg->velbody.x);
     measurement_vector_(ObservationVy) = static_cast<double>(msg->velbody.y);
     // Set the update vector indices
-    update_vector_[ObservationVx] = 1;
-    update_vector_[ObservationVy] = 1;
+    updated_sensors_[VelocitySensor] = 1;
 }
 
 // void VelocityEstimationHandler::attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg) {
@@ -99,9 +101,8 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
     measurement_vector_(ObservationAx) = static_cast<double>(msg->accel.x);
     measurement_vector_(ObservationAy) = static_cast<double>(msg->accel.y);
     // Set the update vector indices
-    update_vector_[ObservationAx] = 1;
-    update_vector_[ObservationAy] = 1;
-    update_vector_[ObservationVyaw] = 1;
+    updated_sensors_[Accelerometer] = 1;
+    updated_sensors_[Gyroscope] = 1;
 }
 
 // Loads the node parameters from the .yaml file

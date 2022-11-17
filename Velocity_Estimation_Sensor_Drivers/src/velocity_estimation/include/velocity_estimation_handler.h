@@ -3,7 +3,6 @@
 
 #include <chrono>
 #include <functional>
-#include <vector>
 #include <rclcpp/rclcpp.hpp>
 
 // Include custom vectornav messages
@@ -37,7 +36,7 @@ private:
     // ROS Publisher to output results to the velocity estimation topic
     rclcpp::Publisher<custom_msgs::msg::VelEstimation>::SharedPtr pub_;
 
-    std::array<bool, ObservationSize> update_vector_;
+    std::array<bool, SensorSize> updated_sensors_;
     ObservationVector measurement_vector_;
 
     void loadParameters();
