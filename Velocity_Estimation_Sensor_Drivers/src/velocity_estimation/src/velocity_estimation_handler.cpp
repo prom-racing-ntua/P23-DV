@@ -21,8 +21,7 @@ VelocityEstimationHandler::VelocityEstimationHandler()
 
     // Initialize the measurement and update vector with zeros
     measurement_vector_.setZero();
-    // Should be all zeros...
-    updated_sensors_ = { 1, 1, 1, 0, 0, 0, 0 };
+    updated_sensors_.fill(false);
 
     setSubscribers();
 
@@ -53,34 +52,44 @@ void VelocityEstimationHandler::setSubscribers() {
 }
 
 void VelocityEstimationHandler::publishResults() {
+    constexpr static std::array<int, 3> outputs{ StateVx, StateVy, StateVyaw };
+    static unsigned long count{ 0 };
     const StateVector pub_state{ estimator_.getState() };
     const StateMatrix pub_cov{ estimator_.getStateCovariance() };
     custom_msgs::msg::VelEstimation msg;
 
-    msg.counter = 24; // to be changed to master's counter
+    msg.counter = count++; // to be changed to master's counter
     msg.u_x = pub_state(StateVx);
     msg.u_y = pub_state(StateVy);
     msg.u_yaw = pub_state(StateVyaw);
-    //msg.var_matrix = pub_cov.block(0,0,3,3);
-    for (int i = 0; i < 3; i++)
+    for (size_t i{ 0 }; i < outputs.size(); ++i)
     {
-        for (int j = 0; j < 3; j++)
+        for (size_t j{ 0 }; j < outputs.size(); ++j)
         {
-            msg.var_matrix[i * 3 + j] = pub_cov((i + StateVx) * 6 + (j + StateVx));
+            msg.var_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
-    }    // this will not work properly if Vx, Vy, Vyaw are separated
-
+    }
     pub_->publish(msg);
 }
 
 // ROS Callback Functions
 
 void VelocityEstimationHandler::timerCallback() {
-    // TODO: timing of the execution and warn if greater than clock cycle
+    rclcpp::Time starting_time{ this->now() };
     estimator_.setUpdateVector(updated_sensors_);
+    // Check if no new measurements came this time step and use dead reckoning if true
+    bool dead_reck{ false };
+    if (std::none_of(updated_sensors_.begin(), updated_sensors_.end(), [](bool v) { return v; }))
+    {
+        dead_reck = true;
+        RCLCPP_WARN_STREAM(get_logger(), "No measurements received this time step. Dead-reckoning...");
+    }
     estimator_.setMeasurements(measurement_vector_);
-    updated_sensors_ = { 1, 1, 1, 0, 0, 0, 0 };
-    estimator_.runAlgorithm();
+    updated_sensors_.fill(false);
+    estimator_.runAlgorithm(dead_reck);
+
+    rclcpp::Duration total_time{ this->now() - starting_time };
+    RCLCPP_INFO_STREAM(get_logger(), "\n-- Execution Completed --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
 void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg) {
@@ -88,7 +97,7 @@ void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsG
     measurement_vector_(ObservationVx) = static_cast<double>(msg->velbody.x);
     measurement_vector_(ObservationVy) = static_cast<double>(msg->velbody.y);
     // Set the update vector indices
-    updated_sensors_[VelocitySensor] = 1;
+    updated_sensors_[VelocitySensor] = true;
 }
 
 // void VelocityEstimationHandler::attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg) {
@@ -101,8 +110,8 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
     measurement_vector_(ObservationAx) = static_cast<double>(msg->accel.x);
     measurement_vector_(ObservationAy) = static_cast<double>(msg->accel.y);
     // Set the update vector indices
-    updated_sensors_[Accelerometer] = 1;
-    updated_sensors_[Gyroscope] = 1;
+    updated_sensors_[Accelerometer] = true;
+    updated_sensors_[Gyroscope] = true;
 }
 
 // Loads the node parameters from the .yaml file

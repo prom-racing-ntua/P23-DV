@@ -91,7 +91,7 @@ public:
     // Initializes the Kalman filter matrices and other variables
     void init();
 
-    void runAlgorithm();
+    void runAlgorithm(bool dead_reckoning = false);
 
     // Setters
     void setDeltaTime(const double dt) { delta_time_ = dt; }

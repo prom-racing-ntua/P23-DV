@@ -182,6 +182,13 @@ bool VelocityEstimator::update() {
     // used for the update of the estimation.
     std::vector<int> passed_indices{ mahalanobisThreshold() };
 
+    // See if no measurement passed the threshold and skip the update step
+    if (passed_indices.empty())
+    {
+        RCLCPP_WARN(node_handler_->get_logger(), "\nNo valid measurement for the update of the estimate. Dead-reckoning...");
+        return false;
+    }
+
     // Set subset matrices to execute the update algorithm
     size_t update_size{ passed_indices.size() };
 
@@ -221,11 +228,11 @@ bool VelocityEstimator::update() {
 /* Runs both steps of the EKF algorithm (predict and update) and takes care of vector subsets based on the update vector
  * input. All incoming measurements are passed through a mahalanobis threshold to reject outliers.
  */
-void VelocityEstimator::runAlgorithm() {
+void VelocityEstimator::runAlgorithm(bool dead_reckoning) {
     // Run predict step.
     predict();
     // Run the update step where the threshold is applied and subsets are created.
-    update();
+    if (!dead_reckoning) { update(); }
     // Publish the new estimated state.
     node_handler_->publishResults();
 }
