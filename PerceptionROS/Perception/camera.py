@@ -65,26 +65,22 @@ def main():
 
     elif mode == "Trigger":
         setTriggerMode(cameras)
- 
-    # Register callback function
-    # data_stream = cameras[0].data_stream[0]
-    # cnt = 0
-    # data_stream.register_capture_callback(capture_callback)
 
     # Set ROI (max Width, half height)
-    for i in cameras:  
-        setCameraROI(i, offsetY=256, offsetX=0, img_width=1280, img_height=512)
+    # for i in cameras:  
+        setCameraROI(cameras[0], offsetY=256, offsetX=0, img_width=1280, img_height=512)
         # setSettings(i)
     
     # Start acquisition
     switchAcquisitionAllCameras(cameras, True)
 
     if mode == "Trigger":
-        for i in range(1):
+        for i in range(5):
             sendTriggerCommand(cameras[0])
-            img1,_,_ = receiveAndConvertImage(cameras[0])
-            pipe(img1)
-            
+            before = datetime.now()
+            img1 = receiveAndConvertImage(cameras[0])
+            after = datetime.now()
+            print(f"Before: {before} and After: {after}")            
 
     elif mode == "Continuous":
         while(1):

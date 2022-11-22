@@ -40,7 +40,7 @@ class Camera:
         self.cam.BalanceWhiteAuto.set(gx.GxAutoEntry.CONTINUOUS)
 
         # Set ExposureTime
-        self.cam.ExposureTime.set(100000)
+        self.cam.ExposureTime.set(10000)
 
         # Set TriggerMode to Trigger
         self.cam.TriggerMode.set(gx.GxTriggerSourceEntry.SOFTWARE)
@@ -64,8 +64,6 @@ class Camera:
         timestamp = raw_image.get_timestamp()
         frame_id = raw_image.get_frame_id()
 
-        # TODO: check from which camera i received the image
-
         if raw_image is None:
             print("Failed to capture image")
 
@@ -73,7 +71,7 @@ class Camera:
 
         numpy_image = rgb_image.get_numpy_array()
 
-        return numpy_image, timestamp, frame_id, self.orientation
+        return numpy_image, timestamp, frame_id
 
 
 # Camera Opening/Closing/Reseting

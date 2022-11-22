@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 import torch
 import torchvision
+import sys
 
 # Image Functions
 def saveImage(img, imgName:str):
@@ -38,7 +39,6 @@ def receiveAndConvertImage(camera):
     """
     raw_image = camera.data_stream[0].get_image()
     timestamp = raw_image.get_timestamp()
-    # print(f"{camera.DeviceSerialNumber.get()}: {round(nanoToSecond(timestamp),5)} Frame ID: {raw_image.get_frame_id()}")
     frame_id = raw_image.get_frame_id()
     if raw_image is None:
         print("Failed to capture image")
@@ -51,8 +51,8 @@ def receiveAndConvertImage(camera):
     if numpy_image is None:
         print("hihi")
     # Image Processing...
-    img = Image.fromarray(numpy_image, 'RGB')
-    return numpy_image,timestamp,frame_id
+    # img = Image.fromarray(numpy_image, 'RGB')
+    return numpy_image, timestamp, frame_id
     
 # General Purpose Functions
 def nanoToSecond(timestamp:int):

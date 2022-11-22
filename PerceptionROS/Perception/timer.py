@@ -18,22 +18,23 @@ from PIL import Image
 from rclpy.node import Node
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 
-# sys.path.append("/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception")
+sys.path.append("/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception")
 from acquisition import *
 from callback import *
 from camera_control import *
 from cnn import *
 from pipe import *
+from helpers import *
 
 from enum import Enum
 
 
 
 class PerceptionHandler(Node):
-    def __init__(self, cameras, yoloModelPath:str, keypointsModelPath:str, runDirPath:str):
+    def __init__(self, camera, yoloModelPath:str, keypointsModelPath:str, runDirPath:str):
         super().__init__('perception_node')
         timer_period = 0.1  # seconds (10Hz)
-        self.cameras = cameras
+        self.camera = camera
 
         self.runDirPath = runDirPath
 
@@ -46,14 +47,14 @@ class PerceptionHandler(Node):
 
     def timer_callback(self):
         # Trigger camera and acquire image
-        # imageList = []
-        for i in self.cameras:
-            i.TriggerCamera()
-        
-        for i in self.cameras:
-            (numpyImage, _, frameID, cameraOrientation) = i.AcquireImage()
-            cv2.imwrite(f"{self.runDirPath}/{cameraOrientation}_{getEpoch()}_{frameID}.jpg" ,numpyImage)
-            self.get_logger().info(f"Just saved frame {frameID} from {cameraOrientation} camera")
+        sendTriggerCommand(self.camera)
+
+        before = datetime.now()
+        (numpyImage, _, frameID) = receiveAndConvertImage(self.cameras[0])
+        after = datetime.now()
+        # self.get_logger().info(f"Time before and after: {before} and {after}")
+        cv2.imwrite(f"{self.runDirPath}/{self.camera.orientation}_{getEpoch()}_{frameID}.jpg" ,numpyImage)
+        # self.get_logger().info(f"Just saved frame {frameID} from  camera at time {getEpoch()}")
         # Pipeline Starts Here
         
         self.i += 1
@@ -79,7 +80,7 @@ class PerceptionHandler(Node):
 
         
 def getEpoch():
-    return int(time.time())
+    return float(time.time())
 
 def main(args=None):
     rclpy.init(args=args)
