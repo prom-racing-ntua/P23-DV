@@ -3,11 +3,11 @@
 <package format="3">
   <name>Perception</name>
   <version>0.0.0</version>
-
-
+  
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-
+  <exec_depend>perception_msgs</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
   
   <description>TODO: Package description</description>
   <maintainer email="billvrettos2000@gmail.com">vasilis</maintainer>

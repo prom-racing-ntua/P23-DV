@@ -19,7 +19,6 @@ from rclpy.node import Node
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 
 sys.path.append("/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception")
-from acquisition import *
 from callback import *
 from camera_control import *
 from cnn import *

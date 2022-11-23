@@ -2,15 +2,6 @@ import gxipy as gx
 import sys
 from enum import Enum
 
-
-
-# Camera Orientation Table (To be implemented):
-# "KE0220040196" -> LEFT
-# 
-# 
-
-
-
 class CameraOrientation(Enum):
     LEFT = 1
     CENTER = 2

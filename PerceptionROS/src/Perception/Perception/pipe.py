@@ -1,11 +1,8 @@
 import cv2
 import torch
-from PIL import Image
 
-import pandas as pd
 import numpy as np
 
-import matplotlib.pyplot as plt
 import math
 
 from torch.utils.data import Dataset
@@ -14,8 +11,6 @@ import torchvision
 from torch.utils.data import SubsetRandomSampler, DataLoader
 
 import torch.optim as optim
-
-from helpers import *
 
 from cnn import *
 
@@ -63,7 +58,6 @@ def cropResizeCones(yolo_results, images):
 
       # Resize Cones
       cone = cv2.resize(cone,dsize=(48,64))
-      saveImage(Image.fromarray(cone, 'RGB'), f"cone{j}")
       img_cones_list.append(cone)
       img_classes_list.append(cone_dict['class'])
     cones_list.append(img_cones_list)
@@ -89,11 +83,10 @@ def runKeypoints(cones_list, keypoints_model, images):
   for k in range(0,7):
     cones_list[0][0][int(predictions[0][k][1])-1:int(predictions[0][k][1])+1,int(predictions[0][k][0])-1:int(predictions[0][k][0])+1] = np.array([0,255,0])
 
-  saveImage(Image.fromarray(cones_list[0][0], 'RGB'), "pred")
   return predictions
 # End Function
 
-def finalCoordinates(cones_list, or_dimensions, predictions, imgs, cameraMatrix, distCoeffs, objp_orange, monoimg):
+def finalCoordinates(cones_list, or_dimensions, predictions, imgs, cameraMatrix, distCoeffs, objp_orange):
   curr = 0
   for i in range(len(imgs)):
     keypoints_image = []
@@ -107,12 +100,11 @@ def finalCoordinates(cones_list, or_dimensions, predictions, imgs, cameraMatrix,
         y = predictions[curr+j][k][1]*(or_dimensions[i][j][3] - or_dimensions[i][j][1])/64 + or_dimensions[i][j][1]
         #print(x,y)
         
-        monoimg[int(y)-4:int(y)+4,int(x)-4:int(x)+4] = np.array([0,255,0])
+        # monoimg[int(y)-4:int(y)+4,int(x)-4:int(x)+4] = np.array([0,255,0])
 
 
         keypoints_cone.append([x,y]) 
       keypoints_cone_numpy = np.array(keypoints_cone)
-      saveImage(Image.fromarray(monoimg, 'RGB'), "mono")
       success, rotation_vector, translation_vector = cv2.solvePnP(objp_orange, keypoints_cone_numpy, cameraMatrix, distCoeffs)
       pnp_image.append([success, rotation_vector, translation_vector])
 
@@ -157,10 +149,8 @@ def pipe(img):
 
 
 def main():
-    #imgpath = "/home/vasilis/Projects/Prom/Perception/gfr_00554.jpg"
     monopath = "../data/52310296366_46561cba17_o.jpg"
     #monopath = "../data/mono 500 50.bmp"
-    #stereopath = "/home/vasilis/Projects/Prom/Perception/test_images/stereo l 200 0.bmp"
     modelpath = "../models/best.pt"
     keypoints_modelpath = "../models/KeypointsModelComplex.pt"
 
@@ -205,10 +195,6 @@ def main():
 
     #print(final_coordinates)
     
-
-
-
-
 
 if __name__ == "__main__":
     main()
