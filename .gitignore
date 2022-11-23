@@ -1,9 +1,18 @@
 
 YOLO neural network/.idea/inspectionProfiles/profiles_settings.xml
 YOLO neural network/.idea/inspectionProfiles/Project_Default.xml
+
+# Ignore clutter files
 *.json
 *.jpg
 *.png
+
 YOLO_neural_network/test.ipynb
 YOLO_neural_network/test.py
 YOLO_neural_network/.idea/.name
+
+# Ignore ROS2 build folders
+*/build
+*/install
+*/log
+__pycache__/

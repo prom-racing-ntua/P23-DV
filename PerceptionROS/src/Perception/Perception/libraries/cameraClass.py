@@ -2,12 +2,15 @@ import gxipy as gx
 import sys
 
 class Camera:
-    def __init__(self, resolution:tuple, serialNumber:str, orientation:str):
+    def __init__(self, resolution:tuple, serialNumber:str, orientation:str, exposureTime:int):
         self.device_manager = gx.DeviceManager()
+
+        # Basic Camera Settings
         self.ROIx = resolution[0]
         self.ROIy = resolution[1]
         self.serialNumber = serialNumber
         self.orientation = orientation
+        self.exposureTime = exposureTime
         
         dev_num, self.dev_info_list = self.device_manager.update_device_list()
         if dev_num == 0:
@@ -25,7 +28,7 @@ class Camera:
         self.cam.BalanceWhiteAuto.set(gx.GxAutoEntry.CONTINUOUS)
 
         # Set ExposureTime
-        self.cam.ExposureTime.set(10000)
+        self.cam.ExposureTime.set(self.exposureTime)
 
         # Set TriggerMode to Trigger
         self.cam.TriggerMode.set(gx.GxTriggerSourceEntry.SOFTWARE)

@@ -19,11 +19,9 @@ from torch.utils.data import Dataset
 from torch.utils.data import SubsetRandomSampler, DataLoader
 import torch.optim as optim
 
-sys.path.append("/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception")
-
 # Homemade Libraries
-from cnn import *
-from pipe import *
+from .libraries.cnn import *
+from .libraries.pipe import initYOLOModel, inferenceYOLO, initKeypoint, cropResizeCones, runKeypoints, finalCoordinates, pipe
 
 class InferenceNode(Node):
     def __init__(self, models, arrays):

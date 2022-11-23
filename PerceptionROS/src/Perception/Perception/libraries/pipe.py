@@ -11,8 +11,7 @@ import torchvision
 from torch.utils.data import SubsetRandomSampler, DataLoader
 
 import torch.optim as optim
-
-from cnn import *
+from .cnn import *
 
 def initYOLOModel(modelpath, conf=0.25, iou=0.45):
 

@@ -32,9 +32,6 @@ from torch.utils.data import SubsetRandomSampler, DataLoader
 
 import torch.optim as optim
 
-from cnn import *
-
-from pipe import *
 
 def main():
     print("Start Perception")
