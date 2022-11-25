@@ -1,21 +1,21 @@
-acquisition_1:
-  ros_parameters:
+acquisition_left:
+  ros__parameters:
     serialNumber: "KE0220030137"
     exposureTime: 10000
     ROIx: 1280
     ROIy: 1024
     orientation: "left"
 
-acquisition_2:
-  ros_parameters:
+acquisition_right:
+  ros__parameters:
     serialNumber: "KE0220040196"
     exposureTime: 10000
     ROIx: 1280
     ROIy: 1024
     orientation: "right"
 
-acquisition_3:
-  ros_parameters:
+acquisition_center:
+  ros__parameters:
     serialNumber: "KE0220030138"
     exposureTime: 10000
     ROIx: 1280

@@ -38,22 +38,24 @@ class AcquisitionNode(Node):
             sys.exit(2)
         devSN = dev_info_list[0].get("sn")
 
-
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+            ('serialNumber', devSN),
+            ('orientation', 'random'),
+            ('exposureTime', 10000),
+            ('ROIx', 1280),
+            ('ROIy', 1024)
+            ]
+        )
         # Get Parameters from launch file
-        self.declare_parameter('serialNumber', devSN)
         serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
-
-        self.declare_parameter('orientation', 'random')
         orientation = self.get_parameter('orientation').get_parameter_value().string_value
-
-        self.declare_parameter('exposureTime', 10000)
         exposureTime = self.get_parameter('exposureTime').get_parameter_value().integer_value
-
-        self.declare_parameter('ROIx', 1280)
         ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
-
-        self.declare_parameter('ROIy', 1024)
         ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
+
+        self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}")
 
 
         # TODO: Add parameters from launch file to control exposure time, ROI e.t.c.
