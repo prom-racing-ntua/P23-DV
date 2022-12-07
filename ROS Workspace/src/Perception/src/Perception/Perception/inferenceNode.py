@@ -1,16 +1,19 @@
 # System related imports
 import sys
+import os
 
 # ROS2 Related Imports
 import rclpy
 from rclpy.node import Node
 from perception_msgs.msg import AcquisitionMessage
 from cv_bridge import CvBridge, CvBridgeError
+from ament_index_python.packages import get_package_share_directory
 
 # Perception Related Imports
 import cv2
 import numpy as np
 import math
+import pandas as pd
 import json
 
 import torchvision
@@ -56,6 +59,7 @@ class InferenceNode(Node):
         try:
             # Get data from message
             orientation = msg.camera_orientation
+            self.get_logger().info("just received from camera")
             image = self.bridge.imgmsg_to_cv2(msg.image, "passthrough")
         except CvBridgeError as e:
             # Print error if image conversion was not succseful
@@ -65,26 +69,30 @@ class InferenceNode(Node):
             # Perform Perception Pipeline
             images = [image]
             results = inferenceYOLO(self.yoloModel, images, 1280)
-            conesList, classesList, originalDimensions = cropResizeCones(results, images)
-            keypointsPredictions = runKeypoints(conesList, self.smallKeypointsModel, images)
-            final_coordinates = finalCoordinates(conesList, originalDimensions, keypointsPredictions, images, self.cameraMatrix, self.distCoeffs, self.objp_orange)
-            self.get_logger().info(f'Printing Final Coordinates {final_coordinates}')
-
+            if results.pandas().xyxy[0].empty:
+                self.get_logger().info("No cones found")
+            else:
+                conesList, classesList, originalDimensions = cropResizeCones(results, images)
+                keypointsPredictions = runKeypoints(conesList, self.smallKeypointsModel, images)
+                final_coordinates = finalCoordinates(conesList, originalDimensions, keypointsPredictions, images, self.cameraMatrix, self.distCoeffs, self.objp_orange)
+                self.get_logger().info(f'Printing Final Coordinates {final_coordinates}')
             # Send message to SLAM Node
             # self.publisher_.publish(perception2slam_msg)
     
 
 def main(args=None):
     rclpy.init(args=args)
+    
+    path = get_package_share_directory("Perception")
+    models = os.path.join(path,"models")
 
-    # TODO: Setup global project paths
-    # Setup Models and NumpyArray paths
-    yoloModelPath = "/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception/models/yolov5s6.pt"
-    smallKeypointsModelPath = "/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception/models/KeypointsModelComplex.pt"
-    largeKeypointsModelPath = ""
+    numpyObjects = os.path.join(path,"numpyObjects")
+    yoloModelPath = f"{models}/yolov5s6.pt"
+    smallKeypointsModelPath = f"{models}/KeypointsModelComplex.pt"
+    largeKeypointsModelPath = f"{models}/LargeKeypointsModelComplex.pt"
 
-    cameraMatrix = np.load('/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception/cameraMatrix.npy')
-    distCoeffs = np.load('/home/vasilis/Projects/Prom/P23-DV-Workspace/src/Perception/Perception/distCoeffs.npy')
+    cameraMatrix = np.load(f'{numpyObjects}/cameraMatrix.npy')
+    distCoeffs = np.load(f'{numpyObjects}/distCoeffs.npy')
     objp_orange = np.array([[0, 32.5 ,0],
                  [-4.3, 20.5, 0],
                  [4.3, 20.5, 0],

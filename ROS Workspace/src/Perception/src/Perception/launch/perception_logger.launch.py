@@ -13,19 +13,19 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='Perception',
-            executable='acquisition',
+            executable='acquisition_logger',
             name='acquisition_left',
             parameters=[config]
         ),
         Node(
             package='Perception',
-            executable='acquisition',
+            executable='acquisition_logger',
             name='acquisition_right',
             parameters=[config]
         ),
         Node(
             package='Perception',
-            executable='acquisition',
+            executable='acquisition_logger',
             name='acquisition_center',
             parameters=[config]
         )

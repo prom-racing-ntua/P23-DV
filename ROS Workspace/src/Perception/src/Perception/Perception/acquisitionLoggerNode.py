@@ -24,7 +24,7 @@ def getEpoch():
 
 class AcquisitionNode(Node):
     def __init__(self,runDirPath:str):
-        super().__init__('acquisition_node')
+        super().__init__('acquisition_logger_node')
 
         timer_period = 0.1 # seconds (10Hz)
 
@@ -45,7 +45,8 @@ class AcquisitionNode(Node):
             ('orientation', 'random'),
             ('exposureTime', 10000),
             ('ROIx', 1280),
-            ('ROIy', 1024)
+            ('ROIy', 1024),
+            ('nodeTimer', 0.1)
             ]
         )
         # Get Parameters from launch file
@@ -54,8 +55,10 @@ class AcquisitionNode(Node):
         exposureTime = self.get_parameter('exposureTime').get_parameter_value().integer_value
         ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
         ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
+        nodeTimer = self.get_parameter('nodeTimer').get_parameter_value().double_value
 
-        self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}")
+
+        self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {nodeTimer}")
 
 
         # TODO: Add parameters from launch file to control exposure time, ROI e.t.c.
@@ -74,7 +77,7 @@ class AcquisitionNode(Node):
         # This is used for logging purposes
         self.runDirPath = runDirPath
 
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.timer = self.create_timer(nodeTimer, self.timer_callback)
         self.i = 0
 
     def timer_callback(self):
@@ -84,16 +87,8 @@ class AcquisitionNode(Node):
         numpyImage, frameID = self.camera.AcquireImage()
 
         # Save Image to Run folder
-        cv2.imwrite(f"{self.runDirPath}/{self.camera.orientation}_{timestamp}_{frameID}.jpg" ,cv2.cvtColor(numpyImage, cv2.COLOR_RGB2BGR)
-        )
+        cv2.imwrite(f"{self.runDirPath}/{self.camera.orientation}_{timestamp}_{frameID}.jpg" ,cv2.cvtColor(numpyImage, cv2.COLOR_RGB2BGR))
         self.get_logger().info(f"Just saved frame {frameID} from camera {self.camera.orientation}")
-
-        # # Send Image to Perception Node
-        # msg = AcquisitionMessage()
-        # msg.image = self.bridge.cv2_to_imgmsg(numpyImage, encoding="passthrough")
-        # msg.camera_orientation = self.camera.orientation
-        # self.publisher_.publish(msg)
-        # self.get_logger().info(f'Publishng image {frameID} from camera {self.camera.orientation}')
 
         self.i += 1
 
