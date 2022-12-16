@@ -1,6 +1,5 @@
 # THIS SCRIPT ASSUMES THAT YOU HAVE UBUNTU 20.04 INSTALLED
 
-
 # Add ROS 2 GPG key to repo sources list
 sudo apt update && sudo apt install curl
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg

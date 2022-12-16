@@ -15,9 +15,7 @@ from torch.utils.data import SubsetRandomSampler, DataLoader
 
 import torch.optim as optim
 
-from helpers import *
-
-from cnn import *
+from .cnn import *
 
 def initYOLOModel(modelpath, conf=0.25, iou=0.45):
 
@@ -44,7 +42,7 @@ def initKeypoint(modelpath):
 
 # Input: yolo results, img from camera, imgs = [img]
 # Output: cones_list, classes_list, or_dimensions
-def cropResizeCones(yolo_results, images):
+def cropResizeCones(yolo_results, images, originalImage):
   cones_list = []
   classes_list = []
   or_dimensions = []
@@ -60,10 +58,10 @@ def cropResizeCones(yolo_results, images):
       cone_dict = img_cones.iloc[j].to_dict()
       cone = images[i][math.floor(cone_dict['ymin']):math.floor(cone_dict['ymax']),math.floor(cone_dict['xmin']):math.floor(cone_dict['xmax'])]
       or_dimensions_list.append([cone_dict['xmin'], cone_dict['ymin'], cone_dict['xmax'], cone_dict['ymax']])
-
+      
       # Resize Cones
       cone = cv2.resize(cone,dsize=(48,64))
-      saveImage(Image.fromarray(cone, 'RGB'), f"cone{j}")
+      # saveImage(Image.fromarray(cone, 'RGB'), f"cone{j}")
       img_cones_list.append(cone)
       img_classes_list.append(cone_dict['class'])
     cones_list.append(img_cones_list)
@@ -89,7 +87,7 @@ def runKeypoints(cones_list, keypoints_model, images):
   for k in range(0,7):
     cones_list[0][0][int(predictions[0][k][1])-1:int(predictions[0][k][1])+1,int(predictions[0][k][0])-1:int(predictions[0][k][0])+1] = np.array([0,255,0])
 
-  saveImage(Image.fromarray(cones_list[0][0], 'RGB'), "pred")
+  # saveImage(Image.fromarray(cones_list[0][0], 'RGB'), "pred")
   return predictions
 # End Function
 
@@ -112,7 +110,7 @@ def finalCoordinates(cones_list, or_dimensions, predictions, imgs, cameraMatrix,
 
         keypoints_cone.append([x,y]) 
       keypoints_cone_numpy = np.array(keypoints_cone)
-      saveImage(Image.fromarray(monoimg, 'RGB'), "mono")
+      # saveImage(Image.fromarray(monoimg, 'RGB'), "mono")
       success, rotation_vector, translation_vector = cv2.solvePnP(objp_orange, keypoints_cone_numpy, cameraMatrix, distCoeffs)
       pnp_image.append([success, rotation_vector, translation_vector])
 

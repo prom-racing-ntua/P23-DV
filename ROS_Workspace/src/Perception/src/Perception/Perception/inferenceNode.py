@@ -79,7 +79,7 @@ class InferenceNode(Node):
             # Send message to SLAM Node
             # self.publisher_.publish(perception2slam_msg)
     
-
+    
 def main(args=None):
     rclpy.init(args=args)
     

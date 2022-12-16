@@ -47,7 +47,7 @@ class AcquisitionNode(Node):
             ('nodeTimer', 0.1) 
             ]
         )
-        # By default, nodeTimer is set to 10Hz, this timer is configurable in the acquisition_params.yaml file
+        # By default, nodeTimer is set to 0.1seconds (10Hz), this timer is configurable in the acquisition_params.yaml file
         # Get Parameters from launch file
         serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
         orientation = self.get_parameter('orientation').get_parameter_value().string_value
