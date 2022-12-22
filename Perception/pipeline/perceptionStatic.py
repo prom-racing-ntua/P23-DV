@@ -39,21 +39,23 @@ def main():
     ## Load Keypoints and Numpy Arrays
     #Models
     yoloModelPath = f"models/yolov5s6.pt"
-    smallKeypointsModelPath = f"models/KeypointsModelComplex.pt"
+    smallKeypointsModelPath = f"models/vggv3strip2.pt"
 
     yoloModel = initYOLOModel(yoloModelPath)
     smallKeypointsModel = initKeypoint(smallKeypointsModelPath)
 
     #Numpy Arrays
-    cameraMatrix = np.load(f"pnp/cameraMatrix.npy")
-    distCoefficients = np.load(f"pnp/distCoeffs.npy") 
-    objp_orange = np.array([[0, 32.5 ,0],
-                 [-4.3, 20.5, 0],
-                 [4.3, 20.5, 0],
-                 [-5.8, 11.9, 0],
-                 [5.8, 11.9, 0],
-                 [-7.4, 2.7, 0],
-                 [7.4, 2.7, 0]])
+    # cameraMatrix = np.load(f"pnp/cameraMatrix.npy")
+    # distCoefficients = np.load(f"pnp/distCoeffs.npy") 
+    cameraMatrix= np.array([[1250, 0, 640], [0, 1250, 512], [0, 0, 1]])
+    distCoefficients = np.array([[0, 0, 0, 0, 0]])
+    objp_orange = np.array([[7.4, 2.7, 0],
+                        [5.8, 11.9, 0],
+                        [4.3, 20.5, 0],
+                        [0, 32.5 ,0],
+                        [-4.3, 20.5, 0],
+                        [-5.8, 11.9, 0],
+                        [-7.4, 2.7, 0]])
     
     # Run pipeline in every image file:
     folderPath = f"{os.path.dirname(os.path.abspath(dataFolder))}/{dataFolder}"
@@ -82,7 +84,7 @@ def main():
                 print("No Cones Found in this image")
             else:
                 conesList, classesList, originalDimensions = cropResizeConesDebug(results, input, file,folderPath,input[0])
-                keypointsPredictions = runKeypoints(conesList, smallKeypointsModel, input)
+                keypointsPredictions = runKeypointsDebug(conesList, smallKeypointsModel, input, file, folderPath)
                 finalCoords = finalCoordinatesDebug(conesList, originalDimensions, keypointsPredictions, input, cameraMatrix, distCoefficients, objp_orange, input[0], file, folderPath)
 
                 print(f"Filename:{file}")

@@ -68,8 +68,8 @@ def runKeypointsDebug(cones_list, keypoints_model, images, fileName, runFolder):
   test_images = []
   for i in range(len(images)):
     for j in range(len(cones_list[i])):
-      test_images.append(torch.from_numpy(cones_list[i][j]).permute(2,0,1).unsqueeze(0).float())
-    
+        test_images.append(torch.from_numpy((cones_list[i][j].transpose(2,0,1)/255.0)).unsqueeze(0).float())    
+
   test_images = torch.cat(test_images, dim=0)
 
   predictions = keypoints_model(test_images.float())
@@ -79,7 +79,7 @@ def runKeypointsDebug(cones_list, keypoints_model, images, fileName, runFolder):
   for i in range(len(cones_list[0])):
     for k in range(0,7):
         cones_list[0][i][int(predictions[i][k][1])-1:int(predictions[i][k][1])+1,int(predictions[i][k][0])-1:int(predictions[i][k][0])+1] = np.array([0,255,0])
-        cv2.imwrite(f"{runFolder}/{outPath[0]}_keypoints{i}.jpg", cones_list[0][i][...,::-1])
+        # cv2.imwrite(f"{runFolder}/predictions/{outPath[0]}_keypoints{i}.jpg", cones_list[0][i][...,::-1])
 
   return predictions
 
@@ -101,7 +101,7 @@ def finalCoordinatesDebug(cones_list, or_dimensions, predictions, imgs, cameraMa
       # Save Marked Image
       cv2.imwrite(f"{runFolder}/predictions/{outPath[0]+ '.' + outPath[1]}_predictions.jpg", originalImage[...,::-1])
       keypoints_cone_numpy = np.array(keypoints_cone)
-      success, rotation_vector, translation_vector = cv2.solvePnP(objp_orange, keypoints_cone_numpy, cameraMatrix, distCoeffs)
+      success, rotation_vector, translation_vector = cv2.solvePnP(objp_orange, keypoints_cone_numpy, cameraMatrix, distCoeffs, cv2.SOLVEPNP_IPPE)
       pnp_image.append([success, rotation_vector, translation_vector])
 
     return pnp_image

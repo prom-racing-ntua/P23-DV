@@ -86,3 +86,43 @@ class VeryComplexCNN(nn.Module):
         features = self.conv5(self.conv4(self.conv3(self.conv2(self.conv1(x)))))
         features = features.view(features.shape[0], -1)
         return self.linear(features)
+
+
+class VGG_layer(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size_conv1, kernel_size_conv2, stride1, stride2, padding):
+        super(VGG_layer, self).__init__()
+
+        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size_conv1,
+        stride=stride1, padding=padding)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size_conv2,
+        stride=stride2, padding=padding)
+        self.relu2 = nn.ReLU()
+        self.pool = nn.MaxPool2d((2, 2), 2)
+
+    def forward(self, x):
+        out = self.pool(self.relu2(self.conv2(self.relu1(self.conv1(x)))))
+        return out
+
+class VGGLikeV3(nn.Module):
+    def __init__(self):
+        super(VGGLikeV3, self).__init__()
+
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3, 3), stride=1, padding=0)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d((2, 2), 2)
+        self.layer1 = VGG_layer(64, 128, 3, 3, 1, 1, 0)
+        self.layer2 = VGG_layer(128, 256, 3, 3, 1, 1, 0)
+
+        self.linear = nn.Sequential(nn.Linear(in_features=2048, out_features=1024),
+        nn.ReLU(),
+        nn.Dropout(0.3),
+        nn.Linear(1024, 1024),
+        nn.ReLU(),
+        nn.Dropout(0.3),
+        nn.Linear(1024, 14))
+
+    def forward(self, x):
+        features = self.layer2(self.layer1(self.pool1(self.relu1(self.conv1(x)))))
+        features = features.view(features.shape[0], -1) # tensorflow equivalent to flatten()
+        return self.linear(features)

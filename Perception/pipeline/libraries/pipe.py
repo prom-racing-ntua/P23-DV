@@ -34,7 +34,7 @@ def inferenceYOLO(model, imgpath, res):
 # Initialilze Keypoints CNN
 def initKeypoint(modelpath):
 
-  model = ComplexCNN()
+  model = VGGLikeV3()
   model.load_state_dict(torch.load(modelpath,map_location=torch.device('cpu')))
 
   return model
