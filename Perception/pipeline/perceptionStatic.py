@@ -21,8 +21,7 @@ import argparse
 
 import os
 
-from libraries.pipe import *
-from libraries.pipeDebug import cropResizeConesDebug,runKeypointsDebug, finalCoordinatesDebug
+from libraries.pipev2 import *
 
 def parser():
     parser = argparse.ArgumentParser(description='Prom Racing Perception Pipeline')
@@ -39,57 +38,37 @@ def main():
     ## Load Keypoints and Numpy Arrays
     #Models
     yoloModelPath = f"models/yolov5s6.pt"
-    smallKeypointsModelPath = f"models/vggv3strip2.pt"
+    # smallKeypointsModelPath = f"models/vggv3strip2.pt"
+    smallKeypointsModelPath = f"models/KeypointsNet(333).pt"
 
     yoloModel = initYOLOModel(yoloModelPath)
     smallKeypointsModel = initKeypoint(smallKeypointsModelPath)
 
-    #Numpy Arrays
-    # cameraMatrix = np.load(f"pnp/cameraMatrix.npy")
-    # distCoefficients = np.load(f"pnp/distCoeffs.npy") 
-    cameraMatrix= np.array([[1250, 0, 640], [0, 1250, 512], [0, 0, 1]])
-    distCoefficients = np.array([[0, 0, 0, 0, 0]])
-    objp_orange = np.array([[7.4, 2.7, 0],
-                        [5.8, 11.9, 0],
-                        [4.3, 20.5, 0],
-                        [0, 32.5 ,0],
-                        [-4.3, 20.5, 0],
-                        [-5.8, 11.9, 0],
-                        [-7.4, 2.7, 0]])
-    
     # Run pipeline in every image file:
     folderPath = f"{os.path.dirname(os.path.abspath(dataFolder))}/{dataFolder}"
     Path(f"{folderPath}/predictions").mkdir(parents=True, exist_ok=True)
 
     files = os.listdir(dataFolder)
-    print(files)
-    print(len(files))
-
     for file in os.listdir(dataFolder):
         if (file.endswith(".jpg") or file.endswith(".bmp") or file.endswith(".png")):
-            # Create a cones folder (way too many photos, not recommended) If you want the cropped cones photos, then you should also change the cropResizeCones
-            # function to cropResizeConesDebug
-            # Path(f"{folderPath}/predictions/{file.split('.')[0]}_cones").mkdir(parents=True, exist_ok=True)
 
             filePath = f"{folderPath}/{file}"
 
             # Read Image. This weird thing at the end is for color conversion,
             # it says it is faster, idk
             inputImage = cv2.imread(filePath)[...,::-1]
-            input = [inputImage]
 
             # Run inference on yolo model
-            results = inferenceYOLO(yoloModel, input, 1280)
+            results = inferenceYOLO(yoloModel, inputImage, 1280)
             if results.pandas().xyxy[0].empty:
                 print("No Cones Found in this image")
             else:
-                conesList, classesList, originalDimensions = cropResizeConesDebug(results, input, file,folderPath,input[0])
-                keypointsPredictions = runKeypointsDebug(conesList, smallKeypointsModel, input, file, folderPath)
-                finalCoords = finalCoordinatesDebug(conesList, originalDimensions, keypointsPredictions, input, cameraMatrix, distCoefficients, objp_orange, input[0], file, folderPath)
-
-                print(f"Filename:{file}")
-                for i in range(len(classesList[0])):
-                    print(f"Cone{i}: Class - {classesList[0][i]}, RotationVector: {finalCoords[i][1]}, TranslationVector: {finalCoords[i][2]}")
+                conesList, classesList, croppedImageCorners = cropResizeCones(results, inputImage, 3)
+                keypointsPredictions = runKeypoints(conesList, smallKeypointsModel)
+                final_coords = finalCoordinates('left', classesList, croppedImageCorners, keypointsPredictions, 0)
+                for i in range(len(classesList)):
+                    print(file)
+                    print("Class: ", classesList[i], " Range: ", final_coords[i][0], " Theta: ", final_coords[i][1])
 
 if __name__ == "__main__":
     main()
