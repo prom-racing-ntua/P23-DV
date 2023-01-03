@@ -27,27 +27,6 @@ import os
 def liveStreamImage(title, image):
     cv2.imshow(title, image)
 
-def initializeCameras():
-    device_manager = gx.DeviceManager()
-
-    dev_num, dev_info_list, = device_manager.update_device_list()
-    if dev_num == 0:
-        print("No Cameras Found")
-        sys.exit(0)
-    
-    cameras = []
-    
-    for i in range(dev_num):
-        devSN = dev_info_list[i].get("sn")
-        camera = Camera((1280,1024), devSN, 'random', 10000)
-        cameras.append(camera)
-
-    for device in cameras:
-        device.OnClickOpen()
-        device.SetSettings()
-
-    return cameras
-
 def main():
     cameras = initializeCameras()
 

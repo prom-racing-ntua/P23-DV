@@ -1,6 +1,28 @@
 import gxipy as gx
 import sys
 
+# For testing purposes!!!
+def initializeCameras(roi, exposureTime):
+    device_manager = gx.DeviceManager()
+
+    dev_num, dev_info_list, = device_manager.update_device_list()
+    if dev_num == 0:
+        print("No Cameras Found")
+        sys.exit(0)
+    
+    cameras = []
+    
+    for i in range(dev_num):
+        devSN = dev_info_list[i].get("sn")
+        camera = Camera(roi, devSN, 'random', exposureTime)
+        cameras.append(camera)
+
+    for device in cameras:
+        device.OnClickOpen()
+        device.SetSettings()
+
+    return cameras
+
 class Camera:
     def __init__(self, resolution:tuple, serialNumber:str, orientation:str, exposureTime:int):
         self.device_manager = gx.DeviceManager()
@@ -48,7 +70,6 @@ class Camera:
 
     def AcquireImage(self):
         raw_image = self.cam.data_stream[0].get_image()
-        # timestamp = raw_image.get_timestamp()
         frame_id = raw_image.get_frame_id()
 
         if raw_image is None:
