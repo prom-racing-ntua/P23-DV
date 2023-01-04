@@ -23,9 +23,6 @@ def main():
 
     # Initialize cameras with selected settings
     cameras = initializeCameras(roi=roi, exposureTime=exposureTime)
-    for camera in cameras:
-        # Add any settings that you want to test here
-        pass
 
     # Pass Arguments
     args = acquisitionParser()
@@ -36,7 +33,7 @@ def main():
         for device in cameras:
             device.TriggerCamera()
             numpyImage, frameID = device.AcquireImage()
-            cv2.imwrite(f"camera{device.serialNumber}_frame{frameID}.jpg",numpyImage[...,::-1])
+            cv2.imwrite(f"pictures/camera{device.serialNumber}_frame{frameID}.jpg",numpyImage[...,::-1])
 
     for device in cameras:
         device.OnClickClose()
