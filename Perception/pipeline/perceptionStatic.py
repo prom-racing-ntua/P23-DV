@@ -21,7 +21,7 @@ import argparse
 
 import os
 
-from libraries.pipev2 import *
+from libraries.pipelineFunctions import *
 
 def parser():
     parser = argparse.ArgumentParser(description='Prom Racing Perception Pipeline')
@@ -40,9 +40,11 @@ def main():
     yoloModelPath = f"models/yolov5s6.pt"
     # smallKeypointsModelPath = f"models/vggv3strip2.pt"
     smallKeypointsModelPath = f"models/KeypointsNet(333).pt"
+    largeKeypointsModelPath = f"models/largeKeypoints412023.pt"
 
     yoloModel = initYOLOModel(yoloModelPath)
-    smallKeypointsModel = initKeypoint(smallKeypointsModelPath)
+    smallKeypointsModel = initSmallKeypoints(smallKeypointsModelPath)
+    largeKeypointsModel = initLargeKeypoints(largeKeypointsModelPath)
 
     # Run pipeline in every image file:
     folderPath = f"{os.path.dirname(os.path.abspath(dataFolder))}/{dataFolder}"
@@ -53,7 +55,6 @@ def main():
         if (file.endswith(".jpg") or file.endswith(".bmp") or file.endswith(".png")):
 
             filePath = f"{folderPath}/{file}"
-
             # Read Image. This weird thing at the end is for color conversion,
             # it says it is faster, idk
             inputImage = cv2.imread(filePath)[...,::-1]

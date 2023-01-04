@@ -1,32 +1,33 @@
 import torch.nn as nn
 
-# CNN Definitions
-class CNN_layer(nn.Module):
+
+# Small Keypoints CNN
+class smallKeypointslargeKeypointsCNN_layer(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size_conv, kernel_size_pool, stride, padding, padding_pool):
-        super(CNN_layer, self).__init__()
+        super(smallKeypointslargeKeypointsCNN_layer, self).__init__()
 
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size_conv, stride=stride, padding=padding)
         self.relu = nn.ReLU()
         self.pool = nn.MaxPool2d(kernel_size=kernel_size_pool, padding=padding_pool)
-        self.norm = nn.BatchNorm2d(out_channels)
     def forward(self, x):
-        out = self.norm(self.pool(self.relu(self.conv(x))))
+        out = (self.pool(self.relu(self.conv(x))))
         return out
 
-
-class BasicCNN(nn.Module):
+class smallKeypointsBasicCNN(nn.Module):
     def __init__(self, output_size = 14):
-        super(BasicCNN, self).__init__()
+        super(smallKeypointsBasicCNN, self).__init__()
 
-        self.conv1 = CNN_layer(in_channels=3, out_channels=4, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
-        self.conv2 = CNN_layer(in_channels=4, out_channels=7, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
-        self.conv3 = CNN_layer(in_channels=7, out_channels=10, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
-        self.linear = nn.Sequential(nn.Linear(in_features=240, out_features=120),
-                                    nn.ReLU(),
-                                    nn.Linear(120, 60),
-                                    nn.ReLU(),
-                                    nn.Linear(60,14))
+        self.conv1 = smallKeypointslargeKeypointsCNN_layer(in_channels=3, out_channels=32, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
+        self.conv2 = smallKeypointslargeKeypointsCNN_layer(in_channels=32, out_channels=64, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
+        self.conv3 = smallKeypointslargeKeypointsCNN_layer(in_channels=64, out_channels=128, kernel_size_conv=(3,3), kernel_size_pool=(2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
 
+        self.linear = nn.Sequential(nn.Linear(in_features=3072, out_features=1024),
+                                    nn.LeakyReLU(),
+                                    nn.Dropout(0.1),
+                                    nn.Linear(1024, 512),
+                                    nn.LeakyReLU(),
+                                    nn.Dropout(0.1),
+                                    nn.Linear(512, 14))
 
     def forward(self, x):
         features = self.conv3(self.conv2(self.conv1(x)))
@@ -34,60 +35,43 @@ class BasicCNN(nn.Module):
         return self.linear(features)
 
 
-class ComplexCNN(nn.Module):
-    def __init__(self, output_size=14):
-        super(ComplexCNN, self).__init__()
 
-        self.conv1 = CNN_layer(in_channels=3, out_channels=5, kernel_size_conv=(3, 3), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
-        self.conv2 = CNN_layer(in_channels=5, out_channels=8, kernel_size_conv=(3, 3), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
-        self.conv3 = CNN_layer(in_channels=8, out_channels=12, kernel_size_conv=(2, 2), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
+# Large Keypoints CNN
+class largeKeypointsCNN_layer(nn.Module):
+  def __init__(self, in_channels, out_channels, kernel_size_conv, kernel_size_pool, stride, padding, padding_pool):
+    super(largeKeypointsCNN_layer, self).__init__()
 
-        self.conv4 = CNN_layer(in_channels=12, out_channels=16, kernel_size_conv=(2,2), kernel_size_pool=(1,1),
-                               stride=(1,1), padding=(0,0), padding_pool=(0,0))
+    self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size_conv, stride=stride, padding=padding)
+    self.activ = nn.ReLU()
+    self.pool = nn.MaxPool2d(kernel_size=kernel_size_pool, padding=padding_pool)
 
-        self.linear = nn.Sequential(nn.Linear(in_features=240, out_features=120),
-                                    nn.ReLU(),
-                                    nn.Linear(120, 60),
-                                    nn.ReLU(),
-                                    nn.Linear(60, 14))
+  def forward(self, x):
+    out = (self.pool(self.activ(self.conv(x))))
+    return out
 
-    def forward(self, x):
-        print("here")
-        features = self.conv4(self.conv3(self.conv2(self.conv1(x))))
-        features = features.view(features.shape[0], -1)
-        return self.linear(features)
-class VeryComplexCNN(nn.Module):
-    def __init__(self, output_size=14):
-        super(VeryComplexCNN, self).__init__()
+class largeKeypointsBasicCNN( nn.Module):
+  def __init__(self):
+    super(largeKeypointsBasicCNN, self).__init__()
 
-        self.conv1 = CNN_layer(in_channels=3, out_channels=6, kernel_size_conv=(3, 3), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
-        self.conv2 = CNN_layer(in_channels=6, out_channels=9, kernel_size_conv=(3, 3), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
-        self.conv3 = CNN_layer(in_channels=9, out_channels=12, kernel_size_conv=(3, 3), kernel_size_pool=(2, 2),
-                               stride=(1, 1), padding=(0, 0), padding_pool=(0, 0))
-
-        self.conv4 = CNN_layer(in_channels=12, out_channels=16, kernel_size_conv=(2,2), kernel_size_pool=(1,1),
-                               stride=(1,1), padding=(0,0), padding_pool=(0,0))
-
-        self.conv5 = CNN_layer(in_channels=16, out_channels=22, kernel_size_conv=(2,2), kernel_size_pool=(1,1),
-                               stride=(1,1), padding=(0,0), padding_pool=(0,0))
-
-        self.linear = nn.Sequential(nn.Linear(in_features=176, out_features=120),
-                                    nn.ReLU(),
-                                    nn.Linear(120, 60),
-                                    nn.ReLU(),
-                                    nn.Linear(60, 14))
-
-    def forward(self, x):
-        features = self.conv5(self.conv4(self.conv3(self.conv2(self.conv1(x)))))
-        features = features.view(features.shape[0], -1)
-        return self.linear(features)
+    self.conv1 = largeKeypointsCNN_layer(in_channels=3 , out_channels=32 , kernel_size_conv=(4,4), kernel_size_pool= (2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
+    self.conv2 = largeKeypointsCNN_layer(in_channels=32, out_channels=64 , kernel_size_conv=(4,4), kernel_size_pool= (2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
+    self.conv3 = largeKeypointsCNN_layer(in_channels=64, out_channels=128, kernel_size_conv=(4,4), kernel_size_pool= (2,2), stride=(1,1), padding=(0,0), padding_pool=(0,0))
+    
+    self.linear = nn.Sequential(nn.Linear(in_features = 1920, out_features = 1024),
+                                nn.LeakyReLU(),
+                                nn.Dropout(0.6),
+                                nn.Linear(in_features = 1024, out_features = 512),
+                                nn.LeakyReLU(),
+                                nn.Dropout(0.6),
+                                nn.Linear(in_features = 512, out_features = 22))
+    
+  def forward(self, x):
+    features = self.conv3(self.conv2(self.conv1(x)))
+    features = features.view(features.shape[0], -1)
+    return self.linear(features)
 
 
+# Kati alla
 class VGG_layer(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size_conv1, kernel_size_conv2, stride1, stride2, padding):
         super(VGG_layer, self).__init__()

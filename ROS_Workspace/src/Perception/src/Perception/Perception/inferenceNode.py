@@ -5,7 +5,7 @@ import os
 # ROS2 Related Imports
 import rclpy
 from rclpy.node import Node
-from perception_msgs.msg import AcquisitionMessage
+from perception_msgs.msg import AcquisitionMessage, Perception2Slam
 from cv_bridge import CvBridge, CvBridgeError
 from ament_index_python.packages import get_package_share_directory
 
@@ -23,11 +23,10 @@ from torch.utils.data import SubsetRandomSampler, DataLoader
 import torch.optim as optim
 
 # Homemade Libraries
-from .libraries.cnn import *
-from .libraries.pipe import initYOLOModel, inferenceYOLO, initKeypoint, cropResizeCones, runKeypoints, finalCoordinates, pipe
+from .libraries.pipelineFunctions import *
 
 class InferenceNode(Node):
-    def __init__(self, models, arrays):
+    def __init__(self, models):
         super().__init__('inference_node')
 
         # Subscribe to acquisition topic
@@ -37,19 +36,13 @@ class InferenceNode(Node):
             self.listener_callback,
             10
         )
-
         # Create Perception/SLAM topic
         # self.publisher_ = self.create_publisher(Perception2Slam, 'perception2slam_topic', 10)
 
-        # Add models to class
+        # Models
         self.yoloModel = models[0]
         self.smallKeypointsModel = models[1]
-        # self.largeKeypointsModel = models[2]
-
-        # Numpy arrays used for functions
-        self.cameraMatrix = arrays[0]
-        self.distCoeffs = arrays[1]
-        self.objp_orange = arrays[2]
+        self.largeKeypointsModel = models[2]
 
         # Setup Message Transcoder
         self.bridge = CvBridge()
@@ -58,27 +51,29 @@ class InferenceNode(Node):
     def listener_callback(self, msg):
         try:
             # Get data from message
-            orientation = msg.camera_orientation
-            self.get_logger().info("just received from camera")
+            # globalIndex
+            cameraOrientation = msg.camera_orientation
             image = self.bridge.imgmsg_to_cv2(msg.image, "passthrough")
         except CvBridgeError as e:
             # Print error if image conversion was not succseful
             print(e)
         else:
-            self.get_logger().info(f'Received image{self.i} looking {orientation}')
+            self.get_logger().info(f'Received image {self.i} looking {cameraOrientation}')
             # Perform Perception Pipeline
-            images = [image]
-            results = inferenceYOLO(self.yoloModel, images, 1280)
+            results = inferenceYOLO(self.yoloModel, image, 1280)
             if results.pandas().xyxy[0].empty:
                 self.get_logger().info("No cones found")
             else:
-                conesList, classesList, originalDimensions = cropResizeCones(results, images)
-                keypointsPredictions = runKeypoints(conesList, self.smallKeypointsModel, images)
-                final_coordinates = finalCoordinates(conesList, originalDimensions, keypointsPredictions, images, self.cameraMatrix, self.distCoeffs, self.objp_orange)
-                self.get_logger().info(f'Printing Final Coordinates {final_coordinates}')
-            # Send message to SLAM Node
-            # self.publisher_.publish(perception2slam_msg)
-    
+                conesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
+                keypointsPredictions = runKeypoints(conesList, self.smallKeypointsModel)
+                finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                # Send message to SLAM Node
+                perception2slam_msg = Perception2Slam()
+                # gloablIndex
+                perception2slam_msg.classList = classesList
+                # thetaList
+                # rangeList
+                # self.publisher_.publish(perception2slam_msg)    
     
 def main(args=None):
     rclpy.init(args=args)
@@ -86,30 +81,18 @@ def main(args=None):
     path = get_package_share_directory("Perception")
     models = os.path.join(path,"models")
 
-    numpyObjects = os.path.join(path,"numpyObjects")
     yoloModelPath = f"{models}/yolov5s6.pt"
-    smallKeypointsModelPath = f"{models}/KeypointsModelComplex.pt"
-    largeKeypointsModelPath = f"{models}/LargeKeypointsModelComplex.pt"
-
-    cameraMatrix = np.load(f'{numpyObjects}/cameraMatrix.npy')
-    distCoeffs = np.load(f'{numpyObjects}/distCoeffs.npy')
-    objp_orange = np.array([[0, 32.5 ,0],
-                 [-4.3, 20.5, 0],
-                 [4.3, 20.5, 0],
-                 [-5.8, 11.9, 0],
-                 [5.8, 11.9, 0],
-                 [-7.4, 2.7, 0],
-                 [7.4, 2.7, 0]])
-
-    arrays = [cameraMatrix, distCoeffs, objp_orange]
+    smallKeypointsModelPath = f"{models}/KeypointsNet(333).pt"
+    largeKeypointsModelPath = f"{models}/largeKeypoints412023.pt"
 
     # Initialize Models
     yoloModel = initYOLOModel(yoloModelPath, conf=0.25, iou=0.45)
-    smallKeypointsModel = initKeypoint(smallKeypointsModelPath)
+    smallKeypointsModel = initSmallKeypoints(smallKeypointsModelPath)
+    largeKeypointsModel = initLargeKeypoints(largeKeypointsModelPath)
 
-    models = [yoloModel, smallKeypointsModel]
+    models = [yoloModel, smallKeypointsModel, largeKeypointsModel]
     
-    inference_node = InferenceNode(models = models, arrays=arrays)
+    inference_node = InferenceNode(models = models)
     rclpy.spin(inference_node)
 
     inference_node.destroy_node()

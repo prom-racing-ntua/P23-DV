@@ -21,7 +21,7 @@ colcon build
 ```
 
 ## Master Node
-To be announced
+
 
 ## Velocity Estimation
 Tha to grapsw argotera

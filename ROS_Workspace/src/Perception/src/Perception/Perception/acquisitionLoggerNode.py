@@ -17,7 +17,6 @@ from rclpy.node import Node
 # Homemade Libraries
 from .libraries.cameraClass import Camera
 from .libraries.cnn import *
-from .libraries.pipe import *
 
 def getEpoch():
     return float(time.time())

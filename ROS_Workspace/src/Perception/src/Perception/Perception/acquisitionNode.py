@@ -17,7 +17,6 @@ from rclpy.node import Node
 # Homemade Libraries
 from .libraries.cameraClass import Camera
 from .libraries.cnn import *
-from .libraries.pipe import *
 
 def getEpoch():
     return float(time.time())
@@ -90,13 +89,6 @@ class AcquisitionNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
-    # Create directory to save photos in
-    # homepath = os.getenv('HOME')
-    # runTime = int(getEpoch())
-    # runDirPath = f"{homepath}/PerceptionRuns/Run{runTime}"
-    # Path(runDirPath).mkdir(parents=True, exist_ok=True)
-    # print(f"Created Run Directory: {runDirPath}")
     
     # Spin Acquisition Node
     perception_handler = AcquisitionNode()
