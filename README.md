@@ -13,8 +13,6 @@ To be written
 ### Cost Function
 To be written
 
-## Installation 
-
 To install all the dependencies run
 ```
 ./install.sh
