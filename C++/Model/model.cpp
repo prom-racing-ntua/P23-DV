@@ -50,6 +50,7 @@ Torques Model::getTorques(const State &x) const { //checked
 	double T_G_temp=0;
 	double T_Bf_temp=0;
 	double T_Br_temp=0;
+    double T_Bf_temp_new=0.1;
 	if(x.D>0 || x.D == 0){
 		T_G_temp = param_.T_M_max*param_.gr*x.D;  	
 	}
