@@ -87,3 +87,4 @@ arXiv preprint arXiv:1905.05150, 2019.
 
 This paper explains the full system used in the AMZ Driverless car for the 2017 and 2018 seasons. This also includes the MPCC including new features added in the C++ implementation of this GitHub repo, mainly the tire constraints and side slip angle cost. However, the paper also proposes a interesting mixed kinematic-dynamic model, which allows to get the benefits of kinematic models at slow speeds and the accuracy of dynamic models at high speeds.
 
+# MPCC_full
