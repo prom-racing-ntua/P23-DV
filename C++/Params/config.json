@@ -2,7 +2,7 @@
     "n_sqp": 2,
     "n_reset": 2,
     "sqp_mixing" : 0.9,
-    "n_sim": 50,
+    "n_sim": 100,
     "Ts": 0.005,
     "v0": 1.0,
     
