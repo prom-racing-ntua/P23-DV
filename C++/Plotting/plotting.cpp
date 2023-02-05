@@ -44,6 +44,9 @@ namespace mpcc
         std::vector<double> plot_d;
         std::vector<double> plot_delta;
         std::vector<double> plot_vs;
+        std::vector<double> plot_rwf;
+        std::vector<double> plot_rwr;
+        std::vector<double> plot_ax;
 
         std::vector<double> plot_dd;
         std::vector<double> plot_ddelta;
@@ -57,6 +60,11 @@ namespace mpcc
         std::vector<double> plot_F_ry0;
         std::vector<double> plot_F_fx0;
         std::vector<double> plot_F_fy0;
+        
+        std::vector<double> plot_TG;
+        std::vector<double> plot_TBf;
+        std::vector<double> plot_TBr;
+        
 
         for (MPCReturn log_i : log)
         {
@@ -70,6 +78,8 @@ namespace mpcc
             plot_d.push_back(log_i.mpc_horizon[0].xk.D);
             plot_delta.push_back(log_i.mpc_horizon[0].xk.delta);
             plot_vs.push_back(log_i.mpc_horizon[0].xk.vs);
+            plot_rwf.push_back(log_i.mpc_horizon[0].xk.rwf);
+            plot_rwr.push_back(log_i.mpc_horizon[0].xk.rwr);
 
             plot_dd.push_back(log_i.mpc_horizon[0].uk.dD);
             plot_ddelta.push_back(log_i.mpc_horizon[0].uk.dDelta);
@@ -79,6 +89,7 @@ namespace mpcc
             double alpha_r = model_.getSlipAngles(log_i.mpc_horizon[0].xk).sa_r;
             double slip_f = model_.getSlipRatios(log_i.mpc_horizon[0].xk).sr_f;
             double slip_r = model_.getSlipRatios(log_i.mpc_horizon[0].xk).sr_r;
+            double a_x = model_.getF(log_i.mpc_horizon[0].xk,log_i.mpc_horizon[0].uk)(3);
             // std::cout << "horizon 0 is:" << log_i.mpc_horizon[0].xk << std::endl;
             // std::cout << "horizon 1 is:" << log_i.mpc_horizon[1].xk << std::endl;
             TireForces F_r0 = model_.getForceRear(log_i.mpc_horizon[0].xk);
@@ -91,6 +102,12 @@ namespace mpcc
             plot_F_ry0.push_back(F_r0.F_y);
             plot_F_fx0.push_back(F_f0.F_x);
             plot_F_fy0.push_back(F_f0.F_y);
+            plot_ax.push_back(a_x);
+
+            Torques T = model_.getTorques(log_i.mpc_horizon[0].xk);
+            plot_TG.push_back(T.T_G);
+            plot_TBf.push_back(T.T_Bf);
+            plot_TBr.push_back(T.T_Br);
         }
 
         std::vector<double> plot_eps_x;
@@ -156,22 +173,27 @@ namespace mpcc
         plt::ylabel("s [m]");
 
         plt::figure(6);
-        plt::subplot(1, 5, 1);
+        plt::subplot(1, 6, 1);
         plt::plot(plot_alpha_f);
         plt::ylabel("alpha_f [rad]");
-        plt::subplot(1, 5, 2);
+        plt::subplot(1, 6, 2);
         plt::plot(plot_alpha_r);
         plt::ylabel("alpha_r [rad]");
-        plt::subplot(1, 5, 3);
+        plt::subplot(1, 6, 3);
         plt::plot(plot_slip_f);
         plt::ylabel("slip_f [rad]");
-        plt::subplot(1, 5, 4);
+        plt::subplot(1, 6, 4);
         plt::plot(plot_slip_r);
         plt::ylabel("slip_r [rad]");
-        plt::subplot(1, 5, 5);
+        plt::subplot(1, 6, 5);
         plt::plot(plot_F_ry0, plot_F_rx0);
+        plt::xlabel("Fry");
+        plt::ylabel("Frx");
         // plt::plot(plot_F_ry1, plot_F_rx1);
-        plt::plot(plot_eps_x, plot_eps_y);
+        // plt::plot(plot_eps_x, plot_eps_y);
+        plt::subplot(1, 6, 6);
+        plt::plot(plot_ax);
+        plt::ylabel("ax");
         plt::axis("equal");
         plt::xlabel("F_y [N]");
         plt::ylabel("F_x [N]");
@@ -189,6 +211,25 @@ namespace mpcc
         plt::subplot(1, 4, 4);
         plt::plot(plot_F_ry0);
         plt::ylabel("Fry");
+
+        plt::figure(8);
+        plt::subplot(1, 2, 1);
+        plt::plot(plot_rwf);
+        plt::ylabel("rwf");
+        plt::subplot(1, 2, 2);
+        plt::plot(plot_rwr);
+        plt::ylabel("rwr");
+
+        plt::figure(9);
+        plt::subplot(1, 3, 1);
+        plt::plot(plot_TG);
+        plt::ylabel("TG");
+        plt::subplot(1, 3, 2);
+        plt::plot(plot_TBf);
+        plt::ylabel("TBf");
+        plt::subplot(1, 3, 3);
+        plt::plot(plot_TBr);
+        plt::ylabel("TBr");
         plt::show();
     }
     void Plotting::plotSim(const std::list<MPCReturn> &log, const TrackPos &track_xy) const

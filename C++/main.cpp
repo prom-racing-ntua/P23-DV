@@ -69,7 +69,7 @@ int main() {
     mpc.setTrack(track_xy.X,track_xy.Y);
     std::cout<<"mpc.setTrack done"<<std::endl;
     const double phi_0 = std::atan2(track_xy.Y(1) - track_xy.Y(0),track_xy.X(1) - track_xy.X(0));
-    State x0 = {track_xy.X(0),track_xy.Y(0),phi_0,jsonConfig["v0"],0,0,0,0,0,0.0,0,jsonConfig["v0"]};
+    State x0 = {track_xy.X(0),track_xy.Y(0),phi_0,jsonConfig["v0"],0,0,5,5,0,0.0,0,jsonConfig["v0"]};
     std::cout<<"phi_0 & x0 done"<<std::endl;
     std::cout<<"Number of simulation steps is: "<< jsonConfig["n_sim"] << std::endl;
     for(int i=0;i<jsonConfig["n_sim"];i++)
@@ -82,7 +82,7 @@ int main() {
         //     std::cout << mpc_sol.mpc_horizon[j].xk.vx << " " << mpc_sol.mpc_horizon[j].xk.vy << std::endl;
         // }
         // Use the MPC prediction as sim step
-        x0 = mpc_sol.mpc_horizon[1].xk;
+        x0 = mpc_sol.mpc_horizon[5].xk;
         // double frx_now=model.getForceRear(x0).F_x;
         // double fry_now=model.getForceRear(x0).F_y;
         // std::cout << "forces before int: " <<  " " << frx_now << " " << fry_now << std::endl;

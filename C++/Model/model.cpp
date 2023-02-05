@@ -100,7 +100,7 @@ double Model::getSlipAngleFront(const State &x) const
 SlipAngles Model::getSlipAngles(const State &x) const //checked
 {
     // compute slip angels given current state
-    const double sign=-1;
+    const double sign=1;
     const double lf=getLengthFront(x);
     const double lr=getLengthRear(x);
     const double sa_f= sign*(std::atan2(x.vy+x.r*lf,x.vx) - x.delta);
@@ -112,7 +112,7 @@ SlipAngles Model::getSlipAngles(const State &x) const //checked
 SlipRatios Model::getSlipRatios(const State &x) const //checked
 {
     // compute slip angels given current state
-    const double sign=-1;
+    const double sign=1;
     const double lf=getLengthFront(x);
     const double lr=getLengthRear(x);
     const double num = x.rwf*param_.Rf - x.vx*std::cos(x.delta) - std::sin(x.delta)*(x.vy+lf*x.r);
@@ -127,7 +127,7 @@ SlipRatios Model::getSlipRatios(const State &x) const //checked
 SlipAngleDerivatives Model::getSlipAngleDerivatives(const State &x) const { //checked
     const double lf=getLengthFront(x);
     const double lr=getLengthRear(x);
-    const double sign=-1;
+    const double sign=1;
 
 
     const double vx = x.vx;
@@ -157,7 +157,7 @@ SlipAngleDerivatives Model::getSlipAngleDerivatives(const State &x) const { //ch
 SlipRatioDerivatives Model::getSlipRatioDerivatives(const State &x) const{ //checked
     const double lf=getLengthFront(x);
     const double lr=getLengthRear(x);
-    const double sign=-1;
+    const double sign=1;
 
     const double vx = x.vx;
     const double vy = x.vy;
@@ -200,7 +200,7 @@ TireForces Model::getForceFront(const State &x) const //checked
     SlipAngles sa = getSlipAngles(x);
     SlipRatios sr = getSlipRatios(x);
     const double F_y = par_y.C_tire*par_y.D*(std::sin(par_y.C*std::atan(par_y.B*sa.sa_f)));
-    const double F_x = par_x.C_tire*par_x.D*(std::sin(par_x.C*std::atan(par_x.B*sr.sr_f))) - 0.25*param_.CdA*std::pow(x.vx,2.0);
+    const double F_x = par_x.C_tire*par_x.D*(std::sin(par_x.C*std::atan(par_x.B*sr.sr_f))) - 0.25*param_.CdA*param_.pair*::pow(x.vx,2.0);
     return {F_x,F_y,F_z};
 }
 
@@ -216,7 +216,7 @@ TireForces Model::getForceRear(const State &x) const //checked
     SlipRatios sr = getSlipRatios(x);
 
     const double F_y = par_y.C_tire*par_y.D*(std::sin(par_y.C*std::atan(par_y.B*sa.sa_r)));
-    const double F_x = par_x.C_tire*par_x.D*(std::sin(par_x.C*std::atan(par_x.B*sr.sr_r))) - 0.25*param_.CdA*std::pow(x.vx,2.0);
+    const double F_x = par_x.C_tire*par_x.D*(std::sin(par_x.C*std::atan(par_x.B*sr.sr_r))) - 0.25*param_.CdA*param_.pair*std::pow(x.vx,2.0);
     // std::cout << "force params rear are: "  << par_y.C_tire*par_y.D << " " << sa.sa_r << " " << par_y.C*std::atan(par_y.B*sa.sa_r) << " " << par_y.B*sa.sa_r << " " << std::endl;
     return {F_x,F_y,F_z};
 }
@@ -393,6 +393,7 @@ StateVector Model::getF(const State &x,const Input &u) const //checked
     f(9) = dD;
     f(10) = dDelta;
     f(11) = dVs;
+    std::cout << "ax_ol is: " << f(3) << std::endl;
     return f;
 }
 
