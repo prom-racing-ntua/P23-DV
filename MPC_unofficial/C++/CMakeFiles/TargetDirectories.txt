@@ -1,0 +1,3 @@
+/home/subdiduntil/MPC_unofficial/C++/CMakeFiles/rebuild_cache.dir
+/home/subdiduntil/MPC_unofficial/C++/CMakeFiles/edit_cache.dir
+/home/subdiduntil/MPC_unofficial/C++/CMakeFiles/MPCC.dir
