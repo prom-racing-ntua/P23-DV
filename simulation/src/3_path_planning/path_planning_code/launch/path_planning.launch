@@ -1,0 +1,5 @@
+<launch>
+    <node name="path_planning_node" pkg="path_planning_code" type="path_planning_code" output="screen">
+        <rosparam command="load" file="$(find path_planning_code)/config/path_planning.yaml" /> <!--Load parameters from config files-->
+    </node>
+</launch>

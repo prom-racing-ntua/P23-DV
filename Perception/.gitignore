@@ -1,0 +1,18 @@
+**/doc*
+
+**/__pycache__
+
+# Skip object files
+**/*.o
+
+# Skip images
+**/*.jpg
+**/*.bmp
+
+python/api/
+
+.vscode
+python/api/gxipy.egg-info/dependency_links.txt
+python/api/gxipy.egg-info/PKG-INFO
+python/api/gxipy.egg-info/SOURCES.txt
+python/api/gxipy.egg-info/top_level.txt

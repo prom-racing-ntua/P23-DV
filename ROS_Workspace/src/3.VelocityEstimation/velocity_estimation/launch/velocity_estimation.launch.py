@@ -1,0 +1,47 @@
+import os
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+
+# This launch doesn't work by itself, it needs the master node to be running
+
+def generate_launch_description():
+    # Set to True to launch the data logger as well
+    logging = True
+    ld = LaunchDescription()
+
+    vel_estimation_dir = get_package_share_directory('velocity_estimation')
+    estimation_node = Node(
+            package="velocity_estimation",
+            name="velocity_estimation_node",
+            executable="velocity_estimation",
+            output="screen",
+            parameters=[os.path.join(vel_estimation_dir, "config", "params.yaml")],
+            emulate_tty=True
+    )
+
+    vectornav_dir = get_package_share_directory('vectornav')
+    launch_path = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')    
+    vectornav_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(launch_path))
+
+    can_interface_dir = get_package_share_directory('can_reader')
+    launch_path = os.path.join(can_interface_dir, 'launch', 'can_interface.launch.py')
+    can_interface_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(launch_path))
+
+    ld.add_action(vectornav_launch)
+    ld.add_action(can_interface_launch)
+    ld.add_action(estimation_node)
+    
+    if logging:
+        logger_cmd = Node(
+            package="data_logger",
+            executable="data_logger",
+            output="screen",
+            emulate_tty=True
+        )
+        ld.add_action(logger_cmd)
+    
+    return ld

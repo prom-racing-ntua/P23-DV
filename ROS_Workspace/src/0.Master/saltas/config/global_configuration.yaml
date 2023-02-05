@@ -1,0 +1,4 @@
+saltas_node:
+  ros__parameters:
+    velocity_estimation_frequency: 50          # Hz
+    perception_frequency: 10                # Hz

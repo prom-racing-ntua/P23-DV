@@ -1,3 +1,0 @@
-/home/subdiduntil/MPCC_full/C++/CMakeFiles/rebuild_cache.dir
-/home/subdiduntil/MPCC_full/C++/CMakeFiles/edit_cache.dir
-/home/subdiduntil/MPCC_full/C++/CMakeFiles/MPCC.dir

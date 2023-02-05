@@ -1,0 +1,203 @@
+import cv2
+import torch
+from PIL import Image
+import time
+
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import math
+
+from torch.utils.data import Dataset
+import json
+import torchvision
+from torch.utils.data import SubsetRandomSampler, DataLoader
+
+import torch.optim as optim
+
+from .cnn import *
+
+def initYOLOModel(modelpath, conf=0.75, iou=0.45):
+    yolo_model = torch.hub.load('WongKinYiu/yolov7', 'custom', modelpath, force_reload=True)
+    yolo_model.agnostic = True
+    yolo_model.conf = conf
+    yolo_model.iou = iou
+    return yolo_model
+
+
+def inferenceYOLO(model, imgpath, res):
+    results = model(imgpath, size=res).pandas().xyxy[0]
+    return results
+
+
+def initKeypoint(small_modelpath, large_modelpath):
+    small_model = VGGLikeV3()
+    small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
+    large_model = LargeCNN()
+    large_model.load_state_dict(torch.load(large_modelpath,map_location=torch.device('cpu')))
+    return small_model, large_model
+
+def cropResizeCones(yolo_results, image, margin):
+    img_h = len(image)
+    img_w = len(image[0])
+    
+    small_bounding_boxes = yolo_results[yolo_results['class']<3]
+    large_bounding_boxes = yolo_results[yolo_results['class']==3]
+    small_cones_imgs = []
+    large_cones_imgs = []
+    
+    classes = []
+    cropped_img_corners = []
+    
+    for i in range(len(small_bounding_boxes)):
+        bb_dict = small_bounding_boxes.iloc[i].to_dict()
+        
+        # Find corners of cropped images
+        xmin = max(math.floor(bb_dict['xmin'])-margin, 0)
+        xmax = min(math.floor(bb_dict['xmax'])+margin, img_w-1)
+        ymin = max(math.floor(bb_dict['ymin'])-margin, 0)
+        ymax = min(math.floor(bb_dict['ymax'])+margin, img_h-1)
+        
+        # Stack cropped images
+        cone_img = image[ymin:ymax, xmin:xmax]
+        cone_img = cv2.resize(cone_img,dsize=(48,64))
+        small_cones_imgs.append(cone_img)
+        
+        # Stack corners of cropped images
+        cropped_img_corners.append([xmin, ymin, xmax, ymax])
+
+        # Stack classes of cropped images
+        classes.append(bb_dict['class'])
+    
+    for i in range(len(large_bounding_boxes)):
+        bb_dict = large_bounding_boxes.iloc[i].to_dict()
+        
+        # Find corners of cropped images
+        xmin = max(math.floor(bb_dict['xmin'])-margin, 0)
+        xmax = min(math.floor(bb_dict['xmax'])+margin, img_w-1)
+        ymin = max(math.floor(bb_dict['ymin'])-margin, 0)
+        ymax = min(math.floor(bb_dict['ymax'])+margin, img_h-1)
+        
+        # Stack cropped images
+        cone_img = image[ymin:ymax, xmin:xmax]
+        cone_img = cv2.resize(cone_img,dsize=(48,64))
+        large_cones_imgs.append(cone_img)
+        
+        # Stack corners of cropped images
+        cropped_img_corners.append([xmin, ymin, xmax, ymax])
+        
+        # Stack classes of cropped images
+        classes.append(bb_dict['class'])
+
+    return small_cones_imgs, large_cones_imgs, classes, cropped_img_corners
+
+
+def runKeypoints(small_cones_imgs, large_cones_imgs, small_keypoints_model, large_keypoints_model):
+    if (len(small_cones_imgs)>0):
+        small_cones_imgs_list = []
+        
+        # Convert images to a Pytorch-friendly format
+        for i in range(len(small_cones_imgs)):
+            small_cones_imgs_list.append(torch.from_numpy(small_cones_imgs[i].transpose(2,0,1)).unsqueeze(0).float())
+        small_cones_imgs_tensor = torch.cat(small_cones_imgs_list, dim=0)
+    
+        # Inference
+        small_predictions = small_keypoints_model(small_cones_imgs_tensor/255.0).cpu().detach().numpy()
+        small_predictions = small_predictions.reshape(small_predictions.shape[0], 7, 2).tolist()
+    else:
+        small_predictions = []
+    
+    if (len(large_cones_imgs)>0):
+        large_cones_imgs_list = []
+
+        # Convert images to a Pytorch-friendly format
+        for i in range(len(large_cones_imgs)):
+            large_cones_imgs_list.append(torch.from_numpy(large_cones_imgs[i].transpose(2,0,1)).unsqueeze(0).float())
+        large_cones_imgs_tensor = torch.cat(large_cones_imgs_list, dim=0)
+        
+        # Inference
+        large_predictions = large_keypoints_model(large_cones_imgs_tensor).cpu().detach().numpy()
+        large_predictions = large_predictions.reshape(large_predictions.shape[0], 11, 2).tolist()
+    else:
+        large_predictions = []
+    
+    return small_predictions + large_predictions
+
+def rt_converter(camera, pnp_dist):
+    # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
+    if camera == 'left':
+        x = np.cos(math.pi*34/180)*np.cos(math.pi*9.5/180)*pnp_dist[2] + np.cos(math.pi*9.5/180)*np.sin(math.pi*34/180)*pnp_dist[0] - np.sin(math.pi*9.5/180)*pnp_dist[1] - 31
+        y = -np.sin(math.pi*34/180)*pnp_dist[2] + np.cos(math.pi*34/180)*pnp_dist[0] - 10
+        r = np.sqrt(x**2 + y**2)
+        theta = math.atan2(y, x)
+    elif camera == 'right':
+        x = np.cos(math.pi*34/180)*np.cos(math.pi*9.5/180)*pnp_dist[2] - np.cos(math.pi*9.5/180)*np.sin(math.pi*34/180)*pnp_dist[0] - np.sin(math.pi*9.5/180)*pnp_dist[1] - 31
+        y = np.sin(math.pi*34/180)*pnp_dist[2] + np.cos(math.pi*34/180)*pnp_dist[0] + 10
+        r = np.sqrt(x**2 + y**2)
+        theta = math.atan2(y, x)
+    elif camera == 'center':
+        x = np.cos(math.pi*9.5/180)*pnp_dist[2] - np.sin(math.pi*9.5/180)*pnp_dist[1] - 30
+        y = pnp_dist[0]
+        r = np.sqrt(x**2 + y**2)
+        theta = math.atan2(y, x)
+    return r[0]/100, theta
+
+
+def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY, image):
+    rt = []
+    for j in range(len(classes)):
+        cone_keypoints = []
+        
+        # Depending on lens used choose an intrinsic camera matrix
+        if camera == 'center':
+            cameraMatrix = np.array([[2500, 0, 640], [0, 2500, 512], [0, 0, 1]])
+            distCoeffs = np.array([[0, 0, 0, 0, 0]])
+        elif (camera=='left' or camera=='right'):
+            cameraMatrix = np.array([[1250, 0, 640], [0, 1250, 512], [0, 0, 1]])
+            distCoeffs = np.array([[0, 0, 0, 0, 0]])          
+        
+        # Depending on the cone class set real coordiantes of keypoints
+        if classes[j] == 3:
+            # Outputs the coordinates of keypoints on the full image (not just ROI)
+            for k in range(11):
+                x = predictions[j][k][0]*(cropped_img_corners[j][2] - cropped_img_corners[j][0])/48 + cropped_img_corners[j][0]
+                y = OffsetY + predictions[j][k][1]*(cropped_img_corners[j][3] - cropped_img_corners[j][1])/64 + cropped_img_corners[j][1]
+                image[int(y)-4:int(y)+4, int(x)-4:int(x)+4] = np.array([0,255,0])
+
+                cone_keypoints.append([x,y]) 
+            cone_keypoints_numpy = np.array(cone_keypoints)
+            
+            real_coords = np.array([[10.5, 4.5, 0],
+                        [8.75, 14.35, 0],
+                        [7.24, 22.71, 0],
+                        [6.04, 30.62 ,0],
+                        [4.54, 38.99, 0],
+                        [0, 50.5, 0],
+                        [-4.54, 38.99, 0],
+                        [-6.04, 30.62 ,0],
+                        [-7.24, 22.71, 0],
+                        [-8.75, 14.35, 0],
+                        [-10.5, 4.5, 0]])
+        elif classes[j] < 3:
+            # Outputs the coordinates of keypoints on the full image (not just ROI)
+            for k in range(7):
+                x = predictions[j][k][0]*(cropped_img_corners[j][2] - cropped_img_corners[j][0])/48 + cropped_img_corners[j][0]
+                y = OffsetY + predictions[j][k][1]*(cropped_img_corners[j][3] - cropped_img_corners[j][1])/64 + cropped_img_corners[j][1]
+                image[int(y)-4:int(y)+4, int(x)-4:int(x)+4] = np.array([0,255,0])
+
+                cone_keypoints.append([x,y]) 
+            cone_keypoints_numpy = np.array(cone_keypoints)
+            
+            real_coords = np.array([[7.4, 2.7, 0],
+                        [5.8, 11.9, 0],
+                        [4.3, 20.5, 0],
+                        [0, 32.5 ,0],
+                        [-4.3, 20.5, 0],
+                        [-5.8, 11.9, 0],
+                        [-7.4, 2.7, 0]])
+        
+        # Use solvePnP to get cone position in camera frame and then find range,theta from car CoG
+        _, _, translation_vector = cv2.solvePnP(real_coords, cone_keypoints_numpy, cameraMatrix, distCoeffs, cv2.SOLVEPNP_IPPE)
+        rt.append(rt_converter(camera, translation_vector))
+    return rt

@@ -1,0 +1,16 @@
+canbus:
+  can_interface:
+    ros__parameters:
+      # Configure Port
+      port: '/dev/ttyACM0'
+      baudrate: 115200
+      timeout: 0.001
+
+      read_frequency: 150
+
+      # Sensor Configuration - Incoming Messages
+      enabled_sensors: ['front_halls', 'rear_halls', 'steering', 'brakes']
+      
+      # For testing on the wood ;)
+      # enabled_sensors: ['test_hall']
+      # outgoing_messages: ['state_pub']

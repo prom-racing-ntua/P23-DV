@@ -1,0 +1,61 @@
+cmake_minimum_required(VERSION 3.8)
+project(custom_msgs)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+# ament_auto_find_build_dependencies()
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # uncomment the line when a copyright and license is not present in all source files
+  #set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # uncomment the line when this package is not in a git repo
+  #set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ## Can-USB sent msgs
+  "msg/CanSystemState.msg"
+  "msg/CanControlCommand.msg"
+  "msg/CanVehicleVariables.msg"
+
+  ## Can-USB receive msgs
+  "msg/CanWheelSpeed.msg"
+  "msg/CanVehicleSensors.msg"
+
+  ## Mater node msgs
+  "msg/NodeSync.msg"
+
+  ## Velocity Estimation msgs
+  "msg/VelEstimation.msg"
+
+  ## Perception msgs
+  "msg/AcquisitionMessage.msg"
+  "msg/Perception2Slam.msg"
+
+  ## Msgs fot P22 testing
+  "msg/WheelSpeed.msg"
+  "msg/SteeringAngle.msg"
+  "msg/BrakePressure.msg"
+
+  # Services
+  "srv/GetFrequencies.srv"
+
+  DEPENDENCIES std_msgs geometry_msgs sensor_msgs
+  ADD_LINTER_TESTS
+)
+
+ament_export_dependencies(rosidl_default_runtime)
+
+ament_package()

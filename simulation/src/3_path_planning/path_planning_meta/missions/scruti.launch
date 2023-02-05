@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <include file="$(find path_planning_code)/launch/path_planning.launch"/>
+  <include file="$(find control_pure_pursuit)/launch/pure_pursuit.launch"/>
+
+</launch>

@@ -1,0 +1,15 @@
+velocity_estimate_topic_name: /estimation/velocity_estimation/velocity_estimate
+slam_map_topic_name: /estimation/slam/map
+slam_state_topic_name: /estimation/slam/state
+control_command_topic_name: /control/pure_pursuit/control_command
+center_line_topic_name: /control/pure_pursuit/center_line
+
+max_speed: 7  # [m/s]
+
+node_rate: 10   # [Hz]
+
+controller:
+  speed:
+    p: 0.3
+  steering:
+    p: 1.5

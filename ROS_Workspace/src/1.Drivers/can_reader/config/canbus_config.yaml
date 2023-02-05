@@ -1,0 +1,38 @@
+# Incoming Messages
+front_halls:
+  id: 0x310
+  topic: 'front_hall_sensors'
+  msg_type: 'hall_msg'
+  parser: 'hall_parser'
+
+rear_halls:
+  id: 0x4D1
+  topic: 'rear_hall_sensors'
+  msg_type: 'hall_msg'
+  parser: 'hall_parser'
+
+steering:
+  id: 0x4D2
+  topic: 'steering_angle'
+  msg_type: 'steering_msg'
+  parser: 'steering_parser'
+
+brakes:
+  id: 0x301
+  topic: 'brake_pressure'
+  msg_type: 'brake_pressure_msg'
+  parser: 'brakes_parser'
+
+test_hall:
+  id: 0x305
+  topic: 'wheel_encoders'
+  msg_type: 'sim_halls'
+  parser: 'hall_callback'
+
+
+# Outgoing Messages
+state_pub:
+  id: 0x03
+  topic: 'state_pub'
+  msg_type: 'can_state'
+  callback: 'state_pub_callback'
