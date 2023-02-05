@@ -394,7 +394,6 @@ StateVector Model::getF(const State &x,const Input &u) const //checked
     f(10) = dDelta;
     f(11) = dVs;
     // std::cout << "ax_ol is: " << f(3) << std::endl;
-    
     return f;
 }
 
