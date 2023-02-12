@@ -19,7 +19,6 @@
 
 #include "config.h"
 #include "types.h"
-#include "Model/model.h"
 #include "Spline/arc_length_spline.h"
 
 namespace mpcc{
@@ -67,7 +66,6 @@ private:
 
     CostParam cost_param_;
     Param param_;
-    Model model_;
 };
 }
 #endif //MPCC_COST_H

@@ -1,22 +1,23 @@
 
 {
-  "Cr0" : 0.0,
+  "Cr0" : 0.03,
   "CdA": 1.8,
   "ClA": 5.47,
 
   "m"   : 190.0,
-  "Iz"  : 100,
-  "Iw"  : 0.06,
-  "lol" : 1.65,
-  "h_cog":0.275,
+  "Iz"  : 110.0,
+  "lf"  : 0.9141,
+  "lr"  : 0.7359,
 
-  "car_l": 1.8,
+  "car_l": 2.0,
   "car_w": 1.0,
+
+  "R_in" : 1.5,
+  "R_out" : 1.5,
 
   "pair": 1.225, 	
   "g"   : 9.81,
-  "wd": 0.446,
-  "gr":3.9,
+  "gr": 3.9,
   "mi_disk":0.6,
   
   "Rf":0.1995,
@@ -24,20 +25,18 @@
   "Rdf": 0.079,
   "Rdr":0.0735,
   
-  "T_M_max":186.2,
+  "T_M_max":182.6,
   "PMC_max_f":7958000, 
   "PMC_max_r":1932000,	
-  "F_max":1000,
   "A_cal_f":0.001963,
   "A_cal_r":0.000981,
 
   "max_dist_proj": 3.0,
-  "maxAlpha" : 0.15,
 
-  "initial_velocity" : 3.0,
-  "s_trust_region" : 10.0,
+  "maxAlpha" : 0.1,
+
+  "initial_velocity" : 15.0,
+  "s_trust_region" : 30.0,
 
   "vx_zero": 0.1
-  
-  
 }

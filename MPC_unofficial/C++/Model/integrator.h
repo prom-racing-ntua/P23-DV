@@ -33,6 +33,7 @@ public:
 
 private:
     const double fine_time_step_ = 0.001;
+
     Model model_;
 };
 }

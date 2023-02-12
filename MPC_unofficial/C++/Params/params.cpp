@@ -21,15 +21,15 @@ Param::Param(){
     std::cout << "Default initialization of model params" << std::endl;
 }
 
-Param::Param(std::string file){ //checked
+Param::Param(std::string file){
     /////////////////////////////////////////////////////
     // Loading Model and Constraint Parameters //////////
     /////////////////////////////////////////////////////
+    // std::cout << "model" << std::endl;
 
     std::ifstream iModel(file);
     json jsonModel;
     iModel >> jsonModel;
-    // Model Parameters
     Cr0 	= jsonModel["Cr0"];
     CdA 	= jsonModel["CdA"];
     ClA 	= jsonModel["ClA"];
@@ -43,17 +43,14 @@ Param::Param(std::string file){ //checked
 
     m 	= jsonModel["m"];
     Iz 	= jsonModel["Iz"];
-    Iw = jsonModel["Iw"];
-    lol = jsonModel["lol"];
+    lf=jsonModel["lf"];
+    lr=jsonModel["lr"];
 
     car_l = jsonModel["car_l"];
     car_w = jsonModel["car_w"];
-    h_cog=jsonModel["h_cog"];
     
     g = jsonModel["g"];
     pair=jsonModel["pair"];    
-
-    wd = jsonModel["wd"];
     gr = jsonModel["gr"];
     mi_disk = jsonModel["mi_disk"];
 
@@ -62,11 +59,10 @@ Param::Param(std::string file){ //checked
     PMC_max_r = jsonModel["PMC_max_r"];
     A_cal_f = jsonModel["A_cal_f"];
     A_cal_r = jsonModel["A_cal_r"];
-    F_max = jsonModel["F_max"];
 
     //Constraint Parameters
-    //r_in = jsonModel["R_in"];
-    //.r_out = jsonModel["R_out"];
+    r_in = jsonModel["R_in"];
+    r_out = jsonModel["R_out"];
 
     max_dist_proj = jsonModel["max_dist_proj"];
     max_alpha = jsonModel["maxAlpha"];
@@ -100,7 +96,7 @@ CostParam::CostParam(std::string file){
     q_r = jsonCost["qR"];
 
     q_beta = jsonCost["qBeta"];
-    beta_kin_cost = 0;//jsonCost["betaKin"];
+    beta_kin_cost = 1;//jsonCost["betaKin"];
 
     r_D = jsonCost["rD"];
     r_delta = jsonCost["rDelta"];
@@ -136,14 +132,13 @@ BoundsParam::BoundsParam(std::string file) {
     std::ifstream iBounds(file);
     json jsonBounds;
     iBounds >> jsonBounds;
+
     lower_state_bounds.X_l = jsonBounds["Xl"];
     lower_state_bounds.Y_l = jsonBounds["Yl"];
     lower_state_bounds.phi_l = jsonBounds["phil"];
     lower_state_bounds.vx_l = jsonBounds["vxl"];
     lower_state_bounds.vy_l = jsonBounds["vyl"];
     lower_state_bounds.r_l = jsonBounds["rl"];
-    lower_state_bounds.rwf_l=jsonBounds["rwfl"];
-    lower_state_bounds.rwr_l=jsonBounds["rwrl"];
     lower_state_bounds.s_l = jsonBounds["sl"];
     lower_state_bounds.D_l = jsonBounds["Dl"];
     lower_state_bounds.delta_l = jsonBounds["deltal"];
@@ -155,8 +150,6 @@ BoundsParam::BoundsParam(std::string file) {
     upper_state_bounds.vx_u = jsonBounds["vxu"];
     upper_state_bounds.vy_u = jsonBounds["vyu"];
     upper_state_bounds.r_u = jsonBounds["ru"];
-    upper_state_bounds.rwf_u=jsonBounds["rwfu"];
-    upper_state_bounds.rwr_u=jsonBounds["rwru"];
     upper_state_bounds.s_u = jsonBounds["su"];
     upper_state_bounds.D_u = jsonBounds["Du"];
     upper_state_bounds.delta_u = jsonBounds["deltau"];
@@ -193,8 +186,6 @@ NormalizationParam::NormalizationParam(std::string file)
     T_x(si_index.vx,si_index.vx) = jsonNorm["vx"];
     T_x(si_index.vy,si_index.vy) = jsonNorm["vy"];
     T_x(si_index.r,si_index.r) = jsonNorm["r"];
-    T_x(si_index.rwf,si_index.rwf) = jsonNorm["rwf"];
-    T_x(si_index.rwr,si_index.rwr) = jsonNorm["rwr"];
     T_x(si_index.s,si_index.s) = jsonNorm["s"];
     T_x(si_index.D,si_index.D) = jsonNorm["D"];
     T_x(si_index.delta,si_index.delta) = jsonNorm["delta"];

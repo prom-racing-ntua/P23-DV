@@ -1,14 +1,15 @@
+
 {
-    "n_sqp": 2,
-    "n_reset": 2,
-    "sqp_mixing" : 0.9,
-    "n_sim": 100,
-    "Ts": 0.005,
-    "v0": 1.0,
-    
-    "model_path": "Params/model.json",
-    "cost_path": "Params/cost.json",
-    "bounds_path": "Params/bounds.json",
-    "track_path": "Params/track.json",
-    "normalization_path": "Params/normalization.json"
-  }
+  "n_sqp": 2,
+  "n_reset": 2,
+  "sqp_mixing" : 0.9,
+  "n_sim": 2000,
+  "Ts": 0.025,
+  "v0": 0.1,
+  
+  "model_path": "Params/model.json",
+  "cost_path": "Params/cost.json",
+  "bounds_path": "Params/bounds.json",
+  "track_path": "Params/track.json",
+  "normalization_path": "Params/normalization.json"
+}

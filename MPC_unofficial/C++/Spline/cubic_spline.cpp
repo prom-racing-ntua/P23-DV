@@ -36,7 +36,7 @@ void CubicSpline::setRegularData(const Eigen::VectorXd &x_in,const Eigen::Vector
     }
     else
     {
-        std::cout << "input data on cubic spline does not have the same length" << std::endl;
+        std::cout << "input data does not have the same length" << std::endl;
     }
 }
 
@@ -58,7 +58,7 @@ void CubicSpline::setData(const Eigen::VectorXd &x_in,const Eigen::VectorXd &y_i
     }
     else
     {
-        std::cout << "input data on cubic spline does not have the same length" << std::endl;
+        std::cout << "input data does not have the same length" << std::endl;
     }
 }
 

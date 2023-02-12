@@ -20,7 +20,7 @@ namespace mpcc{
 MPC::MPC()
 :Ts_(1.0)
 {
-    std::cout << "default constructor of mpc, not everything is initialized properly" << std::endl;
+    std::cout << "default constructor, not everything is initialized properly" << std::endl;
 }
 
 MPC::MPC(int n_sqp, int n_reset,double sqp_mixing, double Ts,const PathToJson &path)
@@ -47,10 +47,7 @@ void MPC::setMPCProblem()
 {
     for(int i=0;i<=N;i++)
     {
-        //std::cout << "MPC set stage iteration no." << i << std::endl; 
-
         setStage(initial_guess_[i].xk,initial_guess_[i].uk,initial_guess_[i+1].xk,i);
-
     }
 }
 
@@ -70,21 +67,15 @@ void MPC::setStage(const State &xk, const Input &uk, const State &xk1, const int
         stages_[time_step].ns = NS;
     }
 
-    //std::cout << "stages ng, nx and nu set successfully" << std::endl; 
     State xk_nz = xk;
     xk_nz.vxNonZero(param_.vx_zero);
 
     State xk1_nz = xk1;
     xk1_nz.vxNonZero(param_.vx_zero);
 
-    //std::cout << "xk and xk1 non-zero states done" << std::endl; 
-
     stages_[time_step].cost_mat = normalizeCost(cost_.getCost(track_,xk_nz,uk,time_step));
-    //std::cout << "normalized costs done" << std::endl; 
     stages_[time_step].lin_model = normalizeDynamics(model_.getLinModel(xk_nz,uk,xk1_nz));
-    //std::cout << "normalized dynamics done" << std::endl; 
     stages_[time_step].constrains_mat = normalizeCon(constraints_.getConstraints(track_,xk_nz,uk));
-    //std::cout << "normalized constraints done" << std::endl; 
 
     stages_[time_step].l_bounds_x = normalization_param_.T_x_inv*bounds_.getBoundsLX(xk_nz);
     stages_[time_step].u_bounds_x = normalization_param_.T_x_inv*bounds_.getBoundsUX(xk_nz);
@@ -92,8 +83,6 @@ void MPC::setStage(const State &xk, const Input &uk, const State &xk1, const int
     stages_[time_step].u_bounds_u = normalization_param_.T_u_inv*bounds_.getBoundsUU(uk);
     stages_[time_step].l_bounds_s = normalization_param_.T_s_inv*bounds_.getBoundsLS();
     stages_[time_step].u_bounds_s = normalization_param_.T_s_inv*bounds_.getBoundsUS();
-
-
 
     stages_[time_step].l_bounds_x(si_index.s) = normalization_param_.T_x_inv(si_index.s,si_index.s)*
                                                 (-param_.s_trust_region);//*initial_guess_[time_step].xk.vs;
@@ -104,10 +93,8 @@ void MPC::setStage(const State &xk, const Input &uk, const State &xk1, const int
 
 CostMatrix MPC::normalizeCost(const CostMatrix &cost_mat)
 {
-    //std::cout << "mpika normalized cost" << std::endl;    
     const Q_MPC Q = normalization_param_.T_x*cost_mat.Q*normalization_param_.T_x;
     const R_MPC R = normalization_param_.T_u*cost_mat.R*normalization_param_.T_u;
-    //std::cout << "normalized Q & R cost vectors done" << std::endl; 
     const q_MPC q = normalization_param_.T_x*cost_mat.q;
     const r_MPC r = normalization_param_.T_u*cost_mat.r;
     const Z_MPC Z = normalization_param_.T_s*cost_mat.Z*normalization_param_.T_s;
@@ -117,10 +104,9 @@ CostMatrix MPC::normalizeCost(const CostMatrix &cost_mat)
 
 LinModelMatrix MPC::normalizeDynamics(const LinModelMatrix &lin_model)
 {
-    const A_MPC A = normalization_param_.T_x_inv*lin_model.A*normalization_param_.T_x; 
+    const A_MPC A = normalization_param_.T_x_inv*lin_model.A*normalization_param_.T_x;
     const B_MPC B = normalization_param_.T_x_inv*lin_model.B*normalization_param_.T_u;
     const g_MPC g = normalization_param_.T_x_inv*lin_model.g;
-
     return {A,B,g};
 }
 
@@ -128,7 +114,6 @@ ConstrainsMatrix MPC::normalizeCon(const ConstrainsMatrix &con_mat)
 {
     const C_MPC C = con_mat.C*normalization_param_.T_x;
     const D_MPC D =  con_mat.D*normalization_param_.T_u;
-    //std::cout << "C & D matrices done: " << std::endl;
     const d_MPC dl = con_mat.dl;
     const d_MPC du = con_mat.du;
     return {C,D,dl,du};
@@ -154,8 +139,6 @@ void MPC::updateInitialGuess(const State &x0)
 {
     for(int i=1;i<N;i++)
         initial_guess_[i-1] = initial_guess_[i];
-
-    // std::cout << "init.guess is:" << initial_guess_ << std::endl;
 
     initial_guess_[0].xk = x0;
     initial_guess_[0].uk.setZero();
@@ -238,25 +221,20 @@ std::array<OptVariables,N+1> MPC::sqpSolutionUpdate(const std::array<OptVariable
 
 MPCReturn MPC::runMPC(State &x0)
 {
-    std::cout << "mpc started" << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
     int solver_status = -1;
     x0.s = track_.porjectOnSpline(x0);
     x0.unwrap(track_.getLength());
-    // std::cout << "valid initial guess before is:" << valid_initial_guess_ << std::endl;
     if(valid_initial_guess_)
         updateInitialGuess(x0);
     else
         generateNewInitialGuess(x0);
-    // std::cout << "valid initial guess after is:" << valid_initial_guess_ << std::endl;
+
     //TODO: this is one approach to handle solver errors, works well in simulation
     n_no_solves_sqp_ = 0;
     for(int i=0;i<n_sqp_;i++)
     {
-        // std::cout << "I'm at spq iteration " << i << std::endl;
         setMPCProblem();
-        std::cout << "mpc problem (and constraints) set" << std::endl;
-        // std::cout << "MPC Problem set successfully" << std::endl;
         State x0_normalized = vectorToState(normalization_param_.T_x_inv*(stateToVector(x0)-1.0*stateToVector(x0)));
         optimal_solution_ = solver_interface_->solveMPC(stages_,x0_normalized, &solver_status);
         optimal_solution_ = deNormalizeSolution(optimal_solution_);
@@ -279,9 +257,8 @@ MPCReturn MPC::runMPC(State &x0)
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
     double time_nmpc = time_span.count();
-    std::cout << "mpc ended" << std::endl;
+    std::cout << "time of mpc is: " << time_nmpc << std::endl;
     return {initial_guess_[0].uk,initial_guess_,time_nmpc};
-
 }
 
 void MPC::setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y){

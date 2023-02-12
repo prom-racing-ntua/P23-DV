@@ -159,12 +159,13 @@ int testTireForceConstraint(const PathToJson &path) {
     Input uk2 = vectorToInput(uk2_vec);
 
     TireForces f_rear = model.getForceRear(xk1);
+    const NormalForces f_normal = model.getForceNormal(xk1);
+    const MuConstraints mu = constraints.getEllipseParams(f_normal.F_N_rear);
+    const double a = mu.mx_max;
+    const double b = mu.my_max;
 
-    const double lf = model.getLengthFront(xk1);
-    const double lr = model.getLengthRear(xk1);
-    
-    tireForce = std::sqrt(std::pow(1.25*f_rear.F_x,2) + std::pow(f_rear.F_y,2));
-    maxForce = 0.95*1300;
+    tireForce = std::sqrt(std::pow(f_rear.F_x/(a*f_normal.F_N_rear),2) + std::pow(f_rear.F_y/(b*f_normal.F_N_rear),2));
+    maxForce = 1;
 
     ConstrainsMatrix constraints_mat = constraints.getConstraints(track,xk2,uk2);
 

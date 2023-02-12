@@ -26,12 +26,10 @@ StateVector stateToVector(const State &x)
     xk(3) = x.vx;
     xk(4) = x.vy;
     xk(5) = x.r;
-    xk(6) = x.rwf;
-    xk(7) = x.rwr;
-    xk(8) = x.s;
-    xk(9) = x.D;
-    xk(10) = x.delta;
-    xk(11) = x.vs;
+    xk(6) = x.s;
+    xk(7) = x.D;
+    xk(8) = x.delta;
+    xk(9) = x.vs;
     return xk;
 }
 
@@ -50,12 +48,10 @@ State vectorToState(const StateVector &xk)
     x.vx    = xk(3);
     x.vy    = xk(4);
     x.r     = xk(5);
-    x.rwf   = xk(6);
-    x.rwr   = xk(7);
-    x.s     = xk(8);
-    x.D     = xk(9);
-    x.delta = xk(10);
-    x.vs    = xk(11);
+    x.s     = xk(6);
+    x.D     = xk(7);
+    x.delta = xk(8);
+    x.vs    = xk(9);
 
     return x;
 }
@@ -79,12 +75,10 @@ State arrayToState(double *xk)
     x.vx    = xk[3];
     x.vy    = xk[4];
     x.r     = xk[5];
-    x.rwf   = xk[6];
-    x.rwr   = xk[7];
-    x.s     = xk[8];
-    x.D     = xk[9];
-    x.delta = xk[10];
-    x.vs    = xk[11];
+    x.s     = xk[6];
+    x.D     = xk[7];
+    x.delta = xk[8];
+    x.vs    = xk[9];
 
     return x;
 }

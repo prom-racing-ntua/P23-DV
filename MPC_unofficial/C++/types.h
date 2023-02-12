@@ -17,7 +17,7 @@
 #ifndef MPCC_TYPES_H
 #define MPCC_TYPES_H
 
-#include "config.h" //checked
+#include "config.h"
 namespace mpcc{
 struct State{
     double X;
@@ -26,8 +26,6 @@ struct State{
     double vx;
     double vy;
     double r;
-    double rwf; //rot.speed of front wheel 
-    double rwr; // rot.speed of rear wheel
     double s;
     double D;
     double delta;
@@ -41,8 +39,6 @@ struct State{
         vx = 0.0;
         vy = 0.0;
         r = 0.0;
-        rwf=0.0;
-        rwr=0.0;
         s = 0.0;
         D = 0.0;
         delta = 0.0;

@@ -18,7 +18,7 @@
 namespace mpcc{
 Integrator::Integrator()
 {
-    std::cout << "default constructor of integrator, not everything is initialized properly" << std::endl;
+    std::cout << "default constructor, not everything is initialized properly" << std::endl;
 }
 
 Integrator::Integrator(double Ts,const PathToJson &path)
@@ -57,9 +57,12 @@ State Integrator::simTimeStep(const State &x, const Input &u,const double ts) co
     // integrate time step
     State x_next = x;
     const int integration_steps = (int)(ts/fine_time_step_);
+    std::cout << "ts is: " << ts << " and time step is " << fine_time_step_ << std::endl;
+    
+
     if(ts/fine_time_step_ != integration_steps)
     {
-        std::cout << "Warning on int.step" << std::endl;
+        std::cout << "Warning" << std::endl;
     }
     for(int i = 0;i<integration_steps;i++) {
         x_next = RK4(x_next,u,fine_time_step_);

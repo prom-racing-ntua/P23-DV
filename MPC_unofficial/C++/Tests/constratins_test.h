@@ -17,7 +17,7 @@
 #ifndef MPCC_CONSTRATINS_TEST_H
 #define MPCC_CONSTRATINS_TEST_H
 
-#include "Model/model.h"
+
 #include "Spline/arc_length_spline.h"
 #include "Constraints/constraints.h"
 namespace mpcc{

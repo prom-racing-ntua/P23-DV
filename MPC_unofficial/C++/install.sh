@@ -1,4 +1,3 @@
-#!/bin/sh
 ## Copyright 2019 Alexander Liniger
 
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +13,9 @@
 ## limitations under the License.
 ###########################################################################
 ###########################################################################
-## Install dependencies
-set -e
+## install dependincies
 
+#!/bin/bash
 ## clone blasfeo
 repository_blasfeo="https://github.com/giaf/blasfeo.git"
 localFolder_blasfeo="External/blasfeo"
@@ -43,7 +42,7 @@ cd External/blasfeo
 mkdir -p build
 mkdir -p lib
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=$(realpath ../lib)
+cmake .. -DCMAKE_INSTALL_PREFIX=../lib
 make
 make install
 
@@ -51,6 +50,6 @@ cd ../../hpipm
 mkdir -p build
 mkdir -p lib
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=$(realpath ../lib) -DBLASFEO_PATH=$(realpath ../../blasfeo/lib)
+cmake .. -DCMAKE_INSTALL_PREFIX=../lib -DBLASFEO_PATH=../../blasfeo/lib
 make
 make install

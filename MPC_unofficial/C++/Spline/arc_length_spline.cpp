@@ -36,7 +36,7 @@ void ArcLengthSpline::setData(const Eigen::VectorXd &X_in,const Eigen::VectorXd 
         path_data_.s = compArcLength(X_in,Y_in);
     }
     else{
-        std::cout << "input data on arc length spline does not have the same length" << std::endl;
+        std::cout << "input data does not have the same length" << std::endl;
     }
 }
 
@@ -50,7 +50,7 @@ void ArcLengthSpline::setRegularData(const Eigen::VectorXd &X_in,const Eigen::Ve
         path_data_.s = s_in;
     }
     else{
-        std::cout << "input data on arclength spline does not have the same length" << std::endl;
+        std::cout << "input data does not have the same length" << std::endl;
     }
 }
 
@@ -129,8 +129,6 @@ RawPath ArcLengthSpline::outlierRemoval(const Eigen::VectorXd &X_original,const 
     resampled_path.X.setZero(n_points);
     resampled_path.Y.setZero(n_points);
 
-
-
     // compute distance between points in X-Y data
     distVec.setZero(n_points-1);
     for(int i=0;i<n_points-1;i++){
@@ -178,8 +176,6 @@ RawPath ArcLengthSpline::outlierRemoval(const Eigen::VectorXd &X_original,const 
 double ArcLengthSpline::unwrapInput(double x) const
 {
     double x_max = getLength();
-    double output = x - x_max*std::floor(x/x_max);
-    // std::cout << "output is: " << output << std::endl;
     return x - x_max*std::floor(x/x_max);
 }
 
@@ -192,7 +188,6 @@ void ArcLengthSpline::fitSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &
     double total_arc_length;
 
     s_approximation = compArcLength(X,Y);
-//    std::cout << s_approximation << std::endl;
     total_arc_length = s_approximation(s_approximation.size()-1);
 
     CubicSpline first_spline_x,first_spline_y;
@@ -273,10 +268,9 @@ double ArcLengthSpline::porjectOnSpline(const State &x) const
     pos(1) = x.Y;
     double s_guess = x.s;
     Eigen::Vector2d pos_path = getPostion(s_guess);
+
     double s_opt = s_guess;
-    // std::cout << "position and position path are " << pos << " " << pos_path << std::endl;
     double dist = (pos-pos_path).norm();
-    std:: cout << "dist is:" << dist << std::endl;
     if (dist >= param_.max_dist_proj)
     {
         std::cout << "dist too large" << std::endl;
@@ -286,12 +280,10 @@ double ArcLengthSpline::porjectOnSpline(const State &x) const
         std::vector<double> dist_square_vec(dist_square.data(),dist_square.data() + dist_square.size());
         auto min_iter = std::min_element(dist_square_vec.begin(),dist_square_vec.end());
         s_opt = path_data_.s(std::distance(dist_square_vec.begin(), min_iter));
-        std::cout << "s_opt is: "<< s_opt << std::endl;
     }
     double s_old = s_opt;
     for(int i=0; i<20; i++)
     {
-        // std::cout << "mpika gia optimization tou s, on iteration " << i << std::endl;
         pos_path = getPostion(s_opt);
         Eigen::Vector2d ds_path = getDerivative(s_opt);
         Eigen::Vector2d dds_path = getSecondDerivative(s_opt);
@@ -302,12 +294,9 @@ double ArcLengthSpline::porjectOnSpline(const State &x) const
         // Newton method
         s_opt -= jac/hessian;
         s_opt = unwrapInput(s_opt);
-        //std::cout << "gap between s'es" << " " << std::abs(s_old - s_opt) << std::endl;
-        //std::cout << "s_old is: " << s_old << " and " << "s_opt is: "<< s_opt << std::endl;
         if(std::abs(s_old - s_opt) <= 1e-5)
+            std::cout << "found optimal s: " << s_opt << " versus initial guess:" << s_guess << std::endl;
             return s_opt;
-        // std::cout << "didnt find optimal on iteration " << " " << i << std::endl;
-
         s_old = s_opt;
     }
     // something is strange if it did not converge within 20 iterations, give back the initial guess

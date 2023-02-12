@@ -28,18 +28,17 @@ namespace mpcc{
 //used namespace
 using json = nlohmann::json;
 
-class Param{ //checked
+class Param{
 public:
     double Cr0;
-    double Cr2;
     double CdA;
     double ClA;
 
     
     double m;
     double Iz;
-    double Iw;
-    double lol;
+    double lf;
+    double lr;
 
     double car_l;
     double car_w;
@@ -53,10 +52,8 @@ public:
     double Rdr;
     double Rf;
     double Rr;
-    double h_cog;
 
     double mi_disk;
-    double wd;
     double gr;
 
     double T_M_max;
@@ -65,8 +62,7 @@ public:
     double A_cal_f;
     double A_cal_r;
     double max_dist_proj;
-    double F_max;
-
+    
     double max_alpha;
 
     double initial_velocity;
@@ -125,8 +121,6 @@ public:
         double vx_l;
         double vy_l;
         double r_l;
-        double rwf_l;
-        double rwr_l;
         double s_l;
         double D_l;
         double delta_l;
@@ -139,8 +133,6 @@ public:
         double vx_u;
         double vy_u;
         double r_u;
-        double rwf_u;
-        double rwr_u;
         double s_u;
         double D_u;
         double delta_u;

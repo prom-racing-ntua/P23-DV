@@ -18,7 +18,7 @@
 namespace mpcc{
 Cost::Cost() 
 {
-    std::cout << "default constructor of cost, not everything is initialized properly" << std::endl;
+    std::cout << "default constructor, not everything is initialized properly" << std::endl;
 }
 
 Cost::Cost(const PathToJson &path) 
@@ -92,12 +92,16 @@ ErrorInfo Cost::getErrorInfo(const ArcLengthSpline &track,const State &x) const
     d_contouring_error(1,si_index.Y) = -std::sin(track_point.theta_ref);
     d_contouring_error(1,si_index.s) = dLagError;
 
+    // std::cout << " contouring error is : " << contouring_error << std::endl;   
+    // std::cout << " d_contouring_error is : " << d_contouring_error << std::endl;
+
     return {contouring_error,d_contouring_error};
 }
 
 CostMatrix Cost::getBetaCost(const State &x) const
 {
-//    CostMatrix beta_cost;
+    //CostMatrix beta_cost;
+    
     const double vx = x.vx;
     const double vy = x.vy;
     // jacobian of beta
@@ -113,29 +117,22 @@ CostMatrix Cost::getBetaCost(const State &x) const
     return {Q_beta,R_MPC::Zero(),S_MPC::Zero(),q_beta,r_MPC::Zero(),Z_MPC::Zero(),z_MPC::Zero()};
 }
 
-
 CostMatrix Cost::getBetaKinCost(const State &x) const
 {
-    //std::cout << "mpika beta kin cost" << std::endl; 
-    const double lf=model_.getLengthFront(x);
-    const double lr=model_.getLengthRear(x);
-    //std::cout << "got lf & lr for beta kin cost" << std::endl;
-    const double rel_center = lr/(lf + lr);
-    // CostMatrix beta_cost;
+    const double rel_center = param_.lr/(param_.lf + param_.lr);
+    //    CostMatrix beta_cost;
     const double vx = x.vx;
     const double vy = x.vy;
+    
     const double delta = x.delta;
-    //std::cout << "all model params set" << std::endl; 
     // jacobian of beta
     Eigen::Matrix<double,1,NX> d_beta = Eigen::Matrix<double,1,NX>::Zero();
-    //std::cout << "d_beta matrix set" << std::endl; 
     d_beta(si_index.vx) =  vy/(vx*vx + vy*vy);
     d_beta(si_index.vy) = -vx/(vx*vx + vy*vy);
     
     d_beta(si_index.delta) = (rel_center*(1.0/std::cos(delta))*(1.0/std::cos(delta)))/
                              (rel_center*rel_center*std::tan(delta)*std::tan(delta) + 1.0);
     // zero order term of beta approximation
-    //std::cout << "d_beta cost done" << std::endl; 
     const double beta_zero = std::atan(std::tan(delta)*rel_center) - std::atan(vy/vx) - d_beta*stateToVector(x);
     // Q_beta = (qBeta*beta)^2 ~ x^T (qBeta*dBeta^T*dBeta) x + (qBeta*2*BetaZero*qBeta)^ x + const
     const Q_MPC Q_beta = 2.0*cost_param_.q_beta*d_beta.transpose()*d_beta;
@@ -179,6 +176,7 @@ CostMatrix Cost::getContouringCost(const ArcLengthSpline &track, const State &x,
     // progress maximization part
     q_contouring_cost(si_index.vs) = -cost_param_.q_vs;
 
+
     // solver interface expects 0.5 x^T Q x + q^T x
     return {Q_contouring_cost,R_MPC::Zero(),S_MPC::Zero(),q_contouring_cost,r_MPC::Zero(),Z_MPC::Zero(),z_MPC::Zero()};
 }
@@ -191,12 +189,8 @@ CostMatrix Cost::getHeadingCost(const ArcLengthSpline &track, const State &x,int
     const double dy_ref = dpos_ref(1);
     // angle of the reference path
     double theta_ref = atan2(dy_ref,dx_ref);
-    theta_ref += 2.0*M_PI*std::round((x.phi - theta_ref)/(2.0*M_PI));
-
-    // if(std::fabs(x.phi - theta_ref)>= 1.5){
-    //     std::cout << "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk" << std::endl;
-    // }
-
+    theta_ref += 2.0*M_PI*std::round((x.phi - theta_ref)/(2.0*M_PI)); //could have phi??
+    // M_PI -> to 3.14
 
     Q_MPC Q_heading_cost = Q_MPC::Zero();
     Q_heading_cost(si_index.phi,si_index.phi) = 2.0*cost_param_.q_mu;
@@ -250,19 +244,15 @@ CostMatrix Cost::getCost(const ArcLengthSpline &track, const State &x, const Inp
     const CostMatrix contouring_cost = getContouringCost(track,x,k);
     const CostMatrix heading_cost = getHeadingCost(track,x,k);
     const CostMatrix input_cost = getInputCost();
-    //std::cout << "cont, heading & input cost done" << std::endl; 
     CostMatrix beta_cost;
-    //std::cout << "beta kin cost is: " << cost_param_.beta_kin_cost << std::endl; 
     if(cost_param_.beta_kin_cost == 1)
         beta_cost = getBetaKinCost(x);
     else
         beta_cost = getBetaCost(x);
-    //std::cout << "beta kin cost" << std::endl; 
     const CostMatrix soft_con_cost = getSoftConstraintCost();
-    //std::cout << "kinematic & soft. constraints done" << std::endl; 
 
     Q_MPC Q_not_sym = contouring_cost.Q + heading_cost.Q + input_cost.Q + beta_cost.Q;
-    Q_MPC Q_reg = 1e-9*Q_MPC::Identity();
+    Q_MPC Q_reg = 1e-9*Q_MPC::Identity(); //eye array
 
     Q_MPC Q_full = 0.5*(Q_not_sym.transpose()+Q_not_sym);
     R_MPC R_full = contouring_cost.R + heading_cost.R + input_cost.R + beta_cost.R;

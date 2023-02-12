@@ -936,7 +936,6 @@ CMakeFiles/MPCC.dir/Cost/cost.cpp.o: External/Json/include/nlohmann/json_fwd.hpp
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: External/Json/include/nlohmann/ordered_map.hpp
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: External/Json/include/nlohmann/thirdparty/hedley/hedley.hpp
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: External/Json/include/nlohmann/thirdparty/hedley/hedley_undef.hpp
-CMakeFiles/MPCC.dir/Cost/cost.cpp.o: Model/model.h
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: Params/params.h
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: Spline/arc_length_spline.h
 CMakeFiles/MPCC.dir/Cost/cost.cpp.o: Spline/cubic_spline.h
@@ -5523,6 +5522,7 @@ CMakeFiles/MPCC.dir/main.cpp.o: External/hpipm/lib/include/hpipm_timing.h
 CMakeFiles/MPCC.dir/main.cpp.o: External/matplotlib/matplotlibcpp.h
 CMakeFiles/MPCC.dir/main.cpp.o: Interfaces/hpipm_interface.h
 CMakeFiles/MPCC.dir/main.cpp.o: Interfaces/solver_interface.h
+CMakeFiles/MPCC.dir/main.cpp.o: Model/model.h
 CMakeFiles/MPCC.dir/main.cpp.o: Params/params.h
 CMakeFiles/MPCC.dir/main.cpp.o: Spline/arc_length_spline.h
 CMakeFiles/MPCC.dir/main.cpp.o: Spline/cubic_spline.h
