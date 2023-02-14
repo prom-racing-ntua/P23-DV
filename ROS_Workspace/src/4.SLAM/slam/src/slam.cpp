@@ -45,13 +45,10 @@ void GraphSLAM::initialize_factor_graph(gtsam::Symbol start_robot_sym)
   color_char[2] = 's';
   color_char[3] = 'l';
 
-  isam2 = new gtsam::ISAM2();
-
   est_robot_pose = gtsam::Pose2(0,0,0);
 
   // Start a new factor graph and add the starting point using PriorFactor
-  factor_graph = new gtsam::NonlinearFactorGraph();
-  factor_graph->add(gtsam::PriorFactor<gtsam::Pose2>(start_robot_sym, est_robot_pose, gtsam::noiseModel::Gaussian::Covariance(prior_pose_noise))); // add directly to graph
+  factor_graph.add(gtsam::PriorFactor<gtsam::Pose2>(start_robot_sym, est_robot_pose, gtsam::noiseModel::Gaussian::Covariance(prior_pose_noise))); // add directly to graph
   init_est.insert(start_robot_sym, est_robot_pose);
 
   weight = node_handler_->get_parameter("weight").as_double();
@@ -70,7 +67,7 @@ bool GraphSLAM::add_odom_measurement(double odom_Ux, double odom_Uy, double odom
           0, 0, stride*dt;
 
 
-  factor_graph->add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_dt*odom_noise*J_dt.transpose())));
+  factor_graph.add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_dt*odom_noise*J_dt.transpose())));
 
   // Secondly, add an initial estimate of the new robot pose on the global map
   gtsam::Pose2 new_pos = gtsam::Pose2(est_robot_pose.x()+(odom_Ux*std::cos(est_robot_pose.theta())-odom_Uy*std::sin(est_robot_pose.theta()))*stride*dt, est_robot_pose.y()+(odom_Ux*std::sin(est_robot_pose.theta())+odom_Uy*std::cos(est_robot_pose.theta()))*stride*dt, est_robot_pose.theta()+odom_omega*stride*dt);
@@ -131,7 +128,7 @@ void GraphSLAM::add_landmark_measurements_slam(std::vector<int> color_list, std:
           landmark_id_map[color].at(best_match).verified = true;
 
           // Add the previous landmark measurement to the factor graph from the robot pose symbol
-          factor_graph->add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(landmark_id_map[color].at(best_match).robot_pose_sym, landmark_id_map[color].at(best_match).land_sym, landmark_id_map[color].at(best_match).first_theta, landmark_id_map[color].at(best_match).first_range, gtsam::noiseModel::Gaussian::Covariance(landmark_id_map[color].at(best_match).first_obs_var)));
+          factor_graph.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(landmark_id_map[color].at(best_match).robot_pose_sym, landmark_id_map[color].at(best_match).land_sym, landmark_id_map[color].at(best_match).first_theta, landmark_id_map[color].at(best_match).first_range, gtsam::noiseModel::Gaussian::Covariance(landmark_id_map[color].at(best_match).first_obs_var)));
 
           // Add the initial estimate
           init_est.insert(landmark_id_map[color].at(best_match).land_sym, gtsam::Point2(landmark_id_map[color].at(best_match).est_pos[0], landmark_id_map[color].at(best_match).est_pos[1]));
@@ -139,7 +136,7 @@ void GraphSLAM::add_landmark_measurements_slam(std::vector<int> color_list, std:
         }
 
         // Construct the current landmark measurement
-        factor_graph->add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(current_robot_sym, landmark_id_map[color].at(best_match).land_sym, theta_list.at(i), range_list.at(i), gtsam::noiseModel::Gaussian::Covariance(land_obs_noise)));
+        factor_graph.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(current_robot_sym, landmark_id_map[color].at(best_match).land_sym, theta_list.at(i), range_list.at(i), gtsam::noiseModel::Gaussian::Covariance(land_obs_noise)));
         
         // Correct position of cone every new observation    
         landmark_id_map[color].at(best_match).est_pos = weight*landmark_id_map[color].at(best_match).est_pos + (1-weight)*obs_pos;
@@ -153,7 +150,7 @@ void GraphSLAM::add_landmark_measurements_slam(std::vector<int> color_list, std:
         gtsam::Symbol next_landmark_sym = gtsam::Symbol(color_char[color], land_obs_counter[color]);
 
         // Create the landmark entry
-        GraphSLAM::LandmarkInfo landmark_info;
+        LandmarkInfo landmark_info;
 
         landmark_info.verified = false;
 
@@ -206,17 +203,13 @@ bool GraphSLAM::ccw(gtsam::Matrix12 A, gtsam::Matrix12 B, gtsam::Matrix12 C){
 
 
 // Optimizes the factor graph
-void GraphSLAM::optimize_factor_graph(gtsam::NonlinearFactorGraph* opt_factor_graph, gtsam::Values opt_init_est)
+void GraphSLAM::optimize_factor_graph(gtsam::NonlinearFactorGraph opt_factor_graph, gtsam::Values opt_init_est)
 {
-  // auto start_time = std::chrono::high_resolution_clock::now();
 
-  // opt_factor_graph->print();
   // Update the current estimated robot pose
-  isam2->update(*opt_factor_graph, opt_init_est);
-  est_state = isam2->calculateEstimate();
+  isam2.update(opt_factor_graph, opt_init_est);
+  est_state = isam2.calculateEstimate();
 
-  // auto current_time = std::chrono::high_resolution_clock::now();
-  // std::cout << "optimization has been running for " << std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count() << " milliseconds" << std::endl;
 }
 
 

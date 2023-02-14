@@ -39,6 +39,25 @@
 
 namespace slam_namespace {
 
+// Landmark Info for HashMap
+struct LandmarkInfo {
+  // Seen second time?
+  bool verified;
+
+  // Symbol of the landmark
+  gtsam::Symbol land_sym;
+  // Estimated pose of landmark in world
+  gtsam::Matrix12 est_pos;
+
+  // Symbol of the robot pose at first observation
+  gtsam::Symbol robot_pose_sym;
+  // Measured transform from the robot (at obs time) to landmark (range, theta)
+  double first_range;
+  double first_theta; //in radians
+  // First observation variance matrix (range, theta)
+  gtsam::Matrix2 first_obs_var;
+};
+
 // Factor with only one moving end
 class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
   private:
@@ -56,30 +75,12 @@ using Handle = SLAM_handler*;
 class GraphSLAM
 {
   public:
-    // Landmark Info for HashMap
-    struct LandmarkInfo {
-      // Seen second time?
-      bool verified;
-
-      // Symbol of the landmark
-      gtsam::Symbol land_sym;
-      // Estimated pose of landmark in world
-      gtsam::Matrix12 est_pos;
-
-      // Symbol of the robot pose at first observation
-      gtsam::Symbol robot_pose_sym;
-      // Measured transform from the robot (at obs time) to landmark (range, theta)
-      double first_range;
-      double first_theta; //in radians
-      // First observation variance matrix (range, theta)
-      gtsam::Matrix2 first_obs_var;
-    };
 
     // The estimated pose of the robot
     gtsam::Pose2 est_robot_pose;
 
     // Create a Factor Graph and Values to hold the new data
-    gtsam::NonlinearFactorGraph* factor_graph;
+    gtsam::NonlinearFactorGraph factor_graph;
     gtsam::Values init_est;
 
     // Constructor
@@ -103,7 +104,7 @@ class GraphSLAM
     void add_landmark_measurements_slam(std::vector<int> color_list, std::vector<float> range_list, std::vector<float> theta_list, gtsam::Symbol current_robot_sym, gtsam::Pose2 current_pose);
 
     // Optimizes the factor graph
-    void optimize_factor_graph(gtsam::NonlinearFactorGraph* factor_graph, gtsam::Values init_est);
+    void optimize_factor_graph(gtsam::NonlinearFactorGraph factor_graph, gtsam::Values init_est);
 
     // Impose changes caused by optimization 
     void impose_optimization(gtsam::Symbol opt_robot_sym, gtsam::Pose2 pre_opt_pose);
@@ -121,13 +122,13 @@ class GraphSLAM
     bool ccw(gtsam::Matrix12 A, gtsam::Matrix12 B, gtsam::Matrix12 C);
 
     // Map of the landmark ids to LandmarkInfo
-    std::unordered_map<int, GraphSLAM::LandmarkInfo> landmark_id_map[4]; 
+    std::unordered_map<int, LandmarkInfo> landmark_id_map[4]; 
 
     // Counters for the robot pose and landmarks
     int land_obs_counter[4];
 
     // isam2 solver
-    gtsam::ISAM2* isam2;
+    gtsam::ISAM2 isam2;
 
     // The iSAM2 estimated state
     gtsam::Values est_state;

@@ -194,15 +194,15 @@ namespace slam_namespace
   void SLAM_handler::optimizationCallback()
   {
     double optimizationTiming = wtime();
-    gtsam::NonlinearFactorGraph* optimizationFactorGraph = new gtsam::NonlinearFactorGraph();
+    
 
     pthread_spin_lock(&globalLock);
-    *optimizationFactorGraph = *SLAMObject_.factor_graph;
+    gtsam::NonlinearFactorGraph optimizationFactorGraph {SLAMObject_.factor_graph}; // maybe needs deep-copy
     gtsam::Symbol optimizationRobotSymbol = currentRobotSymbol;
     gtsam::Values optimizationInitEstimates = SLAMObject_.init_est;
     gtsam::Pose2 preOptimizationPose = SLAMObject_.est_robot_pose;
 
-    SLAMObject_.factor_graph->resize(0);
+    SLAMObject_.factor_graph.resize(0);
     SLAMObject_.init_est.clear();
     pthread_spin_unlock(&globalLock);
 
