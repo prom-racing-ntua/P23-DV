@@ -203,11 +203,11 @@ bool GraphSLAM::ccw(gtsam::Matrix12 A, gtsam::Matrix12 B, gtsam::Matrix12 C){
 
 
 // Optimizes the factor graph
-void GraphSLAM::optimize_factor_graph(gtsam::NonlinearFactorGraph opt_factor_graph, gtsam::Values opt_init_est)
+void GraphSLAM::optimize_factor_graph(gtsam::NonlinearFactorGraph* opt_factor_graph, gtsam::Values opt_init_est)
 {
 
   // Update the current estimated robot pose
-  isam2.update(opt_factor_graph, opt_init_est);
+  isam2.update(*opt_factor_graph, opt_init_est);
   est_state = isam2.calculateEstimate();
 
 }

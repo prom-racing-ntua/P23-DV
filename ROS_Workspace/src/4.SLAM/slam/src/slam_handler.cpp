@@ -206,7 +206,7 @@ namespace slam_namespace
     SLAMObject_.init_est.clear();
     pthread_spin_unlock(&globalLock);
 
-    SLAMObject_.optimize_factor_graph(optimizationFactorGraph, optimizationInitEstimates);
+    SLAMObject_.optimize_factor_graph(&optimizationFactorGraph, optimizationInitEstimates);
     
     pthread_spin_lock(&globalLock);
     SLAMObject_.impose_optimization(optimizationRobotSymbol, preOptimizationPose);

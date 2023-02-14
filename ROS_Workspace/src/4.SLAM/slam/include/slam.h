@@ -104,7 +104,7 @@ class GraphSLAM
     void add_landmark_measurements_slam(std::vector<int> color_list, std::vector<float> range_list, std::vector<float> theta_list, gtsam::Symbol current_robot_sym, gtsam::Pose2 current_pose);
 
     // Optimizes the factor graph
-    void optimize_factor_graph(gtsam::NonlinearFactorGraph factor_graph, gtsam::Values init_est);
+    void optimize_factor_graph(gtsam::NonlinearFactorGraph* factor_graph, gtsam::Values init_est);
 
     // Impose changes caused by optimization 
     void impose_optimization(gtsam::Symbol opt_robot_sym, gtsam::Pose2 pre_opt_pose);
