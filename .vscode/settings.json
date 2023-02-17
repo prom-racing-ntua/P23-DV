@@ -75,5 +75,5 @@
         "variant": "cpp",
         "bit": "cpp"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/C++/External/Eigen/bench/btl/libs/blaze"
+    "cmake.sourceDirectory": "${workspaceFolder}/MPC_unofficial/C++/External/Eigen/bench/btl/libs/gmm"
 }

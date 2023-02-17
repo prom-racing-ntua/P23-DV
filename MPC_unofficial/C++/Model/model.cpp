@@ -72,7 +72,7 @@ TireForces Model::getForceFront(const State &x) const
     Torques T = getTorques(x); 
     const double alpha_f = getSlipAngleFront(x);
     const double F_y = par_y.D*par_y.C_tire * std::sin(par_y.C * std::atan(par_y.B * alpha_f ));
-    const double F_x = (-T.T_Bf)/(param_.Rf) -0.25*param_.CdA*param_.pair*std::pow(x.vx,2.0) - param_.Cr0*F_z.F_N_front ;
+    const double F_x = (-T.T_Bf)/(param_.Rf)  - param_.Cr0*F_z.F_N_front ;
     return {F_y,F_x};
 }
 
@@ -83,15 +83,14 @@ TireForces Model::getForceRear(const State &x) const
     ForceParameters par_y = getForceParamsY(F_z.F_N_rear);
     Torques T = getTorques(x); 
     const double F_y = par_y.D*par_y.C_tire * std::sin(par_y.C * std::atan(par_y.B * alpha_r ));
-    const double F_x = ((T.T_G-T.T_Br)/(param_.Rr)) -0.25*param_.CdA*param_.pair*std::pow(x.vx,2.0) - param_.Cr0*F_z.F_N_rear;// - param_.Cr0 - param_.Cr2*std::pow(x.vx,2.0);
+    const double F_x = ((T.T_G-T.T_Br)/(param_.Rr))  - param_.Cr0*F_z.F_N_rear;// - param_.Cr0 - param_.Cr2*std::pow(x.vx,2.0);
     // std::cout << "params for fy are:" << alpha_r << " " << par_y.B << " " << par_y.C << " " << par_y.C_tire*par_y.D << std::endl; 
     return {F_y,F_x};
 }
 
 double Model::getForceFriction(const State &x) const
 {
-    NormalForces F_z=getForceNormal(x);
-    const double temp= 0;
+    const double temp= -0.5*param_.CdA*param_.pair*std::pow(x.vx,2); 
     return temp;
 }
 
@@ -114,7 +113,7 @@ TireForcesDerivatives Model::getForceFrontDerivatives(const State &x) const
     const double r  = x.r;
 
     // F_fx
-    const double dF_x_vx    = (-0.5*param_.CdA*param_.pair*x.vx - 0.5*param_.Cr0*param_.pair*param_.ClA*x.vx); //-drag-trivi
+    const double dF_x_vx    = (- 0.5*param_.Cr0*param_.pair*param_.ClA*x.vx); //-drag-trivi
     const double dF_x_vy    = 0.0;
     const double dF_x_r     = 0.0;
     const double dF_x_D     = (-param_.Rdf*param_.mi_disk*param_.A_cal_f*param_.PMC_max_f);
@@ -149,7 +148,7 @@ TireForcesDerivatives Model::getForceRearDerivatives(const State &x) const
     const double D  = x.D;
 
     //F_rx
-    const double dF_x_vx    = (-0.5*param_.CdA*param_.pair*x.vx - 0.5*param_.Cr0*param_.pair*param_.ClA*x.vx); //-drag-trivi
+    const double dF_x_vx    = (- 0.5*param_.Cr0*param_.pair*param_.ClA*x.vx); //-trivi
     const double dF_x_vy    = 0.0;
     const double dF_x_r     = 0.0;
     const double dF_x_D     = (param_.T_M_max*param_.gr - param_.Rdr*param_.mi_disk*param_.A_cal_r*param_.PMC_max_r );
@@ -173,7 +172,7 @@ TireForcesDerivatives Model::getForceRearDerivatives(const State &x) const
 FrictionForceDerivatives Model::getForceFrictionDerivatives(const State &x) const
 {
     // return {-param_.Cr0*param_.pair*param_.ClA*x.vx-param_.CdA*param_.pair*x.vx,0.0,0.0,0.0,0.0};
-    return {0,0.0,0.0,0.0,0.0};
+    return {-param_.CdA*param_.pair*x.vx,0.0,0.0,0.0,0.0};
 }
 
 // Binary function,
@@ -232,8 +231,8 @@ StateVector Model::getF(const State &x,const Input &u) const
     f(1) = vy*std::cos(phi) + vx*std::sin(phi);
     f(2) = r;
     f(3) = (1.0/param_.m)* (lambda*(tire_forces_rear.F_x + friction_force - tire_forces_front.F_y*std::sin(delta) + tire_forces_front.F_x*std::cos(delta) + param_.m*vy*r) + (1-lambda)*(tire_forces_rear.F_x+ param_.m*vy*r));
-    f(4) = (1.0/param_.m)*(lambda*(tire_forces_rear.F_y + tire_forces_front.F_y*std::cos(delta) + tire_forces_front.F_x*std::sin(delta) - param_.m*vx*r) + (1-lambda)*((param_.lf/(param_.lr+param_.lf))*(delta*tire_forces_rear.F_x + dDelta*vx)));
-    f(5) = (1.0/param_.Iz)*(lambda*(tire_forces_front.F_y*param_.lf*std::cos(delta) - tire_forces_rear.F_y*param_.lr + tire_forces_front.F_x*param_.lf*std::sin(delta)) + (1-lambda)*((1.0/(param_.lr+param_.lf))*(delta*tire_forces_rear.F_x + dDelta*vx)));
+    f(4) = (1.0/param_.m)*(lambda*(tire_forces_rear.F_y + tire_forces_front.F_y*std::cos(delta) + tire_forces_front.F_x*std::sin(delta) - param_.m*vx*r)) + (1-lambda)*((param_.lf/(param_.lr+param_.lf))*(delta*tire_forces_rear.F_x + dDelta*vx));
+    f(5) = (1.0/param_.Iz)*(lambda*(tire_forces_front.F_y*param_.lf*std::cos(delta) - tire_forces_rear.F_y*param_.lr + tire_forces_front.F_x*param_.lf*std::sin(delta))) + (1-lambda)*((1.0/(param_.lr+param_.lf))*(delta*tire_forces_rear.F_x + dDelta*vx));
     f(6) = vs;
     f(7) = dD;
     f(8) = dDelta;
@@ -298,18 +297,18 @@ LinModelMatrix Model::getModelJacobian(const State &x, const Input &u) const
     const double df4_ddelta  = (1.0/param_.m)*((lambda*(-dF_front.dF_y_delta*std::sin(delta) - F_front.F_y*std::cos(delta) - F_front.F_x*std::sin(delta))) + 0);
 
     // f5 = 1/param_.m*(F_ry + F_fy*std::cos(delta) + F_fx*std::sin(delta)- param_.m*v_x*r);
-    const double df5_dvx     = (1.0/param_.m)*(lambda*(dF_rear.dF_y_vx  + dF_front.dF_y_vx*std::cos(delta)  + dF_front.dF_x_vx*std::sin(delta)  - param_.m*r) + (1-lambda)*(param_.lr/(param_.lr+param_.lf))*(f(8)+delta*dF_rear.dF_x_vx));
+    const double df5_dvx     = (1.0/param_.m)*(lambda*(dF_rear.dF_y_vx  + dF_front.dF_y_vx*std::cos(delta)  + dF_front.dF_x_vx*std::sin(delta)  - param_.m*r)) + (1-lambda)*(param_.lr/(param_.lr+param_.lf))*(f(8)+delta*dF_rear.dF_x_vx);
     const double df5_dvy     = (1.0/param_.m)*(lambda*(dF_rear.dF_y_vy  + dF_front.dF_y_vy*std::cos(delta)));
     const double df5_dr      = (1.0/param_.m)*(lambda*(dF_rear.dF_y_r   + dF_front.dF_y_r*std::cos(delta) - param_.m*vx));
-    const double df5_dD =      (1.0/param_.m)*(lambda*(dF_front.dF_x_D*std::sin(delta))+(1-lambda)*(param_.lr/(param_.lr+param_.lf))*(delta*dF_rear.dF_x_D));
-    const double df5_ddelta  = (1.0/param_.m)*(lambda*( dF_front.dF_y_delta*std::cos(delta) - F_front.F_y*std::sin(delta) + F_front.F_x*std::cos(delta)) +(1-lambda)*(param_.lr/(param_.lr+param_.lf))*(F_rear.F_x));
+    const double df5_dD =      (1.0/param_.m)*(lambda*(dF_front.dF_x_D*std::sin(delta)))+(1-lambda)*(param_.lr/(param_.lr+param_.lf))*(delta*dF_rear.dF_x_D);
+    const double df5_ddelta  = (1.0/param_.m)*(lambda*( dF_front.dF_y_delta*std::cos(delta) - F_front.F_y*std::sin(delta) + F_front.F_x*std::cos(delta))) +(1-lambda)*(param_.lr/(param_.lr+param_.lf))*(F_rear.F_x);
 
     // f6 = 1/param_.Iz*(F_fy*l_f*std::cos(delta)- F_ry*l_r +F_fx*lf*sin(delta))
-    const double df6_dvx     = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_vx*param_.lf*std::cos(delta)    - dF_rear.dF_y_vx*param_.lr + dF_front.dF_x_vx*param_.lf*std::sin(delta)) +(1-lambda)*(1/(param_.lr+param_.lf))*(f(8)+(delta*dF_rear.dF_x_vx)));
+    const double df6_dvx     = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_vx*param_.lf*std::cos(delta)    - dF_rear.dF_y_vx*param_.lr + dF_front.dF_x_vx*param_.lf*std::sin(delta))) +(1-lambda)*(1/(param_.lr+param_.lf))*(f(8)+(delta*dF_rear.dF_x_vx));
     const double df6_dvy     = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_vy*param_.lf*std::cos(delta)    - dF_rear.dF_y_vy*param_.lr));
     const double df6_dr      = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_r*param_.lf*std::cos(delta)     - dF_rear.dF_y_r*param_.lr));
-    const double df6_dD = (1.0/param_.Iz)*(lambda*(dF_front.dF_x_D*param_.lf*std::sin(delta)) + (1-lambda)*(1/(param_.lr+param_.lf))*(delta*dF_rear.dF_x_D));
-    const double df6_ddelta  = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_delta*param_.lf*std::cos(delta) - F_front.F_y*param_.lf*std::sin(delta)+F_front.F_x*param_.lf*std::cos(delta)) + (1-lambda)*(1/(param_.lr+param_.lf))*(F_rear.F_x));
+    const double df6_dD = (1.0/param_.Iz)*(lambda*(dF_front.dF_x_D*param_.lf*std::sin(delta))) + (1-lambda)*(1/(param_.lr+param_.lf))*(delta*dF_rear.dF_x_D);
+    const double df6_ddelta  = (1.0/param_.Iz)*(lambda*(dF_front.dF_y_delta*param_.lf*std::cos(delta) - F_front.F_y*param_.lf*std::sin(delta)+F_front.F_x*param_.lf*std::cos(delta))) + (1-lambda)*(1/(param_.lr+param_.lf))*(F_rear.F_x);
 
     // Jacobians
     // Matrix A
@@ -348,7 +347,7 @@ LinModelMatrix Model::getModelJacobian(const State &x, const Input &u) const
     A_c(4,8) = df5_ddelta;
     A_c(5,8) = df6_ddelta;
     // Column 10
-    A_c(6,9) = 0.0;
+    A_c(6,9) = 1.0;
 
     // Matrix B
     // Column 1

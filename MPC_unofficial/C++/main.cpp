@@ -68,7 +68,7 @@ int main() {
         MPCReturn mpc_sol = mpc.runMPC(x0);
         std::cout << "mpc path run successfully at simulation step: " << i  << std::endl;
         // Use the MPC prediction as sim step
-        // x0 = mpc_sol.mpc_horizon[30].xk;
+        // x0 = mpc_sol.mpc_horizon[1].xk;
         // Use ODE integrator
         x0 = integrator.simTimeStep(x0,mpc_sol.u0,jsonConfig["Ts"]);
         std::cout << "arc length is " << x0.s << " at iteration" << i << std::endl;
