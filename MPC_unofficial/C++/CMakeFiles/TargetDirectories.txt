@@ -1,3 +1,0 @@
-/home/subdiduntil/P23-DV/MPC_unofficial/C++/CMakeFiles/rebuild_cache.dir
-/home/subdiduntil/P23-DV/MPC_unofficial/C++/CMakeFiles/edit_cache.dir
-/home/subdiduntil/P23-DV/MPC_unofficial/C++/CMakeFiles/MPCC.dir
