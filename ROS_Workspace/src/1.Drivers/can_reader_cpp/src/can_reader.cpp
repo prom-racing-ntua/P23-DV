@@ -113,6 +113,8 @@ namespace can_reader_namespace {
         unsigned char *read_buf = new unsigned char[11];
 
         //CHAT GPT FTW
+        // I guess readfds is a set of file descriptors we want to monitor. so we add to the set
+        // the fd/serial port of the can2usb. I dont understand the purpose of serial_port+1 on select()
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(serial_port, &readfds); // fd is the file descriptor for the input stream you want to monitor 
