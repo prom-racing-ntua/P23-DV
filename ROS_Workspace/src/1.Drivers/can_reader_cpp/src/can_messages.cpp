@@ -29,54 +29,38 @@ namespace can_reader_namespace {
     StatePubMessage::~StatePubMessage() {}
 
     void FrontHallsMessage::handler() {
-        std::cout << "FH Handler " << std::hex << id;
-
         custom_msgs::msg::WheelSpeed msg;
         msg.left_wheel = message[4] << 8 | message[5];
         msg.right_wheel = message[6] << 8 | message[7];
 
         msg.actual_speed = (msg.left_wheel + msg.right_wheel) / 2 / 9.5493 * 0.1995;
 
-        pub_->publish(msg);
-
-        cout << " handler after message " << msg.right_wheel << " " << msg.left_wheel << " " << msg.actual_speed << endl;
-        
+        pub_->publish(msg);        
     }
 
     void RearHallsMessage::handler() {
-        std::cout << "RH Handler " << id << std::endl;
         custom_msgs::msg::WheelSpeed msg;
         msg.left_wheel = message[4] << 8 | message[5];
         msg.right_wheel = message[6] << 8 | message[7];
 
         msg.actual_speed = (msg.left_wheel + msg.right_wheel) / 2 / 9.5493 * 0.1995;
 
-        cout << "publishing " << pub_ << endl;
-
         pub_->publish(msg);
-
-        cout << " handler after message " << msg.right_wheel << " " << msg.left_wheel << " " << msg.actual_speed << endl;
     }
 
     void SteeringMessage::handler() {
-        std::cout << "S Handler " << id << std::endl;
         custom_msgs::msg::SteeringAngle msg;
         msg.steering_angle = message[4];
 
         pub_->publish(msg);
-
-        cout << " handler after message " << msg.steering_angle << endl;
     }
 
     void BrakesMessage::handler() {
-        std::cout << "B Handler " << id << std::endl;
         custom_msgs::msg::BrakePressure msg;
         msg.front_cylinder = message[2];
         msg.rear_cylinder = message[3];
-        
-        pub_->publish(msg);
 
-        cout << " handler after message " << msg.front_cylinder << " " << msg.rear_cylinder << endl;
+        pub_->publish(msg);
     }
 
     void TestHallMessage::handler() {

@@ -18,7 +18,7 @@ namespace can_reader_namespace {
     CanReader::CanReader() : Node("can_reader_cpp_node") {
         
         baud_rate = declare_parameter("baud_rate", 9600);
-        port_number = declare_parameter("port_number", 2);
+        port_number = declare_parameter("port_number", 0);
         timeout = declare_parameter("timeout", 1);
         freq = declare_parameter("read_frequency", 150);
         period = 1000000/freq;
@@ -43,9 +43,10 @@ namespace can_reader_namespace {
     void CanReader::setup_serial() {
         struct termios tty;
 
-        serial_port = open("/tmp/vserial1", O_RDWR);
-
-        std::cout << "Opened /dev/pts/" << port_number << " and got " << serial_port << std::endl;
+        //For Development
+        //serial_port = open("/tmp/vserial1", O_RDWR);
+        //For Use on car
+        serial_port = open("/dev/ttyUSB"+port_number, O_RDWR);
 
         if (tcgetattr(serial_port, &tty) != 0) {
             printf("Error %i from tcgetattr: %s", errno, strerror(errno));
@@ -69,10 +70,8 @@ namespace can_reader_namespace {
             printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
         }
 
-        unsigned char wbuf[4] = { 0x0, 0x0, 0x0, 0x42} ;
+        unsigned char wbuf[4] = { 0x0, 0x0, 0x0, 0x0} ;
         int wr = write(serial_port, &wbuf, 4);
-        cout << "wrote " << wr << endl;
-
     }
 
     CanMessage* CanReader::extract_message(unsigned char *buf) {
