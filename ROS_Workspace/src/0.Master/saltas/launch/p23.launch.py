@@ -31,6 +31,12 @@ def generate_launch_description():
         'saltas_acquisition.launch.py'
     )
 
+    slamLaunch = os.path.join(
+        slam_dir,
+        'launch',
+        "slam.launch.py"
+    )
+
     # TODO: First start every node EXCEPT salta, then start salta when you are ready to run
 
     # Master Node
@@ -53,10 +59,8 @@ def generate_launch_description():
     )
 
     # SLAM Nodes
-    slam = Node(
-        package='slam',
-        executable='slam',
-        name='slam_node'
+    slam = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(slamLaunch)
     )
 
     ldList = [perception, velocity_estimation, slam]
