@@ -30,3 +30,6 @@ slam_node:
     # right_orange: [0.0, 0.0]
 
     lap_counter_cooldown: 10
+
+    logger: true
+    telemetry: true

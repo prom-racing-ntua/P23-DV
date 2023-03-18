@@ -30,13 +30,13 @@ velocity_estimation_node:
     vectornav-vn-200:
       x: 0.49                   # [m]
       y: 0.00                   # [m]
-      roll: -0.528              # [deg]
-      pitch: -4.140             # [deg]
+      roll: -0.147              # [deg]
+      pitch: -3.358             # [deg]
     vectornav-vn-300:
       x: 0.18                   # [m]
       y: 0.00                   # [m]
-      roll: -1.440              # [deg]
-      pitch: 2.192              # [deg]
+      roll: -1.121             # [deg]
+      pitch: 1.452              # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]

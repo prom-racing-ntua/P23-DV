@@ -25,12 +25,21 @@ SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
     slam_object_.setDeltaTime(1.0 / static_cast<double>(node_frequency_));
     slam_object_.init();
 
+    int init_time{ static_cast<int>(now().seconds()) };
+    // Create Log files
+    if (is_logging_)
+    {
+        velocity_log_.open(share_dir_ + "/../../../../velocityLog_" + std::to_string(init_time) + ".txt");
+        perception_log_.open(share_dir_ + "/../../../../perceptionLog_" + std::to_string(init_time) + ".txt");
+    }
+
     // If in localization mode load the track map
     if (!is_mapping_)
     {
         std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
         slam_object_.loadMap(track_file);
     }
+    else map_log_.open(share_dir_ + "/../../../../mapLog_" + std::to_string(init_time) + ".txt");
 
     //Initialize global lock
     if (pthread_spin_init(&global_lock_, PTHREAD_PROCESS_SHARED) != 0)
@@ -55,19 +64,30 @@ SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
 
     // pose_publisher_ = create_publisher
     // map_publisher_ = create_publisher
-    landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
-    car_pose_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+
 
     optimization_clock_ = create_wall_timer(std::chrono::milliseconds(1000 * optimization_interval_ / node_frequency_),
         std::bind(&SlamHandler::optimizationCallback, this), slam_callback_group_);
 
-    telemetry_clock_ = create_wall_timer(std::chrono::milliseconds(50),
-        std::bind(&SlamHandler::visualize, this), slam_callback_group_);
-
+    if (get_parameter("telemetry").as_bool())
+    {
+        landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
+        car_pose_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+        telemetry_clock_ = create_wall_timer(std::chrono::milliseconds(50),
+            std::bind(&SlamHandler::visualize, this), slam_callback_group_);
+    }
     RCLCPP_WARN(get_logger(), "Created SlamHandler");
 }
 
-SlamHandler::~SlamHandler() {}
+SlamHandler::~SlamHandler() {
+    if (get_parameter("telemetry").as_bool())
+    {
+        velocity_log_.close();
+        perception_log_.close();
+    }
+
+    if (is_mapping_) map_log_.close();
+}
 
 void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::SharedPtr msg) {
     rclcpp::Time starting_time{ this->now() };
@@ -90,15 +110,23 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     {
         competed_laps_++;
         cooldown_ = cooldown_max_;
+        RCLCPP_WARN(get_logger(), "Lap Completed!");
     }
     else if (cooldown_ > 0)
     {
         cooldown_--;
     }
 
+    // Keep odometry log
+    if (is_logging_)
+    {
+        velocity_log_ << odometry.global_index << '\n' << odometry.velocity_x << '\n' << odometry.velocity_y << '\n' << odometry.yaw_rate << '\n';
+        for (auto val : variance_array) velocity_log_ << val << ' ';
+        velocity_log_ << '\n';
+    }
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
-    RCLCPP_INFO_STREAM(get_logger(), "\n-- Odometry Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+    // RCLCPP_INFO_STREAM(get_logger(), "\n-- Odometry Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
 void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::SharedPtr msg) {
@@ -149,9 +177,20 @@ void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::Sh
     }
     landmark_list.clear();
 
+    // Keep perception log
+    if (is_logging_)
+    {
+        perception_log_ << static_cast<unsigned long>(msg->global_index) << '\n';
+        for (auto col : color) perception_log_ << col << ' ';
+        perception_log_ << '\n';
+        for (auto rng : range) perception_log_ << rng << ' ';
+        perception_log_ << '\n';
+        for (auto th : theta) perception_log_ << th << ' ';
+        perception_log_ << '\n';
+    }
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
-    RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+    // RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
 void SlamHandler::optimizationCallback() {
@@ -173,11 +212,19 @@ void SlamHandler::optimizationCallback() {
 
     pthread_spin_lock(&global_lock_);
     slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
+
+    // Keep map log
+    if (is_mapping_)
+    {
+        std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
+        map_log_ << optimization_pose_symbol.index() << '\n';
+        for (auto cone : track) map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+    }
     pthread_spin_unlock(&global_lock_);
 
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
-    RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+    // RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
 void SlamHandler::loadParameters() {
@@ -204,6 +251,9 @@ void SlamHandler::loadParameters() {
     cooldown_max_ = declare_parameter<int>("lap_counter_cooldown", 10);
 
     share_dir_ = ament_index_cpp::get_package_share_directory("slam");
+
+    is_logging_ = declare_parameter<bool>("logger", true);
+    declare_parameter<bool>("telemetry", true);
 }
 
 int SlamHandler::getNodeFrequency() {

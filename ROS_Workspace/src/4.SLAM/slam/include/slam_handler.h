@@ -29,7 +29,9 @@ private:
     int node_frequency_;
     unsigned long global_index_;
     ns_slam::GraphSLAM slam_object_;
+
     bool is_mapping_;
+    std::ofstream map_log_;
 
     double perception_range_;
     int optimization_interval_;
@@ -38,6 +40,10 @@ private:
     double perception_weight_;
 
     std::string share_dir_;
+
+    bool is_logging_;
+    std::ofstream velocity_log_;
+    std::ofstream perception_log_;
 
     // Lap counter variables
     int competed_laps_;
