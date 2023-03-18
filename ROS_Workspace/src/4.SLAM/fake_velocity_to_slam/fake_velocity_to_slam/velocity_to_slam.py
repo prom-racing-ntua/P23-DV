@@ -16,7 +16,7 @@ class FakeVelocityNode(Node):
 
         self.fp = open(filePath)
 
-        self.publisher_ = self.create_publisher(VelEstimation, 'state_estimation/vel_est', 10)
+        self.publisher_ = self.create_publisher(VelEstimation, 'velocity_estimation', 10)
 
         timer_period = 0.02  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -24,18 +24,18 @@ class FakeVelocityNode(Node):
 
     def timer_callback(self):
         msg = VelEstimation()
-        msg.counter = int(self.fp.readline()) #line1
+        msg.global_index = int(self.fp.readline()) #line1
 
-        msg.u_x = float(self.fp.readline()) #line2
-        msg.u_y = float(self.fp.readline()) #line3
-        msg.u_yaw = float(self.fp.readline()) #line4
+        msg.velocity_x = float(self.fp.readline()) #line2
+        msg.velocity_y = float(self.fp.readline()) #line3
+        msg.yaw_rate = float(self.fp.readline()) #line4
 
         # msg.var_matrix = [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]
         proxy = []
         for i in self.fp.readline().split(" "):
             proxy.append(float(i))
 
-        msg.var_matrix = proxy
+        msg.variance_matrix = proxy
         self.i += 1
         self.publisher_.publish(msg)
         # self.get_logger().info(f"Just published to slam, vlaka")

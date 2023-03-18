@@ -8,14 +8,12 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     slam_dir = get_package_share_directory("slam")
-    slam_node = Node(
-        package="slam",
-        name="slam_node",
-        executable="slam",
-        output="screen",
-        emulate_tty=True,
-        parameters=[os.path.join(slam_dir, "config", "params.yaml")]
+    rviz2_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=['-d' + os.path.join(slam_dir, "config", "telemetry.rviz")]
     )
 
-    ld.add_action(slam_node)
+    ld.add_action(rviz2_node)
     return ld

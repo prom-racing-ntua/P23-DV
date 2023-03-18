@@ -4,16 +4,17 @@
   <name>slam</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="billvrettos2000@gmail.com">vasilis</maintainer>
+  <maintainer email="d.papailiopoulos.promracing@gmail.com">dimitris</maintainer>
   <license>TODO: License declaration</license>
 
-  <depend>rclcpp</depend>
-  <depend>eigen</depend>
-  <depend>custom_msgs</depend>
-  <depend>gtsam</depend>
-
-
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>visualization_msgs</depend>
+  <depend>custom_msgs</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>eigen</depend>
+  <depend>gtsam</depend>
 
   <exec_depend>ros2launch</exec_depend>
 

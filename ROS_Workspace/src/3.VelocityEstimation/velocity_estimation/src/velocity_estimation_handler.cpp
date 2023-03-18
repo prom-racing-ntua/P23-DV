@@ -79,17 +79,20 @@ void VelocityEstimationHandler::publishResults() {
     const StateMatrix pub_cov{ estimator_.getStateCovariance() };
     custom_msgs::msg::VelEstimation msg;
 
-    msg.counter = global_index_;
-    msg.u_x = pub_state(StateVx);
-    msg.u_y = pub_state(StateVy);
-    msg.u_yaw = pub_state(StateVyaw);
+    msg.global_index = global_index_;
+    msg.velocity_x = pub_state(StateVx);
+    msg.velocity_y = pub_state(StateVy);
+    msg.yaw_rate = pub_state(StateVyaw);
     for (size_t i{ 0 }; i < outputs.size(); ++i)
     {
         for (size_t j{ 0 }; j < outputs.size(); ++j)
         {
-            msg.var_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
+            msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
     }
+    msg.acceleration_x = pub_state(StateAx);
+    msg.acceleration_y = pub_state(StateAy);
+
     pub_->publish(msg);
 }
 
@@ -99,27 +102,27 @@ int VelocityEstimationHandler::getNodeFrequency() {
     // Instead of a timer we get the node frequency from the mater node with the following client request
     auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
     int call_counter{ 0 };
-    while (!cli_->wait_for_service(1s)) // and call_counter < 15)
+    while (!cli_->wait_for_service(1s) and call_counter < 15)
     {
         if (!rclcpp::ok())
         {
             return 0;
         }
         RCLCPP_INFO(get_logger(), "Could not get node frequency. Master service not available, waiting...");
-       // call_counter++;
+        // call_counter++;
     }
-    // if (call_counter == 15)
-    // {
-    //     RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
-    //     return 0;
-    // }
+    if (call_counter == 15)
+    {
+        RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
+        return 0;
+    }
     // Send empty request
     auto result{ cli_->async_send_request(request) };
     // Await for response (TODO: Set a timeout for response time)
     if (rclcpp::spin_until_future_complete(get_node_base_interface(), result, 5s) == rclcpp::FutureReturnCode::SUCCESS)
     {
         // If get successful response return the node frequency
-        RCLCPP_INFO_STREAM(get_logger(), "Node frequency has been set to" << node_frequency_);
+        RCLCPP_INFO_STREAM(get_logger(), "Node frequency has been set to" << result.get()->velocity_estimation_frequency);
         return result.get()->velocity_estimation_frequency;
     }
     else
@@ -243,7 +246,7 @@ void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::W
 
 void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg) {
     // 3.17 is the gear ratio of the steering rack
-    RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
+    // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
     input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad
 }
 
