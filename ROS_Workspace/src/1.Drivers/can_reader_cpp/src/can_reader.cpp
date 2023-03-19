@@ -49,8 +49,10 @@ namespace can_reader_namespace {
         //For Development
         //serial_port = open("/tmp/vserial1", O_RDWR);
         //For Use on car
-        RCLCPP_INFO(get_logger(), "Opening: /dev/ttyACM%c", port_number);
-        serial_port = open("/dev/ttyACM0", O_RDWR);
+        char dev[13];
+        sprintf(dev, "/dev/ttyACM%i", port_number);
+        RCLCPP_INFO(get_logger(), "Opening: %s", dev);
+        serial_port = open(dev, O_RDWR);
         RCLCPP_INFO(get_logger(), "Port %i Opened.",serial_port);
 
         if (tcgetattr(serial_port, &tty) != 0) {
