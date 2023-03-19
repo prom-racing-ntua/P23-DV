@@ -11,9 +11,9 @@ namespace can_reader_namespace {
     class CanMessage {
         public:
             short id;
-            unsigned char *message;
+            unsigned int *message;
         
-            CanMessage(int id_, unsigned char *msg);
+            CanMessage(int id_, unsigned int *msg);
             virtual ~CanMessage() {};
             virtual void handler() = 0;
     };
@@ -22,7 +22,7 @@ namespace can_reader_namespace {
         public:
             rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub_;
 
-            FrontHallsMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub);
+            FrontHallsMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub);
             ~FrontHallsMessage() override;
             void handler() override;
     };
@@ -31,7 +31,7 @@ namespace can_reader_namespace {
         public:
             rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub_;
 
-            RearHallsMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub);
+            RearHallsMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub);
             ~RearHallsMessage();
             virtual void handler();
     };
@@ -40,7 +40,7 @@ namespace can_reader_namespace {
         public:
             rclcpp::Publisher<custom_msgs::msg::SteeringAngle>::SharedPtr pub_;
             
-            SteeringMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::SteeringAngle>::SharedPtr pub);
+            SteeringMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::SteeringAngle>::SharedPtr pub);
             ~SteeringMessage();
             virtual void handler();
     };
@@ -49,21 +49,21 @@ namespace can_reader_namespace {
         public:
             rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub_;
 
-            BrakesMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub);
+            BrakesMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub);
             ~BrakesMessage();
             virtual void handler();
     };
 
     class TestHallMessage : public CanMessage {
         public:
-            TestHallMessage(unsigned char *msg);
+            TestHallMessage(unsigned int *msg);
             ~TestHallMessage();
             virtual void handler();
     };
 
     class StatePubMessage : public CanMessage {
         public:
-            StatePubMessage(unsigned char *msg);
+            StatePubMessage(unsigned int *msg);
             ~StatePubMessage();
             virtual void handler();
     };

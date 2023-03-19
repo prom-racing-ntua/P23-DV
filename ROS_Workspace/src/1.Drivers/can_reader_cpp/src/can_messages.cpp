@@ -5,21 +5,21 @@
 using namespace std;
 
 namespace can_reader_namespace {
-    CanMessage::CanMessage(int id_, unsigned char *msg) {
+    CanMessage::CanMessage(int id_, unsigned int *msg) {
         id = id_;
         message = msg;
     }
 
-    FrontHallsMessage::FrontHallsMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub) 
+    FrontHallsMessage::FrontHallsMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub) 
         : CanMessage(0x0310, msg), pub_(pub) {}
-    RearHallsMessage::RearHallsMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub) 
+    RearHallsMessage::RearHallsMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::WheelSpeed>::SharedPtr pub) 
         : CanMessage(0x4D1, msg), pub_(pub) {} 
-    SteeringMessage::SteeringMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::SteeringAngle>::SharedPtr pub) 
+    SteeringMessage::SteeringMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::SteeringAngle>::SharedPtr pub) 
         : CanMessage(0x4D2, msg), pub_(pub) {} 
-    BrakesMessage::BrakesMessage(unsigned char *msg, rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub) 
+    BrakesMessage::BrakesMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub) 
         : CanMessage(0x301, msg), pub_(pub) {} 
-    TestHallMessage::TestHallMessage(unsigned char *msg) : CanMessage(0x305, msg) {} 
-    StatePubMessage::StatePubMessage(unsigned char *msg) : CanMessage(0x03, msg) {} 
+    TestHallMessage::TestHallMessage(unsigned int *msg) : CanMessage(0x305, msg) {} 
+    StatePubMessage::StatePubMessage(unsigned int *msg) : CanMessage(0x03, msg) {} 
 
     FrontHallsMessage::~FrontHallsMessage() {}
     RearHallsMessage::~RearHallsMessage() {}

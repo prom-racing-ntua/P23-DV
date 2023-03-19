@@ -15,7 +15,7 @@ namespace can_reader_namespace {
         private:
             //Serial port config members
             int baud_rate;
-            int port_number;
+            char port_number;
             int serial_port;
             int timeout;
             int freq;
@@ -42,7 +42,8 @@ namespace can_reader_namespace {
             //Functions
             void setup_serial();
             void write_serial(CanMessage &message);
-            CanMessage * extract_message(unsigned char *buf);
+            CanMessage * extract_message(unsigned int *buf);
+            void read2byte(unsigned char *buf, unsigned int *to, int n);
             
         public:
             CanReader();

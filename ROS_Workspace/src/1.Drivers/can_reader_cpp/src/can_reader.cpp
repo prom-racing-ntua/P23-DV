@@ -16,6 +16,7 @@ using namespace std;
 
 namespace can_reader_namespace {
     CanReader::CanReader() : Node("can_reader_cpp_node") {
+        RCLCPP_INFO(this->get_logger(), "Initializing CAN2USB node");
         
         baud_rate = declare_parameter("baud_rate", 9600);
         port_number = declare_parameter("port_number", 0);
@@ -43,13 +44,17 @@ namespace can_reader_namespace {
     void CanReader::setup_serial() {
         struct termios tty;
 
+        RCLCPP_INFO(get_logger(), "Initializing...");
+
         //For Development
         //serial_port = open("/tmp/vserial1", O_RDWR);
         //For Use on car
-        serial_port = open("/dev/ttyUSB"+port_number, O_RDWR);
+        RCLCPP_INFO(get_logger(), "Opening: /dev/ttyACM%c", port_number);
+        serial_port = open("/dev/ttyACM0", O_RDWR);
+        RCLCPP_INFO(get_logger(), "Port %i Opened.",serial_port);
 
         if (tcgetattr(serial_port, &tty) != 0) {
-            printf("Error %i from tcgetattr: %s", errno, strerror(errno));
+            RCLCPP_INFO(get_logger(), "Error %i from tcgetattr: %s", errno, strerror(errno));
         }
 
         tty.c_cflag &= ~PARENB;
@@ -67,15 +72,19 @@ namespace can_reader_namespace {
         cfsetospeed(&tty, baud_rate);
 
         if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-            printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+            RCLCPP_INFO(get_logger(),"Error %i from tcsetattr: %s\n", errno, strerror(errno));
         }
-
+        
+        RCLCPP_INFO(get_logger(), "Writing 4 0bytes");
         unsigned char wbuf[4] = { 0x0, 0x0, 0x0, 0x0} ;
         int wr = write(serial_port, &wbuf, 4);
+
+        RCLCPP_INFO(get_logger(), "Init OK!");
     }
 
-    CanMessage* CanReader::extract_message(unsigned char *buf) {
+    CanMessage* CanReader::extract_message(unsigned int *buf) {
         short id = buf[0] << 8 | buf[1];
+        RCLCPP_INFO(get_logger(), "Got id: 0x%04X", id);
         switch (id)
         {
         case 0x310: {            
@@ -109,8 +118,18 @@ namespace can_reader_namespace {
 
     }
 
+    void CanReader::read2byte(unsigned char *from, unsigned int *to, int n) {
+        for (int i=0; i<n; i++) {
+            unsigned int x1;
+            std::stringstream ss;
+            ss << std::hex << from[i*2] << from[(i*2)+1];
+            ss >> x1;
+            to[i] = x1;
+        }
+    }
+
     void CanReader::read_serial() {
-        unsigned char *read_buf = new unsigned char[11];
+        
 
         //CHAT GPT FTW
         // I guess readfds is a set of file descriptors we want to monitor. so we add to the set
@@ -125,14 +144,23 @@ namespace can_reader_namespace {
         int ready = select(serial_port+1, &readfds, NULL, NULL, &tv); // fd+1 is the maximum file descriptor number in the set plus one
 
         if (ready == -1) {
-            //error log
+            RCLCPP_INFO(get_logger(), "ERROR!");
         } else if (ready == 0) {
+            //RCLCPP_INFO(get_logger(), "TIMEOUT");
             // better log this: cout << "Timeout " << endl;
         } else {
-            int n = read(serial_port, read_buf, 11);
+            unsigned char *read_buf = new unsigned char[23];
+            unsigned int *byte_array = new unsigned int[11];
 
-            CanMessage *can_message = extract_message(read_buf);
-            can_message->handler();
+            RCLCPP_INFO(get_logger(), "READING");
+            int n = read(serial_port, read_buf, 23);
+            
+            read2byte(read_buf, byte_array, 11);
+            CanMessage *can_message = extract_message(byte_array);
+            if (can_message != NULL) {
+                RCLCPP_INFO(get_logger(), "HANDLING MESSAGE");
+                can_message->handler();
+            } 
             delete can_message;
             delete []read_buf;
         }
