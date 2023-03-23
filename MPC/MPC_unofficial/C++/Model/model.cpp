@@ -342,13 +342,12 @@ LinModelMatrix Model::getModelJacobian(const State &x, const Input &u) const
     A_c(3,7) = df4_dD;
     A_c(4,7) = df5_dD;
     A_c(5,7) = df6_dD;
-    // Column 9
+    // Column 9    dx_dt=xs.vx*casadi.cos(xs.phi) -xs.vy*casadi.sin(xs.phi)
     A_c(3,8) = df4_ddelta;
     A_c(4,8) = df5_ddelta;
     A_c(5,8) = df6_ddelta;
     // Column 10
     A_c(6,9) = 1.0;
-
     // Matrix B
     // Column 1
     B_c(7,0) = 1.0;
@@ -356,7 +355,6 @@ LinModelMatrix Model::getModelJacobian(const State &x, const Input &u) const
     B_c(8,1) = 1.0;
     // Column 3
     B_c(9,2) = 1.0;
-
     //zero order term
     g_c = f - A_c*stateToVector(x) - B_c*inputToVector(u);
     //std::cout << g_c << std::endl;

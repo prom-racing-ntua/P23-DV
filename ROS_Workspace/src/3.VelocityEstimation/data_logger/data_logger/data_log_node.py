@@ -2,9 +2,10 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor, ExternalShutdownException
+from ament_index_python import get_package_share_directory
 
+import os
 import pandas as pd
-from datetime import datetime
 import atexit
 
 from vectornav_msgs.msg import ImuGroup, InsGroup, GpsGroup, AttitudeGroup
@@ -101,7 +102,7 @@ class DataLogger(Node):
         self._dict.update({'f_brake': msg.front_cylinder, 'r_brake':msg.rear_cylinder})
 
     def velocity_callback(self, msg) -> None:
-        self._dict.update({'u_x': msg.u_x, 'u_y': msg.u_y, 'yaw_rate': msg.u_yaw, 'cov': msg.var_matrix})
+        self._dict.update({'u_x': msg.velocity_x, 'u_y': msg.velocity_y, 'yaw_rate': msg.yaw_rate, 'cov': msg.variance_matrix})
 
     def timer_callback(self) -> None:
         time = self.get_clock().now().seconds_nanoseconds()
@@ -111,15 +112,16 @@ class DataLogger(Node):
         self._df = pd.concat([self._df, new_df], axis=0, ignore_index=True)
 
     def save_data(self):
-        self._df.to_csv(f"~/Prom_Driverless/logs/DataLogger_{self.start_time}.csv")
-        self.get_logger().warn("Log Data Saved", )
+        share_dir = get_package_share_directory("data_logger")
+        self._df.to_csv(os.path.join(share_dir, "../../../..", f"sensorLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        self.get_logger().warn("Log Data Saved")
 
 
 def main(args=None):
     rclpy.init(args=args)
     logger = DataLogger()
 
-    executor = MultiThreadedExecutor(num_threads=4)
+    executor = MultiThreadedExecutor(num_threads=2)
     #executor = SingleThreadedExecutor()
     
     try:

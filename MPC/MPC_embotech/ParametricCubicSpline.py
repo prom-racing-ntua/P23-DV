@@ -90,7 +90,7 @@ def getSpline(track_cones, axis=None, resolution=10000, boundary_condition='clos
     spline = np.empty((1,2),dtype=np.float32)
 
     spline_derivatives = getSplineDerivatives(track_cones, boundary_condition)
-    print("spline derivatives are: ",spline_derivatives,type(spline_derivatives),np.shape(spline_derivatives))
+    # print("spline derivatives are: ",spline_derivatives,type(spline_derivatives),np.shape(spline_derivatives))
     
     for t in global_index:
         i = int(t // inter)
@@ -121,6 +121,11 @@ def main():
 
     # points = np.array([[0,0], [3,1], [8,6], [2,10], [-5,7], [-4,0], [-2,-1], [0,0]])
     spline = getSpline(points, axis=ax, boundary_condition='closed_loop')
+    print(points.T)
+    print()
+    print(spline.T[:,:-1])
+
+
     # print("spline is", spline, np.shape(spline), type(spline))
     # print()
     # print("transposed spline is", spline.T, np.shape(spline.T), type(spline.T))
