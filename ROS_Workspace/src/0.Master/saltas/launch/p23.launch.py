@@ -8,32 +8,45 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     this_dir = get_package_share_directory('saltas')
-    perception_dir = get_package_share_directory('perception')
-    vel_est_dir = get_package_share_directory('velocity_estimation')
-    slam_dir = get_package_share_directory('slam')
 
+
+    # Sensor Nodes
+    can_interface_dir = get_package_share_directory('can_reader')
+    can_launch = os.path.join(can_interface_dir, 'launch', 'can_interface.launch.py')
+    can_interface = IncludeLaunchDescription(PythonLaunchDescriptionSource(can_launch))
+
+    vectornav_dir = get_package_share_directory('vectornav')
+    vectornav_launch = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')    
+    vectornav = IncludeLaunchDescription(PythonLaunchDescriptionSource(vectornav_launch))
+
+
+    # Velocity Estimation Node
+    vel_est_dir = get_package_share_directory('velocity_estimation')
+    velocityEstimationLaunch = os.path.join(vel_est_dir, 'launch', 'velocity_estimation.launch.py')
+    velocity_estimation = IncludeLaunchDescription(PythonLaunchDescriptionSource(velocityEstimationLaunch))
+
+
+    # Perception Nodes
+    perception_dir = get_package_share_directory('perception')
+    perceptionLaunch = os.path.join(perception_dir, 'launch', 'saltas_acquisition.launch.py')
+    perception = IncludeLaunchDescription(PythonLaunchDescriptionSource(perceptionLaunch))
+
+
+    # SLAM - Localization Node
+    slam_dir = get_package_share_directory('slam')
+    slamLaunch = os.path.join(slam_dir, 'launch', 'slam.launch.py')
+    slam = IncludeLaunchDescription(PythonLaunchDescriptionSource(slamLaunch))
+
+
+
+    # TODO: First start every node EXCEPT salta, then start salta when you are ready to run
+    # Master Node
     masterConfig = os.path.join(
         this_dir,
         'config',
         'global_configuration.yaml'
     )
 
-    # Nested Launch Files
-    velocityEstimationLaunch = os.path.join(
-        vel_est_dir,
-        'launch',
-        'velocity_estimation.launch.py'
-    )
-
-    perceptionLaunch = os.path.join(
-        perception_dir,
-        'launch',
-        'saltas_acquisition.launch.py'
-    )
-
-    # TODO: First start every node EXCEPT salta, then start salta when you are ready to run
-
-    # Master Node
     saltas = Node(
         name='saltas_node',
         package='saltas',
@@ -42,24 +55,8 @@ def generate_launch_description():
         parameters=[masterConfig]
     )
 
-    # Perception Nodes
-    perception = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(perceptionLaunch)
-    )
 
-    # Velocity Estimation Nodes
-    velocity_estimation = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(velocityEstimationLaunch)
-    )
-
-    # SLAM Nodes
-    slam = Node(
-        package='slam',
-        executable='slam',
-        name='slam_node'
-    )
-
-    ldList = [perception, velocity_estimation, slam]
+    ldList = [can_interface, vectornav, perception, velocity_estimation, slam]
 
     ld = LaunchDescription(ldList)
     return ld

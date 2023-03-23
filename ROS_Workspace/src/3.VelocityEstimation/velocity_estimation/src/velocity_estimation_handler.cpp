@@ -36,6 +36,7 @@ VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimatio
     setSubscribers();
 
     // We dont' care about the lost precision of int division, wall_timer gets int values anyway...
+    // Don't need timer anymore, node gets activated by master callback
     // timer_ = create_wall_timer(std::chrono::milliseconds(1000 / node_frequency_), std::bind(&VelocityEstimationHandler::timerCallback, this));
 
     RCLCPP_INFO(get_logger(), "Velocity Estimator is Online");
@@ -79,17 +80,30 @@ void VelocityEstimationHandler::publishResults() {
     const StateMatrix pub_cov{ estimator_.getStateCovariance() };
     custom_msgs::msg::VelEstimation msg;
 
-    msg.counter = global_index_;
-    msg.u_x = pub_state(StateVx);
-    msg.u_y = pub_state(StateVy);
-    msg.u_yaw = pub_state(StateVyaw);
+    msg.global_index = global_index_;
+
+    if (std::fabs(pub_state(StateVx)) < 0.05) \
+        msg.velocity_x = 0.0;
+    else \
+        msg.velocity_x = pub_state(StateVx);
+
+    if (std::fabs(pub_state(StateVy)) < 0.05) \
+        msg.velocity_y = 0.0;
+    else \
+        msg.velocity_y = pub_state(StateVy);
+
+    msg.yaw_rate = pub_state(StateVyaw);
+    msg.acceleration_x = pub_state(StateAx);
+    msg.acceleration_y = pub_state(StateAy);
+
     for (size_t i{ 0 }; i < outputs.size(); ++i)
     {
         for (size_t j{ 0 }; j < outputs.size(); ++j)
         {
-            msg.var_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
+            msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
     }
+
     pub_->publish(msg);
 }
 
@@ -99,27 +113,27 @@ int VelocityEstimationHandler::getNodeFrequency() {
     // Instead of a timer we get the node frequency from the mater node with the following client request
     auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
     int call_counter{ 0 };
-    while (!cli_->wait_for_service(1s)) // and call_counter < 15)
+    while (!cli_->wait_for_service(1s) and call_counter < 15)
     {
         if (!rclcpp::ok())
         {
             return 0;
         }
         RCLCPP_INFO(get_logger(), "Could not get node frequency. Master service not available, waiting...");
-       // call_counter++;
+        // call_counter++;
     }
-    // if (call_counter == 15)
-    // {
-    //     RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
-    //     return 0;
-    // }
+    if (call_counter == 15)
+    {
+        RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
+        return 0;
+    }
     // Send empty request
     auto result{ cli_->async_send_request(request) };
     // Await for response (TODO: Set a timeout for response time)
     if (rclcpp::spin_until_future_complete(get_node_base_interface(), result, 5s) == rclcpp::FutureReturnCode::SUCCESS)
     {
         // If get successful response return the node frequency
-        RCLCPP_INFO_STREAM(get_logger(), "Node frequency has been set to" << node_frequency_);
+        RCLCPP_INFO_STREAM(get_logger(), "Node frequency has been set to" << result.get()->velocity_estimation_frequency);
         return result.get()->velocity_estimation_frequency;
     }
     else
@@ -231,19 +245,43 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
 
 void VelocityEstimationHandler::frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
-    measurement_vector_(ObservationVhall_front) = (static_cast<double>(msg->right_wheel) + static_cast<double>(msg->left_wheel)) / 2.0;
+    double right_rpm{ static_cast<double>(msg->right_wheel) };
+    double left_rpm{ static_cast<double>(msg->left_wheel) };
+
+    double temp{ (right_rpm + left_rpm) / 2.0 };
+    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_front) = right_rpm;
+    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_front) = left_rpm;
+    else if (std::fabs(temp - measurement_vector_(ObservationVhall_front)) >= 80.0) \
+        measurement_vector_(ObservationVhall_front) = 0.997 * measurement_vector_(ObservationVhall_front) + 0.003 * temp;
+    else \
+        measurement_vector_(ObservationVhall_front) = temp;
+
     updated_sensors_[FrontWheelEncoders] = true;
 }
 
 void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
-    measurement_vector_(ObservationVhall_rear) = (static_cast<double>(msg->right_wheel) + static_cast<double>(msg->left_wheel)) / 2.0;
+    double right_rpm{ static_cast<double>(msg->right_wheel) };
+    double left_rpm{ static_cast<double>(msg->left_wheel) };
+
+    double temp{ (right_rpm + left_rpm) / 2.0 };
+    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = right_rpm;
+    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = left_rpm;
+    else if (std::fabs(temp - measurement_vector_(ObservationVhall_rear)) >= 80.0) \
+        measurement_vector_(ObservationVhall_rear) = 0.997 * measurement_vector_(ObservationVhall_rear) + 0.003 * temp;
+    else \
+        measurement_vector_(ObservationVhall_rear) = temp;
+
     updated_sensors_[RearWheelEncoders] = true;
 }
 
 void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg) {
     // 3.17 is the gear ratio of the steering rack
-    RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
+    // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
     input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad
 }
 
