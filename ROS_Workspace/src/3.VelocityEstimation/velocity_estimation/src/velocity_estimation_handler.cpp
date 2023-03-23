@@ -36,6 +36,7 @@ VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimatio
     setSubscribers();
 
     // We dont' care about the lost precision of int division, wall_timer gets int values anyway...
+    // Don't need timer anymore, node gets activated by master callback
     // timer_ = create_wall_timer(std::chrono::milliseconds(1000 / node_frequency_), std::bind(&VelocityEstimationHandler::timerCallback, this));
 
     RCLCPP_INFO(get_logger(), "Velocity Estimator is Online");
@@ -80,9 +81,21 @@ void VelocityEstimationHandler::publishResults() {
     custom_msgs::msg::VelEstimation msg;
 
     msg.global_index = global_index_;
-    msg.velocity_x = pub_state(StateVx);
-    msg.velocity_y = pub_state(StateVy);
+
+    if (std::fabs(pub_state(StateVx)) < 0.05) \
+        msg.velocity_x = 0.0;
+    else \
+        msg.velocity_x = pub_state(StateVx);
+
+    if (std::fabs(pub_state(StateVy)) < 0.05) \
+        msg.velocity_y = 0.0;
+    else \
+        msg.velocity_y = pub_state(StateVy);
+
     msg.yaw_rate = pub_state(StateVyaw);
+    msg.acceleration_x = pub_state(StateAx);
+    msg.acceleration_y = pub_state(StateAy);
+
     for (size_t i{ 0 }; i < outputs.size(); ++i)
     {
         for (size_t j{ 0 }; j < outputs.size(); ++j)
@@ -90,8 +103,6 @@ void VelocityEstimationHandler::publishResults() {
             msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
     }
-    msg.acceleration_x = pub_state(StateAx);
-    msg.acceleration_y = pub_state(StateAy);
 
     pub_->publish(msg);
 }
@@ -234,13 +245,37 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
 
 void VelocityEstimationHandler::frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
-    measurement_vector_(ObservationVhall_front) = (static_cast<double>(msg->right_wheel) + static_cast<double>(msg->left_wheel)) / 2.0;
+    double right_rpm{ static_cast<double>(msg->right_wheel) };
+    double left_rpm{ static_cast<double>(msg->left_wheel) };
+
+    double temp{ (right_rpm + left_rpm) / 2.0 };
+    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_front) = right_rpm;
+    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_front) = left_rpm;
+    else if (std::fabs(temp - measurement_vector_(ObservationVhall_front)) >= 80.0) \
+        measurement_vector_(ObservationVhall_front) = 0.997 * measurement_vector_(ObservationVhall_front) + 0.003 * temp;
+    else \
+        measurement_vector_(ObservationVhall_front) = temp;
+
     updated_sensors_[FrontWheelEncoders] = true;
 }
 
 void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
-    measurement_vector_(ObservationVhall_rear) = (static_cast<double>(msg->right_wheel) + static_cast<double>(msg->left_wheel)) / 2.0;
+    double right_rpm{ static_cast<double>(msg->right_wheel) };
+    double left_rpm{ static_cast<double>(msg->left_wheel) };
+
+    double temp{ (right_rpm + left_rpm) / 2.0 };
+    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = right_rpm;
+    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = left_rpm;
+    else if (std::fabs(temp - measurement_vector_(ObservationVhall_rear)) >= 80.0) \
+        measurement_vector_(ObservationVhall_rear) = 0.997 * measurement_vector_(ObservationVhall_rear) + 0.003 * temp;
+    else \
+        measurement_vector_(ObservationVhall_rear) = temp;
+
     updated_sensors_[RearWheelEncoders] = true;
 }
 

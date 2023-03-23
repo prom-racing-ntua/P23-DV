@@ -23,16 +23,6 @@ def generate_launch_description():
             emulate_tty=True
     )
 
-    vectornav_dir = get_package_share_directory('vectornav')
-    launch_path = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')    
-    vectornav_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(launch_path))
-
-    can_interface_dir = get_package_share_directory('can_reader')
-    launch_path = os.path.join(can_interface_dir, 'launch', 'can_interface.launch.py')
-    can_interface_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(launch_path))
-
-    ld.add_action(vectornav_launch)
-    ld.add_action(can_interface_launch)
     ld.add_action(estimation_node)
     
     if logging:
