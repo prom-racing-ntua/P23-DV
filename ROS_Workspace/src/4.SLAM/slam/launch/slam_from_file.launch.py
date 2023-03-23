@@ -8,14 +8,14 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     slam_dir = get_package_share_directory("slam")
-    slam_node = Node(
+    slam_from_file_node = Node(
         package="slam",
-        name="slam_node",
-        executable="slam",
+        name="slam_from_file_node",
+        executable="read_files",
         output="screen",
         emulate_tty=True,
-        parameters=[os.path.join(slam_dir, "config", "params.yaml")]
+        parameters=[os.path.join(slam_dir, "config", "from_file_params.yaml")]
     )
 
-    ld.add_action(slam_node)
+    ld.add_action(slam_from_file_node)
     return ld

@@ -1,92 +1,97 @@
 #ifndef SLAM_HANDLER_H
 #define SLAM_HANDLER_H
 
+#include <string>
+#include <limits>
 #include <chrono>
 #include <functional>
-#include <rclcpp/rclcpp.hpp>
-#include <pthread.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include "slam.h"
-#include "custom_msgs/msg/perception2_slam.hpp"
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include "custom_msgs/msg/vel_estimation.hpp"
+#include "custom_msgs/msg/perception2_slam.hpp"
+#include "custom_msgs/srv/get_frequencies.hpp"
 
-// GTSAM Includes
-#include <gtsam/inference/Symbol.h>
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/geometry/Pose2.h>
-#include <gtsam/base/Vector.h>
-#include <gtsam/base/Matrix.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-namespace slam_namespace
+#include "slam_common.h"
+#include "slam.h"
+
+
+namespace ns_slam
 {
-    class GraphSLAM;
-    class SLAM_handler : public rclcpp::Node {
-    private:
-        // SLAM object/class
-        GraphSLAM SLAMObject_;
+class GraphSLAM;
 
-        // Setup Callback group for mutual exclusion
-        rclcpp::CallbackGroup::SharedPtr slam_callback_group_;
+class SlamHandler: public rclcpp::Node {
+private:
+    int node_frequency_;
+    unsigned long global_index_;
+    ns_slam::GraphSLAM slam_object_;
 
-        // ROS Subscribers
-        // Perception Subscription
-        rclcpp::Subscription<custom_msgs::msg::Perception2Slam>::SharedPtr perception_subscription_;
+    bool is_mapping_;
+    std::ofstream map_log_;
 
-        // Velocity Estimation Subscription
-        rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_estimation_subscription_;
+    double perception_range_;
+    int optimization_interval_;
 
-        // ROS Publisher (Message for SLAM to publish to others)
-        // rclcpp::Publisher<custom_msgs::msg::SLAMMessage>::SharedPtr slam_publisher_;
+    double odometry_weight_;
+    double perception_weight_;
 
-        // Index To Symbol Dictionary
-        std::unordered_map<int, gtsam::Symbol> indexToSymbol;
-        
-        // Index to Pose Dictionary
-        std::unordered_map<int, gtsam::Pose2> indexToPose;
+    std::string share_dir_;
 
-        // Node log files
-        std::ofstream lapCounterFile;
-        std::ofstream poseLogFile;
-        std::ofstream mapLogFile;
-        std::ofstream velocityLogFile;
-        std::ofstream perceptionLogFile;
-        std::ofstream timeAnalysisLogFile;
+    bool is_logging_;
+    std::ofstream velocity_log_;
+    std::ofstream perception_log_;
 
-        // Global Index
-        int previousGlobalIndex;
+    // Lap counter variables
+    int competed_laps_;
+    int cooldown_;
+    int cooldown_max_;
 
+    // Global lock for SLAM node
+    pthread_spinlock_t global_lock_;
 
-        // Global lock for SLAM node
-        pthread_spinlock_t globalLock;
+    // Callback group for threading
+    rclcpp::CallbackGroup::SharedPtr slam_callback_group_;
 
-        // Current Robot Symbol
-        gtsam::Symbol currentRobotSymbol;
+    // Subscribers to Velocity and Perception topics
+    rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_subscriber_;
+    rclcpp::Subscription<custom_msgs::msg::Perception2Slam>::SharedPtr perception_subscriber_;
 
-        // SLAM Timer
-        rclcpp::TimerBase::SharedPtr OptimizationTimer_;
-        rclcpp::TimerBase::SharedPtr PublishTimer_;
+    // Slam topics publishers
+    // TODO: Create custom slam message and publisher here
 
-        // Lap counting material
-        int laps_completed, cooldown, cooldown_max;
+    // Optimization timer
+    rclcpp::TimerBase::SharedPtr optimization_clock_;
+    rclcpp::TimerBase::SharedPtr telemetry_clock_;
 
-        // ROS setup Methods
-        void setSubscribers();
+    // Visualization topics
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr car_pose_publisher_;
 
-        // Callback Methods
-        void perceptionCallback(const custom_msgs::msg::Perception2Slam::SharedPtr msg);
-        void velocityEstimationCallback(const custom_msgs::msg::VelEstimation::SharedPtr msg);
+    // Velocity Estimation getter in order to set time interval in slam_object_
+    rclcpp::Client<custom_msgs::srv::GetFrequencies>::SharedPtr cli_;
 
-        // Timer Methods
-        void optimizationCallback();
+    // Load ROS parameters from config files
+    void loadParameters();
+    int getNodeFrequency();
 
-        void loadParameters();
-        
+    void odometryCallback(const custom_msgs::msg::VelEstimation::SharedPtr msg);
 
-    public:
-        explicit SLAM_handler();
-        void publishSLAM();
+    void perceptionCallback(const custom_msgs::msg::Perception2Slam::SharedPtr msg);
 
-    }; //slam_namespace
-}
+    void optimizationCallback();
 
-#endif
+    void visualize();
+
+public:
+    // The file paths are passed as arguments to the constructor and can be modified in the main function
+    SlamHandler();
+
+    ~SlamHandler();
+};
+} // namespace ns_slam
+
+#endif // SLAM_HANDLER_H

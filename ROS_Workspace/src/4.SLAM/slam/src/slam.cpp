@@ -1,251 +1,475 @@
 #include "slam.h"
-#include "slam_handler.h"
 
 
-namespace slam_namespace {
-
-UnaryFactor::UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model): gtsam::NoiseModelFactor1<gtsam::Pose2> (model, j), m_range(range), m_theta(theta), cone_x(x), cone_y(y) {}
-
-gtsam::Vector UnaryFactor::evaluateError(const gtsam::Pose2& q, boost::optional<gtsam::Matrix&> H = boost::none) const
+namespace ns_slam
 {
-      if (H) (*H) = (gtsam::Matrix(2,3)<< (q.x()-cone_x)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), (q.y()-cone_y)/sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), 0,
-                                   (q.y()-cone_y)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -pow((q.x()-cone_x),2)/(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)), -1).finished();
-      return (gtsam::Vector(2) << sqrt(pow((q.x()-cone_x),2) + pow((q.y()-cone_y),2)) - m_range, std::atan2(cone_y-q.y(), cone_x-q.x()) - q.theta() - m_theta).finished();
+UnaryFactor::UnaryFactor(gtsam::Key j, double range, double theta, double x, double y, const gtsam::SharedNoiseModel& model)
+	: gtsam::NoiseModelFactor1<gtsam::Pose2>(model, j), measured_range(range), measured_angle(theta), actual_cone_x(x), actual_cone_y(y) {}
+
+/* The method evaluateError() is required by gtsam to implement a custom factor.
+ * It calculates the error of the Factor based on the cone measurement.
+ * If the optional Matrix reference argument is specified, the method computes both
+ * the error and its derivative at the current values of the car_pose variables.
+ */
+gtsam::Vector UnaryFactor::evaluateError(const gtsam::Pose2& car_pose, gtsam::OptionalMatrixType H) const {
+	// Calculate the error of the cone measurement [range error, angle error]
+	gtsam::Vector2 local_cone_position{ measured_range* std::cos(measured_angle), measured_range* std::sin(measured_angle) };
+	gtsam::Vector2 global_cone_position{ actual_cone_x, actual_cone_y };
+	gtsam::Vector2 global_car_postion{ car_pose.x(), car_pose.y() };
+	gtsam::Matrix2 global2local{ car_pose.rotation().transpose() };
+
+	if (H)
+	{
+		gtsam::Matrix23 error_jacobian{};
+		double ct{ std::cos(car_pose.theta()) };
+		double st{ std::sin(car_pose.theta()) };
+
+		// Calculated the jacobian of the error vector above with respect to the car x, y and θ.
+		error_jacobian <<
+			-1, 0, -st * (actual_cone_x - car_pose.x()) + ct * (actual_cone_y - car_pose.y()),
+			0, -1, -ct * (actual_cone_x - car_pose.x()) - st * (actual_cone_y - car_pose.y());
+		*H = error_jacobian;
+	}
+	return global2local * (global_cone_position - global_car_postion) - local_cone_position;
 }
 
+gtsam::NonlinearFactor::shared_ptr UnaryFactor::clone() const {
+	return std::static_pointer_cast<gtsam::NonlinearFactor>(
+		gtsam::NonlinearFactor::shared_ptr(new UnaryFactor(*this)));
+}
 
-GraphSLAM::GraphSLAM(Handle nh): node_handler_(nh) {}
+GraphSLAM::GraphSLAM(rclcpp::Node* nh): node_handler_(nh) {
+	previous_global_index_ = 0;
+	landmark_counter_ = 0;
+	cone_count_ = 0;
+}
 
+GraphSLAM::~GraphSLAM() {
+	// Free up heap memory occupied by iSAM
+	delete isam_;
+}
 
-// GraphSLAM::~GraphSLAM() {}
+void GraphSLAM::init() {
+	association_distance_threshold_ = node_handler_->get_parameter("association_threshold").as_double();
 
+	// Initialize iSAM2 with specified parameters
+	gtsam::ISAM2Params parameters;
+	parameters.relinearizeThreshold = node_handler_->get_parameter("relinearize_threshold").as_double();
+	parameters.relinearizeSkip = node_handler_->get_parameter("relinearize_skip").as_int();
+	isam_ = new gtsam::ISAM2(parameters);
+
+	auto orange1 = node_handler_->get_parameter("left_orange").as_double_array();
+	left_orange_ << orange1[0], orange1[1];
+	auto orange2 = node_handler_->get_parameter("right_orange").as_double_array();
+	right_orange_ << orange2[0], orange2[1];
+
+	// Initializes the factor graph
+	initializeFactorGraph();
+	RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Created SLAM object" << '\n');
+}
 
 // Initializes the factor graph
-void GraphSLAM::initialize_factor_graph(gtsam::Symbol start_robot_sym)
-{
-  small_dist_threshold = node_handler_->get_parameter("small_dist_threshold").as_double();
-  large_dist_threshold = node_handler_->get_parameter("large_dist_threshold").as_double();
+void GraphSLAM::initializeFactorGraph() {
+	current_car_pose_symbol_ = gtsam::Symbol('I', 0);
 
-  dt = node_handler_->get_parameter("dt").as_double();
+	// Set the initial car_pose and create a Prior Factor for it
+	auto initial_pose{ node_handler_->get_parameter("starting_position").as_double_array() };
+	estimated_car_pose_ = gtsam::Pose2(initial_pose[0], initial_pose[1], initial_pose[2]);
 
-  auto orange1 = node_handler_->get_parameter("left_orange").as_double_array();
-  left_orange << orange1[0], orange1[1];
-  auto orange2 = node_handler_->get_parameter("right_orange").as_double_array();
-  right_orange << orange2[0], orange2[1];
+	// Create the Gaussian noise model as a diagonal matrix
+	auto initial_variances{ node_handler_->get_parameter("starting_position_covariance").as_double_array() };
+	gtsam::noiseModel::Diagonal::shared_ptr noise_model{
+		gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(initial_variances[0], initial_variances[1], initial_variances[2]))
+	};
 
-  auto noise1 = node_handler_->get_parameter("prior_pose_noise").as_double_array();
-  prior_pose_noise << noise1[0],0,0,
-                      0,noise1[1],0,
-                      0,0,noise1[2];
+	// Make sure new factors and variables are empty and add the Prior Pose to the temporary graph variables
+	new_factors_ = gtsam::NonlinearFactorGraph{};
+	new_variable_values_ = gtsam::Values{};
 
-  for (int i=0; i<4; i++) land_obs_counter[i] = 0;
-
-  color_char[0] = 'y';
-  color_char[1] = 'b';
-  color_char[2] = 's';
-  color_char[3] = 'l';
-
-  est_robot_pose = gtsam::Pose2(0,0,0);
-
-  // Start a new factor graph and add the starting point using PriorFactor
-  factor_graph.add(gtsam::PriorFactor<gtsam::Pose2>(start_robot_sym, est_robot_pose, gtsam::noiseModel::Gaussian::Covariance(prior_pose_noise))); // add directly to graph
-  init_est.insert(start_robot_sym, est_robot_pose);
-
-  weight = node_handler_->get_parameter("weight").as_double();
-  range_limit = node_handler_->get_parameter("range_limit").as_double();
+	new_factors_.add(gtsam::PriorFactor<gtsam::Pose2>(current_car_pose_symbol_, estimated_car_pose_, noise_model));
+	new_variable_values_.insert(current_car_pose_symbol_, estimated_car_pose_);
 }
 
+// Adds an odometry measurement to iSAM2 and computes the current estimated state
+bool GraphSLAM::addOdometryMeasurement(OdometryMeasurement& odometry) {
+	RCLCPP_INFO_STREAM(node_handler_->get_logger(), odometry.global_index);
 
-// Adds an odometry measurement to iSAM2 and returns the current estimated state
-bool GraphSLAM::add_odom_measurement(double odom_Ux, double odom_Uy, double odom_omega, gtsam::Matrix3 odom_noise, gtsam::Symbol current_robot_sym, gtsam::Symbol next_robot_sym, int stride)
-{
-  // Firstly, add the edge between two robot poses based on the velocity estimation received
-  gtsam::Pose2 robot_odometry(odom_Ux*stride*dt, odom_Uy*stride*dt, odom_omega*stride*dt);
-  gtsam::Matrix3 J_dt;
-  J_dt << stride*dt, 0, 0,
-          0, stride*dt, 0,
-          0, 0, stride*dt;
+	// Create the symbol of the new pose variable that is to be created
+	gtsam::Symbol next_car_pose_symbol{ 'X', odometry.global_index };
 
+	// Calculate time interval from last received odometry measurement
+	double time_interval{ (odometry.global_index - previous_global_index_) * delta_time_ };
+	if (previous_global_index_ == 0) time_interval = delta_time_;
+	previous_global_index_ = odometry.global_index;
 
-  factor_graph.add(gtsam::BetweenFactor<gtsam::Pose2> (current_robot_sym, next_robot_sym, robot_odometry, gtsam::noiseModel::Gaussian::Covariance(J_dt*odom_noise*J_dt.transpose())));
+	// Compute the distance (Factor length) between the current and the previous poses
+	gtsam::Pose2 pose_distance{ odometry.velocity_x* time_interval, odometry.velocity_y* time_interval, odometry.yaw_rate* time_interval };
 
-  // Secondly, add an initial estimate of the new robot pose on the global map
-  gtsam::Pose2 new_pos = gtsam::Pose2(est_robot_pose.x()+(odom_Ux*std::cos(est_robot_pose.theta())-odom_Uy*std::sin(est_robot_pose.theta()))*stride*dt, est_robot_pose.y()+(odom_Ux*std::sin(est_robot_pose.theta())+odom_Uy*std::cos(est_robot_pose.theta()))*stride*dt, est_robot_pose.theta()+odom_omega*stride*dt);
-  init_est.insert(next_robot_sym, new_pos);
+	// Create the pose distance covariance matrix and the noise model for the Between Factor
+	gtsam::Matrix3 distance_covariance;
+	distance_covariance << time_interval, 0, 0,
+		0, time_interval, 0,
+		0, 0, time_interval;
 
-  gtsam::Matrix12 prev_pose_matrix, curr_pose_matrix;
-  prev_pose_matrix << est_robot_pose.x(), est_robot_pose.y();
-  curr_pose_matrix << new_pos.x(), new_pos.y();
+	gtsam::noiseModel::Gaussian::shared_ptr noise_model{
+		gtsam::noiseModel::Gaussian::Covariance(distance_covariance* odometry.measurement_noise* distance_covariance.transpose())
+	};
 
-  bool completed_lap = intersect(prev_pose_matrix, curr_pose_matrix);
+	// Add the new Between Factor to the Factors temporary variable and update pose symbol 
+	new_factors_.add(gtsam::BetweenFactor<gtsam::Pose2>(current_car_pose_symbol_, next_car_pose_symbol, pose_distance, noise_model));
 
-  est_robot_pose = new_pos;
+	// Calculate an initial estimate of the new pose variable that was just created
+	double new_x{
+	  estimated_car_pose_.x() + (odometry.velocity_x * std::cos(estimated_car_pose_.theta()) - odometry.velocity_y * std::sin(estimated_car_pose_.theta())) * time_interval
+	};
+	double new_y{
+	  estimated_car_pose_.y() + (odometry.velocity_x * std::sin(estimated_car_pose_.theta()) + odometry.velocity_y * std::cos(estimated_car_pose_.theta())) * time_interval
+	};
+	double new_theta{ estimated_car_pose_.theta() + odometry.yaw_rate * time_interval };
+	gtsam::Pose2 new_pose_estimate{ new_x, new_y, new_theta };
 
-  return completed_lap;
+	// Add that estimate to the Values temporary variable and update the car's current pose
+	new_variable_values_.insert(next_car_pose_symbol, new_pose_estimate);
 
+	gtsam::Vector2 previous_pose;
+	gtsam::Vector2 new_pose;
+	previous_pose << estimated_car_pose_.x(), estimated_car_pose_.y();
+	new_pose << new_x, new_y;
+
+	bool completed_lap{ intersectFinishLine(previous_pose, new_pose) };
+	current_car_pose_symbol_ = next_car_pose_symbol;
+	estimated_car_pose_ = new_pose_estimate;
+
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), "Car Position: X = " << estimated_car_pose_.x() << ", Y = " << estimated_car_pose_.y());
+	return completed_lap;
 }
 
+// !!!! TODO: Olo redo...
+// Adds landmark measurements in SLAM mode
+void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
+	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
+	gtsam::Pose2 observation_pose;
 
-// void GraphSLAM::add_landmark_measurements_loc(std::vector<PerceptionMeasurement> land_rel){
-//   // Find best match for every cone observation arriving from perception
-//   for (long unsigned int i=0; i<land_rel.size(); i++){
-//     int best_match = findNN(land_rel.at(i));
-//     if (best_match > -1) {
-//       factor_graph->add(slam::UnaryFactor(current_robot_sym, land_rel.at(i).range, land_rel.at(i).theta, landmark_id_map.at(best_match).est_pos[0], landmark_id_map.at(best_match).est_pos[1], gtsam::noiseModel::Gaussian::Covariance(land_rel.at(i).land_obs_noise_)));
-//     }
-//     // else: phantom cone
-//   }
-// }
+	if (isam_->valueExists(observation_pose_symbol)) \
+		observation_pose = isam_->calculateEstimate(observation_pose_symbol).cast<gtsam::Pose2>();
+	else if (new_variable_values_.exists(observation_pose_symbol)) \
+		observation_pose = new_variable_values_.at(observation_pose_symbol).cast<gtsam::Pose2>();
+	else
+	{
+		RCLCPP_ERROR_STREAM(node_handler_->get_logger(), "addLandmark() -> Perception index does not match any poses. global_index = " << global_index);
+		return;
+	}
 
+	for (PerceptionMeasurement& cone : landmarks)
+	{
+		RCLCPP_INFO_STREAM(node_handler_->get_logger(), cone.observation_noise);
 
-void GraphSLAM::add_landmark_measurements_slam(std::vector<int> color_list, std::vector<float> range_list, std::vector<float> theta_list, gtsam::Symbol current_robot_sym, gtsam::Pose2 current_pose)
-{
-  for (long unsigned int i=0; i<color_list.size(); i++){
-    int color = color_list.at(i);
-    if (range_list.at(i)<range_limit){
-      // Estimate position of newly observed cone in global map (x,y)
-      gtsam::Matrix12 obs_pos;
-      obs_pos << current_pose.x() + range_list.at(i)*std::cos(theta_list.at(i)+current_pose.theta()),
-                 current_pose.y() + range_list.at(i)*std::sin(theta_list.at(i)+current_pose.theta());
+		// Estimate position of newly observed cone in global map (x,y)
+		gtsam::Vector2 observed_position;
+		observed_position << observation_pose.x() + cone.range * std::cos(cone.theta + observation_pose.theta()),
+			observation_pose.y() + cone.range * std::sin(cone.theta + observation_pose.theta());
 
-      gtsam::Matrix2 land_obs_noise;
-      if (color == 3){
-        land_obs_noise << 0.01,0,
-                          0,0.06*range_list.at(i)/10;
-      }
-      else {
-        land_obs_noise << 0.001,0,
-                          0,0.02*range_list.at(i)/10;
-      }
+		int best_match_id{ findNearestNeighbor(cone, observed_position) };
 
-      int best_match = findNN(color, range_list.at(i), theta_list.at(i), current_pose);
-      if (best_match > -1)
-      {
-        // If the landmark was observed only once, put the previous landmark measurement into the factor graph and add the initial estimate of the landmark's position (x,y)
-        if (landmark_id_map[color].at(best_match).verified == false)
-        {
-          // Seen for a second time = verified
-          landmark_id_map[color].at(best_match).verified = true;
+		/* Case where the landmark has not been observed before.
+		 * Here we don't put the observed landmark in the graph in case it is a false positive of
+		 * the perception pipeline (i.e. a ghost cone). We just add it to the landmark_id_map_ variable
+		 * and wait to observe the same cone a second time. Then we will add this first measurement in
+		 * the graph along with its initial estimate and then update that estimate according to the second
+		 * measurement and every other measurement thereafter.
+		 */
+		if (best_match_id == -1)
+		{
+			// Creating the new landmark symbol and putting it in the dictionary
+			gtsam::Symbol new_landmark_symbol{'L', landmark_counter_};
 
-          // Add the previous landmark measurement to the factor graph from the robot pose symbol
-          factor_graph.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(landmark_id_map[color].at(best_match).robot_pose_sym, landmark_id_map[color].at(best_match).land_sym, landmark_id_map[color].at(best_match).first_theta, landmark_id_map[color].at(best_match).first_range, gtsam::noiseModel::Gaussian::Covariance(landmark_id_map[color].at(best_match).first_obs_var)));
+			// Create the landmark entry
+			LandmarkInfo new_landmark;
 
-          // Add the initial estimate
-          init_est.insert(landmark_id_map[color].at(best_match).land_sym, gtsam::Point2(landmark_id_map[color].at(best_match).est_pos[0], landmark_id_map[color].at(best_match).est_pos[1]));
+			new_landmark.is_verified = false;
+			new_landmark.symbol = new_landmark_symbol;
+			new_landmark.color = cone.color;
+			new_landmark.estimated_pose = observed_position;
+			new_landmark.car_pose_symbols.push_back(observation_pose_symbol);
+			new_landmark.range_vector.push_back(cone.range);
+			new_landmark.theta_vector.push_back(cone.theta);
+			new_landmark.variance_vector.push_back(cone.observation_noise);
 
-        }
+			if (cone.range > 7.5) new_landmark.score = 1;
+			else new_landmark.score = 5;
 
-        // Construct the current landmark measurement
-        factor_graph.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(current_robot_sym, landmark_id_map[color].at(best_match).land_sym, theta_list.at(i), range_list.at(i), gtsam::noiseModel::Gaussian::Covariance(land_obs_noise)));
-        
-        // Correct position of cone every new observation    
-        landmark_id_map[color].at(best_match).est_pos = weight*landmark_id_map[color].at(best_match).est_pos + (1-weight)*obs_pos;
+			landmark_id_map_[landmark_counter_++] = new_landmark;
+		}
+		// Case where the landmark has been observed before
+		else
+		{
+			LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
 
-      }
+			// If the landmark was observed only once, put the previous landmark measurement into the factor graph and add the initial estimate 
+			// of the landmark's position (x,y)
+			if (!best_match->is_verified)
+			{
+				best_match->car_pose_symbols.push_back(observation_pose_symbol);
+				best_match->range_vector.push_back(cone.range);
+				best_match->theta_vector.push_back(cone.theta);
+				best_match->variance_vector.push_back(cone.observation_noise);
+				best_match->estimated_pose[0] = (best_match->estimated_pose[0] + observed_position[0]) / 2.0;
+				best_match->estimated_pose[1] = (best_match->estimated_pose[1] + observed_position[1]) / 2.0;
 
-      // Case where the landmark has not been observed before
-      else
-      {
-        // Creating the new landmark symbol and putting it in the dictionary
-        gtsam::Symbol next_landmark_sym = gtsam::Symbol(color_char[color], land_obs_counter[color]);
+				if (cone.range > 7.5) best_match->score += 1;
+				else best_match->score += 5;
 
-        // Create the landmark entry
-        LandmarkInfo landmark_info;
+				if (best_match->score > 20)
+				{
+					best_match->is_verified = true;
+					cone_count_++;
 
-        landmark_info.verified = false;
+					// Add the previous landmark measurements to the factor graph from the car_pose_symbol with the first observation values
+					for (int i{ 0 }; i < best_match->car_pose_symbols.size(); i++)
+					{
+						gtsam::noiseModel::Gaussian::shared_ptr noise_model {
+							gtsam::noiseModel::Gaussian::Covariance(best_match->variance_vector[i])
+						};
 
-        landmark_info.land_sym = next_landmark_sym;
-        landmark_info.est_pos = obs_pos;
+						new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+							best_match->car_pose_symbols[i], best_match->symbol, gtsam::Rot2(best_match->theta_vector[i]), best_match->range_vector[i], noise_model)
+						);
+					}
+					// Add the initial estimate of the newly added landmark pose
+					new_variable_values_.insert(best_match->symbol, gtsam::Point2(best_match->estimated_pose[0], best_match->estimated_pose[1]));
+				}
+			}
+			else
+			{
+				best_match->car_pose_symbols.push_back(observation_pose_symbol);
+				best_match->range_vector.push_back(cone.range);
+				best_match->theta_vector.push_back(cone.theta);
+				best_match->variance_vector.push_back(cone.observation_noise);
 
-        landmark_info.robot_pose_sym = current_robot_sym;
-        landmark_info.first_range = range_list.at(i);
-        landmark_info.first_theta = theta_list.at(i);
-        landmark_info.first_obs_var = land_obs_noise;
+				// Construct the current landmark observation Factor and add it to the temporary variable
+				gtsam::noiseModel::Gaussian::shared_ptr noise_model {
+					gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
+				};
 
-        landmark_id_map[color][land_obs_counter[color]++] = landmark_info;
-      }
-    }
-  }
+				new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+					observation_pose_symbol, best_match->symbol, gtsam::Rot2(cone.theta), cone.range, noise_model)
+				);
+			}
+		}
+	}
 }
 
+// Adds landmark measurements in LOCALIZATION mode
+void GraphSLAM::addLandmarkMeasurementsLocalization(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
+	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
+	gtsam::Pose2 observation_pose;
 
-int GraphSLAM::findNN(int color, float range, float theta, gtsam::Pose2 current_pose) {
-  // Check already known cones for closest observed cone (Mahalanobis distance), best_match is the index of the closest neighbor, if best_match==-1 then it is a phantom cone
-  int best_match = -1;
-  double curr_best_dist;
-  if (color == 3) curr_best_dist = large_dist_threshold;
-  else curr_best_dist = small_dist_threshold;
-  gtsam::Matrix12 obs_pos;
-  obs_pos << current_pose.x() + range*std::cos(theta+current_pose.theta()),
-             current_pose.y() + range*std::sin(theta+current_pose.theta());
+	if (isam_->valueExists(observation_pose_symbol)) \
+		observation_pose = isam_->calculateEstimate(observation_pose_symbol).cast<gtsam::Pose2>();
+	else if (new_variable_values_.exists(observation_pose_symbol)) \
+		observation_pose = new_variable_values_.at(observation_pose_symbol).cast<gtsam::Pose2>();
+	else
+	{
+		RCLCPP_ERROR_STREAM(node_handler_->get_logger(), "addLandmark() -> Perception index does not match any poses. global_index = " << global_index);
+		return;
+	}
 
-  for (long unsigned int i=0; i<landmark_id_map[color].size(); i++){
-    gtsam::Matrix12 exp_pos = landmark_id_map[color].at(i).est_pos;
-    double dist = sqrt((obs_pos - exp_pos)*(obs_pos - exp_pos).transpose());
-    if (dist < curr_best_dist)
-    {
-      curr_best_dist = dist;
-      best_match = i;
-    }
-  }
-  return best_match;
+	// Find best match for every cone observation arriving from perception
+	for (PerceptionMeasurement& cone : landmarks)
+	{
+		gtsam::Vector2 observed_position;
+		observed_position << observation_pose.x() + cone.range * std::cos(cone.theta + observation_pose.theta()),
+			observation_pose.y() + cone.range * std::sin(cone.theta + observation_pose.theta());
+		int best_match_id = findNearestNeighbor(cone, observed_position);
+
+		if (best_match_id != -1)
+		{
+			LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
+
+			gtsam::noiseModel::Gaussian::shared_ptr noise_model{
+				gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
+			};
+
+			new_factors_.add(UnaryFactor(
+				observation_pose_symbol, cone.range, cone.theta, best_match->estimated_pose[0], best_match->estimated_pose[1], noise_model
+			));
+		}
+	}
 }
 
-// Source: https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
-bool GraphSLAM::intersect(gtsam::Matrix12 old_pose, gtsam::Matrix12 new_pose){
-  return (ccw(old_pose,left_orange,right_orange) != ccw(new_pose,left_orange,right_orange)) && (ccw(old_pose,new_pose,left_orange) != ccw(old_pose,new_pose,right_orange));
+void GraphSLAM::loadMap(std::string& map_file_path) {
+	std::fstream map_file{ map_file_path };
+	while (!map_file.eof())
+	{
+		gtsam::Symbol cone_symbol{ 'L', landmark_counter_ };
+		LandmarkInfo cone{};
+		cone.is_verified = true;
+		cone.symbol = cone_symbol;
+		double color_temp{};
+		map_file >> color_temp;
+		cone.color = static_cast<ConeColor>(color_temp);
+		map_file >> cone.estimated_pose[0];
+		map_file >> cone.estimated_pose[1];
+
+		landmark_id_map_[landmark_counter_++] = cone;
+	}
 }
 
+// TODO: This algorithm sound a bit expensive to do for all cones every perception measurement
+int GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position) {
+	// Check already known cones for closest observed cone (Euler distance), best_match is the index of the closest neighbor.
+	// If best_match == -1 then it is a phantom cone.
+	int best_match = -1;
+	double least_distance_square{ std::pow(association_distance_threshold_, 2) };
 
-bool GraphSLAM::ccw(gtsam::Matrix12 A, gtsam::Matrix12 B, gtsam::Matrix12 C){
-  return (C[1]-A[1])*(B[0]-A[0]) > (B[1]-A[1])*(C[0]-A[0]);
+	if (observed_landmark.color == ConeColor::LargeOrange)
+	{
+		least_distance_square = std::pow(1.8 * association_distance_threshold_, 2);
+	}
+
+	// Iterate through all of the cones in the current map
+	for (auto& it : landmark_id_map_)
+	{
+		LandmarkInfo& cone{ it.second };
+		// Only check cones of the same color
+		if (cone.color == observed_landmark.color)
+		{
+			// Calculate the distance between the observed cone and the mapped cone
+			double current_distance_square = (global_position - cone.estimated_pose).transpose() * (global_position - cone.estimated_pose);
+			// If their distance is less than the previous best, assign the current cone as the best match
+			if (current_distance_square < least_distance_square)
+			{
+				least_distance_square = current_distance_square;
+				best_match = it.first;
+			}
+		}
+	}
+	return best_match;
 }
-
 
 // Optimizes the factor graph
-void GraphSLAM::optimize_factor_graph(gtsam::NonlinearFactorGraph* opt_factor_graph, gtsam::Values opt_init_est)
-{
-
-  // Update the current estimated robot pose
-  isam2.update(*opt_factor_graph, opt_init_est);
-  est_state = isam2.calculateEstimate();
-
+void GraphSLAM::optimizeFactorGraph(gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_variable_values) {
+	// Update the current estimated robot pose
+	isam_->update(new_factors, new_variable_values);
+	estimated_global_state_ = isam_->calculateEstimate();
 }
 
+// Used to be part of optimization, split for ROS purposes
+void GraphSLAM::imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam::Vector3& pre_optimization_pose) {
+	// std::function<bool(gtsam::Key)> isPose{ gtsam::Symbol::ChrTest('X') };
+	// std::function<bool(gtsam::Key)> isLandmark{ gtsam::Symbol::ChrTest('L') };
 
-void GraphSLAM::impose_optimization(gtsam::Symbol opt_robot_sym, gtsam::Pose2 pre_opt_pose)
-{
-  // Update the current estimated robot pose
-  double new_x = est_state.at<gtsam::Pose2>(opt_robot_sym).x() + std::cos(est_state.at<gtsam::Pose2>(opt_robot_sym).theta() - pre_opt_pose.theta())*(est_robot_pose.x() - pre_opt_pose.x()) - std::sin(est_state.at<gtsam::Pose2>(opt_robot_sym).theta() - pre_opt_pose.theta())*(est_robot_pose.y() - pre_opt_pose.y());
-  double new_y = est_state.at<gtsam::Pose2>(opt_robot_sym).y() + std::sin(est_state.at<gtsam::Pose2>(opt_robot_sym).theta() - pre_opt_pose.theta())*(est_robot_pose.x() - pre_opt_pose.x()) + std::cos(est_state.at<gtsam::Pose2>(opt_robot_sym).theta() - pre_opt_pose.theta())*(est_robot_pose.y() - pre_opt_pose.y());
-  double new_theta = est_state.at<gtsam::Pose2>(opt_robot_sym).theta() + est_robot_pose.theta() - pre_opt_pose.theta(); 
-  est_robot_pose = gtsam::Pose2(new_x, new_y, new_theta);
+	gtsam::Pose2 optimized_pose{ estimated_global_state_.at<gtsam::Pose2>(optimization_symbol) };
+	// double delta_x{ optimized_pose.x() - pre_optimization_pose(0) };
+	// double delta_y{ optimized_pose.y() - pre_optimization_pose(1) };
+	// double delta_theta{ optimized_pose.theta() - pre_optimization_pose(2) };
+	// gtsam::Matrix3 transformation_matrix{ gtsam::Pose2(delta_x, delta_y, delta_theta).matrix() };
 
-  // For every landmark that has been optimized update estimated position
-  for (int i=0; i<4; i++){
-    for (long unsigned int j=0; j<landmark_id_map[i].size(); j++)
-    {
-      if (est_state.exists<gtsam::Point2>(landmark_id_map[i].at(j).land_sym))
-      {
-        landmark_id_map[i].at(j).est_pos = est_state.at<gtsam::Point2>(landmark_id_map[i].at(j).land_sym);
-      }
-    }
-  }
+	// // Rotate and translate every value variable that was added during optimization
+	// for (auto it : new_variable_values_)
+	// {
+	// 	if (isPose(it.key))
+	// 	{
+	// 		new_variable_values_.update(it.key, transformation_matrix * it.value.cast<gtsam::Pose2>().matrix());
+	// 	}
+	// 	else if (isLandmark(it.key))
+	// 	{
+	// 		new_variable_values_.update(it.key, transformation_matrix.block(0, 0, 2, 3) * it.value.cast<gtsam::Point2>());
+	// 	}
+	// }
+
+	// Update the current estimated robot pose
+	double new_x{
+	  optimized_pose.x() + std::cos(optimized_pose.theta() - pre_optimization_pose(2)) * (estimated_car_pose_.x() - pre_optimization_pose(0)) - std::sin(optimized_pose.theta() - pre_optimization_pose(2)) * (estimated_car_pose_.y() - pre_optimization_pose(1))
+	};
+
+	double new_y{
+	  optimized_pose.y() + std::sin(optimized_pose.theta() - pre_optimization_pose(2)) * (estimated_car_pose_.x() - pre_optimization_pose(0)) + std::cos(optimized_pose.theta() - pre_optimization_pose(2)) * (estimated_car_pose_.y() - pre_optimization_pose(1))
+	};
+
+	double new_theta{ optimized_pose.theta() + estimated_car_pose_.theta() - pre_optimization_pose(2) };
+	estimated_car_pose_ = gtsam::Pose2(new_x, new_y, new_theta);
+
+	// For every landmark that has been optimized update its estimated position
+	for (auto& it : landmark_id_map_)
+	{
+		LandmarkInfo& cone{ it.second };
+		if (estimated_global_state_.exists<gtsam::Point2>(cone.symbol))
+		{
+			cone.estimated_pose = estimated_global_state_.at<gtsam::Point2>(cone.symbol);
+		}
+	}
 }
 
-
-std::vector<gtsam::Matrix13> GraphSLAM::get_est_map(){
-  std::vector<gtsam::Matrix13> est_map;
-  for (int i=0; i<4; i++){
-    for (long unsigned int j=0; j<landmark_id_map[i].size(); j++){
-      gtsam::Matrix13 cone;
-      if (landmark_id_map[i].at(j).verified) {
-        cone << i, landmark_id_map[i].at(j).est_pos[0], landmark_id_map[i].at(j).est_pos[1];
-        est_map.push_back(cone);
-      }
-    }
-  }
-  return est_map;
+void GraphSLAM::resetTemporaryGraph() {
+	new_factors_.resize(0);
+	new_variable_values_.clear();
+	return;
 }
 
-}//slam_namespace namesapce
+// Returns the current estimate of the car's pose
+gtsam::Vector3 GraphSLAM::getEstimatedCarPose() {
+	return gtsam::Vector3(estimated_car_pose_.x(), estimated_car_pose_.y(), estimated_car_pose_.theta());
+}
+
+// Returns the current estimate of the track map
+std::vector<gtsam::Vector3> GraphSLAM::getEstimatedMap() {
+	std::vector<gtsam::Vector3> estimated_map;
+
+	// Iterate through the HashMap of cones and add them to the return vector if the cone is verified
+	for (auto& it : landmark_id_map_)
+	{
+		LandmarkInfo& cone{ it.second };
+		if (cone.is_verified)
+		{
+			gtsam::Vector3 mapped_cone{ static_cast<double>(cone.color), cone.estimated_pose[0], cone.estimated_pose[1] };
+			estimated_map.push_back(mapped_cone);
+		}
+	}
+	return estimated_map;
+}
+
+void GraphSLAM::visualize(const bool print_all_observations, const bool print_trajectory) {
+	std::ofstream data("plot_data.txt");
+
+	// Prints all verified cones
+	// if (print_all_observations)
+	// {
+	// 	for (auto it : landmark_id_map_)
+	// 	{
+	// 		LandmarkInfo cone{ it.second };
+	// 		for (gtsam::Vector2 observation : cone.all_observations)
+	// 		{
+	// 			data << 5 << ' ' << observation[0] << ' ' << observation[1] << '\n';
+	// 		}
+	// 	}
+	// }
+
+	// Prints all observations
+	for (auto it : landmark_id_map_)
+	{
+		LandmarkInfo& cone{ it.second };
+		if (cone.is_verified)
+		{
+			data << cone.color << ' ' << cone.estimated_pose[0] << ' ' << cone.estimated_pose[1] << '\n';
+		}
+	}
+
+	// Prints the trajectory followed by the car, does not always work
+	if (print_trajectory)
+	{
+		std::function<bool(gtsam::Key)> isPose{ gtsam::Symbol::ChrTest('X') };
+		for (auto it : estimated_global_state_)
+		{
+			if (isPose(it.key))
+			{
+				gtsam::Pose2 car_pose { it.value.cast<gtsam::Pose2>() };
+				data << 4 << ' ' << car_pose.x() << ' ' << car_pose.y() << '\n';
+			}
+		}
+	}
+	data.close();
+}
+} // namespace ns_slam

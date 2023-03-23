@@ -1,13 +1,16 @@
-slam_node:
+slam_from_file_node:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
     mapping_mode: true
     track_map: "/test_tracks/AutoX.txt"
 
+    # This must be the same as the sampling rate of the log files if used
+    sampling_rate: 50
+
     # Defines the starting position of the car
     starting_position: [ -7.5, 0.0, 0.0 ]
-    starting_position_covariance: [ 0.5, 0.1, 0.01 ]
+    starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
     perception_range: 14.0
@@ -25,11 +28,7 @@ slam_node:
     odometry_covariance_weight: 10.0
     perception_covariance_weight: 0.01
 
-    # Big orange cones for starting/finish line
-    # left_orange: [0.0, 0.0]
-    # right_orange: [0.0, 0.0]
-
-    lap_counter_cooldown: 10
-
-    logger: true
-    telemetry: true
+    # The files should be placed in the DataFiles directory and the variables
+    # below must have the relative path in the form "/DataFiles/my_log_file.txt"
+    perception_log: "/DataFiles/AutoX3_Perception.txt"
+    odometry_log: "/DataFiles/AutoX3_Velocity.txt"

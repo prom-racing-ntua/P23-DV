@@ -1,0 +1,360 @@
+#include <iostream>
+#include <stdexcept>
+#include "slam_from_file.h"
+
+
+namespace ns_slam
+{
+SlamFromFile::SlamFromFile(): Node("slam_from_file_node"), slam_object_(this) {
+	global_index_ = 0;
+
+	perception_eof_ = false;
+	odometry_eof_ = false;
+
+	loadParameters();
+
+	readNextOdometry();
+	readNextPerception();
+
+	// Initialize slam
+	slam_object_.setDeltaTime(1.0 / sampling_rate_);
+	slam_object_.init();
+	RCLCPP_WARN_STREAM(get_logger(), "Created SLAM object" << '\n');
+
+	// If in localization mode load the track map
+	std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
+	if (!is_mapping_) slam_object_.loadMap(track_file);
+
+	// Set ROS objects
+	landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
+	car_pose_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+	global_timer_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000 / sampling_rate_)), std::bind(&SlamFromFile::run_slam, this));
+}
+
+SlamFromFile::~SlamFromFile() {
+	// Closes the files at the end of execution
+	perception_file_.close();
+	odometry_file_.close();
+}
+
+
+void SlamFromFile::run_slam() {
+	std::vector<ns_slam::PerceptionMeasurement> all_observed_landmarks;
+	// RCLCPP_INFO_STREAM(get_logger(), "Global Index is " << global_index_);
+	rclcpp::Time starting_time{ this->now() };
+
+	while (odometry_.index == global_index_ && !odometry_eof_)
+	{
+		OdometryMeasurement odometry_measurement;
+
+		odometry_measurement.global_index = global_index_;
+		odometry_measurement.velocity_x = odometry_.velocity_x;
+		odometry_measurement.velocity_y = odometry_.velocity_y;
+		// odometry_measurement.velocity_y = 0.0;
+		odometry_measurement.yaw_rate = odometry_.yaw_rate;
+		odometry_measurement.measurement_noise = odometry_weight_ * odometry_.covariance_matrix;
+
+		slam_object_.addOdometryMeasurement(odometry_measurement);
+
+		odometry_eof_ = readNextOdometry();
+	}
+
+	rclcpp::Duration total_time{ this->now() - starting_time };
+	RCLCPP_INFO_STREAM(get_logger(), "\n-- Odometry --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+	starting_time = this->now();
+
+	while (perception_.index == global_index_ && !perception_eof_)
+	{
+		int observation_size{ static_cast<int>(perception_.color.size()) };
+		PerceptionMeasurement landmark;
+		gtsam::Matrix2 obs_noise;
+
+		// RCLCPP_INFO_STREAM(get_logger(), "Got Perception -> " << observation_size << '\n');
+		for (int i{ 0 }; i < observation_size; i++)
+		{
+			landmark.color = perception_.color[i];
+			landmark.range = perception_.range[i];
+			landmark.theta = perception_.theta[i];
+			// Setting observation noise depending on type of cone
+			if (landmark.color == ConeColor::LargeOrange)
+			{
+				obs_noise << 0.01, 0,
+					0, 3 * perception_weight_ * landmark.range / 10;
+			}
+			else
+			{
+				obs_noise << 0.001, 0,
+					0, perception_weight_* landmark.range / 10;
+			}
+			landmark.observation_noise = obs_noise;
+
+			// Only accept cones that are within the specified range
+			if (landmark.range <= perception_range_)
+			{
+				// RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
+				all_observed_landmarks.push_back(landmark);
+			}
+		}
+		perception_eof_ = readNextPerception();
+	}
+	if (!all_observed_landmarks.empty())
+	{
+		if (is_mapping_) slam_object_.addLandmarkMeasurementSLAM(global_index_, all_observed_landmarks);
+		else slam_object_.addLandmarkMeasurementsLocalization(global_index_, all_observed_landmarks);
+		all_observed_landmarks.clear();
+	}
+	total_time = this->now() - starting_time;
+	RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+
+	if (global_index_ % optimization_interval_ == 0)
+	{
+		starting_time = this->now();
+
+		gtsam::NonlinearFactorGraph opt_new_factors{ slam_object_.getNewFactors() };
+		gtsam::Values opt_new_variable_values{ slam_object_.getNewValues() };
+		gtsam::Vector3 pre_optimization_pose{ slam_object_.getEstimatedCarPose() };
+		gtsam::Symbol optimization_pose_symbol{ slam_object_.getCurrentPoseSymbol() };
+		slam_object_.resetTemporaryGraph();
+
+		slam_object_.optimizeFactorGraph(opt_new_factors, opt_new_variable_values);
+		slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
+
+		total_time = this->now() - starting_time;
+		RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+	}
+
+	visualize();
+	global_index_++;
+
+	if (perception_eof_ or odometry_eof_)
+	{
+		rclcpp::shutdown();
+	}
+}
+
+void SlamFromFile::resetPerception() {
+	perception_.index = 0;
+	perception_.color.clear();
+	perception_.range.clear();
+	perception_.theta.clear();
+}
+
+void SlamFromFile::resetOdometry() {
+	odometry_.index = 0;
+	odometry_.velocity_x = 0.0;
+	odometry_.velocity_y = 0.0;
+	odometry_.yaw_rate = 0.0;
+	odometry_.covariance_matrix.setZero();
+}
+
+bool SlamFromFile::readNextOdometry() {
+	resetOdometry();
+	if (odometry_file_.is_open())
+	{
+		odometry_file_ >> odometry_.index;
+		odometry_file_ >> odometry_.velocity_x;
+		odometry_file_ >> odometry_.velocity_y;
+		odometry_file_ >> odometry_.yaw_rate;
+		for (int i{ 0 }; i < 9; i++)
+		{
+			odometry_file_ >> odometry_.covariance_matrix(i / 3, i % 3);
+		}
+	}
+	if (odometry_file_.eof()) return 1;
+	return 0;
+}
+
+bool SlamFromFile::readNextPerception() {
+	resetPerception();
+	if (perception_file_.is_open())
+	{
+		std::string next_line;
+
+		int index_temp;
+		int color_temp;
+		double range_temp;
+		double theta_temp;
+
+		// Read observation index
+		std::getline(perception_file_, next_line);
+		std::istringstream line_stream_i{next_line};
+		line_stream_i >> index_temp;
+		perception_.index = index_temp;
+		// std::cout << perception_.index << '\n';
+		next_line.clear();
+
+		// Read observation color
+		std::getline(perception_file_, next_line);
+		std::istringstream line_stream_c{next_line};
+		while (line_stream_c >> color_temp) perception_.color.push_back(static_cast<ConeColor>(color_temp));
+		next_line.clear();
+
+		// Read observation range
+		std::getline(perception_file_, next_line);
+		std::istringstream line_stream_r{next_line};
+		while (line_stream_r >> range_temp) perception_.range.push_back(range_temp);
+		next_line.clear();
+
+		// Read observation theta
+		std::getline(perception_file_, next_line);
+		std::istringstream line_stream_t{next_line};
+		while (line_stream_t >> theta_temp) perception_.theta.push_back(theta_temp);
+		next_line.clear();
+	}
+	if (perception_file_.eof()) return 1;
+	return 0;
+}
+
+void SlamFromFile::loadParameters() {
+	is_mapping_ = declare_parameter<bool>("mapping_mode", false);
+	declare_parameter<std::string>("track_map", "");
+
+	sampling_rate_ = declare_parameter<int>("sampling_rate", 40);
+	perception_range_ = declare_parameter<double>("perception_range", 10.0);
+	optimization_interval_ = declare_parameter<int>("optimization_interval", 50);
+
+	declare_parameter<double>("association_threshold", 1.0);
+
+	declare_parameter<double>("relinearize_threshold", 0.1);
+	declare_parameter<int>("relinearize_skip", 10);
+
+	odometry_weight_ = declare_parameter<double>("odometry_covariance_weight", 1.0);
+	perception_weight_ = declare_parameter<double>("perception_covariance_weight", 0.02);
+
+	// Starting position variables
+	declare_parameter<std::vector<double>>("starting_position", { 0.0, 0.0, 0.0 });
+	declare_parameter<std::vector<double>>("starting_position_covariance", { 0.1, 0.1, 0.1 });
+
+	declare_parameter<std::vector<double>>("left_orange", { 6.0, -3.0 });
+	declare_parameter<std::vector<double>>("right_orange", { 6.0, 3.0 });
+
+	// Set and open files
+	share_dir_ = ament_index_cpp::get_package_share_directory("slam");
+
+	std::string odometry_file_path{ declare_parameter<std::string>("odometry_log", "") };
+	std::string perception_file_path{ declare_parameter<std::string>("perception_log", "") };
+
+	if (odometry_file_path.empty() or perception_file_path.empty())
+	{
+		throw std::runtime_error("SlamFromFile -> Log files were not specified");
+	}
+
+	odometry_file_.open(share_dir_ + odometry_file_path, std::fstream::in);
+	perception_file_.open(share_dir_ + perception_file_path, std::fstream::in);
+}
+
+void SlamFromFile::visualize() {
+	// Delete all existing markers
+	visualization_msgs::msg::Marker delete_all_markers{};
+	delete_all_markers.header.frame_id = "map";
+	delete_all_markers.header.stamp = now();
+	delete_all_markers.action = delete_all_markers.DELETEALL;
+	delete_all_markers.ns = "my_ns";
+
+	// Visualize car position
+	gtsam::Vector3 car_pose{ slam_object_.getEstimatedCarPose() };
+
+	visualization_msgs::msg::Marker car_marker{};
+	car_marker.header.frame_id = "map";
+	car_marker.header.stamp = now();
+	car_marker.ns = "my_ns";
+	car_marker.id = 0;
+
+	car_marker.type = visualization_msgs::msg::Marker::CUBE;
+	car_marker.action = visualization_msgs::msg::Marker::ADD;
+
+	// Minus y variable is for left handed system
+	car_marker.pose.position.x = car_pose(1);
+	car_marker.pose.position.y = car_pose(0);
+	car_marker.pose.position.z = 0.7;
+
+	tf2::Quaternion car_orientation;
+	car_orientation.setRPY(0.0, 0.0, M_PI / 2 - car_pose(2));
+	car_orientation.normalize();
+
+	car_marker.pose.orientation = tf2::toMsg(car_orientation);
+
+	car_marker.scale.x = 2.0;
+	car_marker.scale.y = 1.22;
+	car_marker.scale.z = 0.9;
+
+	car_marker.color.r = 0.839;
+	car_marker.color.g = 0.224;
+	car_marker.color.b = 0.082;
+	car_marker.color.a = 1.0;
+
+	// Visualize landmarks seen by the car
+	int id{ 0 };
+	visualization_msgs::msg::MarkerArray cones_array{};
+	visualization_msgs::msg::Marker cone_marker{};
+
+	cone_marker.header.frame_id = "map";
+	cone_marker.header.stamp = now();
+	cone_marker.ns = "my_ns";
+	cone_marker.action = cone_marker.ADD;
+	cone_marker.type = cone_marker.CYLINDER;
+
+	cone_marker.color.a = 1.0;
+	cone_marker.scale.x = 0.3;
+	cone_marker.scale.y = 0.3;
+	cone_marker.scale.z = 0.4;
+	cone_marker.pose.position.z = 0.2;
+	cone_marker.pose.orientation.x = 0.0;
+	cone_marker.pose.orientation.y = 0.0;
+	cone_marker.pose.orientation.z = 0.0;
+	cone_marker.pose.orientation.w = 1.0;
+
+	std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
+	for (gtsam::Vector3& cone : track)
+	{
+		cone_marker.id = id;
+		cone_marker.pose.position.x = cone(2);
+		cone_marker.pose.position.y = cone(1);
+		switch (static_cast<ConeColor>(cone(0)))
+		{
+		case ConeColor::Yellow:
+			cone_marker.color.r = 1.0;
+			cone_marker.color.g = 1.0;
+			cone_marker.color.b = 0.0;
+			break;
+		case ConeColor::Blue:
+			cone_marker.color.r = 0.0;
+			cone_marker.color.g = 0.0;
+			cone_marker.color.b = 0.8;
+			break;
+		case ConeColor::SmallOrange:
+			cone_marker.color.r = 247.0 / 250.0;
+			cone_marker.color.g = 140.0 / 250.0;
+			cone_marker.color.b = 25.0 / 250.0;
+			break;
+		case ConeColor::LargeOrange:
+			cone_marker.color.r = 117.0 / 250.0;
+			cone_marker.color.g = 59.0 / 250.0;
+			cone_marker.color.b = 29.0 / 250.0;
+			break;
+		default:
+			RCLCPP_WARN(get_logger(), "SlamFromFile() -> Invalid cone color encountered when reading map");
+			break;
+		}
+		cones_array.markers.push_back(cone_marker);
+		id++;
+	}
+
+	car_pose_publisher_->publish(delete_all_markers);
+	car_pose_publisher_->publish(car_marker);
+	landmark_publisher_->publish(cones_array);
+}
+} // namespace ns_slam
+
+
+int main(int argc, char** argv) {
+	// Clear std::cout buffer
+	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+	rclcpp::init(argc, argv);
+
+	ns_slam::SlamFromFile node{};
+	rclcpp::spin(node.get_node_base_interface());
+	rclcpp::shutdown();
+
+	return 0;
+}
