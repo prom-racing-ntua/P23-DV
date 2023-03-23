@@ -22,7 +22,7 @@ namespace can_reader_namespace {
         port_number = declare_parameter("port_number", 0);
         timeout = declare_parameter("timeout", 1);
         freq = declare_parameter("read_frequency", 150);
-        period = 1000000/freq;
+        period = 1000000000/freq;
 
         auto sensor_qos {
             rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data)

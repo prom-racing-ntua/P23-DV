@@ -1,6 +1,6 @@
 can_reader_cpp_node:
-  ros_parameters:
+  ros__parameters:
     baud_rate: 9600
     port_number: 0
     timeout: 1
-    read_frequency: 150
+    read_frequency: 200
