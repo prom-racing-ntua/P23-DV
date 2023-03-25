@@ -5,6 +5,7 @@ from pathlib import Path
 import time
 
 # Perception/Acquisition Related Imports
+import numpy as np
 import cv2
 import gxipy as gx
 
@@ -42,7 +43,7 @@ class AcquisitionNode(Node):
             ('orientation', 'random'),
             ('exposureTime', 10000),
             ('autoExposure', False),
-            ('expectedGrayValue', 50),
+            ('expectedGrayValue', 100),
             ('ROIx', 1280),
             ('ROIy', 1024),
             ]
@@ -84,9 +85,15 @@ class AcquisitionNode(Node):
         # Trigger camera and acquire image
         trigger = msg.exec_perception
         if (trigger):
-            global_index = msg.global_index            
+            global_index = msg.global_index
+            start_time = self.get_clock().now().nanoseconds / 10**6
             self.camera.TriggerCamera()
+            trigger_time = self.get_clock().now().nanoseconds / 10**6
             numpyImage = self.camera.AcquireImage()
+            if type(numpyImage) != np.ndarray:
+                self.get_logger().error(f'Error when acquiring image')
+                return
+            aquired_time = self.get_clock().now().nanoseconds / 10**6
 
             # Send Image to Perception Node
             imageMessage = AcquisitionMessage()
@@ -94,6 +101,8 @@ class AcquisitionNode(Node):
             imageMessage.image = self.bridge.cv2_to_imgmsg(numpyImage, encoding="passthrough")
             imageMessage.camera_orientation = self.camera.orientation
             self.publisher_.publish(imageMessage)
+
+            self.get_logger().info(f'Triggering Time: {trigger_time - start_time}\nAquisition Time {aquired_time - trigger_time}\n')
         else:
             pass
 
@@ -106,13 +115,16 @@ def main(args=None):
     try:
         rclpy.spin(perception_handler, executor)
     except (KeyboardInterrupt, ExternalShutdownException):
+        # I think this works fine...
+        perception_handler.camera.OnClickClose()
+
         # Close cameras, needs to be tested THOUROUGHLY!!
-        device_manager = gx.DeviceManager()
-        dev_num, dev_info_list = device_manager.update_device_list()
-        for i in range(dev_num):
-            devSN = dev_info_list[i].get("sn")
-            camera = device_manager.open_device_by_sn(devSN)
-            camera.close_device()
+        # device_manager = gx.DeviceManager()
+        # dev_num, dev_info_list = device_manager.update_device_list()
+        # for i in range(dev_num):
+        #     devSN = dev_info_list[i].get("sn")
+        #     camera = device_manager.open_device_by_sn(devSN)
+        #     camera.close_device()
     finally:
         perception_handler.destroy_node()
         rclpy.shutdown()

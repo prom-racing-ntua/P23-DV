@@ -19,7 +19,15 @@ import torch.optim as optim
 from .cnn import *
 
 def initYOLOModel(modelpath, conf=0.75, iou=0.45):
-    yolo_model = torch.hub.load('WongKinYiu/yolov7', 'custom', modelpath, force_reload=True)
+    # Local load has way slower performance for some reason...
+    yolov5_local_path = "/home/prom/YOLO_models/yolov5"
+    yolov7_local_path = "/home/prom/YOLO_models/yolov7"
+
+    if "v5" in modelpath:
+        yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=True)
+    elif "v7" in modelpath:
+        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=True)
+
     yolo_model.agnostic = True
     yolo_model.conf = conf
     yolo_model.iou = iou

@@ -42,6 +42,7 @@ GraphSLAM::GraphSLAM(rclcpp::Node* nh): node_handler_(nh) {
 	previous_global_index_ = 0;
 	landmark_counter_ = 0;
 	cone_count_ = 0;
+	landmark_id_map_.clear();
 }
 
 GraphSLAM::~GraphSLAM() {

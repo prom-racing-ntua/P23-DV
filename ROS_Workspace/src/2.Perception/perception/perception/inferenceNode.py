@@ -34,7 +34,7 @@ class InferenceNode(Node):
         self.smallKeypointsModel = smallKeypointsModel
         self.largeKeypointsModel = largeKeypointsModel
 
-        self.fp = open(f'Inference_log_file_{int(time.time())}.txt', 'w')
+        self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
 
         # Setup Message Transcoder
         self.bridge = CvBridge()
@@ -53,13 +53,16 @@ class InferenceNode(Node):
             # Perform Perception Pipeline
             inferenceTiming = time.time()
             results = inferenceYOLO(self.yoloModel, image, 640)
+            self.get_logger().info(f"YOLO Time: {(time.time() - inferenceTiming)*1000.0}")
             if results.empty:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
+                keypointsTiming = time.time()
                 keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
                 finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
                 rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
+                self.get_logger().info(f"Keypoints Time: {(time.time() - keypointsTiming)*1000.0}")
 
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
@@ -71,6 +74,7 @@ class InferenceNode(Node):
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
+                self.get_logger().info(f"Inference Time: {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):
@@ -79,21 +83,26 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
 
+    # Yolo v7
+    yolov7_model_path = f"{models}/yolov7.pt"
     # Medium Yolo v5
-    yoloModelPath = f"{models}/yolov7.pt"
+    yolov5m_model_path = f"{models}/yolov5m6.pt"
+    # Small Yolo v5
+    yolov5s_model_path = f"{models}/yolov5s6.pt"
+    
     # Small Keypoints Parh
     smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
     # Large Keypoints dated 17/1/2023
     largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
 
     # Initialize Models
-    yoloModel = initYOLOModel(yoloModelPath, conf=0.75, iou=0.45)
+    yoloModel = initYOLOModel(yolov5m_model_path, conf=0.75, iou=0.45)
     smallModel, largeModel = initKeypoint(smallKeypointsModelPath, largeKeypointsModelPath)
     
     # Spin inference node
     inference_node = InferenceNode(yoloModel=yoloModel, smallKeypointsModel=smallModel, largeKeypointsModel=largeModel)
     executor = MultiThreadedExecutor(num_threads=3)
-    
+
     try:
         rclpy.spin(inference_node, executor)
     except (KeyboardInterrupt, ExternalShutdownException):

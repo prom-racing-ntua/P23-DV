@@ -3,10 +3,10 @@ slam_node:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
     mapping_mode: true
-    track_map: "/test_tracks/AutoX.txt"
+    track_map: "/test_tracks/skidpad_new.txt"
 
     # Defines the starting position of the car
-    starting_position: [ -7.5, 0.0, 0.0 ]
+    starting_position: [ -6.5, 0.0, 0.0 ]
     starting_position_covariance: [ 0.5, 0.1, 0.01 ]
 
     # The max distance perception measurements are accepted
@@ -26,8 +26,8 @@ slam_node:
     perception_covariance_weight: 0.01
 
     # Big orange cones for starting/finish line
-    # left_orange: [0.0, 0.0]
-    # right_orange: [0.0, 0.0]
+    left_orange: [0.0, -2.5]
+    right_orange: [0.0, 2.5]
 
     lap_counter_cooldown: 10
 

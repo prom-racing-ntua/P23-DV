@@ -29,8 +29,8 @@ SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
     // Create Log files
     if (is_logging_)
     {
-        velocity_log_.open(share_dir_ + "/../../../../velocityLog_" + std::to_string(init_time) + ".txt");
-        perception_log_.open(share_dir_ + "/../../../../perceptionLog_" + std::to_string(init_time) + ".txt");
+        velocity_log_.open(share_dir_ + "/../../../../testingLogs/velocityLog_" + std::to_string(init_time) + ".txt");
+        perception_log_.open(share_dir_ + "/../../../../testingLogs/perceptionLog_" + std::to_string(init_time) + ".txt");
     }
 
     // If in localization mode load the track map
@@ -39,7 +39,7 @@ SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
         std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
         slam_object_.loadMap(track_file);
     }
-    else map_log_.open(share_dir_ + "/../../../../mapLog_" + std::to_string(init_time) + ".txt");
+    else map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
 
     //Initialize global lock
     if (pthread_spin_init(&global_lock_, PTHREAD_PROCESS_SHARED) != 0)

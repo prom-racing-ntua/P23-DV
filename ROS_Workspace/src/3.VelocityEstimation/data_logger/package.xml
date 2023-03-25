@@ -6,9 +6,11 @@
   <description>TODO: Package description</description>
   <maintainer email="d.papailiopoulos.promracing@gmail.com">dimitris</maintainer>
   <license>TODO: License declaration</license>
-  
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>vectornav</exec_depend>
+
+  <depend>rclpy</depend>
+
+  <exec_depend>vectornav_msgs</exec_depend>  
+  <exec_depend>custom_msgs</exec_depend>  
   <exec_depend>ros2launch</exec_depend>
   
   <test_depend>ament_copyright</test_depend>

@@ -32,7 +32,7 @@ vn_200:
       # Binary output register 1
       BO1:
         asyncMode: 1                        # ASYNCMODE_ONE_PORT
-        rateDivisor: 16                     # 50 Hz
+        rateDivisor: 20                     # 40 Hz
         commonField:    0x0000
         timeField:      0x0000
         imuField:       0x0600

@@ -113,7 +113,7 @@ class DataLogger(Node):
 
     def save_data(self):
         share_dir = get_package_share_directory("data_logger")
-        self._df.to_csv(os.path.join(share_dir, "../../../..", f"sensorLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        self._df.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"sensorLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
         self.get_logger().warn("Log Data Saved")
 
 

@@ -6,7 +6,7 @@ canbus:
       baudrate: 115200
       timeout: 0.001
 
-      read_frequency: 150
+      read_frequency: 250
 
       # Sensor Configuration - Incoming Messages
       enabled_sensors: ['front_halls', 'rear_halls', 'steering', 'brakes']

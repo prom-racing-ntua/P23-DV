@@ -60,7 +60,9 @@ class Camera:
         if raw_image is None:
             print("Failed to capture image")
 
-        rgb_image = raw_image.convert("RGB")
-        numpy_image = rgb_image.get_numpy_array()
-
-        return numpy_image
+        try:
+            rgb_image = raw_image.convert("RGB")
+            numpy_image = rgb_image.get_numpy_array()
+            return numpy_image
+        except AttributeError as err:
+            return err
