@@ -24,9 +24,9 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
 
     if "v5" in modelpath:
-        yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=True)
+        yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=False)
     elif "v7" in modelpath:
-        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=True)
+        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
 
     yolo_model.agnostic = True
     yolo_model.conf = conf
