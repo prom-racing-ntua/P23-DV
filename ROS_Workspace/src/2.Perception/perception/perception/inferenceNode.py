@@ -53,7 +53,7 @@ class InferenceNode(Node):
             # Perform Perception Pipeline
             inferenceTiming = time.time()
             results = inferenceYOLO(self.yoloModel, image, 640)
-            self.get_logger().info(f"YOLO Time: {(time.time() - inferenceTiming)*1000.0}")
+            # self.get_logger().info(f"YOLO Time: {(time.time() - inferenceTiming)*1000.0}")
             if results.empty:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
@@ -62,7 +62,7 @@ class InferenceNode(Node):
                 keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
                 finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
                 rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
-                self.get_logger().info(f"Keypoints Time: {(time.time() - keypointsTiming)*1000.0}")
+                # self.get_logger().info(f"Keypoints Time: {(time.time() - keypointsTiming)*1000.0}")
 
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
@@ -74,7 +74,7 @@ class InferenceNode(Node):
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
-                self.get_logger().info(f"Inference Time: {inferenceTiming}")
+                # self.get_logger().info(f"Inference Time: {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):

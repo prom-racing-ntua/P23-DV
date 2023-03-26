@@ -206,9 +206,9 @@ void SlamHandler::optimizationCallback() {
     slam_object_.resetTemporaryGraph();
     pthread_spin_unlock(&global_lock_);
 
-    RCLCPP_WARN(get_logger(), "Starting Optimization");
+    // RCLCPP_WARN(get_logger(), "Starting Optimization");
     slam_object_.optimizeFactorGraph(opt_new_factors, opt_new_variable_values);
-    RCLCPP_WARN(get_logger(), "Finished Optimization");
+    // RCLCPP_WARN(get_logger(), "Finished Optimization");
 
     pthread_spin_lock(&global_lock_);
     slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
@@ -404,11 +404,14 @@ void SlamHandler::visualize() {
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-    rclcpp::executors::MultiThreadedExecutor executor;
+
+    auto options{ rclcpp::ExecutorOptions() };
+    rclcpp::executors::MultiThreadedExecutor executor{ options, 4 };
+
     auto slam_node = std::make_shared<ns_slam::SlamHandler>();
-    RCLCPP_INFO_STREAM(slam_node->get_logger(), ">>Check!");
     executor.add_node(slam_node);
     executor.spin();
+
     rclcpp::shutdown();
     return 0;
 }

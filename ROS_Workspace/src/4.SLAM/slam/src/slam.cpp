@@ -93,7 +93,7 @@ void GraphSLAM::initializeFactorGraph() {
 
 // Adds an odometry measurement to iSAM2 and computes the current estimated state
 bool GraphSLAM::addOdometryMeasurement(OdometryMeasurement& odometry) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), odometry.global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), odometry.global_index);
 
 	// Create the symbol of the new pose variable that is to be created
 	gtsam::Symbol next_car_pose_symbol{ 'X', odometry.global_index };
@@ -148,7 +148,7 @@ bool GraphSLAM::addOdometryMeasurement(OdometryMeasurement& odometry) {
 // !!!! TODO: Olo redo...
 // Adds landmark measurements in SLAM mode
 void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -164,7 +164,7 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 
 	for (PerceptionMeasurement& cone : landmarks)
 	{
-		RCLCPP_INFO_STREAM(node_handler_->get_logger(), cone.observation_noise);
+		// RCLCPP_INFO_STREAM(node_handler_->get_logger(), cone.observation_noise);
 
 		// Estimate position of newly observed cone in global map (x,y)
 		gtsam::Vector2 observed_position;
@@ -221,7 +221,7 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 				if (cone.range > 7.5) best_match->score += 1;
 				else best_match->score += 5;
 
-				if (best_match->score > 20)
+				if (best_match->score > 15)
 				{
 					best_match->is_verified = true;
 					cone_count_++;
@@ -263,7 +263,7 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 
 // Adds landmark measurements in LOCALIZATION mode
 void GraphSLAM::addLandmarkMeasurementsLocalization(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 

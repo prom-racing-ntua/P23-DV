@@ -145,7 +145,7 @@ class CommonUtilities:
             + yaw_rate_hex[2:4] + yaw_rate_hex[0:2]
         # parent.get_logger().info(f"Raw hex msg {can_msg}")
         can_msg = bytes.fromhex(can_msg).decode('ascii', errors='ignore').encode('utf-8')
-        parent.get_logger().info(f"Sending message: {can_msg}")
+        # parent.get_logger().info(f"Sending message: {can_msg}")
         parent.ser.write(can_msg)
         # parent.get_logger().info(f"Time to process {(parent.get_clock().now() - time_start).nanoseconds / 10**6} ms")
 
@@ -259,7 +259,7 @@ class CanInterface(Node):
             self.ser.reset_input_buffer()
             self.get_logger().warn("Input buffer overflow. Flushing buffer.")
         if msg != b'':
-            self.get_logger().info(f"Received message: {msg}")
+            # self.get_logger().info(f"Received message: {msg}")
             msg = msg.strip().decode('utf-8')
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(bytearray.fromhex(msg[0:4]), byteorder='big', signed=False)

@@ -102,7 +102,7 @@ class AcquisitionNode(Node):
             imageMessage.camera_orientation = self.camera.orientation
             self.publisher_.publish(imageMessage)
 
-            self.get_logger().info(f'Triggering Time: {trigger_time - start_time}\nAquisition Time {aquired_time - trigger_time}\n')
+            # self.get_logger().info(f'Triggering Time: {trigger_time - start_time}\nAquisition Time {aquired_time - trigger_time}\n')
         else:
             pass
 
