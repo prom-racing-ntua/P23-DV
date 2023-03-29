@@ -24,38 +24,52 @@ from track_plotter import getTrackdrive, getSkidpad, getAccel, getAutoX
 from ParametricCubicSpline import getSpline, getSplineDerivatives
 from Trackdrive import cones_blue, cones_orange_big, cones_yellow
 
+#global params
+
+# set physical constants
+l_f = 0.9141
+l_r = 0.7359
+CdA = 1.8 # for drag
+ClA = 5.47    # for downforce
+pair = 1.225
+m = 185.0   # mass of the car
+g = 9.81
+Iz = 110.0
+
+#for dynamic model
+B=-8.266
+C=1.456
+C_tire=0.66
+D= 1739.47
+cs=-16419.31
+
+#compute l_a
+umin=3.0
+umax=6.0
+
+#ellipse params
+a=1.46
+b=1.62
+
 def continuous_dynamics(x, u):
     """Defines dynamics of the car, i.e. equality constraints.
     parameters:
     state x = [xPos,yPos,phi, vx, vy, r, F, delta]
     input u = [dF,ddelta]
     """
-    # set physical constants
-    l_f = 0.9141
-    l_r = 0.7359
-    CdA = 1.8 # for drag
-    ClA = 5.47    # for downforce
-    pair = 1.225
-    m = 185.0   # mass of the car
-    g = 9.81
-    Iz = 110.0
-
-    #for dynamic model
-    B=-8.266
-    C=1.456
-    C_tire=0.66
-    D= 1739.47
-    cs=-16419.31
+    temp1=casadi.fmax((x[3]-umin)/(umax-umin),0)
+    l_a=casadi.fmin(temp1,1)
 
     #slip angles and Fys
     saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
     sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
-    # Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
-    # Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
+    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
+    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
     Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
     Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(x[3]**2)
     # Ffy = -saf*cs
     # Fry = -sar*cs
+    print("Fys-slip angles are:", saf, " ",Ffy, " and ",sar, " ", Fry)
 
     #friction forces
     Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
@@ -64,24 +78,34 @@ def continuous_dynamics(x, u):
     # xdot=x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])
     # ydot=x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])
     # phidot= x[5] 
-    # vxdot=(x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ m
+    # vxdot=(x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ (0.5*m)
     # vydot= (-x[3]*x[5]) + (Fry + Ffy*casadi.cos(x[7]))/m           #FR,y +FF,y cos δ−mvxr
-    # rdot=  (Ffy*l_f - Fry*l_r)/Iz           #FF,y lFcos δ−FR,y lR
+    # rdot=  (Ffy*l_f - Fry*l_r)/(0.5*Iz)           #FF,y lFcos δ−FR,y lR
     # Fdot= u[0]
     # deltadot = u[1]
-    # # return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot)
 
     # kinematic dxs/dt
-    # print("F on x is",u[0] - Fdrag)
+    # beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
+    # xdot = x[3]*casadi.cos(x[2] + beta) 
+    # ydot = x[3]*casadi.sin(x[2] + beta) 
+    # phidot= x[5] 
+    # vxdot=(x[6] - Fdrag)/ m 
+    # vydot= (l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
+    # rdot= (1/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
+    # Fdot= u[0]
+    # deltadot = u[1]
+
+    #blending with const lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
-    xdot = x[3]*casadi.cos(x[2] + beta) 
-    ydot = x[3]*casadi.sin(x[2] + beta) 
-    phidot= x[5] 
-    vxdot=(x[6] - Fdrag)/ m 
-    vydot= (l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
-    rdot= (1/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
+    xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
+    ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
+    phidot = x[5]
+    vxdot = (1-l_a)*((x[6] - Fdrag)/ m) + (l_a)*((x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ m)
+    vydot = (1-l_a)*((l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))) + (l_a)*(((-x[3]*x[5]) + (Fry + Ffy*casadi.cos(x[7])))/(1.0*m))
+    rdot = (1-l_a)*((1/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))) + (l_a)*((Ffy*l_f*casadi.cos(x[7]) - Fry*l_r)/(1.0*Iz))
     Fdot= u[0]
     deltadot = u[1]
+
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot)
 
 err_array=[]
@@ -90,30 +114,16 @@ def obj(z,current_target):
     z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta]
     current_target = point on path that is to be headed for
     """
-    return (10000.0*(z[2]-current_target[0])**2 # costs on deviating on the
+    return (1e3*(z[2]-current_target[0])**2 # costs on deviating on the
 #                                              path in x-direction
-            + 10000.0*(z[3]-current_target[1])**2 # costs on deviating on the
+            + 1e3*(z[3]-current_target[1])**2 # costs on deviating on the
 #                                               path in y-direction
-            + 0e-5*z[0]**2 # penalty on input F, 
-            + 1e-1*z[1]**2 
-            + 1e-1*z[9]**2
-            + 0e-5*z[8]**2
-            + 10*((1/(z[5]**2 +1e-6)))
-            - 10*(z[5]**2)) 
-
-# def objN(z,current_target):
-#     """Increased least square costs for last stage on deviating from the path and 
-#     on the inputs F and phi
-#     z = [F,phi,xPos,yPos,v,theta,delta]
-#     current_target = point on path that is to be headed for
-#     """
-#     return (10000.0*(z[2]-current_target[0])**2 # costs on deviating on the
-# #                                              path in x-direction
-#             + 7500.0*(z[3]-current_target[1])**2 # costs on deviating on the
-# #                                               path in y-direction
-#             + 0.1*z[0]**2 # penalty on input F
-#             + 0.1*z[1]**2 
-#             + 0.01*((1/(z[4]**2 +1e-6)))) 
+            + 1e-2*z[0]**2 # penalty on input F, 
+            + 1e2*z[1]**2 
+            + 1e2*z[9]**2
+            + 1e-2*z[8]**2
+            + 1e0*((1/(z[5]**2 +1e-6)))
+            - 1e0*(z[5]**2)) 
 
 def calc_points_on_ellipse(num_points):
     """Desired trajectory on ellipoid represented by 2D points"""
@@ -188,14 +198,15 @@ def generate_pathplanner():
     # model.ub = np.array([+3560.7,  np.deg2rad(+60.),   200.,   200.,   20.,   np.inf,  0.48*np.pi])
 
     # z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta]
+    # from brake -> -Fbrake = -4120.0
 
-    model.lb = np.array([-4000.0,  np.deg2rad(-90.),  -400.,   -400.,  -np.inf,  0.0 , -20.0, -20.0, -4120.0, -0.5*np.pi])
+    model.lb = np.array([-3000.0,  np.deg2rad(-90.),  -400.,   -400.,  -np.inf,  0.0 , -20.0, -20.0, -3560.7, -0.5*np.pi])
     model.ub = np.array([+3000.0,  np.deg2rad(+90.),   400.,   400.,   +np.inf,  20.0 , +20.0, 20.0, 3560.7, 0.5*np.pi])
 
     model.nh = 1 #number of inequality constr
-    model.ineq = lambda z, current_target: casadi.vertcat(((z[2]-current_target[0])**2  + (z[3]-current_target[1])**2))
-    model.hu = np.array([+np.inf])
-    model.hl = np.array([-np.inf])
+    model.ineq = lambda z,current_target: casadi.vertcat((z[2]-current_target[0])**2 + (z[3]-current_target[1])**2)
+    model.hu = np.array([+200.0])
+    model.hl = np.array([-200.0])
 
     # Initial condition on vehicle states x
     model.xinitidx = range(num_ins,model.nvar) # use this to specify on which variables initial conditions
@@ -206,7 +217,7 @@ def generate_pathplanner():
 
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 200     # Maximum number of iterations
+    codeoptions.maxit = 20000    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 
@@ -217,7 +228,7 @@ def generate_pathplanner():
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
+    codeoptions.sqp_nlp.reg_hessian = 5e-7 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
     # codeoptions.server = 'https://forces.embotech.com'
@@ -292,7 +303,7 @@ def createPlot(x,u,start_pred,sim_length,model,path_points,xinit,cones_yellow,co
     print("what is gs ",gs)
     # Plot trajectory
     ax_pos = fig.add_subplot(gs[:,0])
-    l0, = ax_pos.plot(np.transpose(path_points[0,:]), np.transpose(path_points[1,:]), 'rx')
+    l0, = ax_pos.plot(np.transpose(path_points[0,:]), np.transpose(path_points[1,:]), '.',color='red')
     l1, = ax_pos.plot(xinit[0], xinit[1], 'bx')
     plt.title('Position')
     #plt.axis('equal')
@@ -391,12 +402,7 @@ def main():
 
     # Simulation
     # ----------
-    sim_length = 1000 # simulate 8sec
-    # model.N = 10  # horizon length
-    # model.nvar = 7  # number of variables
-    # model.neq = 5  # number of equality constraints
-    # model.npar = 2 # number of runtime parameters
-    # num_ins=model.nvar-model.neq
+    sim_length = 2000 # simulate 8sec
 
     # Variables for storing simulation data
     x = np.zeros((model.neq,sim_length+1))  # states
@@ -405,14 +411,11 @@ def main():
     # Set initial guess to start solver from
     x0i = np.zeros((model.nvar,1))
     x0 = np.transpose(np.tile(x0i, (1, model.N)))
-    phi0 = casadi.arctan((path_points[1][1]-path_points[1][0])/(path_points[0][1]-path_points[0][0]))
-    print("dy is",path_points[1][1]," ",path_points[1][0])
-    print("dx is",path_points[0][1]," ",path_points[0][0])
-    print("path points are: ",np.shape(path_points))
-    print("phi0 is",phi0)
+    index0=0
+    phi0 = casadi.arctan((path_points[1][index0+1]-path_points[1][index0])/(path_points[0][index0+1]-path_points[0][index0]))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
-    xinit = np.transpose(np.array([path_points[0][0], path_points[1][0], phi0, 1, 0.0, 0.0, 412., 0.]))
+    xinit = np.transpose(np.array([path_points[0][index0], path_points[1][index0], phi0, 0.1, 0.0, 0.0, 100, 0.]))
     x[:,0] = xinit
 
     problem = {"x0": x0,
@@ -488,7 +491,11 @@ def main():
                 plt.draw()
         print()
     print("steering_txt is:", steering_txt)
+    print()
     print("wheel_torques_txt is: ",wheel_torques_txt)
+    print()
+    print("error array is: ",err_array, " ", np.max(err_array)," ",np.mean(err_array))
+    print()
 
 if __name__ == "__main__":
     main()

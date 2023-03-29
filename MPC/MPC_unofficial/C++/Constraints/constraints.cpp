@@ -67,6 +67,7 @@ MuConstraints Constraints::getEllipseParams(const double &Fz) const {
 	const double C_tire=0.66;
 	const double mx_max=C_tire*(2.21891927-1.36151651e-07*dfz);
 	const double my_max=C_tire*(2.46810824-0.21654031*dfz);
+    //a_nom is -> 
     // std::cout << "as and bs are: " << mx_max << " " << my_max << std::endl;
 	return {mx_max,my_max};
 }

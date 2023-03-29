@@ -84,7 +84,7 @@ def getSplineDerivatives(interpolation_points, boundary_condition = 'closed_loop
     return second_derivative
 
 
-def getSpline(track_cones, axis=None, resolution=10000, boundary_condition='closed_loop'):
+def getSpline(track_cones, axis=None, resolution=2000, boundary_condition='closed_loop'):
     global_index = np.linspace(0,1,resolution)
     inter = 1 / (track_cones.shape[0] - 1)
     spline = np.empty((1,2),dtype=np.float32)
