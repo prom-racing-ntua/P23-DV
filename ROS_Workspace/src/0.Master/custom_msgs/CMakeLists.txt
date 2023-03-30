@@ -51,6 +51,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   # Services
   "srv/GetFrequencies.srv"
+  
+  # Path Planning Messages
+  "msg/ConeStruct.msg"
+  "msg/LocalMapMsg.msg"
+  "msg/Point2Struct.msg"
+  "msg/PoseMsg.msg"
+  "msg/WaypointsMsg.msg"
 
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS
