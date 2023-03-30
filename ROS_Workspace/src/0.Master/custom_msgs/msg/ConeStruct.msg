@@ -1,0 +1,2 @@
+Point2Struct coords
+uint8 color
