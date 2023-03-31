@@ -1,0 +1,5 @@
+lidar_node:
+  ros__parameters:
+    # hor_res: 0.09 gia 300rpm/5hz
+    hor_res: 0.18 # gia 600rpm/10hz
+    # hor_res: 0.36 gia 1200rpm/20hz
