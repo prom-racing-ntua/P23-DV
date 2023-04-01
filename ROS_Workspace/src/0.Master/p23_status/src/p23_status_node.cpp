@@ -12,13 +12,10 @@
 
 /*
     TODO List:
-    1. Create Publishers to send towards CANBUS
-    2. Write a callback to receive Velocity Estimation Message and update Current Accel/Vel values
-    3. Write a callback to receive SLAM message and update current Laps e.t.c.
+    3. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
     4. Convert data to be sent to VCU to byte arrays.
     5. Write the launch sripts and find a smart way to control them.
 */
-
 
 namespace p23_status_namespace
 {
@@ -35,11 +32,17 @@ namespace p23_status_namespace
         conesCountAll = 0;
         conesActual = 0;
         insMode = 2;
-        currentLap = 0;
+        currentLap = -1;
         missionFinished = false;
         currentASStatus = AS_OFF;
-        currentMission = INSPECTION;
+        currentMission = MANUAL;
         currentDVStatus = STARTUP;
+
+        velocityX = 0.0;
+        velocityY = 0.0;
+        yawRate = 0.0;
+        accelerationX = 0.0;
+        accelerationY = 0.0;
 
         /*
             Initialize speed/acceleration variables and such.
@@ -74,16 +77,22 @@ namespace p23_status_namespace
     void P23StatusNode::setPublishers()
     {
         // Set publisher towards CANBUS writer topic
-        // canbus_slow_publisher_ = 
-        // canbus_medium_publisher_ =
-        // canbus_controls_publisher_ = 
+        canbus_system_state_publisher_ = create_publisher<custom_msgs::msg::CanSystemState>(
+            std::string(get_name()) + std::string("/system_state"), 10);
+
+        canbus_vehicle_variables_publisher_ = create_publisher<custom_msgs::msg::CanVehicleVariables>(
+            std::string(get_name()) + std::string("/vehicle_variables"), 10);
+
+        // This Node should not be activated immediately, but should be activated when you go AS_Driving
+        canbus_controls_publisher_ = create_publisher<custom_msgs::msg::CanControlCommand>(
+            std::string(get_name()) + std::string("/control_command"), 10);
     }
 
     void P23StatusNode::setServices()
     {
         // Set a service to change DV Status and to receive IMU Mode
         p23_status_client_ = create_client<custom_msgs::srv::DriverlessStatus>("lifecycle_manager/driverless_status");
-        ins_status_client_ = create_client<custom_msgs::srv::CustomInsStatus>("velocity_estimation/ins_status_service");
+        ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("vn_300/update_ins_mode");
     }
 
     void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg)
@@ -118,8 +127,27 @@ namespace p23_status_namespace
 
     void P23StatusNode::updateVelocityInformation(const custom_msgs::msg::VelEstimation::SharedPtr msg)
     {
+        // Speed Actual
+        velocityX = static_cast<double>(msg->velocity_x);
+        velocityY = static_cast<double>(msg->velocity_y);
+        yawRate = static_cast<double>(msg->yaw_rate);
 
+        // Acceleration Values
+        accelerationX = static_cast<double>(msg->acceleration_x);
+        accelerationY = static_cast<double>(msg->acceleration_y);
     }
+
+    // void P23StatusNode::updateSLAMInformation()
+    // {
+
+    // }
+
+    // void P23StatusNode::updateControlsInput()
+    // {
+
+        // Send updated inputs to VCU
+        // PCtoVCU_controls();
+    // }
 
     void P23StatusNode::checkSensors()
     {
@@ -164,9 +192,9 @@ namespace p23_status_namespace
     {
         using namespace std::chrono_literals;
 
-        auto request = std::make_shared<custom_msgs::srv::CustomInsStatus::Request>();
+        auto request = std::make_shared<custom_msgs::srv::InsMode::Request>();
         
-        while (!ins_status_client_->wait_for_service(1s))
+        while (!ins_mode_client_->wait_for_service(1s))
         {
             if (!rclcpp::ok())
             {
@@ -176,14 +204,14 @@ namespace p23_status_namespace
         }
 
         // Send INS Mode request
-        using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::CustomInsStatus>::SharedFuture;
+        using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::InsMode>::SharedFuture;
         auto response_received_callback = [this](ServiceResponseFuture future) {
             auto result = future.get();
             insMode = result.get()->ins_mode;
-            RCLCPP_INFO(get_logger(), "Received INS Mode from Vel Est");
+            RCLCPP_INFO(get_logger(), "Received INS Mode from Vectornav");
         };
 
-        auto future_result = ins_status_client_->async_send_request(request, response_received_callback);
+        auto future_result = ins_mode_client_->async_send_request(request, response_received_callback);
     }
 
     void P23StatusNode::changeDVStatus(DV_Status newStatus)

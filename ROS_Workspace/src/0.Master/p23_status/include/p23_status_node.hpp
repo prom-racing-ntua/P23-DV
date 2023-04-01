@@ -11,8 +11,12 @@
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"
 #include "custom_msgs/srv/driverless_status.hpp"
-#include "custom_msgs/srv/custom_ins_status.hpp"
+#include "custom_msgs/srv/ins_mode.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
+
+#include "custom_msgs/msg/can_control_command.hpp"
+#include "custom_msgs/msg/can_system_state.hpp"
+#include "custom_msgs/msg/can_vehicle_variables.hpp"
 
 typedef enum Mission{
     ACCELERATION = 1,
@@ -49,14 +53,16 @@ namespace p23_status_namespace
         // Thewrw oti conesActual einai oi kwnoi tou sygkekrimenou lap
         // From SLAM
         uint32_t conesCountAll, conesActual;
-        uint32_t currentLap;
+        int currentLap;
 
-        // From Velocity Estimation
+        // From Velocity Estimation - Speed Actual
         double velocityX, velocityY, yawRate; 
         double accelerationX, accelerationY;
+
+        // From Vectornav Service
         uint insMode;
         
-        // State input from Controls
+        // State input from Controls - Speed Target
         double targetVelocityX, targetVelocityY, targetYawRate; 
         double motorTorqueTarget, steeringAngleTarget, brakeHydraulicTarget;
 
@@ -70,18 +76,17 @@ namespace p23_status_namespace
         rclcpp::Subscription<custom_msgs::msg::MissionSelection>::SharedPtr canbus_mission_subscription_;
         rclcpp::Subscription<custom_msgs::msg::AutonomousStatus>::SharedPtr canbus_status_subscription_;
         rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_estimation_subscription_;
-        // rclcpp::Subscription<custom_msg::msg::Slam>::SharedPtr ;
+        // rclcpp::Subscription<custom_msg::msg::Slam>::SharedPtr slam_subscription_;
+        // rclcpp::Subscription<custom_msg::msg::Controls>::SharedPtr controls_subscription_;
 
         //Node Publishers
-        /*
-        rclcpp::Publisher<custom_msgs::msg::>::SharedPtr canbus_slow_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::>::SharedPtr canbus_medium_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::>::SharedPtr canbus_controls_publisher_;
-        */
-
+        rclcpp::Publisher<custom_msgs::msg::CanSystemState>::SharedPtr canbus_system_state_publisher_;
+        rclcpp::Publisher<custom_msgs::msg::CanVehicleVariables>::SharedPtr canbus_vehicle_variables_publisher_;
+        rclcpp::Publisher<custom_msgs::msg::CanControlCommand>::SharedPtr canbus_controls_publisher_;
+        
         //Clients
         rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedPtr p23_status_client_;
-        rclcpp::Client<custom_msgs::srv::CustomInsStatus>::SharedPtr ins_status_client_;
+        rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
 
         // Timers of node
         rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;

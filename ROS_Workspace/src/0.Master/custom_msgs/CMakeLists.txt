@@ -55,17 +55,17 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DriverlessStatus.msg"
   "msg/Mission.msg"
 
-  # Services
-  "srv/GetFrequencies.srv"
-  "srv/DriverlessStatus.srv"
-  "srv/CustomInsStatus.srv"
-  
   # Path Planning Messages
   "msg/ConeStruct.msg"
   "msg/LocalMapMsg.msg"
   "msg/Point2Struct.msg"
   "msg/PoseMsg.msg"
   "msg/WaypointsMsg.msg"
+
+  # Services
+  "srv/GetFrequencies.srv"
+  "srv/DriverlessStatus.srv"
+  "srv/InsMode.srv"
 
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS
