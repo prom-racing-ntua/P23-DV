@@ -20,6 +20,8 @@ namespace can_reader_namespace {
             int timeout;
             int freq;
             int period;
+            fd_set readfds;
+            struct timeval tv;
             rclcpp::TimerBase::SharedPtr timer;
             
             //ROS members
@@ -40,7 +42,8 @@ namespace can_reader_namespace {
 
 
             //Functions
-            void setup_serial();
+            bool setup_serial();
+            unsigned int charToInt(unsigned char r);
             void write_serial(CanMessage &message);
             CanMessage * extract_message(unsigned int *buf);
             void read2byte(unsigned char *buf, unsigned int *to, int n);
