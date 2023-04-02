@@ -83,7 +83,6 @@ namespace p23_status_namespace
         canbus_vehicle_variables_publisher_ = create_publisher<custom_msgs::msg::CanVehicleVariables>(
             std::string(get_name()) + std::string("/vehicle_variables"), 10);
 
-        // This Node should not be activated immediately, but should be activated when you go AS_Driving
         canbus_controls_publisher_ = create_publisher<custom_msgs::msg::CanControlCommand>(
             std::string(get_name()) + std::string("/control_command"), 10);
     }
@@ -102,6 +101,7 @@ namespace p23_status_namespace
         switch(currentMission){
             case(ACCELERATION):
                 // I think that the best way to do this is by forking and then running execve().
+                // Or running std::system. Will test and see
                 break;
             case(SKIDPAD):
                 break;
