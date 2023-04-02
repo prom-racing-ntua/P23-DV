@@ -1,3 +1,4 @@
 DriverlessStatus   new_status
+Mission            mission
 ---
-bool    success
+bool               success

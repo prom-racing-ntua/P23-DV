@@ -33,6 +33,17 @@ namespace can_reader_namespace {
             rear_wheel_encoder_pub_ = create_publisher<custom_msgs::msg::WheelSpeed>("canbus/rear_hall_sensors", sensor_qos);
             steering_pub_ = create_publisher<custom_msgs::msg::SteeringAngle>("canbus/steering_angle", sensor_qos);
             braking_pub_ = create_publisher<custom_msgs::msg::BrakePressure>("canbus/brake_pressure", sensor_qos);
+            mission_pub_ = create_publisher<custom_msgs::msg::Mission>("canbus/mission_selection", 10);
+            autonomous_status_pub_ = create_publisher<custom_msgs::msg::AutonomousStatus>("canbus/as_status", 10);
+
+            system_state_sub_ = create_subscription<custom_msgs::msg::CanSystemState>(
+                "/p23_status/system_state", 10, std::bind(&CanReader::sendSystemState, this, std::placeholders::_1));
+
+            vehicle_variables_sub_ = create_subscription<custom_msgs::msg::CanVehicleVariables>(
+                "/p23_status/vehicle_variables", 10, std::bind(&CanReader::sendVehicleVariables, this, std::placeholders::_1));
+
+            controls_command_sub_ = create_subscription<custom_msgs::msg::CanControlCommand>(
+                "/p23_status/control_command", 10, std::bind(&CanReader::sendControlsCommand, this, std::placeholders::_1));
 
             timer = create_wall_timer(std::chrono::nanoseconds(period), std::bind(&CanReader::read_serial, this));
         }
@@ -86,7 +97,10 @@ namespace can_reader_namespace {
             
             RCLCPP_INFO(get_logger(), "Writing 4 0bytes");
             unsigned char wbuf[4] = { 0x0, 0x0, 0x0, 0x0} ;
-            int wr = write(serial_port, &wbuf, 4);
+            // To kserw oti einai to idio alla den mporw na vlepw size_t metavlhtes xwris pollaplasiasmo sizeof :(
+            // Sorry :( 
+            
+            int wr = write(serial_port, &wbuf, 4*sizeof(unsigned char));
 
             RCLCPP_INFO(get_logger(), "Init OK!");
             return true;
@@ -123,6 +137,14 @@ namespace can_reader_namespace {
         }
         case 0x03: {
             return new StatePubMessage(buf+3);
+            break;
+        }
+        case 0x500: {
+            return new MissionMessage(buf+3, mission_pub_);
+            break;
+        }
+        case 0x501: {
+            return new AutonomousStatusMessage(buf+3, autonomous_status_pub_);
             break;
         }
         default:

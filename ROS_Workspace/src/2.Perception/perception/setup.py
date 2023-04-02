@@ -29,7 +29,9 @@ setup(
             'acquisition = perception.acquisitionNode:main',
             'acquisition_logger = perception.acquisitionLoggerNode:main',
             'inference = perception.inferenceNode:main',
-            'saltas_acquisition = perception.acquisitionNodeSaltas:main'
+            'saltas_acquisition = perception.acquisitionNodeSaltas:main',
+            'lifecycle_acquisition = perception.lifecycleAcquisition:main',
+            'lifecycle_inference = perception.lifecycleInference:main'
         ],
     },
 )

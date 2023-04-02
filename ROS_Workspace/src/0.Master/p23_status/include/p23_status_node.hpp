@@ -11,6 +11,7 @@
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"
 #include "custom_msgs/srv/driverless_status.hpp"
+#include "custom_msgs/msg/mission.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
 
@@ -70,6 +71,7 @@ namespace p23_status_namespace
         Mission currentMission;
         AS_Status currentASStatus;
         DV_Status currentDVStatus;
+        bool missionLocked;
         bool missionFinished, standstill, pcError;
 
         //Node Subscriptions
@@ -92,6 +94,9 @@ namespace p23_status_namespace
         rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;
         rclcpp::TimerBase::SharedPtr pcToVCU_slow_;
         rclcpp::TimerBase::SharedPtr pcToVCU_medium_;
+
+        // Callback Groups
+        rclcpp::CallbackGroup::SharedPtr mission_selection_group_;
 
         // Basic Initialization functions that are called when generating the node
         void initializeNode();

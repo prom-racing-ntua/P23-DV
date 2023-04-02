@@ -1,5 +1,8 @@
-/lifecycle_manager_node:
+ifecycle_manager:
   ros__parameters:
     managing_node_list: ["acquisition_left", "acquisition_right", "acquisition_center",
      "inference", "slam", "velocity_estimation", "saltas"]
   
+  # The managing node list parameter should have all the nodes that are managed by the manager.
+  # Whichever node is not needed in the end due to a specific mission happening is handled inside
+  # the manager itself.

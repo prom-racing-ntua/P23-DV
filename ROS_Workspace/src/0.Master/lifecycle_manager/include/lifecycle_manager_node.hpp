@@ -83,7 +83,7 @@ namespace lifecycle_manager_namespace
 
         // 4 Main Functions for controlling the whole pipeline of P23
         bool LV_On();
-        bool Mission_Selected();
+        bool Mission_Selected(Mission mission);
         bool DV_Ready();
         bool DV_Driving();
 

@@ -10,7 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/p23_status_node.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/p23_status_node.cpp src/p23_status_callbacks.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs)
 
 install(TARGETS
