@@ -17,8 +17,10 @@ using lifecycle_msgs::msg::Transition;
 
 namespace lifecycle_manager_namespace
 {
-    LifecycleManagerNode::LifecycleManagerNode() : Node("p23_lifecycle_manager")
+    LifecycleManagerNode::LifecycleManagerNode() : Node("lifecycle_manager")
     {
+        RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
+
         currentDVStatus = STARTUP;
         currentASStatus = AS_OFF;
         currentMission = INSPECTION;
@@ -31,7 +33,8 @@ namespace lifecycle_manager_namespace
 
         initializeLifecycleClients(nodeList);
 
-        // Create a timer callback that checks node's status every x seconds.
+        // TODO: Create a timer callback that checks node's status every x seconds.        
+        RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
 
     void LifecycleManagerNode::initializeServices()
@@ -70,13 +73,12 @@ namespace lifecycle_manager_namespace
         return lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN;
         }
 
-
         using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedFuture;
         auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
             auto result = future.get();
 
             std::string nodeStatus = result->current_state.label.c_str();
-            RCLCPP_INFO(get_logger(), "Status of node %s is %s", nodeName.c_str(), nodeStatus);
+            RCLCPP_INFO(get_logger(), "Status of node %s is %s", nodeName.c_str(), nodeStatus.c_str());
             return result->current_state.id;
         };
 
@@ -124,44 +126,57 @@ namespace lifecycle_manager_namespace
         return true;
     }
 
-
     void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessStatus::Request> request,
         std::shared_ptr<custom_msgs::srv::DriverlessStatus::Response> response)
     {   
         DV_Status newDVStatus = static_cast<DV_Status>(request->new_status.id);
+        Mission missionSent = static_cast<Mission>(request->mission.id);
 
         // check if dv status changes successfully
         bool success = false;
 
         if (currentDVStatus == newDVStatus) {
             RCLCPP_INFO(get_logger(), "Already in this state, skipping request");
-            // return false;
         }
-
+        else if (currentDVStatus > newDVStatus) {
+            RCLCPP_INFO(get_logger(), "Should not go back to a previous state");
+        }
+        
         else {
             switch(newDVStatus){
                 case(STARTUP):
+                    RCLCPP_INFO(get_logger(), "Should never get here... :3");
                     break;
                 case(LV_ON):
+                    RCLCPP_INFO(get_logger(), "Received LV_ON state change. Make sure that everyone is alive but unconfigured");
                     success = LV_On();
                     break;
                 case(MISSION_SELECTED):
-                    success = Mission_Selected();
+                    RCLCPP_INFO(get_logger(), "Received MISSION_SELECTED state change. Configure the nodes based on mission selection");
+                    success = Mission_Selected(missionSent);
                     break;
                 case(DV_READY):
+                    RCLCPP_INFO(get_logger(), "Received DV_READY state change. Activate everyone except Controls");
                     success = DV_Ready();
                     break;
                 case(DV_DRIVING):
+                    RCLCPP_INFO(get_logger(), "Received DV_DRIVING state change. Activate controls and pray that P23 doesn't unalive anyone");
                     success = DV_Driving();
                     break;
                 case(NODE_PROBLEM):
+                    RCLCPP_INFO(get_logger(), "TODO!");
                     break;
             }
         }
-        response->success = success;
 
-        if (success)
+        if (success) {
             currentDVStatus = newDVStatus;
+            if (currentDVStatus == MISSION_SELECTED)
+                currentMission = missionSent;
+            RCLCPP_INFO(get_logger(), "Successfully Changed DV Status to %d", currentDVStatus);
+        }
+
+        response->success = success;
     }
 
     bool LifecycleManagerNode::verifyDVState()
@@ -177,6 +192,7 @@ namespace lifecycle_manager_namespace
     /*
         The 4 Main DV States that the car should be in.
     */
+
     bool LifecycleManagerNode::LV_On()
     {
         /*
@@ -187,33 +203,86 @@ namespace lifecycle_manager_namespace
             SLAM: Unconfigured
             Pathplanning: Unconfigured
             Controls: Unconfigured
-        */
+
+            1. Send a getNodeState call to make sure that everything is in this state.
+        */  
 
         return true;
     }
 
-    bool LifecycleManagerNode::Mission_Selected()
+    bool LifecycleManagerNode::Mission_Selected(Mission mission)
     {
         /*
+            Shutdown nodes that are no longer necessary and load the parameter files
+            depending on which mission you selected.
+                1. Send a shutdown transition
+                2. Delete the clients
+                3. Delete them from the map and the node list
+
             Configure Nodes (changeNodeState(Transition::TRANSITION_CONFIGURE))
+                1. Select the correct configuartion file based on the mission selected
+                2. Send a changeNodeState transition call to every node remaining
         */
+
+       switch(mission){
+            case(ACCELERATION):
+                break;
+            case(SKIDPAD):
+                break;
+            case(TRACKDRIVE):
+                break;
+            case(EBS_TEST):
+                break;
+            case(INSPECTION):
+                break;
+            case(AUTOX):
+                break;
+            case(MANUAL):
+            // The PC will shutdown so no one cares what happens here...
+                break;
+       }
+
         return true;
     }
 
     bool LifecycleManagerNode::DV_Ready()
     {
+        bool success;
+
         /*
             Activate every other node except Controls
+                1. Send an activate transition call to every node except Controls
         */
-        return true;
+
+        for (auto node: nodeList) {
+            if (node == "controls")
+                continue;
+            
+            success = changeNodeState(Transition::TRANSITION_ACTIVATE, node);
+            if (!success) {
+                break;
+                RCLCPP_INFO(get_logger(),"Failed to activate Node %s, cancelling DV_READY change", node.c_str());
+            }
+        }
+
+        RCLCPP_INFO(get_logger(), "DV_Ready change complete, every node except controls is ACTIVE");
+
+        return success;
     }
 
     bool LifecycleManagerNode::DV_Driving()
     {
         /*
             Activate Controls Node
+                1. Send an activate transition call to the Controls node.
         */
-        return true;
+        bool success = changeNodeState(Transition::TRANSITION_ACTIVATE, "controls");
+
+        if (!success) {
+            RCLCPP_INFO(get_logger(), "Failed to activate controls node, DV_DRIVING cancelled");
+        }
+
+        return success;
     }
 
     void LifecycleManagerNode::loadParameters()

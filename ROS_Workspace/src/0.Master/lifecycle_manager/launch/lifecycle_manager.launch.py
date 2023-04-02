@@ -9,6 +9,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     lifecycle_manager_dir = get_package_share_directory("lifecycle_manager")
+    
     lifecycle_manager_node = Node(
         package="lifecycle_manager",
         name="lifecycle_manager",

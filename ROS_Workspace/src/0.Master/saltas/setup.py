@@ -24,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'run_salta = saltas.saltas_node:main'
+            'run_salta = saltas.saltas_node:main',
+            'lifecycle_saltas = saltas.lifecycle_saltas:main'
         ],
     },
 )

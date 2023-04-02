@@ -19,7 +19,11 @@ namespace can_reader_namespace {
     BrakesMessage::BrakesMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::BrakePressure>::SharedPtr pub) 
         : CanMessage(0x301, msg), pub_(pub) {} 
     TestHallMessage::TestHallMessage(unsigned int *msg) : CanMessage(0x305, msg) {} 
-    StatePubMessage::StatePubMessage(unsigned int *msg) : CanMessage(0x03, msg) {} 
+    StatePubMessage::StatePubMessage(unsigned int *msg) : CanMessage(0x03, msg) {}
+    MissionMessage::MissionMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::Mission>::SharedPtr pub)
+        : CanMessage(0x500, msg), pub_(pub) {}
+    AutonomousStatusMessage::AutonomousStatusMessage(unsigned int *msg, rclcpp::Publisher<custom_msgs::msg::AutonomousStatus>::SharedPtr pub)
+        : CanMessage(0x501, msg), pub_(pub) {}
 
     FrontHallsMessage::~FrontHallsMessage() {}
     RearHallsMessage::~RearHallsMessage() {}
@@ -27,6 +31,8 @@ namespace can_reader_namespace {
     BrakesMessage::~BrakesMessage() {}
     TestHallMessage::~TestHallMessage() {}
     StatePubMessage::~StatePubMessage() {}
+    MissionMessage::~MissionMessage() {}
+    AutonomousStatusMessage::~AutonomousStatusMessage() {}
 
     void FrontHallsMessage::handler() {
         custom_msgs::msg::WheelSpeed msg;
@@ -69,6 +75,20 @@ namespace can_reader_namespace {
 
     void StatePubMessage::handler() {
         std::cout << "SP Handler " << id << std::endl;
+    }
+
+    void MissionMessage::handler() {
+        custom_msgs::msg::Mission msg;
+        msg.id = message[2];
+
+        pub_->publish(msg);
+    }
+    
+    void AutonomousStatusMessage::handler() {
+        custom_msgs::msg::AutonomousStatus msg;
+        msg.id = message[2];
+
+        pub_->publish(msg);
     }
 
 }
