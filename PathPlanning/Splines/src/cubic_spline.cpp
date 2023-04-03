@@ -210,10 +210,27 @@ PointsArray CubicSpline::getSplineCurve(const long int resolution) {
     return spline_curve;
 }
 
+PointsData CubicSpline::getSplineData(const long int resolution) {
+    PointsData spline_data{ resolution, 4};
+    // Iterate through all points and data of interest (X,Y,tang,curv)
+    for (long int i{ 0 }; i <= resolution - 1; i++)
+    {
+        double param{ static_cast<double>(i) / static_cast<double>(resolution - 1) };
+        Point temp1=getPoint(param);
+        double temp2 = getTangent(param);
+        double temp3 = getCurvature(param);
+        spline_data(i,0)=temp1(0);
+        spline_data(i,1)=temp1(1);
+        spline_data(i,2)=temp2;
+        spline_data(i,3)=temp3;
+    }
+    return spline_data;
+}
+
 double CubicSpline::getCurvature(double parameter) {
     Point first_der{ getFirstDerivative(parameter) };
     Point second_der{ getSecondDerivative(parameter) };
-    // Should probably be checked again if ti is correct
+    // Should probably be checked again if it is correct
     double curvature{
         (first_der(0) * second_der(1) - first_der(1) * second_der(0)) / (std::pow(std::pow(first_der(0), 2) + std::pow(first_der(1), 2), 3.0 / 2.0))
     };
@@ -260,6 +277,10 @@ int main() {
     std::ofstream spline_curve("cubic_spline_points.txt");
     spline_curve << spline.getSplineCurve(2000);
     spline_curve.close();
+
+    std::ofstream spline_data("../../../MPC/MPC_embotech/cubic_spline_data.txt");
+    spline_data << spline.getSplineData(2000);
+    spline_data.close();
 
     return 0;
 }

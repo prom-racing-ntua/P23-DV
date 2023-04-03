@@ -1,7 +1,5 @@
 # See also FORCES_NLP
-
 # (c) Embotech AG, Zurich, Switzerland, 2013-2022.
-
 
 import sys
 import numpy as np
@@ -19,9 +17,6 @@ from scipy.linalg import solve_banded
 from scipy.sparse import diags
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from TriangulationNew import Triangulation
-from track_plotter import getTrackdrive, getSkidpad, getAccel, getAutoX
-from ParametricCubicSpline import getSpline, getSplineDerivatives
 from Trackdrive import cones_blue, cones_orange_big, cones_yellow
 
 #global params
@@ -32,7 +27,7 @@ l_r = 0.7359
 CdA = 1.8 # for drag
 ClA = 5.47    # for downforce
 pair = 1.225
-m = 185.0   # mass of the car
+m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 
@@ -44,12 +39,26 @@ D= 1739.47
 cs=-16419.31
 
 #compute l_a
-umin=3.0
-umax=6.0
+umin=4.0
+umax=7.0
 
 #ellipse params
 a=1.46
 b=1.62
+
+# Read the txt file data
+def Dataloader(txt):
+    with open(txt) as f:
+        lines = f.readlines()
+
+    # Convert the data to a numpy array
+    data = []
+    for line in lines:
+        row = [float(x) for x in line.split()]
+        data.append(row)
+    data = np.transpose(np.array(data))
+    return data
+
 
 def continuous_dynamics(x, u):
     """Defines dynamics of the car, i.e. equality constraints.
@@ -61,15 +70,16 @@ def continuous_dynamics(x, u):
     l_a=casadi.fmin(temp1,1)
 
     #slip angles and Fys
-    saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
-    sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
+    # saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
+    # sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
+    saf=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
+    sar=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
     Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
     Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
     Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
     Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(x[3]**2)
     # Ffy = -saf*cs
     # Fry = -sar*cs
-    print("Fys-slip angles are:", saf, " ",Ffy, " and ",sar, " ", Fry)
 
     #friction forces
     Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
@@ -95,7 +105,7 @@ def continuous_dynamics(x, u):
     # Fdot= u[0]
     # deltadot = u[1]
 
-    #blending with const lambda
+    #blending with changing lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
     xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
     ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
@@ -114,16 +124,53 @@ def obj(z,current_target):
     z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta]
     current_target = point on path that is to be headed for
     """
+    dyn_sa  = casadi.arctan(z[6]/(z[5]+1e-3))
+    beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(z[9]))
+    dsa =(dyn_sa-beta)
+    e_c= casadi.sin(current_target[2])*(z[2]-current_target[0]) - casadi.cos(current_target[3])*((z[3]-current_target[1])) #katakorifi
+    e_l= -casadi.cos(current_target[2])*(z[2]-current_target[0]) - casadi.sin(current_target[3])*((z[3]-current_target[1])) #orizontia
+    
     return (1e3*(z[2]-current_target[0])**2 # costs on deviating on the
 #                                              path in x-direction
             + 1e3*(z[3]-current_target[1])**2 # costs on deviating on the
 #                                               path in y-direction
             + 1e-2*z[0]**2 # penalty on input F, 
+            + 1e-2*z[8]**2
             + 1e2*z[1]**2 
             + 1e2*z[9]**2
-            + 1e-2*z[8]**2
-            + 1e0*((1/(z[5]**2 +1e-6)))
-            - 1e0*(z[5]**2)) 
+            + 1e1*(z[4]-current_target[2])**2 #dphi gap
+            + 1e0*(dsa**2)
+            + 1e1*((1/(z[5]**2 +1e-3)))
+            - 1e1*(z[5]**2)) 
+#     return (1e4*(e_c)**2 # costs on deviating on the
+# #                                              path in x-direction
+#             + 1e1*(e_l)**2 # costs on deviating on the
+# #                                               path in y-direction
+#             + 1e-2*z[0]**2 # penalty on input F, 
+#             + 1e-2*z[8]**2
+#             + 1e-2*z[1]**2 
+#             + 1e-2*z[9]**2
+#             + 1e2*(z[4]-current_target[2])**2 #dphi gap
+#             + 1e-2*(dsa**2)
+#             + 1e-1*((1/(z[5]**2 +1e-3)))
+#             - 1e-1*(z[5]**2)) 
+
+
+def constr(z,current_target):
+    """Least square costs on deviating from the path and on the inputs F and phi
+    z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta]
+    current_target = point on path that is to be headed for
+    """
+    saf=casadi.arctan((z[6]+l_f*z[7])/(z[5]+1e-3)) - z[9]
+    sar=casadi.arctan((z[6]-l_r*z[7])/(z[5]+1e-3))
+    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
+    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
+    Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[5]**2)
+    Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[5]**2)
+    constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    constr2 = (z[8]/(a*Frz))**2 + (z[8]/(b*Frz))**2 #tyre constraints
+    constr3 = saf
+    return (constr1,constr2,constr3) 
 
 def calc_points_on_ellipse(num_points):
     """Desired trajectory on ellipoid represented by 2D points"""
@@ -145,17 +192,16 @@ def find_closest_point(points, ref_point):
     squared_dist = squared_diff[0,:] + squared_diff[1,:]
     return np.argmin(squared_dist)
 
-def extract_next_path_points(path_points, pos, N):
+def extract_next_path_points(data_points, pos, N):
     """Extract the next N points on the path for the next N stages starting from 
     the current car position pos
     """
+    path_points=data_points[:2,:] #keep only X,Y coords
     idx = find_closest_point(path_points,pos)
     num_points = path_points.shape[1]
-    print(np.shape(path_points))
     num_ellipses = np.ceil((idx+N+1)/num_points)
-    print(num_ellipses)
     path_points = np.tile(path_points,(1,int(num_ellipses)))
-    return path_points[:,idx+1:idx+N+1]
+    return data_points[:,idx+1:idx+N+1]
 
 
 def generate_pathplanner():
@@ -164,13 +210,13 @@ def generate_pathplanner():
     """
     # Model Definition
     # ----------------
-
+    
     # Problem dimensions
     model = forcespro.nlp.SymbolicModel()
     model.N = 40  # horizon length
     model.nvar = 10  # number of variables
     model.neq = 8  # number of equality constraints
-    model.npar = 2 # number of runtime parameters
+    model.npar = 4 # number of runtime parameters
     num_ins=model.nvar-model.neq
 
     # Objective function
@@ -191,22 +237,14 @@ def generate_pathplanner():
     model.E = np.concatenate([np.zeros((model.neq,num_ins)), np.eye(model.neq)], axis=1)
 
     # Inequality constraints
-    #  upper/lower variable bounds lb <= z <= ub
-    #                     inputs                 |  states
-    #                     F          phi            x    y     v    theta         delta
-    # model.lb = np.array([-4120.0,  np.deg2rad(-60.),  -200.,   -200.,  0.,   -np.inf, -0.48*np.pi])
-    # model.ub = np.array([+3560.7,  np.deg2rad(+60.),   200.,   200.,   20.,   np.inf,  0.48*np.pi])
-
-    # z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta]
     # from brake -> -Fbrake = -4120.0
+    model.lb = np.array([-3560.7,  np.deg2rad(-90.),  -400.,   -400.,  -np.inf,  0.0, -20.0, -20.0, -3560.7, -0.5*np.pi])
+    model.ub = np.array([+3560.7,  np.deg2rad(+90.),   400.,   400.,   +np.inf,  20.0, +20.0, 20.0, 3560.7, 0.5*np.pi])
 
-    model.lb = np.array([-3000.0,  np.deg2rad(-90.),  -400.,   -400.,  -np.inf,  0.0 , -20.0, -20.0, -3560.7, -0.5*np.pi])
-    model.ub = np.array([+3000.0,  np.deg2rad(+90.),   400.,   400.,   +np.inf,  20.0 , +20.0, 20.0, 3560.7, 0.5*np.pi])
-
-    model.nh = 1 #number of inequality constr
-    model.ineq = lambda z,current_target: casadi.vertcat((z[2]-current_target[0])**2 + (z[3]-current_target[1])**2)
-    model.hu = np.array([+200.0])
-    model.hl = np.array([-200.0])
+    model.nh = 3 #number of inequality constr
+    model.ineq = constr
+    model.hu = np.array([+35.0,1.0,0.3])
+    model.hl = np.array([-np.inf,-np.inf,-0.3])
 
     # Initial condition on vehicle states x
     model.xinitidx = range(num_ins,model.nvar) # use this to specify on which variables initial conditions
@@ -214,7 +252,6 @@ def generate_pathplanner():
 
     # Solver generation
     # -----------------
-
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
     codeoptions.maxit = 20000    # Maximum number of iterations
@@ -228,7 +265,7 @@ def generate_pathplanner():
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-7 # increase this if exitflag=-8
+    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
     # codeoptions.server = 'https://forces.embotech.com'
@@ -381,27 +418,16 @@ def main():
     #import data from path planning
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
-    track = getTrackdrive(ax, return_points=True)
-    track_new = np.concatenate([cones_blue,cones_yellow,cones_orange_big])
-    tri = Triangulation(track)
-    points = np.vstack((tri.midpoints, tri.midpoints[0,:]))
-    points_mpc = np.vstack((tri.midpoints, tri.midpoints[0,:])).T
-    spline = getSpline(points, axis=ax, boundary_condition='closed_loop')
-    spline_mpc = getSpline(points, axis=ax, boundary_condition='closed_loop').T
-    # print("points are: ",points,np.shape(points))
-    # print("points mpc is: ",points_mpc,np.shape(points_mpc))
-    path_points=spline_mpc[:,:-1]
-    print("points mpc are:",points_mpc, np.shape(points_mpc))
+    #from C++ path planning
+    data_points=Dataloader("P23-DV/MPC/MPC_embotech/cubic_spline_data.txt")
+    
+    print("c++ data are: ",data_points, np.shape(data_points))
     print()
-    print("splines mpc are: ",spline_mpc, np.shape(spline_mpc))
-    print()
-    print("actaul points are: ",path_points,np.shape(path_points))
     # generate code for estimator
     model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
-
+    
     # Simulation
-    # ----------
     sim_length = 2000 # simulate 8sec
 
     # Variables for storing simulation data
@@ -411,25 +437,21 @@ def main():
     # Set initial guess to start solver from
     x0i = np.zeros((model.nvar,1))
     x0 = np.transpose(np.tile(x0i, (1, model.N)))
-    index0=0
-    phi0 = casadi.arctan((path_points[1][index0+1]-path_points[1][index0])/(path_points[0][index0+1]-path_points[0][index0]))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
-    xinit = np.transpose(np.array([path_points[0][index0], path_points[1][index0], phi0, 0.1, 0.0, 0.0, 100, 0.]))
+    vx0 = 0.1
+    Frx0 = 100
+    xinit = np.transpose(np.array([data_points[0][0], data_points[1][0],data_points[2][0], vx0, 0.0, 0.0, Frx0, 0.]))
+    print("xinit is: ",xinit)
     x[:,0] = xinit
 
     problem = {"x0": x0,
             "xinit": xinit}
-
     # Create 2D points on ellipse which the car is supposed to follow
-    # num_points = 80
-    # path_points = calc_points_on_ellipse(num_points)
-    print("path points are:",path_points,np.shape(path_points),type(path_points))
-
     start_pred = np.reshape(problem["x0"],(model.nvar,model.N)) # first prdicition corresponds to initial guess
 
     # generate plot with initial values
-    createPlot(x,u,start_pred,sim_length,model,path_points,xinit,cones_yellow, cones_blue, cones_orange_big)
+    createPlot(x,u,start_pred,sim_length,model,data_points[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
     wheel_torques_txt=[]
     steering_txt=[]
 
@@ -441,13 +463,10 @@ def main():
         temp=x[:,k]
         # print("x_init is:",problem["xinit"])
         # Set runtime parameters (here, the next N points on the path)
-        print("shape xinit is: ",np.shape(temp))
-        next_path_points = extract_next_path_points(path_points, x[0:num_ins,k], model.N)
-        print("next N path points are: ",next_path_points,np.shape(next_path_points),type(next_path_points))
-        problem["all_parameters"] = np.reshape(np.transpose(next_path_points), \
-            (2*model.N,1))
-        print("xinit is: ",problem["xinit"][0],problem["xinit"][1])
-        print("params are:",problem["all_parameters"][0][0],problem["all_parameters"][1][0])
+        next_data_points = extract_next_path_points(data_points, x[0:num_ins,k], model.N)
+        # print("next N path points are: ",next_data_points,np.shape(next_data_points),type(next_data_points))
+        problem["all_parameters"] = np.reshape(np.transpose(next_data_points), \
+            (model.npar*model.N,1))
         if(k>0):
             err_array.append(np.sqrt((problem["xinit"][0] - problem["all_parameters"][0][0])**2 + (problem["xinit"][1] - problem["all_parameters"][1][0])**2))
             print("error array is:",err_array)
@@ -458,7 +477,7 @@ def main():
         output, exitflag, info = solver.solve(problem)
 
         # Make sure the solver has exited properly.
-        print(exitflag)
+        # print(exitflag)
         assert exitflag == 1, "bad exitflag"
         sys.stderr.write("FORCESPRO took {} iterations and {} seconds to solve the problem.\n"\
             .format(info.it, info.solvetime))
@@ -478,7 +497,7 @@ def main():
         wheel_torques_txt.append(x[:,k][6]*0.2)
         steering_txt.append(x[:,k][7])
         # plot results of current simulation step
-        if(k%10==0):
+        if(k%20==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  
             if k == sim_length-1:
                 fig=plt.gcf()
@@ -490,6 +509,7 @@ def main():
             else:
                 plt.draw()
         print()
+
     print("steering_txt is:", steering_txt)
     print()
     print("wheel_torques_txt is: ",wheel_torques_txt)
