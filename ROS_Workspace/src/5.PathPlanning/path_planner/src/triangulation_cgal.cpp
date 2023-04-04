@@ -82,7 +82,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         triangulation_object.insert(cone.coords);
         cone_lookup[cone.coords] = cone.color;
     }
-    std::cout << "check_4" << std::endl;
+    //std::cout << "check_4" << std::endl;
     std::unordered_set<Face_handle> not_visited_faces;
 
     for (Delaunay_t::Finite_faces_iterator it = triangulation_object.finite_faces_begin();
@@ -90,17 +90,19 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     {
         not_visited_faces.insert(it);
     }
-    std::cout << "check_5" << std::endl;
+    //std::cout << "check_5" << std::endl;
     std::vector<my_edge> selected_edges;
 
     Point direction_from_position(position.x() + direction.dx(), position.y() + direction.dy());
-    std::cout << position << '\n';
+    
 
     Face_handle starting_face = triangulation_object.locate(position);
-    if (starting_face == nullptr) std::cout << "aaaaa";
+    
+    std::pair<std::vector<my_edge>, int> best_best_path;
+
     if (triangulation_object.is_infinite(starting_face))
     {
-        std::cout << "cjec\n";
+        
         Line_face_circulator lfc = triangulation_object.line_walk(position, direction_from_position);
 
         Face_handle first_face = --lfc;
@@ -121,101 +123,116 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         Segment_2 seg_2(second_face->vertex((index_2 + 1) % 3)->point(), second_face->vertex((index_2 + 2) % 3)->point());
         float dist_1 = CGAL::squared_distance(seg_1, position);
         float dist_2 = CGAL::squared_distance(seg_2, position);
+        my_edge starting_edge(Cone(Point(0,0),-1),Cone(Point(0,0),-1));
         if (dist_1 < dist_2)
         {
             starting_face = first_face->neighbor(index_1);
+            Point other_a = first_face->vertex((index_1 + 1) % 3)->point();
+            Point other_b = first_face->vertex((index_1 + 2) % 3)->point();
+            starting_edge =my_edge(Cone(other_a, cone_lookup[other_a]), 
+            Cone(other_b, cone_lookup[other_b]));
         }
         else
         {
             starting_face = second_face->neighbor(index_2);
-        }
-    }
-
-    std::cout << "ccejesa\n";
-    Triangle starting_triangle = triangulation_object.triangle(starting_face);
-    Point other_a, other_b;
-
-    // vector(position, direction_from_position) parallel to direction
-
-    not_visited_faces.erase(starting_face);
-    int count_invalid = 0; // for debugging
-    std::pair<std::vector<my_edge>, int> best_path[3];
-    std::cout << "check_6" << std::endl;
-    for (int i = 0; i < 3; i++)
-    {
-        other_a = starting_triangle.vertex((i + 1) % 3);
-        other_b = starting_triangle.vertex((i + 2) % 3);
-        my_edge starting_edge(Cone(other_a, cone_lookup[other_a]),
+            Point other_a = second_face->vertex((index_2 + 1) % 3)->point();
+            Point other_b = second_face->vertex((index_2 + 2) % 3)->point();
+            starting_edge =my_edge(Cone(other_a, cone_lookup[other_a]), 
             Cone(other_b, cone_lookup[other_b]));
+        }
 
-        if (std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint())) > maximum_angle ||
-            triangulation_object.is_infinite(starting_face->neighbor(i)))
-        {
-            //std::cout<<direction_from_position<<" / "<<position<<" / "<<starting_edge.midpoint()<<" / ";
-            //std::cout<<std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint()))<<std::endl;
-            count_invalid++;
-            best_path[i] = std::make_pair(empty_vector<my_edge>(), INT_MAX);
-            continue;
-        }
-        else
-        {
-            best_path[i] = find_best_path(position, direction, starting_edge, direction_from_position, selected_edges, not_visited_faces, starting_face->neighbor(i), starting_face, 0);
-            // current_depth = already added edges
-        }
-    }
-    if (count_invalid == 3)
-    {
-
-
-        //std::cout << "all three edges invalid" << std::endl;
-        Ray_2 pos_vector(position, direction_from_position);
-        Segment_2 edges[3] = { Segment_2(starting_triangle.vertex(0), starting_triangle.vertex(1)),
-                              Segment_2(starting_triangle.vertex(1), starting_triangle.vertex(2)),
-                              Segment_2(starting_triangle.vertex(2), starting_triangle.vertex(0)) };
-        if (CGAL::squared_distance(pos_vector, edges[0]) < 0.00001)
-        {
-            my_edge starting_edge(Cone(starting_triangle.vertex(0), cone_lookup[starting_triangle.vertex(0)]),
-                Cone(starting_triangle.vertex(1), cone_lookup[starting_triangle.vertex(1)]));
-            best_path[2] = find_best_path(position, direction, starting_edge, direction_from_position, selected_edges, not_visited_faces, starting_face->neighbor(2), starting_face, 0);
-        }
-        if (CGAL::squared_distance(pos_vector, edges[1]) < 0.00001)
-        {
-            my_edge starting_edge(Cone(starting_triangle.vertex(1), cone_lookup[starting_triangle.vertex(1)]),
-                Cone(starting_triangle.vertex(2), cone_lookup[starting_triangle.vertex(2)]));
-            best_path[0] = find_best_path(position, direction, starting_edge, direction_from_position, selected_edges, not_visited_faces, starting_face->neighbor(0), starting_face, 0);
-        }
-        if (CGAL::squared_distance(pos_vector, edges[2]) < 0.00001)
-        {
-            my_edge starting_edge(Cone(starting_triangle.vertex(2), cone_lookup[starting_triangle.vertex(2)]),
-                Cone(starting_triangle.vertex(0), cone_lookup[starting_triangle.vertex(0)]));
-            best_path[1] = find_best_path(position, direction, starting_edge, direction_from_position, selected_edges, not_visited_faces, starting_face->neighbor(1), starting_face, 0);
-        }
-    }
-    int best_index;
-    if (best_path[0].second < best_path[1].second && best_path[0].second < best_path[2].second)
-    {
-        best_index = 0;
-    }
-    else if (best_path[1].second < best_path[2].second)
-    {
-        best_index = 1;
+        
+        not_visited_faces.erase(starting_face);
+        
+        best_best_path = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face, starting_face, 0);
     }
     else
     {
-        best_index = 2;
+        Triangle starting_triangle = triangulation_object.triangle(starting_face);
+        Point other_a, other_b;
+
+        // vector(position, direction_from_position) parallel to direction
+
+        not_visited_faces.erase(starting_face);
+        int count_invalid = 0; // for debugging
+        std::pair<std::vector<my_edge>, int> best_path[3];
+        //std::cout << "check_6" << std::endl;
+        for (int i = 0; i < 3; i++)
+        {
+            other_a = starting_triangle.vertex((i + 1) % 3);
+            other_b = starting_triangle.vertex((i + 2) % 3);
+            my_edge starting_edge(Cone(other_a, cone_lookup[other_a]),
+                Cone(other_b, cone_lookup[other_b]));
+
+            if (std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint())) > maximum_angle ||
+                triangulation_object.is_infinite(starting_face->neighbor(i)))
+            {
+                //std::cout<<direction_from_position<<" / "<<position<<" / "<<starting_edge.midpoint()<<" / ";
+                //std::cout<<std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint()))<<std::endl;
+                count_invalid++;
+                best_path[i] = std::make_pair(empty_vector<my_edge>(), INT_MAX);
+                continue;
+            }
+            else
+            {
+                best_path[i] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(i), starting_face, 0);
+                // current_depth = already added edges
+            }
+        }
+        if (count_invalid == 3)
+        {
+
+
+            //std::cout << "all three edges invalid" << std::endl;
+            Ray_2 pos_vector(position, direction_from_position);
+            Segment_2 edges[3] = { Segment_2(starting_triangle.vertex(0), starting_triangle.vertex(1)),
+                                Segment_2(starting_triangle.vertex(1), starting_triangle.vertex(2)),
+                                Segment_2(starting_triangle.vertex(2), starting_triangle.vertex(0)) };
+            if (CGAL::squared_distance(pos_vector, edges[0]) < 0.00001)
+            {
+                my_edge starting_edge(Cone(starting_triangle.vertex(0), cone_lookup[starting_triangle.vertex(0)]),
+                    Cone(starting_triangle.vertex(1), cone_lookup[starting_triangle.vertex(1)]));
+                best_path[2] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(2), starting_face, 0);
+            }
+            if (CGAL::squared_distance(pos_vector, edges[1]) < 0.00001)
+            {
+                my_edge starting_edge(Cone(starting_triangle.vertex(1), cone_lookup[starting_triangle.vertex(1)]),
+                    Cone(starting_triangle.vertex(2), cone_lookup[starting_triangle.vertex(2)]));
+                best_path[0] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(0), starting_face, 0);
+            }
+            if (CGAL::squared_distance(pos_vector, edges[2]) < 0.00001)
+            {
+                my_edge starting_edge(Cone(starting_triangle.vertex(2), cone_lookup[starting_triangle.vertex(2)]),
+                    Cone(starting_triangle.vertex(0), cone_lookup[starting_triangle.vertex(0)]));
+                best_path[1] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(1), starting_face, 0);
+            }
+        }
+        int best_index;
+        if (best_path[0].second < best_path[1].second && best_path[0].second < best_path[2].second)
+        {
+            best_index = 0;
+        }
+        else if (best_path[1].second < best_path[2].second)
+        {
+            best_index = 1;
+        }
+        else
+        {
+            best_index = 2;
+        }
+        best_best_path = best_path[best_index];
     }
     std::vector<Point> out;
     out.reserve(selected_edges.size() + 1);
     out.push_back(position);
-    for (my_edge edge : best_path[best_index].first)
+    for (my_edge edge : best_best_path.first)
     {
         no_of_midpoints++;
         out.push_back(edge.midpoint());
     }
     last_calculated_path = out;
 
-    std::cout << "(" << out[0].x() << "," << out[0].y() << "),(" << out[1].x() << "," << out[1].y() << "),(" << out[2].x() << "," << out[2].y() << ")" << std::endl;
-    return std::make_pair(out, best_path[best_index].second);
+    return std::make_pair(out, best_best_path.second);
 }
 
 std::vector<Point> Triangulation::get_last_path() const {
@@ -223,7 +240,7 @@ std::vector<Point> Triangulation::get_last_path() const {
 }
 
 std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point& starting_point, const Direction_2& starting_direction,
-    const my_edge& current_edge, const Point& current_direction, std::vector<my_edge> selected_edges, std::unordered_set<Face_handle> not_visited_faces,
+    const my_edge& current_edge, std::vector<my_edge> selected_edges, std::unordered_set<Face_handle> not_visited_faces,
     Face_handle current_face, const Face_handle& starting_face, int current_depth) {
     //std::cout << current_depth << std::endl;
     selected_edges.push_back(current_edge);
@@ -232,7 +249,6 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point& 
     std::pair<std::vector<my_edge>, int> best_of_a = std::make_pair(selected_edges, INT_MAX),
         best_of_b = std::make_pair(selected_edges, INT_MAX);
     int idx_opposite;
-    Point pdir(current_direction);
     for (int i = 0; i < 3; i++)
     {
         if (vertices[i] != current_edge.a().coords && vertices[i] != current_edge.b().coords)
@@ -265,8 +281,7 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point& 
     }
     else if (not_visited_faces.count(current_face->neighbor((idx_opposite + 1) % 3)) != 0)
     {
-        Point dir(2 * edge_1.midpoint().x() - current_edge.midpoint().x(), 2 * edge_1.midpoint().y() - current_edge.midpoint().y());
-        best_of_a = find_best_path(starting_point, starting_direction, edge_1, dir, best_of_a.first, not_visited_faces, current_face->neighbor((idx_opposite + 1) % 3), starting_face, current_depth + 1);
+        best_of_a = find_best_path(starting_point, starting_direction, edge_1, best_of_a.first, not_visited_faces, current_face->neighbor((idx_opposite + 1) % 3), starting_face, current_depth + 1);
     }
 
     else
@@ -293,8 +308,8 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point& 
     else if (not_visited_faces.count(current_face->neighbor((idx_opposite + 2) % 3)) != 0)
     {
         // BC=AB => (Xc-Xb, Yc-Yb) = (Xb - Xa, Yb - Ya) => 2Xb = Xc + Xa => Xc = 2Xb - Xa
-        Point dir(2 * edge_2.midpoint().x() - current_edge.midpoint().x(), 2 * edge_2.midpoint().y() - current_edge.midpoint().y());
-        best_of_b = find_best_path(starting_point, starting_direction, edge_2, dir, best_of_b.first, not_visited_faces, current_face->neighbor((idx_opposite + 2) % 3), starting_face, current_depth + 1);
+        
+        best_of_b = find_best_path(starting_point, starting_direction, edge_2, best_of_b.first, not_visited_faces, current_face->neighbor((idx_opposite + 2) % 3), starting_face, current_depth + 1);
     }
 
     else

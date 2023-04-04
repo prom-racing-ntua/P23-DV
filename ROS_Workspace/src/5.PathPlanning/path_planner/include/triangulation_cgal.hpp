@@ -83,7 +83,7 @@ private:
     int total_length_reward;  // ^^
     int cost_function(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
     int cost_function_advanced(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
-    std::pair<std::vector<my_edge>, int> find_best_path(const Point&, const Direction_2&, const my_edge&, const Point&, std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle&, int);
+    std::pair<std::vector<my_edge>, int> find_best_path(const Point&, const Direction_2&, const my_edge&,  std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle&, int);
     // CGAL function for angle approximation supports only 3d points. Bridge function
     //int angle_point_2(const Point &, const Point &, const Point &) const;
 
