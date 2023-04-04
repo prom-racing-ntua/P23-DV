@@ -84,6 +84,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
         sample.y = point.y();
         waypoints_ros.push_back(sample);
     }
+
     for_pub.waypoints = waypoints_ros;
     pub_waypoints->publish(for_pub);
 }
