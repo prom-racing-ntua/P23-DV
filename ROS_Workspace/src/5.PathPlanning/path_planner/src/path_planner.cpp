@@ -76,7 +76,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     custom_msgs::msg::WaypointsMsg for_pub;
     for_pub.count = waypoints.size();
     std::vector<custom_msgs::msg::Point2Struct> waypoints_ros;
-    waypoints_ros.resize(waypoints.size());
+    waypoints_ros.reserve(waypoints.size());
     custom_msgs::msg::Point2Struct sample;
     for (Point point : waypoints)
     {
@@ -84,6 +84,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
         sample.y = point.y();
         waypoints_ros.push_back(sample);
     }
+
     for_pub.waypoints = waypoints_ros;
     pub_waypoints->publish(for_pub);
 }
