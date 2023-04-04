@@ -25,9 +25,9 @@ typedef Delaunay_t::Finite_vertices_iterator Finite_vertices_iterator;
 typedef Finite_vertex_handles::iterator Finite_vertex_handles_iterator;
 typedef Delaunay_t::Point Point;
 typedef Delaunay_t::Triangle Triangle;
+typedef Delaunay_t::Line_face_circulator Line_face_circulator;
 
-struct Cone
-{
+struct Cone {
     Point coords;
     int color;
     /*
@@ -36,13 +36,12 @@ struct Cone
         2 for small orange
         3 for large orange
     */
-    Cone() : coords(), color() {}
-    Cone(Point x, int y) : coords(x), color(y) {}
-    Cone(Point x) : coords(x), color(-1) {}
+    Cone(): coords(), color() {}
+    Cone(Point x, int y): coords(x), color(y) {}
+    Cone(Point x): coords(x), color(-1) {}
 };
 
-class my_edge
-{
+class my_edge {
 private:
     Cone a_priv;
     Cone b_priv;
@@ -50,25 +49,21 @@ private:
 
 public:
     my_edge(Cone, Cone);
-    
-    Cone a() const
-    {
+
+    Cone a() const {
         return a_priv;
     }
-    Cone b() const
-    {
+    Cone b() const {
         return b_priv;
     }
-    Point midpoint() const
-    {
+    Point midpoint() const {
         return midpoint_priv;
     }
 };
 //bridge function
-int angle_point_2(const Point &a, const Point &b, const Point &c);
+int angle_point_2(const Point& a, const Point& b, const Point& c);
 
-class Triangulation
-{
+class Triangulation {
 private:
     std::map<Point, int> cone_lookup; //matches points coords to their color
     Delaunay_t triangulation_object;
@@ -86,9 +81,9 @@ private:
     int length_penalty;      // ^^
     int angle_penalty;       // ^^
     int total_length_reward;  // ^^
-    int cost_function(const std::vector<my_edge> &, const Point &, const Direction_2 &) const;
-    int cost_function_advanced(const std::vector<my_edge> &, const Point &, const Direction_2 &) const;
-    std::pair<std::vector<my_edge>, int> find_best_path(const Point &, const Direction_2 &, const my_edge &, const Point &, std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle &, int);
+    int cost_function(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
+    int cost_function_advanced(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
+    std::pair<std::vector<my_edge>, int> find_best_path(const Point&, const Direction_2&, const my_edge&, const Point&, std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle&, int);
     // CGAL function for angle approximation supports only 3d points. Bridge function
     //int angle_point_2(const Point &, const Point &, const Point &) const;
 
@@ -97,7 +92,7 @@ public:
     //Triangulation(int, int, int, int, int, int);
     Triangulation();
     void init(int maximum_angle = 90, int maximum_edge_angle = 90, int maximum_distance = 5, int minimum_angle = 0, int minimum_distance = 0, int target_depth = 10, int same_edge_penalty = 10, float length_penalty = 0.1, float angle_penalty = 0.1, float total_length_reward = 0.075);
-    std::pair<std::vector<Point>, int> new_batch(const std::vector<Cone> &, const Point &, const Direction_2 &);
+    std::pair<std::vector<Point>, int> new_batch(const std::vector<Cone>&, const Point&, const Direction_2&);
     std::vector<Point> get_last_path() const;
     // sends message to stdout/stderr/log for debug purposes
     ~Triangulation();
