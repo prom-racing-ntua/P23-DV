@@ -39,7 +39,7 @@ ament_target_dependencies(${PROJECT_NAME} rclcpp visualization_msgs custom_msgs 
 target_link_libraries(${PROJECT_NAME} gtsam)
 
 add_executable(read_files src/slam_from_file.cpp src/slam.cpp)
-ament_target_dependencies(read_files rclcpp visualization_msgs ament_index_cpp)
+ament_target_dependencies(read_files rclcpp visualization_msgs custom_msgs ament_index_cpp)
 target_link_libraries(read_files gtsam)
 
 add_executable(test_run src/test_visual.cpp)

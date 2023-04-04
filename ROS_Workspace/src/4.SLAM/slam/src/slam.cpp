@@ -42,7 +42,7 @@ GraphSLAM::GraphSLAM(rclcpp::Node* nh): node_handler_(nh) {
 	previous_global_index_ = 0;
 	landmark_counter_ = 0;
 	cone_count_ = 0;
-	landmark_id_map_.clear();
+	for (auto& cone_class : landmark_id_map_) cone_class.clear();
 }
 
 GraphSLAM::~GraphSLAM() {
@@ -66,7 +66,6 @@ void GraphSLAM::init() {
 
 	// Initializes the factor graph
 	initializeFactorGraph();
-	RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Created SLAM object" << '\n');
 }
 
 // Initializes the factor graph
@@ -149,6 +148,8 @@ bool GraphSLAM::addOdometryMeasurement(OdometryMeasurement& odometry) {
 // Adds landmark measurements in SLAM mode
 void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
 	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	RCLCPP_WARN(node_handler_->get_logger(), "In perception\n");
+
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -171,7 +172,9 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 		observed_position << observation_pose.x() + cone.range * std::cos(cone.theta + observation_pose.theta()),
 			observation_pose.y() + cone.range * std::sin(cone.theta + observation_pose.theta());
 
-		int best_match_id{ findNearestNeighbor(cone, observed_position) };
+		int color_id{ static_cast<int>(cone.color) };
+		gtsam::Key best_match_id{ findNearestNeighbor(cone, observed_position) };
+		RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Best match found at symbol " << gtsam::Symbol(best_match_id) << '\n');
 
 		/* Case where the landmark has not been observed before.
 		 * Here we don't put the observed landmark in the graph in case it is a false positive of
@@ -180,17 +183,15 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 		 * the graph along with its initial estimate and then update that estimate according to the second
 		 * measurement and every other measurement thereafter.
 		 */
-		if (best_match_id == -1)
+		if (best_match_id == gtsam::Symbol('N', 0).key())
 		{
 			// Creating the new landmark symbol and putting it in the dictionary
-			gtsam::Symbol new_landmark_symbol{'L', landmark_counter_};
+			gtsam::Symbol new_landmark_symbol{'L', landmark_counter_++};
 
 			// Create the landmark entry
 			LandmarkInfo new_landmark;
 
 			new_landmark.is_verified = false;
-			new_landmark.symbol = new_landmark_symbol;
-			new_landmark.color = cone.color;
 			new_landmark.estimated_pose = observed_position;
 			new_landmark.car_pose_symbols.push_back(observation_pose_symbol);
 			new_landmark.range_vector.push_back(cone.range);
@@ -200,12 +201,12 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 			if (cone.range > 7.5) new_landmark.score = 1;
 			else new_landmark.score = 5;
 
-			landmark_id_map_[landmark_counter_++] = new_landmark;
+			landmark_id_map_[color_id][new_landmark_symbol.key()] = new_landmark;
 		}
 		// Case where the landmark has been observed before
 		else
 		{
-			LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
+			LandmarkInfo* best_match{ &landmark_id_map_[color_id].at(best_match_id) };
 
 			// If the landmark was observed only once, put the previous landmark measurement into the factor graph and add the initial estimate 
 			// of the landmark's position (x,y)
@@ -234,11 +235,11 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 						};
 
 						new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
-							best_match->car_pose_symbols[i], best_match->symbol, gtsam::Rot2(best_match->theta_vector[i]), best_match->range_vector[i], noise_model)
+							best_match->car_pose_symbols[i], best_match_id, gtsam::Rot2(best_match->theta_vector[i]), best_match->range_vector[i], noise_model)
 						);
 					}
 					// Add the initial estimate of the newly added landmark pose
-					new_variable_values_.insert(best_match->symbol, gtsam::Point2(best_match->estimated_pose[0], best_match->estimated_pose[1]));
+					new_variable_values_.insert(best_match_id, gtsam::Point2(best_match->estimated_pose[0], best_match->estimated_pose[1]));
 				}
 			}
 			else
@@ -254,7 +255,7 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 				};
 
 				new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
-					observation_pose_symbol, best_match->symbol, gtsam::Rot2(cone.theta), cone.range, noise_model)
+					observation_pose_symbol, best_match_id, gtsam::Rot2(cone.theta), cone.range, noise_model)
 				);
 			}
 		}
@@ -283,11 +284,11 @@ void GraphSLAM::addLandmarkMeasurementsLocalization(const unsigned long global_i
 		gtsam::Vector2 observed_position;
 		observed_position << observation_pose.x() + cone.range * std::cos(cone.theta + observation_pose.theta()),
 			observation_pose.y() + cone.range * std::sin(cone.theta + observation_pose.theta());
-		int best_match_id = findNearestNeighbor(cone, observed_position);
+		gtsam::Key best_match_id = findNearestNeighbor(cone, observed_position);
 
-		if (best_match_id != -1)
+		if (best_match_id != gtsam::Symbol('N', 0).key())
 		{
-			LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
+			LandmarkInfo* best_match{ &landmark_id_map_[static_cast<int>(cone.color)].at(best_match_id) };
 
 			gtsam::noiseModel::Gaussian::shared_ptr noise_model{
 				gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
@@ -304,25 +305,24 @@ void GraphSLAM::loadMap(std::string& map_file_path) {
 	std::fstream map_file{ map_file_path };
 	while (!map_file.eof())
 	{
-		gtsam::Symbol cone_symbol{ 'L', landmark_counter_ };
+		gtsam::Symbol cone_symbol{ 'L', landmark_counter_++ };
 		LandmarkInfo cone{};
 		cone.is_verified = true;
-		cone.symbol = cone_symbol;
 		double color_temp{};
 		map_file >> color_temp;
-		cone.color = static_cast<ConeColor>(color_temp);
+		int color_id{ static_cast<int>(color_temp) };
 		map_file >> cone.estimated_pose[0];
 		map_file >> cone.estimated_pose[1];
 
-		landmark_id_map_[landmark_counter_++] = cone;
+		landmark_id_map_[color_id][cone_symbol.key()] = cone;
 	}
 }
 
 // TODO: This algorithm sound a bit expensive to do for all cones every perception measurement
-int GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position) {
+gtsam::Key GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position) {
 	// Check already known cones for closest observed cone (Euler distance), best_match is the index of the closest neighbor.
 	// If best_match == -1 then it is a phantom cone.
-	int best_match = -1;
+	gtsam::Key best_match{ gtsam::Symbol('N', 0).key() };
 	double least_distance_square{ std::pow(association_distance_threshold_, 2) };
 
 	if (observed_landmark.color == ConeColor::LargeOrange)
@@ -330,24 +330,24 @@ int GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landmark, gts
 		least_distance_square = std::pow(1.8 * association_distance_threshold_, 2);
 	}
 
-	// Iterate through all of the cones in the current map
-	for (auto& it : landmark_id_map_)
+	// Iterate through all of the cones in the current map. Only check cones of the same color
+	for (auto& it : landmark_id_map_[static_cast<int>(observed_landmark.color)])
 	{
 		LandmarkInfo& cone{ it.second };
-		// Only check cones of the same color
-		if (cone.color == observed_landmark.color)
+		// Calculate the distance between the observed cone and the mapped cone
+		double current_distance_square = (global_position - cone.estimated_pose).transpose() * (global_position - cone.estimated_pose);
+		// If their distance is less than the previous best, assign the current cone as the best match
+		if (current_distance_square < least_distance_square)
 		{
-			// Calculate the distance between the observed cone and the mapped cone
-			double current_distance_square = (global_position - cone.estimated_pose).transpose() * (global_position - cone.estimated_pose);
-			// If their distance is less than the previous best, assign the current cone as the best match
-			if (current_distance_square < least_distance_square)
-			{
-				least_distance_square = current_distance_square;
-				best_match = it.first;
-			}
+			least_distance_square = current_distance_square;
+			best_match = it.first;
 		}
 	}
 	return best_match;
+}
+
+gtsam::KeySet GraphSLAM::checkObservationRatio() {
+	// To be implemented...
 }
 
 // Optimizes the factor graph
@@ -394,12 +394,15 @@ void GraphSLAM::imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam::Ve
 	estimated_car_pose_ = gtsam::Pose2(new_x, new_y, new_theta);
 
 	// For every landmark that has been optimized update its estimated position
-	for (auto& it : landmark_id_map_)
+	for (auto& cone_class : landmark_id_map_)
 	{
-		LandmarkInfo& cone{ it.second };
-		if (estimated_global_state_.exists<gtsam::Point2>(cone.symbol))
+		for (auto& it : cone_class)
 		{
-			cone.estimated_pose = estimated_global_state_.at<gtsam::Point2>(cone.symbol);
+			LandmarkInfo& cone{ it.second };
+			if (estimated_global_state_.exists<gtsam::Point2>(it.first))
+			{
+				cone.estimated_pose = estimated_global_state_.at<gtsam::Point2>(it.first);
+			}
 		}
 	}
 }
@@ -418,16 +421,21 @@ gtsam::Vector3 GraphSLAM::getEstimatedCarPose() {
 // Returns the current estimate of the track map
 std::vector<gtsam::Vector3> GraphSLAM::getEstimatedMap() {
 	std::vector<gtsam::Vector3> estimated_map;
+	int color_id{ 0 };
 
 	// Iterate through the HashMap of cones and add them to the return vector if the cone is verified
-	for (auto& it : landmark_id_map_)
+	for (auto& cone_class : landmark_id_map_)
 	{
-		LandmarkInfo& cone{ it.second };
-		if (cone.is_verified)
+		for (auto& it : cone_class)
 		{
-			gtsam::Vector3 mapped_cone{ static_cast<double>(cone.color), cone.estimated_pose[0], cone.estimated_pose[1] };
-			estimated_map.push_back(mapped_cone);
+			LandmarkInfo& cone{ it.second };
+			if (cone.is_verified)
+			{
+				gtsam::Vector3 mapped_cone{ static_cast<double>(color_id), cone.estimated_pose[0], cone.estimated_pose[1] };
+				estimated_map.push_back(mapped_cone);
+			}
 		}
+		color_id++;
 	}
 	return estimated_map;
 }
@@ -449,13 +457,18 @@ void GraphSLAM::visualize(const bool print_all_observations, const bool print_tr
 	// }
 
 	// Prints all observations
-	for (auto it : landmark_id_map_)
+	int color_id{ 0 };
+	for (auto cone_class : landmark_id_map_)
 	{
-		LandmarkInfo& cone{ it.second };
-		if (cone.is_verified)
+		for (auto& it : cone_class)
 		{
-			data << cone.color << ' ' << cone.estimated_pose[0] << ' ' << cone.estimated_pose[1] << '\n';
+			LandmarkInfo& cone{ it.second };
+			if (cone.is_verified)
+			{
+				data << color_id << ' ' << cone.estimated_pose[0] << ' ' << cone.estimated_pose[1] << '\n';
+			}
 		}
+		color_id++;
 	}
 
 	// Prints the trajectory followed by the car, does not always work

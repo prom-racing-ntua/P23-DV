@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <sstream>
-#include <vector>
+#include <array>
 #include <unordered_map>
 #include <cmath>
 #include <fstream>
@@ -76,7 +76,10 @@ private:
 	rclcpp::Node* node_handler_;
 
 	// Map of the landmark ids to LandmarkInfo. Contains all the cones observed so far.
-	std::unordered_map<int, LandmarkInfo> landmark_id_map_;
+	// It is split into 4 separate cone classes, one for each color, in the order of the 
+	// ConeColor enum. The keys of each map are symbols that will be used when and if a
+	// landmark gets added to the factor graph. 
+	std::array<std::unordered_map<gtsam::Key, LandmarkInfo>, 4> landmark_id_map_;
 
 	// Symbol (e.g. "X4") of current car pose
 	gtsam::Symbol current_car_pose_symbol_;
@@ -118,7 +121,7 @@ private:
 	void initializeFactorGraph();
 
 	// Find nearest neighbor of an observed landmark to be associated with
-	int findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position);
+	gtsam::Key findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position);
 
 	// Lap counter methods
 	// Source: https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
@@ -129,6 +132,8 @@ private:
 	bool ccw(gtsam::Vector2 A, gtsam::Vector2 B, gtsam::Vector2 C) {
 		return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0]);
 	}
+
+	gtsam::KeySet checkObservationRatio();
 
 public:
 	// Constructor

@@ -12,6 +12,8 @@
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "custom_msgs/msg/local_map_msg.hpp"
+#include "custom_msgs/msg/pose_msg.hpp"
 
 #include "slam_common.h"
 #include "slam.h"
@@ -40,6 +42,10 @@ private:
 
     PerceptionMsgStructure perception_;
     OdometryMsgStructure odometry_;
+
+    // Slam topics publishers
+    rclcpp::Publisher<custom_msgs::msg::LocalMapMsg>::SharedPtr map_publisher_;
+    rclcpp::Publisher<custom_msgs::msg::PoseMsg>::SharedPtr pose_publisher_;
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr car_pose_publisher_;

@@ -8,7 +8,7 @@
 
 namespace ns_slam
 {
-SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
+SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
     loadParameters();
     cli_ = create_client<custom_msgs::srv::GetFrequencies>("get_frequencies");
 
@@ -62,9 +62,8 @@ SlamHandler::SlamHandler(): Node("slam_from_file_node"), slam_object_(this) {
         "perception2slam_topic", 10, std::bind(&SlamHandler::perceptionCallback, this, std::placeholders::_1), options
     );
 
-    // pose_publisher_ = create_publisher
-    // map_publisher_ = create_publisher
-
+    map_publisher_ = create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);
+    pose_publisher_ = create_publisher<custom_msgs::msg::PoseMsg>("pose", 10);
 
     optimization_clock_ = create_wall_timer(std::chrono::milliseconds(1000 * optimization_interval_ / node_frequency_),
         std::bind(&SlamHandler::optimizationCallback, this), slam_callback_group_);
@@ -104,6 +103,7 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
 
     pthread_spin_lock(&global_lock_);
     bool is_completed_lap{ slam_object_.addOdometryMeasurement(odometry) };
+    gtsam::Vector3 current_pose{ slam_object_.getEstimatedCarPose() };
     pthread_spin_unlock(&global_lock_);
 
     if (is_completed_lap && (cooldown_ == 0))
@@ -116,6 +116,13 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     {
         cooldown_--;
     }
+
+    // Publish pose message
+    custom_msgs::msg::PoseMsg pose_msg{};
+    pose_msg.position.x = current_pose[0];
+    pose_msg.position.y = current_pose[1];
+    pose_msg.theta = current_pose[2];
+    pose_publisher_->publish(pose_msg);
 
     // Keep odometry log
     if (is_logging_)
@@ -212,15 +219,33 @@ void SlamHandler::optimizationCallback() {
 
     pthread_spin_lock(&global_lock_);
     slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
+    std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
+    gtsam::Vector3 current_pose{ slam_object_.getEstimatedCarPose() };
+    pthread_spin_unlock(&global_lock_);
 
-    // Keep map log
+    // Keep map log and publish map
     if (is_mapping_)
     {
-        std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
         map_log_ << optimization_pose_symbol.index() << '\n';
-        for (auto cone : track) map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+
+        custom_msgs::msg::LocalMapMsg map_msg{};
+        custom_msgs::msg::ConeStruct cone_msg{};
+        map_msg.cone_count = track.size();
+        map_msg.pose.position.x = current_pose[0];
+        map_msg.pose.position.y = current_pose[1];
+        map_msg.pose.theta = current_pose[2];
+
+        for (auto cone : track)
+        {
+            map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+
+            cone_msg.color = cone[0];
+            cone_msg.coords.x = cone[1];
+            cone_msg.coords.y = cone[2];
+            map_msg.local_map.push_back(cone_msg);
+        }
+        map_publisher_->publish(map_msg);
     }
-    pthread_spin_unlock(&global_lock_);
 
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
