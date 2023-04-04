@@ -11,7 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(custom_msgs REQUIRED)
 
 # executable commands
-add_executable(${PROJECT_NAME} src/main.cpp src/can_messages.cpp src/can_reader.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/can_messages.cpp src/can_reader.cpp src/can_writer.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs)
 
 # install excutables to lib directory

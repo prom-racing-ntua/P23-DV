@@ -49,15 +49,23 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SteeringAngle.msg"
   "msg/BrakePressure.msg"
 
-  # Services
-  "srv/GetFrequencies.srv"
-  
+  ## P23 Status Messages
+  "msg/MissionSelection.msg"
+  "msg/AutonomousStatus.msg"
+  "msg/DriverlessStatus.msg"
+  "msg/Mission.msg"
+
   # Path Planning Messages
   "msg/ConeStruct.msg"
   "msg/LocalMapMsg.msg"
   "msg/Point2Struct.msg"
   "msg/PoseMsg.msg"
   "msg/WaypointsMsg.msg"
+
+  # Services
+  "srv/GetFrequencies.srv"
+  "srv/DriverlessStatus.srv"
+  "srv/InsMode.srv"
 
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS
