@@ -30,5 +30,5 @@ slam_from_file_node:
 
     # The files should be placed in the DataFiles directory and the variables
     # below must have the relative path in the form "/DataFiles/my_log_file.txt"
-    perception_log: "/DataFiles/good_perceptionLog.txt"
-    odometry_log: "/DataFiles/good_velocityLog.txt"
+    perception_log: "/DataFiles/Testing4_Thwmaidio/perceptionLog_9.txt"
+    odometry_log: "/DataFiles/Testing4_Thwmaidio/velocityLog_9_corrected.txt"

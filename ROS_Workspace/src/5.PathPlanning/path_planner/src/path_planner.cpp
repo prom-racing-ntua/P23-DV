@@ -67,7 +67,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     }
     Point current_position(msg->pose.position.x, msg->pose.position.y);
     float theta = msg->pose.theta;
-    Point current_direction(current_position.x() + std::cos(theta),current_position.y() + std::sin(theta));
+    Point current_direction(current_position.x() + std::cos(theta), current_position.y() + std::sin(theta));
     local_map = select_cones_by_dist_and_angle(full_map, current_position, current_direction, selection_radius_small, selection_radius_big, selection_angle);
     std::cout << local_map.size() << std::endl;
     std::pair<std::vector<Point>, int> batch_output = waymaker.new_batch(local_map, current_position, Direction_2(Segment_2(current_position, current_direction)));
@@ -76,7 +76,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     custom_msgs::msg::WaypointsMsg for_pub;
     for_pub.count = waypoints.size();
     std::vector<custom_msgs::msg::Point2Struct> waypoints_ros;
-    waypoints_ros.resize(waypoints.size());
+    waypoints_ros.reserve(waypoints.size());
     custom_msgs::msg::Point2Struct sample;
     for (Point point : waypoints)
     {

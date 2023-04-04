@@ -163,7 +163,7 @@ void SlamFromFile::run_slam() {
 		RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 	}
 
-	visualize();
+	// visualize();
 	global_index_++;
 
 	if (perception_eof_ or odometry_eof_)
