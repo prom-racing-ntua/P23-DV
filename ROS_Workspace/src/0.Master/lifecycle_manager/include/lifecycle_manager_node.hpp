@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
+#include <string>
+#include <cstring>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
@@ -13,6 +16,9 @@
 #include "custom_msgs/msg/driverless_status.hpp"
 #include "lifecycle_msgs/srv/get_state.hpp"
 #include "lifecycle_msgs/srv/change_state.hpp"
+#include "rclcpp/parameter_client.hpp"
+#include "rclcpp/utilities.hpp"
+#include "yaml-cpp/yaml.h"
 
 
 typedef enum Mission{
@@ -42,6 +48,23 @@ typedef enum DV_Status{
     NODE_PROBLEM = 5
 } DV_Status;
 
+template<typename T>
+void printVector(std::vector<T>& vector)
+{
+    for (T element: vector)
+    {
+        std::cout << element << std::endl;
+    }
+}
+
+template<typename T>
+void removeElement(std::vector<T>& vector, T element)
+{
+    auto iterator = std::find(vector.begin(), vector.end(), element);
+    if (iterator != vector.end())
+        vector.erase(iterator);
+}
+
 namespace lifecycle_manager_namespace
 {
     
@@ -51,18 +74,29 @@ namespace lifecycle_manager_namespace
         AS_Status currentASStatus;
         DV_Status currentDVStatus;
 
-        // std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
+        // Configuration and Launch folders
+        std::string packageShareDirectory, configFolder, launchFolder;
 
-        // List of the node names that should run when having selected a mission
+        // List of the node names that should run when having selected a mission and are managed by this Lifecycle Manager.
         std::vector<std::string> nodeList;
 
+        /*
+            The first 2 dictionaries are used for the get_state and change_state services that the lifecycle nodes provide
+            automatically upon creation. The 3rd dictionary is used to load the configuration file to each node that it 
+            manages.
+        */
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedPtr> lifecycleGetStateMap;
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedPtr> lifecycleChangeStateMap;
+        std::unordered_map<std::string, rclcpp::AsyncParametersClient::SharedPtr> parameterClients;
 
         rclcpp::Service<custom_msgs::srv::DriverlessStatus>::SharedPtr dvStatusService_;
 
+        // Timer to check if the nodes that we are managing are still alive
+        rclcpp::TimerBase::SharedPtr heartbeatTimer;
+
         void initializeServices();
         void initializeLifecycleClients(std::vector<std::string> nodeList);
+        void loadConfigurationFileToNode(std::string nodeName, std::string configFile);        
 
         /*
             Functions for controlling the lifecycle nodes, individually. Each lifecycle node creates two major services:
@@ -81,7 +115,7 @@ namespace lifecycle_manager_namespace
         bool verifyDVState();
         void loadParameters();
 
-        // 4 Main Functions for controlling the whole pipeline of P23
+        // 4 Main Functions for controlling the whole state machine of P23
         bool LV_On();
         bool Mission_Selected(Mission mission);
         bool DV_Ready();

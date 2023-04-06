@@ -1,30 +1,17 @@
-#include "rclcpp/rclcpp.hpp"
-#include "rmw/qos_profiles.h"
+#include <rmw/qos_profiles.h>
 #include <rclcpp/qos.hpp>
 
-// #include <rclcpp_lifecycle/rclcpp_lifecycle.hpp>
+#include "velocity_estimation_handler.h"
 
-#include "lifecycle_velocity_estimation_handler.hpp"
-
+// TODO: detect when vectornav goes into mode 2: INS Tracking
 
 namespace ns_vel_est
 {
-LifecycleVelocityEstimationHandler::LifecycleVelocityEstimationHandler(): LifecycleNode("velocity_estimation"), estimator_{ this } {
-    RCLCPP_INFO(rclcpp::get_logger(), "Launched Lifecycle Velocity Estimation node");
-
-    // We dont' care about the lost precision of int division, wall_timer gets int values anyway...
-    // Don't need timer anymore, node gets activated by master callback
-    // timer_ = create_wall_timer(std::chrono::milliseconds(1000 / node_frequency_), std::bind(&LifecycleVelocityEstimationHandler::timerCallback, this));
-    RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimator is Online (but not configured)");
-}
-
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
-    on_configure(const rclcpp_lifecycle::State &state)
-{
-    RCLCPP_INFO(get_logger(), "Configuring Lifecycle Velocity Estimation node");
-
+VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimation_node"), estimator_{ this } {
+    RCLCPP_INFO(this->get_logger(), "Initializing Velocity Estimation node");
     loadParameters();
+
+    pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
     cli_ = create_client<custom_msgs::srv::GetFrequencies>("get_frequencies");
 
     // Initialize the states object and set the time step
@@ -34,7 +21,6 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
         rclcpp::shutdown();
         return;
     }
-
     estimator_.setDeltaTime(1.0 / node_frequency_);
     estimator_.init();
 
@@ -47,50 +33,17 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
     // Initialize the measurement and update vector with zeros
     measurement_vector_.setZero();
     updated_sensors_.fill(false);
-
-    RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimation Configured!");
-
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-}
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
-    on_activate(const rclcpp_lifecycle::State &state) 
-{
-    RCLCPP_INFO(get_logger(), "Activating Lifecycle Velocity Estimation node");
-
     setSubscribers();
-    pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
 
-    RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimation Activated!");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    // We dont' care about the lost precision of int division, wall_timer gets int values anyway...
+    // Don't need timer anymore, node gets activated by master callback
+    // timer_ = create_wall_timer(std::chrono::milliseconds(1000 / node_frequency_), std::bind(&VelocityEstimationHandler::timerCallback, this));
+
+    RCLCPP_INFO(get_logger(), "Velocity Estimator is Online");
 }
-
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
-    on_deactivate(const rclcpp_lifecycle::State &state) 
-{
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-}
-
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
-    on_cleanup(const rclcpp_lifecycle::State &state) 
-{
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-}
-
-rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn 
-    on_shutdown(const rclcpp_lifecycle::State &state) 
-{
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-}
-
-
-
-
 
 // Set node subscribers
-void LifecycleVelocityEstimationHandler::setSubscribers() {
+void VelocityEstimationHandler::setSubscribers() {
     using std::placeholders::_1;
 
     // Setting the quality of service for the subscribers to sensor data. This has a smaller buffer
@@ -100,28 +53,28 @@ void LifecycleVelocityEstimationHandler::setSubscribers() {
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
 
     vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vn_300/raw/ins",
-        sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::velocityCallback, this, _1));
+        sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1));
     //
     // vn_attitude_sub_ = create_subscription<vectornav_msgs::msg::AttitudeGroup>("vn_300/raw/attitude",
-    // sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::attitudeCallback, this, _1));
+    // sensor_qos, std::bind(&VelocityEstimationHandler::attitudeCallback, this, _1));
     //
     vn_imu_sub_ = create_subscription<vectornav_msgs::msg::ImuGroup>("vn_200/raw/imu",
-        sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::imuCallback, this, _1));
+        sensor_qos, std::bind(&VelocityEstimationHandler::imuCallback, this, _1));
     //
     front_wheel_encoder_sub_ = create_subscription<custom_msgs::msg::WheelSpeed>("canbus/front_hall_sensors",
-        sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::frontWheelSpeedCallback, this, _1));
+        sensor_qos, std::bind(&VelocityEstimationHandler::frontWheelSpeedCallback, this, _1));
     //
     rear_wheel_encoder_sub_ = create_subscription<custom_msgs::msg::WheelSpeed>("canbus/rear_hall_sensors",
-        sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::rearWheelSpeedCallback, this, _1));
+        sensor_qos, std::bind(&VelocityEstimationHandler::rearWheelSpeedCallback, this, _1));
     //
     steering_sub_ = create_subscription<custom_msgs::msg::SteeringAngle>("canbus/steering_angle",
-        sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::steeringCallback, this, _1));
+        sensor_qos, std::bind(&VelocityEstimationHandler::steeringCallback, this, _1));
     //
     master_sub_ = create_subscription<custom_msgs::msg::NodeSync>("saltas_clock", 10,
-        std::bind(&LifecycleVelocityEstimationHandler::masterCallback, this, _1));
+        std::bind(&VelocityEstimationHandler::masterCallback, this, _1));
 }
 
-void LifecycleVelocityEstimationHandler::publishResults() {
+void VelocityEstimationHandler::publishResults() {
     constexpr static std::array<int, 3> outputs{ StateVx, StateVy, StateVyaw };
     const StateVector pub_state{ estimator_.getState() };
     const StateMatrix pub_cov{ estimator_.getStateCovariance() };
@@ -154,7 +107,7 @@ void LifecycleVelocityEstimationHandler::publishResults() {
     pub_->publish(msg);
 }
 
-int LifecycleVelocityEstimationHandler::getNodeFrequency() {
+int VelocityEstimationHandler::getNodeFrequency() {
     using namespace std::chrono_literals;
 
     // Instead of a timer we get the node frequency from the mater node with the following client request
@@ -191,7 +144,7 @@ int LifecycleVelocityEstimationHandler::getNodeFrequency() {
     }
 }
 
-Eigen::Matrix<double, 3, 3> LifecycleVelocityEstimationHandler::getRotationMatrix(double roll, double pitch, double yaw) {
+Eigen::Matrix<double, 3, 3> VelocityEstimationHandler::getRotationMatrix(double roll, double pitch, double yaw) {
     // Returns the rotation matrix of the angles specified. Input angles should be in degrees.
     roll = roll * M_PI / 180.0;
     pitch = pitch * M_PI / 180.0;
@@ -207,7 +160,7 @@ Eigen::Matrix<double, 3, 3> LifecycleVelocityEstimationHandler::getRotationMatri
 
 // ROS Callback Functions
 
-void LifecycleVelocityEstimationHandler::masterCallback(const custom_msgs::msg::NodeSync::SharedPtr msg) {
+void VelocityEstimationHandler::masterCallback(const custom_msgs::msg::NodeSync::SharedPtr msg) {
     if (!msg->exec_velocity)
     {
         return;
@@ -237,7 +190,7 @@ void LifecycleVelocityEstimationHandler::masterCallback(const custom_msgs::msg::
     // RCLCPP_INFO_STREAM(get_logger(), "\n-- Execution Completed --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
-void LifecycleVelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg) {
+void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg) {
     // When in mode 0 or mode 3 we still get messages in the topics but the values are 0, messing up the filter, so we ignore them instead
     if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3))
     {
@@ -260,12 +213,12 @@ void LifecycleVelocityEstimationHandler::velocityCallback(const vectornav_msgs::
     }
 }
 
-// void LifecycleVelocityEstimationHandler::attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg) {
+// void VelocityEstimationHandler::attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg) {
 //     // NOTE: see if yaw, pitch, roll measurement could be useful for something
        // automatic calculation of euler angles for rotation matrices? Possibly it would only work for vn_300. 
 // }
 
-void LifecycleVelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg) {
+void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg) {
     // Write measurements to corresponding node vector
     Eigen::Matrix<double, 3, 1> yaw_rate_vec{};
     yaw_rate_vec << static_cast<double>(msg->angularrate.x), static_cast<double>(msg->angularrate.y), static_cast<double>(msg->angularrate.z);
@@ -290,7 +243,7 @@ void LifecycleVelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::
     }
 }
 
-void LifecycleVelocityEstimationHandler::frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
+void VelocityEstimationHandler::frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
     double right_rpm{ static_cast<double>(msg->right_wheel) };
     double left_rpm{ static_cast<double>(msg->left_wheel) };
@@ -308,7 +261,7 @@ void LifecycleVelocityEstimationHandler::frontWheelSpeedCallback(const custom_ms
     updated_sensors_[FrontWheelEncoders] = true;
 }
 
-void LifecycleVelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
+void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
     // We take the average of the two wheels
     double right_rpm{ static_cast<double>(msg->right_wheel) };
     double left_rpm{ static_cast<double>(msg->left_wheel) };
@@ -326,14 +279,14 @@ void LifecycleVelocityEstimationHandler::rearWheelSpeedCallback(const custom_msg
     updated_sensors_[RearWheelEncoders] = true;
 }
 
-void LifecycleVelocityEstimationHandler::steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg) {
+void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg) {
     // 3.17 is the gear ratio of the steering rack
     // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
     input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad
 }
 
 // Loads the node parameters from the .yaml file
-void LifecycleVelocityEstimationHandler::loadParameters() {
+void VelocityEstimationHandler::loadParameters() {
     declare_parameter<int>("frequency", 50);
 
     declare_parameter<std::vector<double>>("initial_state_vector",
@@ -381,13 +334,3 @@ void LifecycleVelocityEstimationHandler::loadParameters() {
     declare_parameter<double>("rear_axle", 1.0);
 }
 } // namespace ns_vel_est
-
-int main(int argc, char* argv[]) {
-    rclcpp::init(argc, argv);
-
-    ns_vel_est::LifecycleVelocityEstimationHandler lifecycleVelocityEstimationNode{};
-
-    rclcpp::spin(lifecycleVelocityEstimationNode.get_node_base_interface());
-    rclcpp::shutdown();
-    return 0;
-}

@@ -6,9 +6,10 @@
 
 /*
     TODO List:
-    3. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
-    4. Convert data to be sent to VCU to byte arrays.
-    5. Write the launch sripts and find a smart way to control them.
+    1. Write a callback to receive controls message, convert it to the needed scale and send it to the canbus node. This
+        means that controls need to be complete first.
+    2. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
+    3. Convert data to correct scale before senting it to VCU in byte arrays.
 */
 
 namespace p23_status_namespace
@@ -23,6 +24,14 @@ namespace p23_status_namespace
         setPublishers();
 
         RCLCPP_INFO(get_logger(), "P23 Status Node Initialized");
+
+        /*
+            We need to get the Lifecycle Manager to an LV_ON state. This will ensure that every node is alive but unconfigured.
+            The configuration will happen when the Mission Selected DV Change happens.
+        */
+
+        RCLCPP_INFO(get_logger(), "Sending LV_ON state change");
+        // changeDVStatus(LV_ON);
     }
 
     void P23StatusNode::initializeNode()
@@ -53,7 +62,8 @@ namespace p23_status_namespace
 
         /*
             Initialize Timers. Slow VCU communication is set at 10Hz, Medium VCU communication is set at 20Hz. Controls communication
-            should be done as soon as new control decisions are made (ASAP). Sensor Checkups are set at 1Hz (temporarily, we will see)
+            should be done as soon as new control decisions are made (ASAP). Sensor Checkups are set at 1Hz (temporarily, we will see).
+            Might add a CPU/GPU temperature checkup.
         */
 
         sensorCheckupTimer_ = create_wall_timer(std::chrono::milliseconds(1000), std::bind(&P23StatusNode::checkSensors, this));
@@ -106,7 +116,7 @@ namespace p23_status_namespace
     void P23StatusNode::setServices()
     {
         // Set a service to change DV Status and to receive IMU Mode
-        p23_status_client_ = create_client<custom_msgs::srv::DriverlessStatus>("lifecycle_manager/driverless_status");
+        p23_status_client_ = create_client<custom_msgs::srv::DriverlessStatus>("lifecycle_manager/change_driverless_status");
         ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("vn_300/update_ins_mode");
     }
 
@@ -117,26 +127,13 @@ namespace p23_status_namespace
 
         currentMission = static_cast<Mission>(msg->mission_selected);
 
-        switch(currentMission){
-            case(ACCELERATION):
-                break;
-            case(SKIDPAD):
-                break;
-            case(TRACKDRIVE):
-                break;
-            case(EBS_TEST):
-                break;
-            case(INSPECTION):
-                break;
-            case(AUTOX):
-                break;
-            case(MANUAL):
-                //bash script that shuts down pc in 1 minute (Tha doumee)
-                break;
+        if (currentMission == MANUAL) {
+            //Shutdown the System
         }
-        
+
+        // changeDVStatus might need to become blocking. Will see.
+        // INS Status can (and should) remain non-blocking
         changeDVStatus(MISSION_SELECTED);
-        // Load the correct configuration files depending on the mission
     }
 
     void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::SharedPtr msg)
@@ -145,6 +142,7 @@ namespace p23_status_namespace
 
         switch(statusReceived) {
             case(AS_OFF):
+                // Error Handling point
                 RCLCPP_INFO(get_logger(), "Den paizei re...");
                 break;
             case(AS_READY):
@@ -159,9 +157,11 @@ namespace p23_status_namespace
                 RCLCPP_INFO(get_logger(), "Den paizei re... egw ta stelnw afta");
                 break;
             case(AS_EMERGENCY):
+                // Error Handling point
                 RCLCPP_INFO(get_logger(), "H egw ekana malakia, h oi eletronix kapsane kouti :(");
                 break;    
         }
+
         currentASStatus = statusReceived;
     }
 
@@ -174,7 +174,8 @@ namespace p23_status_namespace
         while (!ins_mode_client_->wait_for_service(1s))
         {
             if (!rclcpp::ok())
-            {
+            {   
+                // Error-Handling point
                 return;
             }
             RCLCPP_INFO(get_logger(), "INS Service not available, waiting...");
@@ -185,7 +186,7 @@ namespace p23_status_namespace
         auto response_received_callback = [this](ServiceResponseFuture future) {
             auto result = future.get();
             insMode = result.get()->ins_mode;
-            RCLCPP_INFO(get_logger(), "Received INS Mode from Vectornav");
+            RCLCPP_INFO(get_logger(), "Received INS Mode from Vectornav %u", insMode);
         };
 
         auto future_result = ins_mode_client_->async_send_request(request, response_received_callback);
@@ -204,20 +205,25 @@ namespace p23_status_namespace
         if (newStatus == MISSION_SELECTED){
             request->mission.id = currentMission;
             request->mission.label = missionList[currentMission];
+            RCLCPP_INFO(get_logger(), "Mission Selected is %s", missionList[currentMission].c_str());
+
         }
 
         if ((newStatus == DV_READY) || (newStatus == DV_DRIVING)) {
             RCLCPP_INFO(get_logger(), "Want to change to DV_READY or DV_DRIVING --> CHECK INS MODE");
             while(insMode != 2) {
+                // Error-Handling point
                 RCLCPP_INFO(get_logger(), "IMU Still not in mode 2. Current mode: %u",insMode);
             }   
         }
 
+        RCLCPP_INFO(get_logger(), "Sending a %s request to Lifecycle Manager", driverlessStatusList[newStatus].c_str());
+
         while (!p23_status_client_->wait_for_service(1s))
         {
-            //pinw polla kokoria
             if (!rclcpp::ok())
-            {
+            {   
+                // Error-Handling point
                 return;
             }
             RCLCPP_INFO(get_logger(), "Lifecycle Manager Service not available, waiting...");
@@ -226,8 +232,9 @@ namespace p23_status_namespace
         // Send request to Lifecycle Manager
         using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedFuture;
         auto response_received_callback = [this, newStatus](ServiceResponseFuture future) {
+
             auto result = future.get();
-            RCLCPP_INFO(get_logger(), "Received result from Lifecycle Manager Service");
+            RCLCPP_INFO(get_logger(), "Received result from Lifecycle Manager Service for %s request", driverlessStatusList[newStatus].c_str());
 
             bool success = result.get()->success;
 
@@ -241,9 +248,11 @@ namespace p23_status_namespace
             else
             {
                 RCLCPP_INFO(get_logger(), "Could not change Driverless Status to: %s", driverlessStatusList[newStatus].c_str());
+                // Error-Handling point
             }
         };
 
         auto future_result = p23_status_client_->async_send_request(request, response_received_callback);
+        RCLCPP_INFO(get_logger(), "%s request sent to Lifecycle Manager, waiting for response...", driverlessStatusList[newStatus].c_str());
     }
 }

@@ -39,6 +39,3 @@ def generate_launch_description():
 
     ld = LaunchDescription(ldList)
     return ld
-
-
-    

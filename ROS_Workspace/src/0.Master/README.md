@@ -7,15 +7,15 @@
 ## Saltas Node
 Package Name: **saltas**.
 
-Τιμητικό όνομα για τον αρχηγό της ομάδας, μεγάλη η χάρη του. Orchistrates every ROS node. 
+Τιμητικό όνομα για τον αρχηγό της ομάδας, μεγάλη η χάρη του. 
 
-## CAN2USB
-Θα μεταφερθεί εδώ
+Sets the running frequency of the Velocity Estimation and Perception Nodes
 
-## P23Messages
+## P23 Messages
 Package Name: **custom_msgs**
 
-Θα μεταφερθούν εδώ
+## P23 Status Node
+Package Name: **p23_status**
 
-## Mission Selector
-θα συζητηθεί αργότερα
+## Lifecycle Manager
+Package Name: **lifecycle_manager**

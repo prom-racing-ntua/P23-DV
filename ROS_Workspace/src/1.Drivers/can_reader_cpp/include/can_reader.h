@@ -63,7 +63,7 @@ namespace can_reader_namespace {
             void sendSystemState(const custom_msgs::msg::CanSystemState::SharedPtr msg);
             void sendVehicleVariables(const custom_msgs::msg::CanVehicleVariables::SharedPtr msg);
             void sendControlsCommand(const custom_msgs::msg::CanControlCommand::SharedPtr msg);
-            int writeBufferToSerial(int id, int buffer[], size_t bytesToSend);
+            int writeBufferToSerial(uint8_t buffer[], size_t bytesToSend);
 
             CanMessage * extract_message(unsigned int *buf);
             void read2byte(unsigned char *buf, unsigned int *to, int n);

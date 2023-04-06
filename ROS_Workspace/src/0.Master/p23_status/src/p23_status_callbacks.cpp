@@ -19,12 +19,12 @@ namespace p23_status_namespace
         accelerationY = static_cast<double>(msg->acceleration_y);
     }
 
-    // void P23StatusNode::updateSLAMInformation()
+    // void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::Slam::SharedPtr msg)
     // {
 
     // }
 
-    // void P23StatusNode::updateControlsInput()
+    // void P23StatusNode::updateControlsInput(const custom_msgs::msg::Controls::SharedPtr msg)
     // {
 
         // Send updated inputs to VCU
@@ -34,18 +34,21 @@ namespace p23_status_namespace
     void P23StatusNode::checkSensors()
     {
         //For IMU, request from Vectornav the IMU Mode Status
-        // requestINSStatus();
+        requestINSStatus();
     }
 
     void P23StatusNode::PCtoVCU_slow()
     {
-        /*
-            Should send information on a 10Hz refresh rate. The info sent are the ones that are not heavily important for the car to function.
-            These are: MissionFinished(bool), LapCounter(unsigned 4-bit), Standstill(bool), PC Error(bool), Cones Count actual(unsigned) and Cones Count All(unsigned).
-            First 4 are 1 byte, Cones count actual is 1 byte and cones count all is 2 bytes
-        */
+        custom_msgs::msg::CanSystemState systemStateMsg;
 
-       // TODO: Implement this to the CANBUS writer
+         systemStateMsg.mission_finished = missionFinished;
+         systemStateMsg.standstill = standstill;
+         systemStateMsg.pc_error = pcError;
+         systemStateMsg.lap_counter = currentLap;
+         systemStateMsg.cones_count_actual = conesActual;
+         systemStateMsg.cones_count_all = conesCountAll;
+
+         canbus_system_state_publisher_->publish(systemStateMsg);
     }
 
     void P23StatusNode::PCtoVCU_medium()
@@ -56,8 +59,14 @@ namespace p23_status_namespace
 
             Each one is 2 bytes (LSB then MSB)
         */
+       custom_msgs::msg::CanVehicleVariables vehicleVariablesMsg;
 
-       // TODO: Implement this to the CANBUS writer
+       // These are obviously wrong, just a placeholder for the actual values.
+       vehicleVariablesMsg.lat_accel = accelerationY/512;
+       vehicleVariablesMsg.long_accel = accelerationX/512;
+       vehicleVariablesMsg.yaw_rate = yawRate/128;
+    
+       canbus_vehicle_variables_publisher_->publish(vehicleVariablesMsg);
     }
 
     /*
@@ -67,6 +76,10 @@ namespace p23_status_namespace
 
     void P23StatusNode::PCtoVCU_controls()
     {
+        custom_msgs::msg::CanControlCommand controlCommandMsg;
 
+        // Need to fill this out (when the control node is done)
+
+        canbus_controls_publisher_->publish(controlCommandMsg);
     }
 }

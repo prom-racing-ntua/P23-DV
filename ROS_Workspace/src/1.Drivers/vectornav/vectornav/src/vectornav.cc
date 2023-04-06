@@ -27,6 +27,7 @@
 #include "vectornav_msgs/msg/imu_group.hpp"
 #include "vectornav_msgs/msg/ins_group.hpp"
 #include "vectornav_msgs/msg/time_group.hpp"
+#include "custom_msgs/srv/ins_mode.hpp"
 
 // VectorNav libvncxx
 #include "vn/compositedata.h"
@@ -221,6 +222,23 @@ private:
     return (true);
   }
 #endif
+  
+  /*
+     Create a service to update the INS mode for the P23 Status Node.
+  */
+
+  rclcpp::Service<custom_msgs::srv::InsMode>::SharedPtr update_ins_service_ = create_service<custom_msgs::srv::InsMode>(
+      std::string("vn_300/update_ins_mode"),
+      std::bind(&Vectornav::updateInsMode, this, std::placeholders::_1, std::placeholders::_2)
+  );
+  
+  uint currentInsMode;
+
+  void updateInsMode(const std::shared_ptr<custom_msgs::srv::InsMode::Request> request,
+    std::shared_ptr<custom_msgs::srv::InsMode::Response> response)
+  {
+    response->ins_mode = currentInsMode;
+  }
 
   /**
    * Periodically check for connection drops and try to reconnect
@@ -1021,6 +1039,9 @@ private:
     if (compositeData.hasInsStatus())
     {
       msg.insstatus = toMsg(compositeData.insStatus());
+      
+      // Update Ins mode
+      node->currentInsMode = static_cast<uint>(msg.insstatus.mode);
     }
 
     if (compositeData.hasPositionEstimatedLla())

@@ -53,7 +53,8 @@ namespace p23_status_namespace
 
         // Thewrw oti conesActual einai oi kwnoi tou sygkekrimenou lap
         // From SLAM
-        uint32_t conesCountAll, conesActual;
+        uint16_t conesCountAll;
+        uint8_t conesActual;
         int currentLap;
 
         // From Velocity Estimation - Speed Actual
@@ -109,14 +110,13 @@ namespace p23_status_namespace
         void updateASStatus(const custom_msgs::msg::AutonomousStatus::SharedPtr msg);
         void updateVelocityInformation(const custom_msgs::msg::VelEstimation::SharedPtr msg);
         // void updateSLAMInformation(const custom_msgs::msg::kati::SharedPtr msg);
-        // void updateControlsInformation(const custom_msgs::msg::kati::SharedPtr msg);
+        // void updateControlsInput(const custom_msgs::msg::kati::SharedPtr msg);
 
         // Callbacks that send information to the VCU
         void PCtoVCU_slow();
         void PCtoVCU_medium();
         void PCtoVCU_controls();
 
-        //TODO: Include camera checks, imu checks etc...
         void checkSensors();
         void requestINSStatus();
         void changeDVStatus(DV_Status newStatus);

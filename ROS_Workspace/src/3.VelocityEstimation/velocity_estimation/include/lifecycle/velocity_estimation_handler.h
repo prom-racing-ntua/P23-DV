@@ -1,11 +1,9 @@
-#ifndef LIFECYCLE_VELOCITY_ESTIMATION_HANDLER_HPP
-#define LIFECYCLE_VELOCITY_ESTIMATION_HANDLER_HPP
+#ifndef VELOCITY_ESTIMATION_HANDLER_H
+#define VELOCITY_ESTIMATION_HANDLER_H
 
 #include <chrono>
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
-
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
 
 // Include custom vectornav messages
 #include "vectornav_msgs/msg/attitude_group.hpp"
@@ -24,7 +22,7 @@ namespace ns_vel_est
 // Forward declaration of the VelocityEstimator class so it can be used for the estimator_ member variable
 class VelocityEstimator;
 
-class LifecycleVelocityEstimationHandler: public rclcpp_lifecycle::LifecycleNode {
+class VelocityEstimationHandler: public rclcpp::Node {
 private:
     int node_frequency_;
     unsigned long global_index_;
@@ -74,8 +72,8 @@ private:
     void steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg);
 
 public:
-    explicit LifecycleVelocityEstimationHandler();
-    //~LifecycleVelocityEstimationHandler();
+    explicit VelocityEstimationHandler();
+    //~VelocityEstimationHandler();
     void publishResults();
 
     // Setters
