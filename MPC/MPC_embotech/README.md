@@ -25,3 +25,13 @@ export PYTHONPATH="path/to/embotech":$PYTHONPATH
 python3 P23-DV/MPC/MPC_embotech/mpc_prom.py
 ```
 
+or (for updated version)
+
+```
+pip3 install -r P23-DV/MPC/MPC_embotech/requirements.txt
+sudo apt-get install gcc libomp-dev
+export PYTHONPATH="path/to/embotech":$PYTHONPATH
+python3 P23-DV/MPC/MPC_embotech/mpc_prom_v2.py
+```
+
+

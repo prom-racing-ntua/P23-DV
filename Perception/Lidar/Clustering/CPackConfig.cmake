@@ -30,7 +30,7 @@ set(CPACK_DEFAULT_PACKAGE_DESCRIPTION_SUMMARY "lidar_cluster_cpp built using CMa
 set(CPACK_GENERATOR "STGZ;TGZ;TZ")
 set(CPACK_INSTALL_CMAKE_PROJECTS "/home/subdiduntil2/P23-DV/Perception/Lidar/Clustering;lidar_cluster_cpp;ALL;/")
 set(CPACK_INSTALL_PREFIX "/usr/local")
-set(CPACK_MODULE_PATH "/usr/lib/x86_64-linux-gnu/cmake/pcl/Modules;/usr/lib/cmake/vtk-7.1")
+set(CPACK_MODULE_PATH "/usr/local/share/pcl-1.13/Modules")
 set(CPACK_NSIS_DISPLAY_NAME "lidar_cluster_cpp 0.1.0")
 set(CPACK_NSIS_INSTALLER_ICON_CODE "")
 set(CPACK_NSIS_INSTALLER_MUI_ICON_CODE "")
