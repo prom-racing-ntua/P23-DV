@@ -41,6 +41,10 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
     selected.reserve(full_map.size());
     for (Cone cone : full_map)
     {
+        if(cone.color!=0 && cone.color!=1)
+        {
+            continue;
+        }
         if (CGAL::squared_distance(cone.coords, position) <= radius_small * radius_small)
         {
             selected.push_back(cone);
