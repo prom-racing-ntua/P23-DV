@@ -10,7 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
-find_package(lifecycle_msgs REQUIRED)
+# find_package(lifecycle_msgs REQUIRED)
 
 # executable commands
 add_executable(${PROJECT_NAME} src/main.cpp src/lidar.cpp)
@@ -24,7 +24,7 @@ install(TARGETS
 
 # install other directories to share directory
 install(DIRECTORY
-  config launch
+  config
   DESTINATION share/${PROJECT_NAME}/
 )
 

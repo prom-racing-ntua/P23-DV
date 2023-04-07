@@ -15,30 +15,31 @@
 #include "custom_msgs/msg/node_sync.hpp"
 #include <math.h>
 
-namespace lidar_namespace {
+namespace lidar_namespace
+{
 
-    struct Point {
-        double x,y,z;
-    };
+struct Point {
+    double x, y, z;
+};
 
-    class LidarNode: public rclcpp::Node {
-        private:
-            double da;
-            double horizontal_resolution;
-            void declare_params();
-            int rj;
-            std::unordered_map<int, std::unordered_map<int, std::vector<std::tuple<Point, double, double>>>> segments;
-            std::unordered_map<int, std::unordered_map<int, std::array<double, 2>>> prototype_points;
+class LidarNode: public rclcpp::Node {
+private:
+    double da;
+    double horizontal_resolution;
+    void declare_params();
+    int rj;
+    std::unordered_map<int, std::unordered_map<int, std::vector<std::tuple<Point, double, double>>>> segments;
+    std::unordered_map<int, std::unordered_map<int, std::array<double, 2>>> prototype_points;
 
-            rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_sub_;
 
-        public:
-            LidarNode();
-            ~LidarNode();
+public:
+    LidarNode();
+    ~LidarNode();
 
-            void segment_point_cloud(const sensor_msgs::msg::PointCloud2 msg);
+    void segment_point_cloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
-    };
+};
 }
 
 
