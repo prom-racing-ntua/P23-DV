@@ -94,15 +94,15 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     std::vector<my_edge> selected_edges;
 
     Point direction_from_position(position.x() + direction.dx(), position.y() + direction.dy());
-    
+
 
     Face_handle starting_face = triangulation_object.locate(position);
-    
+
     std::pair<std::vector<my_edge>, int> best_best_path;
 
     if (triangulation_object.is_infinite(starting_face))
     {
-        
+
         Line_face_circulator lfc = triangulation_object.line_walk(position, direction_from_position);
 
         Face_handle first_face = --lfc;
@@ -123,34 +123,34 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         Segment_2 seg_2(second_face->vertex((index_2 + 1) % 3)->point(), second_face->vertex((index_2 + 2) % 3)->point());
         float dist_1 = CGAL::squared_distance(seg_1, position);
         float dist_2 = CGAL::squared_distance(seg_2, position);
-        my_edge starting_edge(Cone(Point(0,0),-1),Cone(Point(0,0),-1));
+        my_edge starting_edge(Cone(Point(0, 0), -1), Cone(Point(0, 0), -1));
         if (dist_1 < dist_2)
         {
             starting_face = first_face->neighbor(index_1);
             Point other_a = first_face->vertex((index_1 + 1) % 3)->point();
             Point other_b = first_face->vertex((index_1 + 2) % 3)->point();
-            starting_edge =my_edge(Cone(other_a, cone_lookup[other_a]), 
-            Cone(other_b, cone_lookup[other_b]));
+            starting_edge = my_edge(Cone(other_a, cone_lookup[other_a]),
+                Cone(other_b, cone_lookup[other_b]));
         }
         else
         {
             starting_face = second_face->neighbor(index_2);
             Point other_a = second_face->vertex((index_2 + 1) % 3)->point();
             Point other_b = second_face->vertex((index_2 + 2) % 3)->point();
-            starting_edge =my_edge(Cone(other_a, cone_lookup[other_a]), 
-            Cone(other_b, cone_lookup[other_b]));
+            starting_edge = my_edge(Cone(other_a, cone_lookup[other_a]),
+                Cone(other_b, cone_lookup[other_b]));
         }
 
-        
+
         not_visited_faces.erase(starting_face);
-        
+
         best_best_path = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face, starting_face, 0);
     }
     else
     {
         Triangle starting_triangle = triangulation_object.triangle(starting_face);
         Point other_a, other_b;
-
+        bool flag = false;
         // vector(position, direction_from_position) parallel to direction
 
         not_visited_faces.erase(starting_face);
@@ -181,7 +181,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         }
         if (count_invalid == 3)
         {
-
+            flag = true;
 
             //std::cout << "all three edges invalid" << std::endl;
             Ray_2 pos_vector(position, direction_from_position);
@@ -308,7 +308,7 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point& 
     else if (not_visited_faces.count(current_face->neighbor((idx_opposite + 2) % 3)) != 0)
     {
         // BC=AB => (Xc-Xb, Yc-Yb) = (Xb - Xa, Yb - Ya) => 2Xb = Xc + Xa => Xc = 2Xb - Xa
-        
+
         best_of_b = find_best_path(starting_point, starting_direction, edge_2, best_of_b.first, not_visited_faces, current_face->neighbor((idx_opposite + 2) % 3), starting_face, current_depth + 1);
     }
 
@@ -379,19 +379,22 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge>& selected_e
         }
         total_length += length;
         if (length < maximum_distance && length > minimum_distance)length_cost += length_penalty * length;
-        else if (length > maximum_distance)length_cost += 5 * length_penalty * length;
+        else if (length > maximum_distance) return INT_MAX - 1;
         /* 3 */
         if (i == 0)
         {
             Point direction_from_position(starting_position.x() + starting_direction.dx(), starting_position.y() + starting_direction.dy());
             angle = std::abs(angle_point_2(direction_from_position, starting_position, selected_edges[i].midpoint()));
-            if (angle < maximum_angle && angle>minimum_edge_angle)angle_cost += angle_penalty * angle;
-            else if (angle > maximum_angle) angle_cost += 5 * angle_penalty * angle;
+            //if (angle < maximum_angle && angle>minimum_edge_angle)angle_cost += angle_penalty * angle;
+            //else if (angle > maximum_angle) return INT_MAX - 1;
+            angle_cost += angle_penalty * angle;
         }
         else if (i != total_number_of_edges - 1)
         {
             Point direction_from_position(2 * selected_edges[i].midpoint().x() - selected_edges[i - 1].midpoint().x(), 2 * selected_edges[i].midpoint().y() - selected_edges[i - 1].midpoint().y());
-            angle_cost += angle_penalty * std::abs(angle_point_2(direction_from_position, selected_edges[i].midpoint(), selected_edges[i + 1].midpoint()));
+            angle = std::abs(angle_point_2(direction_from_position, selected_edges[i].midpoint(), selected_edges[i + 1].midpoint()));
+            if (angle < maximum_angle && angle>minimum_edge_angle)angle_cost += angle_penalty * angle;
+            else if (angle > maximum_angle) return INT_MAX - 1;
         }
     }
     cost = color_cost + length_cost / total_number_of_edges + angle_cost / total_number_of_edges - total_length * total_length_reward;
@@ -406,6 +409,8 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge>& selected_e
         }
         std::cout<<std::endl<<cost<<"\t color: "<<color_cost<<"\t length penalty: "<<length_cost / total_number_of_edges<<"\tangle: "<<angle_cost / total_number_of_edges<<"\t length reward: "<<total_length * total_length_reward<<std::endl;
     }*/
+    std::cout << std::endl << cost << "\t color: " << color_cost << "\t length penalty: " << length_cost / total_number_of_edges << "\tangle: " << angle_cost / total_number_of_edges << "\t length reward: " << total_length * total_length_reward << std::endl;
+
     //if(std::abs(selected_edges[total_number_of_edges - 1].midpoint().y() + 1.26572) < 0.01 && total_number_of_edges == 21)std::cout<<"****^^^****"<<std::endl;
     return cost;
 }

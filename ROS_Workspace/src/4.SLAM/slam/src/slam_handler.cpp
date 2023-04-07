@@ -49,7 +49,7 @@ SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
     }
 
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
-    slam_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    slam_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
     // Set ROS objects
     rclcpp::SubscriptionOptions options;

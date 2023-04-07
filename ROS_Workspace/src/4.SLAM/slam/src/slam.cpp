@@ -327,7 +327,7 @@ gtsam::Key GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landma
 
 	if (observed_landmark.color == ConeColor::LargeOrange)
 	{
-		least_distance_square = std::pow(1.8 * association_distance_threshold_, 2);
+		least_distance_square = std::pow(1.5 * association_distance_threshold_, 2);
 	}
 
 	// Iterate through all of the cones in the current map. Only check cones of the same color

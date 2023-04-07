@@ -41,7 +41,7 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
     selected.reserve(full_map.size());
     for (Cone cone : full_map)
     {
-        if(cone.color!=0 && cone.color!=1)
+        if (cone.color != 0 && cone.color != 1)
         {
             continue;
         }
@@ -76,6 +76,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     std::cout << local_map.size() << std::endl;
     std::pair<std::vector<Point>, int> batch_output = waymaker.new_batch(local_map, current_position, Direction_2(Segment_2(current_position, current_direction)));
     std::vector<Point> waypoints(batch_output.first);
+    std::cout << "score: " << batch_output.second << '\n';
 
     custom_msgs::msg::WaypointsMsg for_pub;
     for_pub.count = waypoints.size();

@@ -40,10 +40,14 @@ Telemetry::Telemetry(): Node("telemetry") {
     landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
     marker_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
 
+    rclcpp::CallbackGroup::SharedPtr callback_group{ create_callback_group(rclcpp::CallbackGroupType::Reentrant) };
+    rclcpp::SubscriptionOptions options;
+    options.callback_group = callback_group;
+
     // Set subscribers
-    pose_subscriber_ = create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&Telemetry::pose_callback, this, _1));
-    map_subscriber_ = create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&Telemetry::map_callback, this, _1));
-    waypoints_subscriber_ = create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&Telemetry::waypoints_callback, this, _1));
+    pose_subscriber_ = create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&Telemetry::pose_callback, this, _1), options);
+    map_subscriber_ = create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&Telemetry::map_callback, this, _1), options);
+    waypoints_subscriber_ = create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&Telemetry::waypoints_callback, this, _1), options);
 }
 
 Telemetry::~Telemetry() {}
@@ -82,7 +86,7 @@ void Telemetry::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg) {
 }
 
 void Telemetry::map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
-    int id{ 1 };
+    int id{ 5 };
     visualization_msgs::msg::MarkerArray cones_array{};
     visualization_msgs::msg::Marker cone_marker{};
 
@@ -140,11 +144,28 @@ void Telemetry::map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg)
 }
 
 void Telemetry::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg) {
+    visualization_msgs::msg::Marker delete_path{};
+    visualization_msgs::msg::Marker delete_points{};
+
+    delete_path.header.frame_id = "map";
+    delete_path.header.stamp = now();
+    delete_path.ns = "my_ns";
+    delete_path.id = 1;
+    delete_path.action = visualization_msgs::msg::Marker::DELETE;
+
+    delete_points.header.frame_id = "map";
+    delete_points.header.stamp = now();
+    delete_points.ns = "my_ns";
+    delete_points.id = 2;
+    delete_points.action = visualization_msgs::msg::Marker::DELETE;
+
     visualization_msgs::msg::Marker path_marker{};
+    visualization_msgs::msg::Marker points{};
+
     path_marker.header.frame_id = "map";
     path_marker.header.stamp = now();
     path_marker.ns = "my_ns";
-    path_marker.id = 1000;
+    path_marker.id = 1;
 
     path_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
     path_marker.action = visualization_msgs::msg::Marker::ADD;
@@ -156,15 +177,33 @@ void Telemetry::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedP
     path_marker.color.b = 0.9922;
     path_marker.color.a = 1.0;
 
+    points.header.frame_id = "map";
+    points.header.stamp = now();
+    points.ns = "my_ns";
+    points.id = 2;
+
+    points.type = visualization_msgs::msg::Marker::POINTS;
+    points.action = visualization_msgs::msg::Marker::ADD;
+    points.pose.orientation.w = 1.0;
+    points.scale.x = 0.4;
+    points.scale.y = 0.4;
+
+    points.color.r = 0.0;
+    points.color.g = 0.0;
+    points.color.b = 0.0;
+    points.color.a = 1.0;
+
     for (auto point : msg->waypoints)
     {
         geometry_msgs::msg::Point p;
         p.x = point.y;
         p.y = point.x;
         p.z = 0.0;
-        path_marker.points.push_back(p);
-    }
 
+        path_marker.points.push_back(p);
+        points.points.push_back(p);
+    }
+    marker_publisher_->publish(points);
     marker_publisher_->publish(path_marker);
 }
 } // ns_telemetry
@@ -172,9 +211,13 @@ void Telemetry::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedP
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
-    auto telemetry_node = std::make_shared<ns_telemetry::Telemetry>();
-    rclcpp::spin(telemetry_node);
-    rclcpp::shutdown();
+    auto options{ rclcpp::ExecutorOptions() };
+    rclcpp::executors::MultiThreadedExecutor executor{ options, 3 };
 
+    auto telemetry_node = std::make_shared<ns_telemetry::Telemetry>();
+    executor.add_node(telemetry_node);
+    executor.spin();
+
+    rclcpp::shutdown();
     return 0;
 }
