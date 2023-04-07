@@ -469,7 +469,7 @@ def main():
             (model.npar*model.N,1))
         if(k>0):
             err_array.append(np.sqrt((problem["xinit"][0] - problem["all_parameters"][0][0])**2 + (problem["xinit"][1] - problem["all_parameters"][1][0])**2))
-            print("error array is:",err_array)
+            print("error array is:",err_array," ",np.max(err_array)," ",np.mean(err_array))
             # print("mean error is: ", np.mean(err_array))
         print("all_parameters are: ",problem["all_parameters"], np.shape(problem["all_parameters"]),type(problem["all_parameters"]))
 

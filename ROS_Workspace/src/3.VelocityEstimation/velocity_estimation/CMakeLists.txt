@@ -20,9 +20,8 @@ add_executable(${PROJECT_NAME} src/main.cpp src/velocity_estimation.cpp src/velo
 ament_target_dependencies(${PROJECT_NAME} rclcpp vectornav_msgs custom_msgs)
 
 # Lifecycle Velocity Estimation Node
-add_executable(lifecycle_velocity_estimation src/lifecycle_velocity_estimation_handler.cpp)
-ament_target_dependencies(lifecycle_velocity_estimation rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
-
+# add_executable(lifecycle_velocity_estimation src/lifecycle_velocity_estimation_handler.cpp src/velocity_estimation.cpp)
+# ament_target_dependencies(lifecycle_velocity_estimation rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
 
 # install excutables to lib directory
 install(TARGETS

@@ -1,0 +1,5 @@
+lidar_node:
+  ros__parameters:
+    #hor_res: 0.09
+    hor_res: 0.18
+    #hor_res:0.36

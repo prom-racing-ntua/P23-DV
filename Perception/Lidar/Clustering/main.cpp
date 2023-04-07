@@ -1,10 +1,19 @@
+#include <pcl/search/kdtree.h>
+#include <pcl/search/organized.h>
+#include <pcl/search/search.h>
+#include <pcl/pcl_base.h>
+#include <pcl/pcl_config.h>
+#include <pcl/pcl_macros.h>
+#include <vector>
+#include <cstdint>
+#include <Eigen/Core>
 #include <pcl/ModelCoefficients.h>
-#include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
+#include <pcl/PCLPointField.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -13,7 +22,9 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/crop_box.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <iomanip>
+#include "fast_euclidean_clustering.h"
+
 using namespace std;
 
 typedef pcl::PointXYZ PointT;
@@ -42,6 +53,7 @@ typedef pcl::PointCloud<PointT> PointCloudT;
             point.x = std::stof(row[7]);
             point.y = std::stof(row[8]);
             point.z = std::stof(row[9]);
+            // point.I = std::stof(row[])
             points.push_back(point);
 		}
 	}
@@ -58,7 +70,26 @@ typedef pcl::PointCloud<PointT> PointCloudT;
     return points;
 }
 
+// compute the number of expected points for cone object
+int num_expected_points(const pcl::PointXYZ &centre) {
+    double d = sqrt(centre.x * centre.x + centre.y * centre.y + centre.z * centre.z);
+    static double hc = 0.298;               // cone height (or 29.8)
+    static double wc = 0.30;               // cone width (or 2*7.4=14.8 -> remains to be measured)
+    static double rv = 0.0174533;  // angular resolution vertical at any freq (1° -> rad)
+    static double rh = 0.003141593; // angular resolution horizontal at 10Hz(0.18° -> rad)
+    static double rh2 = 0.006283185;  //angular resolution horizontal at 20Hz(0.36°  -> rad)
+    static double rh3 = 0.001570796; //angular resolution horizontal at 5Hz(0.36°  -> rad)
+
+    // compute and return number of expected points
+    double E = 0.5 * hc / (2 * d * tan(rv / 2)) * wc / (2 * d * tan(rh / 2));
+    return (int)E;
+}
+
 int main () {
+    // pcl::uindex_t index = 0;
+    std::cout << PCL_VERSION << std::endl; 
+     //parameters for time execution
+     clock_t start1, end1, start2, end2;
      // Read in the cloud data
      std::vector<PointT> pcd_csv;
      pcd_csv=reader_csv("lidar_ksi_30_3_23.csv");
@@ -82,8 +113,10 @@ int main () {
      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
      reader.read ("cloud_cluster_ksi.pcd", *cloud);
      std::cout << "PointCloud before filtering has: " << cloud->size () << " data points." << std::endl; 
+
+     start1 = clock(); //before lidar pipeline
     
-    double minX = -5.0;
+  double minX = -5.0;
 	double maxX = 5.0;
 
 	double minY = -15.0;
@@ -148,37 +181,91 @@ int main () {
        extract.setNegative (true);
        extract.filter (*cloud_f);
        *cloud_filtered = *cloud_f;
+       end1 = clock(); //before lidar pipeline
      
     writer.write<pcl::PointXYZ> ("cloud_cluster_segm.pcd", *cloud_filtered, false); //*
     
      // Creating the KdTree object for the search method of the extraction
+    //  start2 = clock(); //before lidar pipeline
      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
      tree->setInputCloud (cloud_filtered);
-   
      std::vector<pcl::PointIndices> cluster_indices;
-     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-     ec.setClusterTolerance(0.5); //parapanw simeia oso to auksanw (why tho??)
-     ec.setMinClusterSize(5);
-     ec.setMaxClusterSize(250);
-     ec.setSearchMethod (tree);
-     ec.setInputCloud (cloud_filtered);
-     ec.extract (cluster_indices);
+
+     //first method
+    //  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    //  ec.setClusterTolerance(0.5); //parapanw simeia oso to auksanw (why tho??)
+    //  ec.setMinClusterSize(5);
+    //  ec.setMaxClusterSize(250);
+    //  ec.setSearchMethod (tree);
+    //  ec.setInputCloud (cloud_filtered);
+    //  start2 = clock(); //before lidar pipeline
+    //  ec.extract (cluster_indices);
+    //  end2 = clock(); //before lidar pipeline
+
+     //faster method
+     start2 = clock(); //before lidar pipeline
+      FastEuclideanClustering<pcl::PointXYZ> fec;
+      fec.setInputCloud(cloud_filtered);
+      fec.setSearchMethod(tree);
+      fec.setMinClusterSize(5);
+      fec.setMaxClusterSize(250);
+      fec.setClusterTolerance(0.5);
+      fec.setQuality(0.0);
+      fec.segment (cluster_indices);
+      end2 = clock(); //before lidar pipeline
    
-     int j = 0;
-     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-     for (const auto& cluster : cluster_indices)
-     {
+     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>); //offical cluster object (to be returned)
+     for (const auto& cluster : cluster_indices) {
+       pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster_temp (new pcl::PointCloud<pcl::PointXYZ>); 
        for (const auto& idx : cluster.indices) {
-         cloud_cluster->push_back((*cloud_filtered)[idx]);
+         cloud_cluster_temp->push_back((*cloud_filtered)[idx]);
+        //  cloud_cluster->push_back((*cloud_filtered)[idx]);
        }
-     } 
+
+      // extract centroid of cluster
+      pcl::PointXYZ centre;
+      pcl::computeCentroid(*cloud_cluster_temp, centre); 
+
+      //whatever
+      double d = std::sqrt(centre.x * centre.x + centre.y * centre.y + centre.z * centre.z);
+      int expected = num_expected_points(centre);
+      std::cout << "num_expected_points = " << expected << std::endl;
+      std::cout << "num actual points   = " << cloud_cluster_temp->size() << std::endl;
+      std::cout << "distance to cone    = " << d << std::endl;
+
+      double thres = 0.5; //percentage threshold in order to de
+      if ((cloud_cluster_temp->size() > (1-thres)*expected) && (cloud_cluster_temp->size() < (1+thres)*expected)) {
+          for (const auto& idx : cluster.indices)
+            cloud_cluster->push_back((*cloud_filtered)[idx]);
+          std::cout << "i kept that sh*t" << std::endl;
+          std::cout << " " << std::endl;
+      }
+
+      else{
+        std::cout << "i left that sh*t" << std::endl;
+        std::cout << " " << std::endl;
+        continue;
+      }
+     }
+
     cloud_cluster->width = cloud_cluster->size ();
     cloud_cluster->height = 1;
     cloud_cluster->is_dense = true;
+    end2 = clock(); //before lidar pipeline
+    // end2 = clock();
+    double time_taken_segm = double(end1 - start1) / double(CLOCKS_PER_SEC);
+    double time_taken_clust = double(end2 - start2) / double(CLOCKS_PER_SEC);
+    cout << "Time taken for segm is : " << fixed
+         << time_taken_segm << std::setprecision(5);
+    cout << " secs " << endl;
+    std::cout << " " << std::endl;
+    cout << "Time taken for clust is : " << fixed
+         << time_taken_clust << std::setprecision(5);
+    cout << " secs " << endl;
+    std::cout << " " << std::endl;
     std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
     // ss << std::setw(4) << std::setfill('0') << j;
     writer.write<pcl::PointXYZ> ("cloud_cluster_final.pcd", *cloud_cluster, false); //*
-    j++; 
   return (0);
 }
