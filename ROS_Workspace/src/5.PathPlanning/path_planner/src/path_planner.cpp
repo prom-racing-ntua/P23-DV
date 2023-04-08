@@ -81,7 +81,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     //std::cout<<"("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
     std::pair<std::vector<Point>, int> batch_output = waymaker.new_batch(local_map, current_position, Direction_2(Segment_2(current_position, current_direction)));
     std::vector<Point> waypoints(batch_output.first);
-    std::cout << "score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
+    //std::cout << "score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
     //std::cout<<"("<<current_position.x()<<","<<current_position.y()<<"),("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
     //std::cout<<"theta = "<<theta<<std::endl;
     custom_msgs::msg::WaypointsMsg for_pub;

@@ -62,7 +62,7 @@ int angle_point_2(const Point &a, const Point &b, const Point &c)
 
 std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Cone> &local_map, const Point &position, const Direction_2 &direction)
 {
-    
+    /*
     std::cout << "____________ (" << position.x() << "," << position.y() << ")" << std::endl
               << '[';
 
@@ -79,7 +79,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
             std::cout << '(' << cone.coords.x() << ',' << cone.coords.y() << "),";
     }
     std::cout << ']' << std::endl;
-    
+    */
     // std::cout << local_map.size() << std::endl;
     triangulation_object.clear(); // faster than "smarter" methods
     cone_lookup.clear();
@@ -91,11 +91,11 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         triangulation_object.insert(cone.coords);
         cone_lookup[cone.coords] = cone.color;
     }
-
+    /*
     for (auto it = triangulation_object.finite_edges_begin(); it != triangulation_object.finite_edges_end(); it++)
     {
         std::cout << "polygon((" << triangulation_object.segment(it)[0].x() << "," << triangulation_object.segment(it)[0].y() << "),(" << triangulation_object.segment(it)[1].x() << "," << triangulation_object.segment(it)[1].y() << "))" << std::endl;
-    }
+    }*/
     // std::cout << "check_4" << std::endl;
     std::unordered_set<Face_handle> not_visited_faces;
 
