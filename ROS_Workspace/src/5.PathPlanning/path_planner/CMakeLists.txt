@@ -21,12 +21,10 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(custom_msgs REQUIRED)
 
 # CGAL and its components
 find_package( CGAL QUIET COMPONENTS  )
-
-find_package(custom_msgs REQUIRED)
-
 if ( NOT CGAL_FOUND )
 
   message(STATUS "This project requires the CGAL library, and will not be compiled.")
@@ -36,7 +34,6 @@ endif()
 
 # Boost and its components
 find_package( Boost REQUIRED )
-
 if ( NOT Boost_FOUND )
 
   message(STATUS "This project requires the Boost library, and will not be compiled.")
@@ -44,6 +41,33 @@ if ( NOT Boost_FOUND )
   return()  
 
 endif()
+
+include_directories(
+  include
+  custom_msgs
+)
+
+add_executable(${PROJECT_NAME} src/path_planner.cpp src/triangulation_cgal.cpp)
+ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs CGAL custom_msgs)
+
+#add_to_cached_list( CGAL_EXECUTABLE_TARGETS path_planner )
+
+#target_link_libraries(talker PRIVATE CGAL::CGAL )
+
+#SET(TARGET_SRC
+#  src/triangulation_cgal.cpp  
+#)
+
+install(TARGETS
+  ${PROJECT_NAME}
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  config launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -56,29 +80,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-include_directories(
-  include
-  custom_msgs
-)
-
-add_executable(path_planner src/path_planner.cpp src/triangulation_cgal.cpp)
-ament_target_dependencies(path_planner rclcpp std_msgs CGAL custom_msgs)
-
-#add_to_cached_list( CGAL_EXECUTABLE_TARGETS path_planner )
-
-#target_link_libraries(talker PRIVATE CGAL::CGAL )
-
-#SET(TARGET_SRC
-#  src/triangulation_cgal.cpp  
-#)
-
-install(TARGETS
-  path_planner
-  DESTINATION lib/path_planner)
-
-install(DIRECTORY
-  config launch
-  DESTINATION share/path_planner)
 
 
 ament_package()

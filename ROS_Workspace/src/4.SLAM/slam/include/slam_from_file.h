@@ -47,8 +47,6 @@ private:
     rclcpp::Publisher<custom_msgs::msg::LocalMapMsg>::SharedPtr map_publisher_;
     rclcpp::Publisher<custom_msgs::msg::PoseMsg>::SharedPtr pose_publisher_;
 
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr car_pose_publisher_;
     rclcpp::TimerBase::SharedPtr global_timer_;
 
     bool is_mapping_;
@@ -75,8 +73,6 @@ private:
 
     // Reads the next perception measurement from the specified file and inserts data into the perception struct
     bool readNextPerception();
-
-    void visualize();
 
     void run_slam();
 };
