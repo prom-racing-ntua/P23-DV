@@ -54,9 +54,10 @@ private:
   {
     std::cout<<"lidarCallback" << std::endl;
     if(m_sPublishType == "both" || m_sPublishType == "points"){
-      pcl_conversions::toPCL(rclcpp::Time(timestamp), cld->header.stamp);
+      // pcl_conversions::toPCL(rclcpp::Time(timestamp), cld->header.stamp);
       sensor_msgs::msg::PointCloud2 output;
       pcl::toROSMsg(*cld, output);
+      output.header.stamp = now();
       lidarPublisher->publish(output);
 #ifdef PRINT_FLAG
         std::cout.setf(ios::fixed);
