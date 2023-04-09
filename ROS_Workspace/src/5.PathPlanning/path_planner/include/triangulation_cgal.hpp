@@ -96,6 +96,7 @@ public:
     std::pair<std::vector<Point>, int> new_batch(const std::vector<Cone>&, const Point&, const Direction_2&);
     std::vector<Point> get_last_path() const;
     std::vector<Point> get_triangulation() const;
+    int get_batch_number()const;
     // sends message to stdout/stderr/log for debug purposes
     ~Triangulation();
 };

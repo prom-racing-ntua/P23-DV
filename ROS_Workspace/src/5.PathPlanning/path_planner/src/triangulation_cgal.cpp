@@ -200,6 +200,8 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         if (count_invalid == 3)
         {
             std::cout<<"all 3 invalid"<<std::endl;
+            std::cout<<position<<" "<<direction_from_position<<" "<<starting_triangle.vertex(0)<<" "<<starting_triangle.vertex(1)<<" "<<starting_triangle.vertex(2)<<std::endl;
+            return std::make_pair(empty_vector<Point>(),0);
             flag = true;
             /*
             // std::cout << "all three edges invalid" << std::endl;
@@ -265,6 +267,10 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
 std::vector<Point> Triangulation::get_last_path() const
 {
     return last_calculated_path;
+}
+int Triangulation::get_batch_number()const
+{
+    return no_of_batches;
 }
 
 std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point &starting_point, const Direction_2 &starting_direction,
