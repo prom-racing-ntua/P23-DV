@@ -28,10 +28,12 @@ private:
     double horizontal_resolution;
     void declare_params();
     int rj;
+    int frame_index;
     std::unordered_map<int, std::unordered_map<int, std::vector<std::tuple<Point, double, double>>>> segments;
     std::unordered_map<int, std::unordered_map<int, std::array<double, 2>>> prototype_points;
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_sub_;
+    std::ofstream myfile;
 
 public:
     LidarNode();

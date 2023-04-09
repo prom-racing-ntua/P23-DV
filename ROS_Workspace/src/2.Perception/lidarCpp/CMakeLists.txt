@@ -10,11 +10,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(PCL 1.8 REQUIRED)
+find_package(pcl_conversions REQUIRED)
 # find_package(lifecycle_msgs REQUIRED)
 
 # executable commands
 add_executable(${PROJECT_NAME} src/main.cpp src/lidar.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp sensor_msgs custom_msgs)
+ament_target_dependencies(${PROJECT_NAME} rclcpp sensor_msgs custom_msgs pcl_conversions)
 
 # install excutables to lib directory
 install(TARGETS
@@ -24,7 +26,7 @@ install(TARGETS
 
 # install other directories to share directory
 install(DIRECTORY
-  config
+  config launch
   DESTINATION share/${PROJECT_NAME}/
 )
 
@@ -33,6 +35,15 @@ include_directories(
   include
   sensor_msgs
   custom_msgs
+  ${PCL_INCLUDE_DIRS}
+)
+
+link_directories(
+  ${PCL_LIBRARY_DIRS}
+)
+
+add_definitions(
+  ${PCL_DEFINITIONS}
 )
 
 if(BUILD_TESTING)
