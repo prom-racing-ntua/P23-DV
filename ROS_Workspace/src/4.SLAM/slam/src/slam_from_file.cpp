@@ -29,8 +29,6 @@ SlamFromFile::SlamFromFile(): Node("slam_from_file_node"), slam_object_(this) {
 	map_publisher_ = create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);
 	pose_publisher_ = create_publisher<custom_msgs::msg::PoseMsg>("pose", 10);
 
-	landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
-	car_pose_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
 	global_timer_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000 / sampling_rate_)), std::bind(&SlamFromFile::run_slam, this));
 }
 
@@ -281,108 +279,6 @@ void SlamFromFile::loadParameters() {
 
 	odometry_file_.open(share_dir_ + odometry_file_path, std::fstream::in);
 	perception_file_.open(share_dir_ + perception_file_path, std::fstream::in);
-}
-
-void SlamFromFile::visualize() {
-	// Delete all existing markers
-	visualization_msgs::msg::Marker delete_all_markers{};
-	delete_all_markers.header.frame_id = "map";
-	delete_all_markers.header.stamp = now();
-	delete_all_markers.action = delete_all_markers.DELETEALL;
-	delete_all_markers.ns = "my_ns";
-
-	// Visualize car position
-	gtsam::Vector3 car_pose{ slam_object_.getEstimatedCarPose() };
-
-	visualization_msgs::msg::Marker car_marker{};
-	car_marker.header.frame_id = "map";
-	car_marker.header.stamp = now();
-	car_marker.ns = "my_ns";
-	car_marker.id = 0;
-
-	car_marker.type = visualization_msgs::msg::Marker::CUBE;
-	car_marker.action = visualization_msgs::msg::Marker::ADD;
-
-	// Minus y variable is for left handed system
-	car_marker.pose.position.x = car_pose(1);
-	car_marker.pose.position.y = car_pose(0);
-	car_marker.pose.position.z = 0.7;
-
-	tf2::Quaternion car_orientation;
-	car_orientation.setRPY(0.0, 0.0, M_PI / 2 - car_pose(2));
-	car_orientation.normalize();
-
-	car_marker.pose.orientation = tf2::toMsg(car_orientation);
-
-	car_marker.scale.x = 2.0;
-	car_marker.scale.y = 1.22;
-	car_marker.scale.z = 0.9;
-
-	car_marker.color.r = 0.839;
-	car_marker.color.g = 0.224;
-	car_marker.color.b = 0.082;
-	car_marker.color.a = 1.0;
-
-	// Visualize landmarks seen by the car
-	int id{ 0 };
-	visualization_msgs::msg::MarkerArray cones_array{};
-	visualization_msgs::msg::Marker cone_marker{};
-
-	cone_marker.header.frame_id = "map";
-	cone_marker.header.stamp = now();
-	cone_marker.ns = "my_ns";
-	cone_marker.action = cone_marker.ADD;
-	cone_marker.type = cone_marker.CYLINDER;
-
-	cone_marker.color.a = 1.0;
-	cone_marker.scale.x = 0.3;
-	cone_marker.scale.y = 0.3;
-	cone_marker.scale.z = 0.4;
-	cone_marker.pose.position.z = 0.2;
-	cone_marker.pose.orientation.x = 0.0;
-	cone_marker.pose.orientation.y = 0.0;
-	cone_marker.pose.orientation.z = 0.0;
-	cone_marker.pose.orientation.w = 1.0;
-
-	std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
-	for (gtsam::Vector3& cone : track)
-	{
-		cone_marker.id = id;
-		cone_marker.pose.position.x = cone(2);
-		cone_marker.pose.position.y = cone(1);
-		switch (static_cast<ConeColor>(cone(0)))
-		{
-		case ConeColor::Yellow:
-			cone_marker.color.r = 1.0;
-			cone_marker.color.g = 1.0;
-			cone_marker.color.b = 0.0;
-			break;
-		case ConeColor::Blue:
-			cone_marker.color.r = 0.0;
-			cone_marker.color.g = 0.0;
-			cone_marker.color.b = 0.8;
-			break;
-		case ConeColor::SmallOrange:
-			cone_marker.color.r = 247.0 / 250.0;
-			cone_marker.color.g = 140.0 / 250.0;
-			cone_marker.color.b = 25.0 / 250.0;
-			break;
-		case ConeColor::LargeOrange:
-			cone_marker.color.r = 117.0 / 250.0;
-			cone_marker.color.g = 59.0 / 250.0;
-			cone_marker.color.b = 29.0 / 250.0;
-			break;
-		default:
-			RCLCPP_WARN(get_logger(), "SlamFromFile() -> Invalid cone color encountered when reading map");
-			break;
-		}
-		cones_array.markers.push_back(cone_marker);
-		id++;
-	}
-
-	car_pose_publisher_->publish(delete_all_markers);
-	car_pose_publisher_->publish(car_marker);
-	landmark_publisher_->publish(cones_array);
 }
 } // namespace ns_slam
 
