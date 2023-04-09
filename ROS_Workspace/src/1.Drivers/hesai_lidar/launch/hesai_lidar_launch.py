@@ -11,7 +11,7 @@ def generate_launch_description():
             name ='hesai_node',
             output ="screen",
             parameters=[
-                {"pcap_file": ""},
+                {"pcap_file": "./src/1.Drivers/hesai_lidar/config/test_lidar.pcap"},
                 {"server_ip"  : "192.168.1.201"},
                 {"lidar_recv_port"  : 2368},
                 {"gps_port"  : 10110},
@@ -22,10 +22,10 @@ def generate_launch_description():
                 {"publish_type"  : "both"},
                 {"timestamp_type"  : ""},
                 {"data_type"  : ""},
-                {"lidar_correction_file"  : "./src/HesaiLidar_General_ROS-ROS2/config/PandarXT-32.csv"},
+                {"lidar_correction_file"  : "./src/1.Drivers/hesai_lidar/config/PandarXT-32.csv"},
                 {"multicast_ip"  : ""},
                 {"coordinate_correction_flag"  : False},
-                {"fixed_frame"  : "map"},
+                {"fixed_frame"  : "lidar"},
                 {"target_frame_frame"  : ""}
             ]
         )
