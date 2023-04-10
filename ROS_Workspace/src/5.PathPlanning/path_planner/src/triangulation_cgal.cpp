@@ -163,7 +163,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     {
         Triangle starting_triangle = triangulation_object.triangle(starting_face);
         Point other_a, other_b;
-        bool flag = false;
+        
         // vector(position, direction_from_position) parallel to direction
 
         not_visited_faces.erase(starting_face);
@@ -183,11 +183,17 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
 
             if ((std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint())) < maximum_angle || CGAL::squared_distance(pos_vector, edges[i]) < 0.0001) && !triangulation_object.is_infinite(starting_face->neighbor(i)))
             {
-                // std::cout<<direction_from_position<<" / "<<position<<" / "<<starting_edge.midpoint()<<" / ";
-                // std::cout<<std::abs(angle_point_2(direction_from_position, position, starting_edge.midpoint()))<<std::endl;
-                Point dir(2 * starting_edge.midpoint().x() - position.x(), 2 * starting_edge.midpoint().y() - position.y());
-                best_path[i] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(i), starting_face, 0, dir);
-                best_path[i] = filter_best_path(best_path[i], position, direction);
+                if(!triangulation_object.is_infinite(starting_face->neighbor(i)))
+                {
+                    Point dir(2 * starting_edge.midpoint().x() - position.x(), 2 * starting_edge.midpoint().y() - position.y());
+                    best_path[i] = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face->neighbor(i), starting_face, 0, dir);
+                    best_path[i] = filter_best_path(best_path[i], position, direction);
+                }
+                else{
+                    std::vector<my_edge> vect{starting_edge};
+                    int cost = cost_function_advanced(vect, position, direction);
+                    best_path[i] = std::make_pair(vect, cost);
+                }
             }
             else
             {
@@ -202,7 +208,6 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
             std::cout<<"all 3 invalid"<<std::endl;
             std::cout<<position<<" "<<direction_from_position<<" "<<starting_triangle.vertex(0)<<" "<<starting_triangle.vertex(1)<<" "<<starting_triangle.vertex(2)<<std::endl;
             return std::make_pair(empty_vector<Point>(),0);
-            flag = true;
             /*
             // std::cout << "all three edges invalid" << std::endl;
             Ray_2 pos_vector(position, direction_from_position);
@@ -443,7 +448,7 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
             if (angle < maximum_edge_angle && angle > minimum_edge_angle)
                 angle_cost += angle_penalty * angle;
             else if (angle > maximum_edge_angle)
-                cost += same_edge_penalty;
+                cost += same_edge_penalty;//if angle exceeds max angle, the penalty is applied to the total cost(to avoid scaling it by total_number_of_edges)
         }
     }
     cost += length_cost / total_number_of_edges + angle_cost / total_number_of_edges - total_length * total_length_reward;
