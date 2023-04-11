@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(PandarGeneral)
 
 
@@ -16,7 +16,7 @@ include_directories(
 )
 
 
-add_library( ${PROJECT_NAME}
+add_library(${PROJECT_NAME}
 	src/input.cc
 	src/pandarGeneral_internal.cc
 	src/pandarGeneral.cc
@@ -28,7 +28,13 @@ target_link_libraries(${PROJECT_NAME}
 		${PCL_IO_LIBRARIES}
 )
 
+rosidl_target_interfaces(${PROJECT_NAME} hesai_lidar "rosidl_typesupport_cpp")
+
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
 endif(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
+install(TARGETS
+    ${PROJECT_NAME}
+    DESTINATION lib
+)

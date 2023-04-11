@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(PandarGeneralSDK)
 
 find_package( Boost REQUIRED  COMPONENTS thread)
@@ -18,7 +18,7 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-add_library( ${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME}
     src/pandarGeneral_sdk.cc
     src/tcp_command_client.c
     src/util.c
@@ -31,6 +31,9 @@ target_link_libraries(${PROJECT_NAME}
     Boost::thread
     pcap
 )
+
+rosidl_target_interfaces(${PROJECT_NAME} hesai_lidar "rosidl_typesupport_cpp")
+
 # if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 #     find_package(PCL REQUIRED)
 #     add_executable(PandarGeneralTest
@@ -45,3 +48,7 @@ target_link_libraries(${PROJECT_NAME}
 #     )
 # endif(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
+install(TARGETS
+    ${PROJECT_NAME}
+    DESTINATION lib
+)

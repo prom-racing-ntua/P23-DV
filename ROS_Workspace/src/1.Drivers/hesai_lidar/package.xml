@@ -16,7 +16,9 @@
   <depend>ament_index_cpp</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_action</depend>
+
   <member_of_group>rosidl_interface_packages</member_of_group>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>
