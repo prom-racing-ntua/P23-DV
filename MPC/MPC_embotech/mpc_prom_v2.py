@@ -84,27 +84,6 @@ def continuous_dynamics(x, u):
     #friction forces
     Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
 
-    # dynamic dxs/dt
-    # xdot=x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])
-    # ydot=x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])
-    # phidot= x[5] 
-    # vxdot=(x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ (0.5*m)
-    # vydot= (-x[3]*x[5]) + (Fry + Ffy*casadi.cos(x[7]))/m           #FR,y +FF,y cos δ−mvxr
-    # rdot=  (Ffy*l_f - Fry*l_r)/(0.5*Iz)           #FF,y lFcos δ−FR,y lR
-    # Fdot= u[0]
-    # deltadot = u[1]
-
-    # kinematic dxs/dt
-    # beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
-    # xdot = x[3]*casadi.cos(x[2] + beta) 
-    # ydot = x[3]*casadi.sin(x[2] + beta) 
-    # phidot= x[5] 
-    # vxdot=(x[6] - Fdrag)/ m 
-    # vydot= (l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
-    # rdot= (1/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))
-    # Fdot= u[0]
-    # deltadot = u[1]
-
     #blending with changing lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
     xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
@@ -134,37 +113,23 @@ def obj(z,current_target):
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     
     return (
-        2e3*(z[3]-current_target[0])**2 # costs on deviating on the
-#                                              path in x-direction
-            + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the
-#                                               path in y-direction
-            +1e1*(e_c)**2 # costs on deviating on the
+        1e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 1e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+            +0e1*(e_c)**2 # costs on deviating on the
                                         #path in y-direction
-            + 1e1*(e_l)**2 # costs on deviating on the
+            + 0e1*(e_l)**2 # costs on deviating on the
                                     #path in x-direction
-            + 1e-5*z[0]**2 # penalty on input F, 
+
+            + 1e-4*z[0]**2 # penalty on input F, 
             + 1e-3*z[9]**2
-            + 1e-5*z[1]**2 #penalty on delta,ddelta
-            + 1e-3*z[10]**2
+            + 1e-2*z[1]**2 #penalty on delta,ddelta
+            + 1e3*z[10]**2
             + 1e-5*(z[5]-current_target[2])**2 #dphi gap
             + 1e-5*(dsa**2)
-            + 2e1*((1/(z[6]**2 +1e-3)))
+            + 1e1*((1/(z[6]**2 +1e-3)))
             - 2e1*(z[6])
             - 2e1*(z[11]/INDEX_MAX)
             - 2e1*(z[2]/DINDEX_MAX))
-#     return (1e4*(e_c)**2 # costs on deviating on the
-# #                                              path in x-direction
-#             + 1e1*(e_l)**2 # costs on deviating on the
-# #                                               path in y-direction
-#             + 1e-2*z[0]**2 # penalty on input F, 
-#             + 1e-2*z[8]**2
-#             + 1e-2*z[1]**2 
-#             + 1e-2*z[9]**2
-#             + 1e2*(z[4]-current_target[2])**2 #dphi gap
-#             + 1e-2*(dsa**2)
-#             + 1e-1*((1/(z[5]**2 +1e-3)))
-#             - 1e-1*(z[5]**2)) 
-
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -350,10 +315,7 @@ def updatePlots(x,u,pred_x,pred_u,model,k):
     
     ax_list[4].step(x[6, 0:k+2],'b-')         # plot new acceleration force
     ax_list[4].step(range(k+1, k+model.N), pred_x[6,1:],'g-')   # plot new prediction of acceleration force
-    
-    ax_list[4].plot(np.rad2deg(x[7, 0:k+2]),'b-')            # plot new steering angle
-    ax_list[4].plot(range(k+1,k+model.N), \
-        np.rad2deg(pred_x[7,1:]),'g-')                       # plot new prediction of steering angle
+
     
     ax_list[5].step(range(0, k+1), \
         np.rad2deg(u[1, 0:k+1]),'b-')                        # plot new steer.rate
@@ -474,6 +436,7 @@ def main():
     # Set initial guess to start solver from
     x0i = np.zeros((model.nvar,1))
     x0 = np.transpose(np.tile(x0i, (1, model.N)))
+    print("shape x0: ",np.shape(x0))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
     vx0 = 0.1
@@ -491,20 +454,27 @@ def main():
     createPlot(x,u,start_pred,sim_length,model,data_points[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
     wheel_torques_txt=[]
     steering_txt=[]
-    err_temp=0.0
+    time_array=[]
+    err_1=0.0
+    err_2=0.0
 
     # Simulation
     for k in range(sim_length):
         print("Im at iteration: ",k+1)
+        print("shape x0: ",np.shape(x0))
         # Set initial condition
         problem["xinit"] = x[:,k]
         print("x_init is:",problem["xinit"],problem["xinit"][8])
         if(k>0):
-            err_temp = np.sqrt((problem["xinit"][0] - problem["all_parameters"][0][0])**2 + (problem["xinit"][1] - problem["all_parameters"][1][0])**2)
-            err_array.append(np.sqrt((problem["xinit"][0] - problem["all_parameters"][0][0])**2 + (problem["xinit"][1] - problem["all_parameters"][1][0])**2))
-            print("error array is:",err_array," ",np.max(err_array)," ",np.mean(err_array))
+            where_i_am=extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
+            # print("where i am is:",where_i_am,np.shape(where_i_am))
+            err_1= np.abs(np.sin(where_i_am[2][0])*(problem["xinit"][0]-where_i_am[0][0]) - np.cos(where_i_am[2][0])*(problem["xinit"][1]-where_i_am[1][0])) #katakorifi
+            err_2 = np.sqrt(problem["xinit"][0] - where_i_am[0][0])**2 + ((problem["xinit"][1] - where_i_am[1][0])**2)
+            err_array.append(err_1)
+            print("errors are:", err_1," ",err_2)
+            # print("error array is:",err_array," ",np.max(err_array)," ",np.mean(err_array))
         # Set runtime parameters (here, the next N points on the path)
-        if(err_temp<=100):
+        if(err_1 < 0.9):
             next_data_points = extract_next_path_points_new(data_points, x[0:num_ins-1,k], model.N, int(problem["xinit"][8]))
         else:
             next_data_points = extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
@@ -521,6 +491,7 @@ def main():
         assert exitflag == 1, "bad exitflag"
         sys.stderr.write("FORCESPRO took {} iterations and {} seconds to solve the problem.\n"\
             .format(info.it, info.solvetime))
+        time_array.append(info.solvetime)
 
         # Extract output
         temp = np.zeros((np.max(model.nvar), model.N))
@@ -531,7 +502,7 @@ def main():
 
         # Apply optimized input u of first stage to system and save simulation data
         # u[:,k] = pred_u[:,0]
-        u[:,k] = pred_u[:,1]
+        u[:,k] = pred_u[:,2]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
         print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
@@ -555,8 +526,13 @@ def main():
     print()
     print("wheel_torques_txt is: ",wheel_torques_txt)
     print()
-    print("error array is: ",err_array, " ", np.max(err_array)," ",np.mean(err_array))
+    print("error array is: ",err_array)
     print()
+    print("time array is: ", time_array)
+    print()
+    print("error data are: ", np.max(err_array)," ",np.mean(err_array))
+    print()
+    print("time data are: ",np.max(time_array), " ",np.mean(time_array))
 
 if __name__ == "__main__":
     main()
