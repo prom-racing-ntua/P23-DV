@@ -40,8 +40,8 @@ void Triangulation::init(int maximum_angle, int maximum_edge_angle, int maximum_
 Triangulation::~Triangulation()
 {
     std::cout << "Object destroyed." << std::endl;
-    std::cout << no_of_cones << "cones pushed." << std::endl
-              << no_of_batches << "batches of cones." << std::endl
+    std::cout << no_of_cones << " cones pushed." << std::endl
+              << no_of_batches << " batches of cones." << std::endl
               << no_of_midpoints << " midpoints calculated." << std::endl;
 }
 

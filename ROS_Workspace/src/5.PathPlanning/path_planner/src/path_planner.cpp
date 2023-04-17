@@ -1,6 +1,6 @@
 #include "path_planner.hpp"
 
-Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker() {
+Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_execution_time(0) {
     //waymaker = Triangulation();
     parameter_load();
 
@@ -65,14 +65,16 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
 }
 
 void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
+    rclcpp::Time starting_time = this->now() ;
     int cone_count = msg->cone_count;
-
     std::vector<Cone> full_map, local_map;
     full_map.reserve(cone_count);
     for (custom_msgs::msg::ConeStruct cone : msg->local_map)
     {
         full_map.push_back(Cone(Point(cone.coords.x, cone.coords.y), cone.color));
     }
+    full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
+    full_map.push_back(Cone(Point(0, -1.5), 0));
     Point current_position(msg->pose.position.x, msg->pose.position.y);
     float theta =  msg->pose.theta; //adjustment for reversed y-axis
     Point current_direction(current_position.x() + std::cos(theta), current_position.y() + std::sin(theta));
@@ -85,7 +87,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     {
         return;
     }
-    std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
+    //std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
     //std::cout<<"("<<current_position.x()<<","<<current_position.y()<<"),("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
     //std::cout<<"theta = "<<theta<<std::endl;
     custom_msgs::msg::WaypointsMsg for_pub;
@@ -103,6 +105,14 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     //std::cout<<std::endl;
     for_pub.waypoints = waypoints_ros;
     pub_waypoints->publish(for_pub);
+    std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
+    rclcpp::Duration total_time = this->now() - starting_time ;
+    total_execution_time += total_time.nanoseconds() / 1000000.0;
+    std::cout << "Time of Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
+}
+Path_Planner_Node::~Path_Planner_Node()
+{
+    std::cout<<"Average execution time: "<<total_execution_time / waymaker.get_batch_number()<<std::endl;
 }
 
 

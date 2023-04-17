@@ -16,5 +16,5 @@ path_planning:
     #local map selection
     selection_radius_small: 7
     selection_radius_big: 15
-    selection_angle: 60
+    selection_angle: 45
 

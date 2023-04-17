@@ -20,6 +20,7 @@ class Path_Planner_Node: public rclcpp::Node
 {
     public:
         Path_Planner_Node();
+        ~Path_Planner_Node();
     private:
         rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr sub_mapper;
         //rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr sub_odometry;
@@ -29,6 +30,7 @@ class Path_Planner_Node: public rclcpp::Node
         Triangulation waymaker;
         int selection_radius_small, selection_radius_big, selection_angle;
         void parameter_load();
+        double total_execution_time;
         //Point last_position;
         //Point last_direction;
 };
