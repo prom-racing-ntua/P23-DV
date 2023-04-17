@@ -39,7 +39,7 @@ const int X_SIZE = 9;
 int LOOKAHEAD = 40;
 const int U_SIZE = 3;
 int Z_SIZE = X_SIZE + U_SIZE;
-int SIM = 2000;
+int SIM = 1000;
 int SPLINE_RES = 2000;
 //set physical constants
 double l_f = 0.9141;
@@ -47,10 +47,14 @@ double l_r = 0.7359;
 double CdA = 1.8; // for drag
 double ClA = 5.47; // for downforce
 const double p_air = 1.225;
+double gr = 3.9;
+double sr = 3.17;
+double Rw = 0.2;
 double m = 190.0; // mass of the car
 double g = 9.81;
 double Iz = 110.0;
-const double ts = 0.1;
+int RK4 = 1;
+const double ts = 0.05;
 
 //for dynamic model
 double B=-8.266;
@@ -79,7 +83,6 @@ double custom_max(double a, double b){
     }
 }
 
-
 double custom_min(double a, double b){
     if(a<b){
         return a;
@@ -90,7 +93,6 @@ double custom_min(double a, double b){
 }
 
 void getF(double X[X_SIZE],double U[U_SIZE], double (&kappa)[X_SIZE])  {
-
         const double temp=(X[3]-umin)/(umax-umin);
         double double_1 = custom_max(temp,0);
         double l_a = custom_min(double_1,1);
@@ -123,6 +125,8 @@ void getF(double X[X_SIZE],double U[U_SIZE], double (&kappa)[X_SIZE])  {
         kappa[7] = U[1];
         kappa[8] = U[2]; 
 }
+
+
 
 int main() {
 
@@ -160,6 +164,9 @@ int main() {
     int return_val = 0;
     int i;
     int exitflag = 0;
+    double motor_torque = 0.0;
+    double brake_torque = 0.0;
+    double steering_angle = 0.0;
     double X[X_SIZE];
     double X2[X_SIZE];
     double X3[X_SIZE];
@@ -178,7 +185,7 @@ int main() {
         params.x0[i] = 0.0;
     }
 
-    double xinit_temp[9] = {X_spl[0], Y_spl[0],tang_spl[0],1.0,0.0,0.0,356.0,0.0,0.0}; //X is: X  Y  phi vx vy  r F delta index
+    double xinit_temp[9] = {X_spl[0], Y_spl[0],tang_spl[0],0.0,0.0,0.0,356.0,0.0,0.0}; //X_array is: X  Y  phi vx vy  r F delta index
     for (i = 0; i < X_SIZE; ++i) {
         X[i] = xinit_temp[i];
     }
@@ -187,14 +194,18 @@ int main() {
 
     for (int i = 0; i < SIM; i++)
     {
-        for (int j = 0; j < X_SIZE; ++j) { //update init state
-            params.xinit[j] = X[j];
-        }
+        std::cout << " " << std::endl;
+        std::cout << "I'm at iteration " << i+1 << std::endl;
+        motor_torque = (X[6]*Rw/gr);
+        brake_torque  = 0.0;
+        steering_angle = X[7]/sr;
+        std::cout << "node output is: " << motor_torque << " " << brake_torque << " " << steering_angle << std::endl; 
+        for (int j = 0; j < X_SIZE; ++j) params.xinit[j] = X[j]; //update init state
 
         double X_spline_temp = X_spl[int(params.xinit[8])];
         double Y_spline_temp = Y_spl[int(params.xinit[8])];
         std::cout << "splines are at: " << X_spline_temp << " " << Y_spline_temp << std::endl;
-        std::cout << "Im at: " << params.xinit[0] << " " << params.xinit[1] << std::endl;
+        std::cout << "I'm at: " << params.xinit[0] << " " << params.xinit[1] << std::endl;
         double phi_spline_temp = tang_spl[int(params.xinit[8])];
         double e_c =  std::sin(phi_spline_temp)*(params.xinit[0]-X_spline_temp) - std::cos(phi_spline_temp)*(params.xinit[1]-Y_spline_temp);
         double e_l =  -std::cos(phi_spline_temp)*(params.xinit[0]-X_spline_temp) - std::sin(phi_spline_temp)*(params.xinit[1]-Y_spline_temp);
@@ -213,53 +224,57 @@ int main() {
         std::cout << "params index is " << params.xinit[8] << std::endl;
         for(int k = 0; k < 4*LOOKAHEAD; ++k) { //set parameters
             int mod_ = k%4;
-            std::cout << int(params.xinit[8]) << std::endl;
+            // std::cout << "mod is: " << mod_ << std::endl;
             int ktemp1 = int(k/4);
             int ktemp2 = int((k-1)/4);
             int ktemp3 = int((k-2)/4);
             int ktemp4 = int((k-3)/4);
-            switch (mod_) {
-            case 0:
+            if (mod_ == 0) {
                 params.all_parameters[k] = X_spl[int(params.xinit[8])+ ktemp1];
-                // std::cout << "added X" << std::endl;
-                break;
-            case 1:
-                params.all_parameters[k] = Y_spl[int(params.xinit[8])+ ktemp2];
-                // std::cout << "added Y" << std::endl;
-            case 2:
-                params.all_parameters[k] = tang_spl[int(params.xinit[8])+ktemp3];
-                // std::cout << "added tang" << std::endl;
-            case 3:
-                params.all_parameters[k] = curv_spl[int(params.xinit[8])+ktemp4];
-                // std::cout << "added curv" << std::endl;
+                // std::cout << "added X at kappa  " << k << std::endl;
             }
-        }
+            else if(mod_ == 1) {
+                params.all_parameters[k] = Y_spl[int(params.xinit[8])+ ktemp2];
+                // std::cout << "added Y at kappa " << k << std::endl;
+            }
+            else if(mod_ == 2) {
+                params.all_parameters[k] = tang_spl[int(params.xinit[8])+ktemp3];
+                // std::cout << "added tang at kappa " << k << std::endl;
+            }
+            else {
+                params.all_parameters[k] = curv_spl[int(params.xinit[8])+ktemp4];
+                // std::cout << "added curv at kappa " << k << std::endl;
+            }
+            }
 
-        printf("right before solver call");
         exitflag = FORCESNLPsolver_solve(&params, &output, &info, mem, NULL, extfunc_eval);
         if (exitflag != 1) {
             printf("\n\nFORCESNLPsolver did not return optimal solution at step %d. Exiting.\n", i + 1);
             return_val = 1;
             break;
         }
-        
+        //                    dF               ddelta       dindex
         double U[U_SIZE] = {output.x01[0], output.x01[1], output.x01[2]};
         std::cout << "U array is: " << U[0] << " " << U[1] << " " << U[2] << std::endl;
         getF(X,U,k1);
-        for (int i = 0; i<X_SIZE;++i) {
+        if(RK4 == 1 ){
+            for (int i = 0; i<X_SIZE;++i) {
             X2[i] = X[i] +(ts/2)*k1[i];
-        }
-        getF(X2,U,k2);
-        for (int i = 0; i<X_SIZE;++i) {
-            X3[i] = X[i] +(ts/2)*k2[i];
-        }
-        getF(X3,U,k3);
-        for (int i = 0; i<X_SIZE;++i) {
-            X4[i] = X[i] +ts*k3[i];
-        }
-        getF(X4,U,k4);
-        for (int i = 0; i<X_SIZE;++i) {
-            X[i] = X[i] + ts*((k1[i]/6) +(k2[3]/3) +(k3[i]/3) + (k4[i]/6));
+            }
+            getF(X2,U,k2);
+            for (int i = 0; i<X_SIZE;++i) {
+                X3[i] = X[i] +(ts/2)*k2[i];
+            }
+            getF(X3,U,k3);
+            for (int i = 0; i<X_SIZE;++i) {
+                X4[i] = X[i] +ts*k3[i];
+            }
+            getF(X4,U,k4);
+            for (int i = 0; i<X_SIZE;++i) {
+                double step_all = ts*((k1[i]/6) +(k2[i]/3) +(k3[i]/3) + (k4[i]/6));
+                // std::cout << "step all is: " << step_all << std::endl;
+                X[i] = X[i] + step_all;
+            }
         }
         std::cout << "X,Y,velocities are: " << X[0] << " " << X[1] << " " << X[3] << std::endl;
         std::cout << "inputs final are: " << X[6] << " " << X[7] << " " << X[8] << std::endl;

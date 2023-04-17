@@ -223,9 +223,9 @@ def generate_pathplanner():
     model.E = np.concatenate([np.zeros((model.neq,num_ins)), np.eye(model.neq)], axis=1)
 
     # Inequality constraints
-    # from brake -> -Fbrake = -4120.0
-    model.lb = np.array([-4120.0,  np.deg2rad(-90.), 1.0, -400.,   -400.,  -np.inf,  0.0, -20.0, -20.0, -4120., -0.5*np.pi, 0])
-    model.ub = np.array([+3560.7,  np.deg2rad(+90.), model.N, 400.,   400.,   +np.inf,  20.0, +20.0, 20.0, 3560.7, 0.5*np.pi, INDEX_MAX])
+    # from brake -> Fbrake = -4120.0
+    model.lb = np.array([-4120.0,  -np.deg2rad(30), 1.0, -400.,   -400.,  -np.inf,  0.0, -20.0, -20.0, -4120., -np.deg2rad(30), 0])
+    model.ub = np.array([+3560.7,  np.deg2rad(+30), model.N, 400.,   400.,   +np.inf,  20.0, +20.0, 20.0, 3560.7, np.deg2rad(30), INDEX_MAX])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
@@ -439,8 +439,8 @@ def main():
     print("shape x0: ",np.shape(x0))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
-    vx0 = 0.1
-    Frx0 = 100
+    vx0 = 0.0
+    Frx0 = 356.0
     xinit = np.transpose(np.array([data_points[0][0], data_points[1][0],data_points[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
     print("xinit is: ",xinit)
     x[:,0] = xinit
