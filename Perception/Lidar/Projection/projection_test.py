@@ -31,7 +31,7 @@ def lidar_2_camera(camera_str, lidar_point): #logiki cog -> lidar -> cone
     checkpoint1 = (cog2lidar_rot @ lidar_points) + cog2lidar_tr
     
     #second part (cam -> cog  -> cone)
-    if (camera_str == "center"):
+    if (camera_str == "center"): 
         pitch2 = np.abs(9.0) 
         yaw2=np.abs(0.0)
         cog2cam_rot = pitch_matrix(-pitch2)@yaw_matrix(yaw2)
@@ -78,10 +78,21 @@ def cam_2_pixel(camera_str,cam_point):
 input_point=1*np.array([0.0,0.0,0.0]) #wanted in cms 
 print(input_point, np.shape(input_point))
 res2,res1 = lidar_2_camera("center",100*input_point)
+res3 = cam_2_pixel("center",100*res2)
+# u=res3[0]
+# v=res3[1]
+u=50
+v=50
 print("cog2cone results is: ",res1,np.shape(res1))
 print("cam2cone results is: ",res2,np.shape(res2))
-res3 = cam_2_pixel("center",100*res2)
 print("(u,v) results is: ",res3,np.shape(res3))
+input_image=cv2.imread('ultradummy.png')
+input_image[v-4:v+4, u-4:u+4] = np.array([0,0,255]) #BGR
+cv2.imshow("dummy image",input_image)
+cv2.waitKey(0)
+# closing all open windows
+cv2.destroyAllWindows()
+
     
 
     

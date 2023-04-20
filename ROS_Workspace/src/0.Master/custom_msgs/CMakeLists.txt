@@ -29,12 +29,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CanSystemState.msg"
   "msg/CanControlCommand.msg"
   "msg/CanVehicleVariables.msg"
+  "msg/MpcToCan.msg"
 
   ## Can-USB receive msgs
   "msg/CanWheelSpeed.msg"
   "msg/CanVehicleSensors.msg"
 
-  ## Mater node msgs
+  ## Master node msgs
   "msg/NodeSync.msg"
 
   ## Velocity Estimation msgs

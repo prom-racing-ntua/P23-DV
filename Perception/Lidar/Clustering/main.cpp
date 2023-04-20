@@ -159,9 +159,9 @@ int main () {
        extract.setIndices (inliers);
        extract.setNegative (false);
        float a = coefficients->values[0];
-        float b = coefficients->values[1];
-        float c = coefficients->values[2];
-        float d = coefficients->values[3];
+       float b = coefficients->values[1];
+       float c = coefficients->values[2];
+       float d = coefficients->values[3];
 
         std::cout << "coeffs of planar are: " << a << " " << b  << " " << c << " " << d << std::endl;
    

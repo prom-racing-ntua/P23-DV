@@ -10,7 +10,7 @@ Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_
         get_parameter("maximum_edge_angle").as_int(),
         get_parameter("maximum_distance").as_int(),
         0, 0,
-        get_parameter("target_depth").as_int(),
+        get_parameter("target_depth").a    custom_msgs-config.cmakes_int(),
         get_parameter("same_edge_penalty").as_int(),
         get_parameter("length_penalty").as_double(),
         get_parameter("angle_penalty").as_double(),
@@ -37,7 +37,6 @@ void Path_Planner_Node::parameter_load() {
     declare_parameter<float>("length_penalty", 0.1);
     declare_parameter<float>("angle_penalty", 0.1);
     declare_parameter<float>("total_length_reward", 0.075);
-
 
 }
 
