@@ -8,19 +8,22 @@ endif()
 # Find Dependencies
 find_package(Eigen3 REQUIRED)
 
-add_executable(cubic_spline.o
-    src/cubic_spline.cpp 
-    include/cubic_spline.h 
-    include/solve_tridiagonal.h
-)
-
-add_executable(b_spline.o
-    src/b-spline.cpp 
-    include/b-spline.h 
-    include/solve_tridiagonal.h
-)
-
 include_directories(
     include
     ${EIGEN3_INCLUDE_DIRS}
+)
+
+add_executable(cubic_spline.o
+    src/cubic_spline_main.cpp
+    src/cubic_spline.cpp
+)
+
+add_executable(b_spline.o
+    src/b-spline_main.cpp
+    src/b-spline.cpp
+)
+
+add_executable(arc_length_spline.o
+    src/arc_length_spline_main.cpp
+    src/cubic_spline.cpp
 )

@@ -10,7 +10,7 @@ Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_
         get_parameter("maximum_edge_angle").as_int(),
         get_parameter("maximum_distance").as_int(),
         0, 0,
-        get_parameter("target_depth").a    custom_msgs-config.cmakes_int(),
+        get_parameter("target_depth").as_int(),
         get_parameter("same_edge_penalty").as_int(),
         get_parameter("length_penalty").as_double(),
         get_parameter("angle_penalty").as_double(),
@@ -64,7 +64,7 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
 }
 
 void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
-    rclcpp::Time starting_time = this->now() ;
+    rclcpp::Time starting_time = this->now();
     int cone_count = msg->cone_count;
     std::vector<Cone> full_map, local_map;
     full_map.reserve(cone_count);
@@ -75,14 +75,14 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
     full_map.push_back(Cone(Point(0, -1.5), 0));
     Point current_position(msg->pose.position.x, msg->pose.position.y);
-    float theta =  msg->pose.theta; //adjustment for reversed y-axis
+    float theta = msg->pose.theta; //adjustment for reversed y-axis
     Point current_direction(current_position.x() + std::cos(theta), current_position.y() + std::sin(theta));
     local_map = select_cones_by_dist_and_angle(full_map, current_position, current_direction, selection_radius_small, selection_radius_big, selection_angle);
-    if(local_map.size() < 3)return ;
+    if (local_map.size() < 3)return;
     //std::cout<<"("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
     std::pair<std::vector<Point>, int> batch_output = waymaker.new_batch(local_map, current_position, Direction_2(Segment_2(current_position, current_direction)));
     std::vector<Point> waypoints(batch_output.first);
-    if(waypoints.size() == 0)
+    if (waypoints.size() == 0)
     {
         return;
     }
@@ -104,14 +104,13 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     //std::cout<<std::endl;
     for_pub.waypoints = waypoints_ros;
     pub_waypoints->publish(for_pub);
-    std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
-    rclcpp::Duration total_time = this->now() - starting_time ;
+    std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
+    rclcpp::Duration total_time = this->now() - starting_time;
     total_execution_time += total_time.nanoseconds() / 1000000.0;
-    std::cout << "Time of Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
+    std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
-Path_Planner_Node::~Path_Planner_Node()
-{
-    std::cout<<"Average execution time: "<<total_execution_time / waymaker.get_batch_number()<<std::endl;
+Path_Planner_Node::~Path_Planner_Node() {
+    std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
 }
 
 

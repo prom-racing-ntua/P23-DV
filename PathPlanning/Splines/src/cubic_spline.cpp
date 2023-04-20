@@ -1,6 +1,4 @@
-#include <fstream>
 #include "cubic_spline.h"
-#include "read_track.h"
 
 namespace path_planning
 {
@@ -211,18 +209,18 @@ PointsArray CubicSpline::getSplineCurve(const long int resolution) {
 }
 
 PointsData CubicSpline::getSplineData(const long int resolution) {
-    PointsData spline_data{ resolution, 4};
+    PointsData spline_data{ resolution, 4 };
     // Iterate through all points and data of interest (X,Y,tang,curv)
     for (long int i{ 0 }; i <= resolution - 1; i++)
     {
         double param{ static_cast<double>(i) / static_cast<double>(resolution - 1) };
-        Point temp1=getPoint(param);
+        Point temp1 = getPoint(param);
         double temp2 = getTangent(param);
         double temp3 = getCurvature(param);
-        spline_data(i,0)=temp1(0);
-        spline_data(i,1)=temp1(1);
-        spline_data(i,2)=temp2;
-        spline_data(i,3)=temp3;
+        spline_data(i, 0) = temp1(0);
+        spline_data(i, 1) = temp1(1);
+        spline_data(i, 2) = temp2;
+        spline_data(i, 3) = temp3;
     }
     return spline_data;
 }
@@ -239,48 +237,7 @@ double CubicSpline::getCurvature(double parameter) {
 
 double CubicSpline::getTangent(double parameter) {
     Point first_der{ getFirstDerivative(parameter) };
-    // Should probably be checked again if ti is correct
+    // Should probably be checked again if it is correct
     return std::atan2(first_der(1), first_der(0));
 }
 } // namespace path_planning
-
-
-// Random stuff for testing
-int main() {
-    path_planning::PointsArray midpoints{ readTrack("../test_tracks/trackdrive_midpoints.txt") };
-    midpoints.conservativeResize(midpoints.rows() + 1, midpoints.cols());
-    midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
-
-    // path_planning::PointsArray midpoints{ 8, 2 };
-    // midpoints <<
-    //     0, 0,
-    //     3, 1,
-    //     8, 6,
-    //     2, 10,
-    //     -5, 7,
-    //     -4, 0,
-    //     -2, -1,
-    //     0, 0;
-
-    path_planning::CubicSpline spline{midpoints, path_planning::BoundaryCondition::ClosedLoop};
-
-    // std::cout << "Second Derivatives:\n" << spline.getSecondDerivativeAtTargets() << "\n\n";
-
-    std::cout << "At s = 0.67" << '\n';
-    std::cout << "Spline coordinates: " << spline.getPoint(0.67) << '\n';
-    std::cout << "Spline curvature: " << spline.getCurvature(0.67) << '\n';
-    std::cout << "Spline tangent: " << spline.getTangent(0.67) << "\n\n";
-
-    std::cout << "Start: x' = " << spline.getFirstDerivative(0) << " , x'' = " << spline.getSecondDerivative(0) << '\n';
-    std::cout << "End: x' = " << spline.getFirstDerivative(1) << " , x'' = " << spline.getSecondDerivative(1) << "\n\n";
-
-    std::ofstream spline_curve("cubic_spline_points.txt");
-    spline_curve << spline.getSplineCurve(2000);
-    spline_curve.close();
-
-    std::ofstream spline_data("../../../MPC/MPC_embotech/cubic_spline_data.txt");
-    spline_data << spline.getSplineData(2000);
-    spline_data.close();
-
-    return 0;
-}

@@ -24,7 +24,7 @@ using Diagonal = Eigen::VectorXd;
  * The algorithm does not modify the objects given in the arguments of the function.
  * For more info: https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
  */
-Eigen::MatrixXd solveTridiagonal(const TriDiagonal& tridiagonal_matrix, Eigen::MatrixXd values_matrix) {
+inline Eigen::MatrixXd solveTridiagonal(const TriDiagonal& tridiagonal_matrix, Eigen::MatrixXd values_matrix) {
     // Check if tridiagonal matrix is square and if the values matrix size matches as well
     const int matrix_rows{ static_cast<int>(tridiagonal_matrix.rows()) };
 

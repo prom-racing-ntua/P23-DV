@@ -30,7 +30,7 @@ struct LocalSplineIndex {
 };
 
 class CubicSpline {
-private:
+protected:
     // A vector of all the points we want to interpolate the spline through
     PointsArray target_points_;
 
@@ -40,6 +40,7 @@ private:
     // Check boundary condition struct
     BoundaryCondition boundary_condition_;
 
+private:
     /* The matrix representing the system of equations used to calculate the spline.
      * Most coefficient will be zero so the matrix is sparse and we can proccess it to make it banded as well,
      * lowering solving time by using the Thomas algorithm implemented in the solve_tridiagonal.h file.
@@ -71,7 +72,7 @@ private:
      * have values in the range [0,1], with 0 indicating the first interpolated point and 1 the last.
      * If an out of range parameter value is given a runtime error will be thrown.
      */
-    LocalSplineIndex getLocalIndex(double parameter);
+    virtual LocalSplineIndex getLocalIndex(double parameter);
 
 public:
     // Constructor

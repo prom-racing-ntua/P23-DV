@@ -1,3 +1,6 @@
+#ifndef READ_TRACK_H
+#define READ_TRACK_H
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -5,7 +8,7 @@
 #include <eigen3/Eigen/Core>
 
 
-Eigen::MatrixXd readTrack(const std::string& filename) {
+inline Eigen::MatrixXd readTrack(const std::string& filename) {
     int cols{ 0 };
     int rows{ 0 };
     std::array<double, (int)1e6> buffer{};
@@ -48,3 +51,5 @@ Eigen::MatrixXd readTrack(const std::string& filename) {
 
 //     return 0;
 // }
+
+#endif
