@@ -13,8 +13,8 @@ namespace can_reader_namespace {
             all the bytes have been written. We are writing to a serial medium AND NOT A FILE. This is fixed
             by doing a while() loop and keeping an offset of the bytes send.
         */ 
-        int writeCount = write(serial_port, &buffer, (bytesToSend)*sizeof(uint8_t));
-        return writeCount;
+  //      int writeCount = write(serial_port, &buffer, (bytesToSend)*sizeof(uint8_t));
+    //    return writeCount;
     }
 
     void CanReader::sendSystemState(const custom_msgs::msg::CanSystemState::SharedPtr msg)

@@ -3,4 +3,4 @@ can_reader_cpp_node:
     baud_rate: 9600
     port_number: 0
     timeout: 1
-    read_frequency: 200
+    read_frequency: 100

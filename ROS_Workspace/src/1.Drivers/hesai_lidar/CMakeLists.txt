@@ -25,7 +25,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
-find_package(PCL 1.13 REQUIRED COMPONENTS io)
+find_package(PCL 1.8 REQUIRED COMPONENTS io)
 
 ament_export_dependencies(rosidl_default_runtime)
 # install(FILES DESTINATION share/${PROJECT_NAME})

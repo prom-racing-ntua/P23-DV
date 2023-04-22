@@ -33,7 +33,7 @@ LidarNode::LidarNode(): Node("lidar_node") {
     };
     using std::placeholders::_1;
     point_cloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/hesai/pandar", sensor_qos, std::bind(&LidarNode::segment_point_cloud, this, _1)
+        "hesai/pandar", sensor_qos, std::bind(&LidarNode::segment_point_cloud, this, _1)
     );
 
     RCLCPP_INFO(this->get_logger(), "Initialization Lidar Inference node finished");
@@ -69,7 +69,7 @@ void LidarNode::segment_point_cloud(const sensor_msgs::msg::PointCloud2::SharedP
 
     for (; xyzIter != xyzIter.end(); ++xyzIter, ++ringIter, ++iIter, ++timeIter) {
 
-        myfile << xyzIter[0] << "," << xyzIter[1] << "," << xyzIter[2]  << "," << ringIter[0] << "," << iIter[0] << "," << msg->header.stamp.sec << "." << msg->header.stamp.nanosec << "," << timeIter[0] << std::endl;
+        myfile << xyzIter[0] << "," << xyzIter[1] << "," << xyzIter[2]  << "," << ringIter[0] << "," << iIter[0] << "," << msg->header.stamp.sec << "." << msg->header.stamp.nanosec << std::endl;
     }
     RCLCPP_INFO(this->get_logger(), "finished cloud");
     

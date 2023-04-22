@@ -13,6 +13,7 @@ import rclpy
 from custom_msgs.msg import NodeSync, AcquisitionMessage
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
 
 # Homemade Libraries
 from .libraries.cameraClass import Camera
@@ -98,7 +99,8 @@ def main(args=None):
     # Create directory to save photos in
     homepath = os.getenv('HOME')
     runTime = int(getEpoch())
-    runDirPath = f"{homepath}/PerceptionRuns/Run{runTime}"
+    share_dir = get_package_share_directory('perception')
+    runDirPath = f"{share_dir}/../../../../PerceptionRuns/Run{runTime}"
     Path(runDirPath).mkdir(parents=True, exist_ok=True)
     print(f"Created Run Directory: {runDirPath}")
     
