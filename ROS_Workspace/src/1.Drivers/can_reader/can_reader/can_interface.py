@@ -8,7 +8,7 @@ from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from ament_index_python.packages import get_package_share_directory
 
 # ROS Message Imports
-from custom_msgs.msg import BrakePressure, SteeringAngle, WheelSpeed, CanVehicleVariables, CanWheelSpeed
+from custom_msgs.msg import BrakePressure, SteeringAngle, WheelSpeed, CanVehicleVariables, CanWheelSpeed, Mission, AutonomousStatus, CanControlCommand, CanSystemState
 
 # Python Imports
 import serial
@@ -60,9 +60,13 @@ class CommonUtilities:
     def __init__(self) -> None:
         # Dictionaries to match config file entries to functions and ros message types
         self.msgs_lib = {'hall_msg': WheelSpeed, 'brake_pressure_msg': BrakePressure, 'steering_msg': SteeringAngle, 'can_state': CanVehicleVariables,
-                         'sim_halls': CanWheelSpeed}
+                         'sim_halls': CanWheelSpeed, 'mission': Mission, 'autonomous_status': AutonomousStatus, 'system_state':CanSystemState,
+                         'vehicle_variables':CanVehicleVariables, 'control_command':CanControlCommand}
+        
         self.func_lib = {'hall_parser': self.parse_hall_msg, 'steering_parser': self.parse_steering_msg, 'brakes_parser': self.parse_brakes_msg,
-                         'state_pub_callback': self.state_pub_callback, 'hall_callback': self.simulation_hall_callback}
+                         'hall_callback': self.simulation_hall_callback, 'mission_selection':self.mission_selection_callback,
+                         'autonomous_status': self.autonomous_status_callback,'system_state': self.system_state_callback,
+                         'vehicle_variables':self.vehicle_variables_callback,'control_command':self.control_commands_callback}
     
     def get_msg_type(self, msg_type:str) -> Any:
         '''
@@ -130,8 +134,18 @@ class CommonUtilities:
         msg.rear_left   = int.from_bytes(bytearray.fromhex(data[8:12]), byteorder='big', signed=True)
         msg.rear_right  = int.from_bytes(bytearray.fromhex(data[12:16]), byteorder='big', signed=True)
         parent.pub.publish(msg)
+    
+    def mission_selection_callback(self, parent, data:bytearray) -> None:
+        msg = parent.msg_type()
 
-    def state_pub_callback(self, msg, parent, ids) -> None:
+        parent.pub.publish(msg)
+
+    def autonomous_status_callback(self, parent, data:bytearray) -> None:
+        msg = parent.msg_type()
+
+        parent.pub.publish(msg)
+
+    def vehicle_variables_callback(self, msg, parent, ids) -> None:
         time_start = parent.get_clock().now()
         size = '06'
         lat_accel = msg.lat_accel
@@ -147,8 +161,44 @@ class CommonUtilities:
         can_msg = bytes.fromhex(can_msg).decode('ascii', errors='ignore').encode('utf-8')
         # parent.get_logger().info(f"Sending message: {can_msg}")
         parent.ser.write(can_msg)
-        # parent.get_logger().info(f"Time to process {(parent.get_clock().now() - time_start).nanoseconds / 10**6} ms")
 
+    def system_state_callback(self, msg, parent, ids) -> None:
+        size = '04'
+        mission_finished = msg.mission_finished
+        standstill = msg.standstill
+        pc_error = msg.pc_error
+        lap_counter = msg.lap_counter
+        cones_count_actual = msg.cones_count_actual
+        cones_count_all = msg.cones_count_all
+
+        can_id = self.makeXBytes(hex(ids), 1)
+
+        # status_hex = self.makeXBytes(hex((mission_finished << 7) + (standstill << 6) + (pc_error << 5) + (lap_counter << 1)),1)
+        status_hex = self.makeXBytes(hex((lap_counter << 4) + (pc_error << 2) + (standstill << 1) + pc_error), 1)
+        cones_count_actual_hex = self.makeXBytes(hex(cones_count_actual), 1)
+        cones_count_all_hex = self.makeXBytes(hex(cones_count_all), 2)
+        
+        can_msg = can_id + size + status_hex[0:2] + cones_count_actual_hex[0:2] + cones_count_all_hex[2:4] + \
+            cones_count_all_hex[0:2]
+
+        can_msg = bytes.fromhex(can_msg).decode('ascii', errors='ignore').encode('utf-8')
+        parent.ser.write(can_msg)
+
+    def control_commands_callback(self, msg, parent, ids) -> None:
+        size = '05'
+
+        can_id = self.makeXBytes(hex(ids), 1)
+        speed_target_hex = self.makeXBytes(hex(msg.speed_target), 1)
+        speed_actual_hex = self.makeXBytes(hex(msg.speed_actual), 1)
+        motor_torque_target_hex = self.makeXBytes(hex(msg.motor_torque_target), 1)
+        steering_angle_target_hex = self.makeXBytes(hex(msg.steering_angle_target), 1)
+        brake_pressure_target_hex = self.makeXBytes(hex(msg.brake_pressure_target), 1)
+
+        can_msg = can_id + size + speed_target_hex[0:2] + speed_actual_hex[0:2] + motor_torque_target_hex[0:2] \
+            + steering_angle_target_hex[0:2] + brake_pressure_target_hex[0:2]
+        
+        can_msg = bytes.fromhex(can_msg).decode('ascii', errors='ignore').encode('utf-8')
+        parent.ser.write(can_msg)
 
 class CanInterface(Node):
     '''
@@ -248,7 +298,6 @@ class CanInterface(Node):
         # print(self.incoming_msgs_array)
         # print(self.outgoing_msgs_array)
 
-
     def run(self) -> None:
         '''
         Checks for new messages finds their id and passes the data to the corresponding parser function
@@ -271,7 +320,6 @@ class CanInterface(Node):
                 if msg_id == can.can_id:
                     can.parser(can, data)
                     # self.get_logger().info(f"Time to process msg: {(self.get_clock().now() - self.time_rec).nanoseconds / 10**6} ms")
-
 
 def main(args=None) -> None:
     rclpy.init(args=args)

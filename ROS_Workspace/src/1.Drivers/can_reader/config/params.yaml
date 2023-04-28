@@ -5,11 +5,11 @@ canbus:
       port: '/dev/ttyACM0'
       baudrate: 115200
       timeout: 0.001
-
       read_frequency: 250
 
       # Sensor Configuration - Incoming Messages
-      enabled_sensors: ['front_halls', 'rear_halls', 'steering', 'brakes']
+      enabled_sensors: ['front_halls', 'rear_halls', 'steering', 'brakes', 'mission_selection', 'autonomous_status']
+      outgoing_messages: ['system_state', 'vehicle_variables', 'control_command']
       
       # For testing on the wood ;)
       # enabled_sensors: ['test_hall']

@@ -29,10 +29,33 @@ test_hall:
   msg_type: 'sim_halls'
   parser: 'hall_callback'
 
+mission_selection:
+  id: 0x500
+  topic: 'mission_selection'
+  msg_type: 'mission'
+  parser: 'mission_selection'
+
+autonomous_status:
+  id: 0x501
+  topic: 'as_status'
+  msg_type: 'autonomous_status'
+  parser: 'autonomous_status'
 
 # Outgoing Messages
-state_pub:
-  id: 0x03
-  topic: 'state_pub'
-  msg_type: 'can_state'
-  callback: 'state_pub_callback'
+system_state:
+  id: 0x00
+  topic: 'p23_status/system_state'
+  msg_type: 'system_state'
+  callback: 'system_state'
+
+vehicle_variables:
+  id: 0x01
+  topic: 'p23_status/vehicle_variables'
+  msg_type: 'vehicle_variables'
+  callback: 'vehicle_variables'
+
+control_command:
+  id: 0x02
+  topic: 'p23_status/control_command'
+  msg_type: 'control_command'
+  callback: 'control_command'
