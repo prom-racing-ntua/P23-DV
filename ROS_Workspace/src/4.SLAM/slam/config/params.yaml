@@ -32,4 +32,3 @@ slam_node:
     lap_counter_cooldown: 10
 
     logger: true
-    telemetry: true

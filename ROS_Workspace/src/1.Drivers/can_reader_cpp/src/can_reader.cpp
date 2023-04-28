@@ -197,12 +197,12 @@ namespace can_reader_namespace {
         int ready = select(serial_port+1, &readfds, NULL, NULL, &tv); // fd+1 is the maximum file descriptor number in the set plus one
         RCLCPP_INFO(get_logger(), "after select");
 
-        if (ready == -1) {
-            RCLCPP_INFO(get_logger(), "ERROR!");
-        } else if (ready == 0) {
-            RCLCPP_INFO(get_logger(), "TIMEOUT");
+       // if (ready == -1) {
+        //    RCLCPP_INFO(get_logger(), "ERROR!");
+       // } else if (ready == 0) {
+        //    RCLCPP_INFO(get_logger(), "TIMEOUT");
             // better log this: cout << "Timeout " << endl;
-        } else {
+       // } else {
             RCLCPP_INFO(get_logger(), "inside else");
             unsigned char *read_buf = new unsigned char[23];
             unsigned int *byte_array = new unsigned int[11];
@@ -222,7 +222,7 @@ namespace can_reader_namespace {
             } 
             delete can_message;
             delete []read_buf;
-        }
+        //}
         RCLCPP_INFO(get_logger(), "exiting read serial");
     }
     

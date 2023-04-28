@@ -24,8 +24,12 @@ struct LandmarkInfo {
     // A way to now if the landmark is actually observed and not a ghost cone.
     // For now we set it to true if a cone is seen for a second time.
     bool is_verified;
+    // Symbol of the landmark in the iSAM object
+    gtsam::Symbol symbol;
     // Estimated pose of landmark in world
     gtsam::Vector2 estimated_pose;
+    // Color of the cone
+    ConeColor color;
 
     // Previous Observations
     // Symbol of the car's pose when the landmark was first observed
@@ -37,7 +41,6 @@ struct LandmarkInfo {
     std::vector<gtsam::Matrix2> variance_vector;
 
     int score;
-    double observation_ratio;
 };
 
 

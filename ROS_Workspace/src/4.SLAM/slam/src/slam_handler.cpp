@@ -49,7 +49,7 @@ SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
     }
 
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
-    slam_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    slam_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
     // Set ROS objects
     rclcpp::SubscriptionOptions options;
@@ -68,18 +68,11 @@ SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
     optimization_clock_ = create_wall_timer(std::chrono::milliseconds(1000 * optimization_interval_ / node_frequency_),
         std::bind(&SlamHandler::optimizationCallback, this), slam_callback_group_);
 
-    if (get_parameter("telemetry").as_bool())
-    {
-        landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
-        car_pose_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
-        telemetry_clock_ = create_wall_timer(std::chrono::milliseconds(50),
-            std::bind(&SlamHandler::visualize, this), slam_callback_group_);
-    }
     RCLCPP_WARN(get_logger(), "Created SlamHandler");
 }
 
 SlamHandler::~SlamHandler() {
-    if (get_parameter("telemetry").as_bool())
+    if (is_logging_)
     {
         velocity_log_.close();
         perception_log_.close();
@@ -278,7 +271,6 @@ void SlamHandler::loadParameters() {
     share_dir_ = ament_index_cpp::get_package_share_directory("slam");
 
     is_logging_ = declare_parameter<bool>("logger", true);
-    declare_parameter<bool>("telemetry", true);
 }
 
 int SlamHandler::getNodeFrequency() {
@@ -316,113 +308,6 @@ int SlamHandler::getNodeFrequency() {
         RCLCPP_ERROR(get_logger(), "Failed to get node frequency");
         return 0;
     }
-}
-
-void SlamHandler::visualize() {
-    // Delete all existing markers
-    visualization_msgs::msg::Marker delete_all_markers{};
-    delete_all_markers.header.frame_id = "map";
-    delete_all_markers.header.stamp = now();
-    delete_all_markers.action = delete_all_markers.DELETEALL;
-    delete_all_markers.ns = "my_ns";
-
-    // Visualize car position
-    pthread_spin_lock(&global_lock_);
-    gtsam::Vector3 car_pose{ slam_object_.getEstimatedCarPose() };
-    pthread_spin_unlock(&global_lock_);
-
-    visualization_msgs::msg::Marker car_marker{};
-    car_marker.header.frame_id = "map";
-    car_marker.header.stamp = now();
-    car_marker.ns = "my_ns";
-    car_marker.id = 0;
-
-    car_marker.type = visualization_msgs::msg::Marker::CUBE;
-    car_marker.action = visualization_msgs::msg::Marker::ADD;
-
-    // Minus y variable is for left handed system
-    car_marker.pose.position.x = car_pose(1);
-    car_marker.pose.position.y = car_pose(0);
-    car_marker.pose.position.z = 0.7;
-
-    tf2::Quaternion car_orientation;
-    car_orientation.setRPY(0.0, 0.0, M_PI / 2 - car_pose(2));
-    car_orientation.normalize();
-
-    car_marker.pose.orientation = tf2::toMsg(car_orientation);
-
-    car_marker.scale.x = 2.0;
-    car_marker.scale.y = 1.22;
-    car_marker.scale.z = 0.9;
-
-    car_marker.color.r = 0.839;
-    car_marker.color.g = 0.224;
-    car_marker.color.b = 0.082;
-    car_marker.color.a = 1.0;
-
-    // Visualize landmarks seen by the car
-    int id{ 0 };
-    visualization_msgs::msg::MarkerArray cones_array{};
-    visualization_msgs::msg::Marker cone_marker{};
-
-    cone_marker.header.frame_id = "map";
-    cone_marker.header.stamp = now();
-    cone_marker.ns = "my_ns";
-    cone_marker.action = cone_marker.ADD;
-    cone_marker.type = cone_marker.CYLINDER;
-
-    cone_marker.color.a = 1.0;
-    cone_marker.scale.x = 0.3;
-    cone_marker.scale.y = 0.3;
-    cone_marker.scale.z = 0.4;
-    cone_marker.pose.position.z = 0.2;
-    cone_marker.pose.orientation.x = 0.0;
-    cone_marker.pose.orientation.y = 0.0;
-    cone_marker.pose.orientation.z = 0.0;
-    cone_marker.pose.orientation.w = 1.0;
-
-    pthread_spin_lock(&global_lock_);
-    std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
-    pthread_spin_unlock(&global_lock_);
-
-    for (gtsam::Vector3& cone : track)
-    {
-        cone_marker.id = id;
-        cone_marker.pose.position.x = cone(2);
-        cone_marker.pose.position.y = cone(1);
-        switch (static_cast<ConeColor>(cone(0)))
-        {
-        case ConeColor::Yellow:
-            cone_marker.color.r = 1.0;
-            cone_marker.color.g = 1.0;
-            cone_marker.color.b = 0.0;
-            break;
-        case ConeColor::Blue:
-            cone_marker.color.r = 0.0;
-            cone_marker.color.g = 0.0;
-            cone_marker.color.b = 0.8;
-            break;
-        case ConeColor::SmallOrange:
-            cone_marker.color.r = 247.0 / 250.0;
-            cone_marker.color.g = 140.0 / 250.0;
-            cone_marker.color.b = 25.0 / 250.0;
-            break;
-        case ConeColor::LargeOrange:
-            cone_marker.color.r = 117.0 / 250.0;
-            cone_marker.color.g = 59.0 / 250.0;
-            cone_marker.color.b = 29.0 / 250.0;
-            break;
-        default:
-            RCLCPP_WARN(get_logger(), "SlamHandler() -> Invalid cone color encountered when reading map");
-            break;
-        }
-        cones_array.markers.push_back(cone_marker);
-        id++;
-    }
-
-    car_pose_publisher_->publish(delete_all_markers);
-    car_pose_publisher_->publish(car_marker);
-    landmark_publisher_->publish(cones_array);
 }
 } // namespace ns_slam
 

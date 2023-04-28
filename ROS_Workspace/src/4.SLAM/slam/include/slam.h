@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <sstream>
-#include <array>
+#include <vector>
 #include <unordered_map>
 #include <cmath>
 #include <fstream>
@@ -76,10 +76,7 @@ private:
 	rclcpp::Node* node_handler_;
 
 	// Map of the landmark ids to LandmarkInfo. Contains all the cones observed so far.
-	// It is split into 4 separate cone classes, one for each color, in the order of the 
-	// ConeColor enum. The keys of each map are symbols that will be used when and if a
-	// landmark gets added to the factor graph. 
-	std::array<std::unordered_map<gtsam::Key, LandmarkInfo>, 4> landmark_id_map_;
+	std::unordered_map<int, LandmarkInfo> landmark_id_map_;
 
 	// Symbol (e.g. "X4") of current car pose
 	gtsam::Symbol current_car_pose_symbol_;
@@ -121,7 +118,7 @@ private:
 	void initializeFactorGraph();
 
 	// Find nearest neighbor of an observed landmark to be associated with
-	gtsam::Key findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position);
+	int findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position);
 
 	// Lap counter methods
 	// Source: https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
@@ -164,9 +161,6 @@ public:
 	void imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam::Vector3& pre_optimization_pose);
 
 	void resetTemporaryGraph();
-
-	// Adds landmarks to a .txt file so a python script can make a visual plot of the estimated map
-	void visualize(const bool print_all_observations = false, const bool print_trajectory = false);
 
 	// Setters
 	void setDeltaTime(const double dt) { delta_time_ = dt; }

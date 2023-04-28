@@ -4,6 +4,8 @@ import numpy as np
 from collections import defaultdict, namedtuple
 from typing import NamedTuple
 from math import atan2, pi, sqrt
+from scipy import stats
+from time import time
 
 #ROS2 Imports
 import rclpy
@@ -22,9 +24,7 @@ class LidarNode(Node):
         self.rj_max = self.get_parameter("rj_max").value
         self.da = self.horizontal_resolution*2*pi/360 #deg -> rad
         self.num_of_segments = 2*pi/self.da
-        field_names = ['x','y','z', 'ring']
-        self.Point = NamedTuple('Point', field_names)
-        self.prototype_points = defaultdict(lambda: defaultdict(self.Point))
+        self.prototype_points = defaultdict(lambda: defaultdict(lambda: [0,100]))
         print("num of segments " + str(self.num_of_segments))
         print("da" + str(self.da))
         self.segments = defaultdict(lambda: defaultdict(list)) #each segment has a dict of bins. eg the segment 
@@ -40,27 +40,37 @@ class LidarNode(Node):
         self.declare_parameter("rj_max", 2)
     
     def subscriber_callback(self, msg):
-        dataList= point_cloud2.read_points_list(msg, field_names=['x','y','z', 'ring'])
+        start = time()
+        dataList= point_cloud2.read_points_list(msg, field_names=['x','y','z'])
         self.segments.clear()
-        print(type(dataList[0]))
         print(str(len(dataList)))
+        print(1,time())
         for point in dataList:
-           dist = sqrt(point.x**2 + point.y**2)
-           bin_ = dist//1
-           seg = round(atan2(point.y, point.x)/self.da)
-           (self.segments[seg])[bin_].append([point, point.z, dist])
-           if ((self.prototype_points[seg])[bin_]).z > point.z:
-               ((self.prototype_points[seg])[bin_]) = self.Point._make(point)
-               
-               
+            dist = sqrt(point.x**2 + point.y**2)
+            bin_ = dist//1
+            seg = round(atan2(point.y, point.x)/self.da)
+            (self.segments[seg])[bin_].append([point, point.z, dist])
+            
+            if ((self.prototype_points[seg])[bin_])[1] > point.z:
+                ((self.prototype_points[seg])[bin_]) = [dist, point.z]
+        print(1,time())
+        # print("len of segments " + str(len(self.segments)))
+        # total_points = 0
+        # for segment in self.segments:
+        #     for bin in self.segments[segment]:
+        #         total_points += len(self.segments[segment][bin])
+        # print("total points in segmented cloud " + str(total_points))
 
-        print("len of segments " + str(len(self.segments)))
-        total_points = 0
-        for segment in self.segments:
-            for bin in self.segments[segment]:
-                total_points += len(self.segments[segment][bin])
-        print("total points in segmented cloud " + str(total_points))
-        print(self.prototype_points)
+        print(2,time())
+        for seg in self.prototype_points:
+            r = []
+            z = []
+            for bin in self.prototype_points[seg]:
+                r.append((self.prototype_points[seg][bin])[0])
+                z.append((self.prototype_points[seg][bin])[1])
+                stats.linregress(r, z)
+        print(2, time())
+        print(time()-start)
 
 
 def main(args=None):

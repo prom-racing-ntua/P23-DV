@@ -70,10 +70,6 @@ private:
     rclcpp::TimerBase::SharedPtr optimization_clock_;
     rclcpp::TimerBase::SharedPtr telemetry_clock_;
 
-    // Visualization topics
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr car_pose_publisher_;
-
     // Velocity Estimation getter in order to set time interval in slam_object_
     rclcpp::Client<custom_msgs::srv::GetFrequencies>::SharedPtr cli_;
 
@@ -86,8 +82,6 @@ private:
     void perceptionCallback(const custom_msgs::msg::Perception2Slam::SharedPtr msg);
 
     void optimizationCallback();
-
-    void visualize();
 
 public:
     // The file paths are passed as arguments to the constructor and can be modified in the main function

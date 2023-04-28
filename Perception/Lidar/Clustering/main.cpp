@@ -59,14 +59,6 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 	}
 	else
 		cout<<"Could not open the file\n";
-    // for(int i=0;i<content.size();i++)
-	// {
-	// 	for(int j=0;j<content[i].size();j++)
-	// 	{
-	// 		cout<<content[i][j]<<" ";
-	// 	}
-	// 	cout<<"\n";
-	// }
     return points;
 }
 
@@ -127,7 +119,7 @@ int main () {
 
 	// perform crop box filtering
 	pcl::CropBox<pcl::PointXYZ> box;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 	box.setMin(Eigen::Vector4f(minX, minY, minZ, 1.0));
 	box.setMax(Eigen::Vector4f(maxX, maxY, maxZ, 1.0));
 	box.setInputCloud(cloud);
@@ -167,9 +159,9 @@ int main () {
        extract.setIndices (inliers);
        extract.setNegative (false);
        float a = coefficients->values[0];
-        float b = coefficients->values[1];
-        float c = coefficients->values[2];
-        float d = coefficients->values[3];
+       float b = coefficients->values[1];
+       float c = coefficients->values[2];
+       float d = coefficients->values[3];
 
         std::cout << "coeffs of planar are: " << a << " " << b  << " " << c << " " << d << std::endl;
    
@@ -233,14 +225,13 @@ int main () {
       std::cout << "num actual points   = " << cloud_cluster_temp->size() << std::endl;
       std::cout << "distance to cone    = " << d << std::endl;
 
-      double thres = 0.5; //percentage threshold in order to de
+      double thres = 0.5; //percentage threshold in order to determine relevance of lidar cluster to cone cluster
       if ((cloud_cluster_temp->size() > (1-thres)*expected) && (cloud_cluster_temp->size() < (1+thres)*expected)) {
           for (const auto& idx : cluster.indices)
             cloud_cluster->push_back((*cloud_filtered)[idx]);
           std::cout << "i kept that sh*t" << std::endl;
-          std::cout << " " << std::endl;
+          std::cout << "centre of cluster is: " << centre.x << " " << centre.y << " " << centre.z << std::endl;
       }
-
       else{
         std::cout << "i left that sh*t" << std::endl;
         std::cout << " " << std::endl;
