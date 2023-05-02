@@ -99,7 +99,7 @@ class InferenceLifecycleNode(Node):
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
-                keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
+                keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallModel, self.largeModel)
                 finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
                 rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
 

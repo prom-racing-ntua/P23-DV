@@ -17,7 +17,7 @@ def generate_launch_description():
     velocity_estimation_dir = get_package_share_directory('velocity_estimation')
     perception_dir = get_package_share_directory('perception')
     slam_dir = get_package_share_directory('slam')
-    # pathplanning_dir = get_package_share_directory('pathplanning')
+    pathplanning_dir = get_package_share_directory('path_planner')
     # controls_dir = get_package_share_directory('controls')
     saltas_dir = get_package_share_directory('saltas')
 
@@ -62,6 +62,11 @@ def generate_launch_description():
     )
 
     # Pathplanning Node
+    pathplanningNode = Node(
+        package='path_planner',
+        executable='lifecycle_path_planner',
+        name='path_planning'
+    )
 
     # Controls Node
 
@@ -71,7 +76,8 @@ def generate_launch_description():
         executable='lifecycle_saltas',
         name='saltas'
     )
-    ldList = [velocityEstimationNode, acquisitionCenterNode, acquisitionLeftNode, acquisitionRightNode, slamNode, inferenceNode, saltasNode]
+    
+    ldList = [velocityEstimationNode, acquisitionCenterNode, acquisitionLeftNode, acquisitionRightNode, slamNode, inferenceNode, saltasNode, pathplanningNode]
 
     ld = LaunchDescription(ldList)
     return ld

@@ -36,7 +36,6 @@ class AcquisitionLifecycleNode(Node):
         if dev_num == 0:
             print("No Devices Found")
             sys.exit(2)
-        # devSN = "test"
         devSN = dev_info_list[0].get("sn")
         
         # Get Parameters from launch file 
@@ -54,6 +53,8 @@ class AcquisitionLifecycleNode(Node):
         )
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
+        self.get_logger().info(f"Configuring Acquisition Node")
+        
         serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
         orientation = self.get_parameter('orientation').get_parameter_value().string_value
         exposureTime = self.get_parameter('exposureTime').get_parameter_value().integer_value
@@ -72,7 +73,6 @@ class AcquisitionLifecycleNode(Node):
         # Open Camera and set settings
         self.camera.OnClickOpen()
         self.camera.SetSettings()
-        self.camera.OnClickClose()
 
         # Setup Publisher
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
@@ -82,7 +82,8 @@ class AcquisitionLifecycleNode(Node):
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Activate Camera Stream
-        self.camera.OnClickOpen()
+        self.get_logger().info(f"Activating Acquisition Node")
+
         self.camera.activateAcquisition()
 
         # Setup saltas clock node
@@ -95,30 +96,29 @@ class AcquisitionLifecycleNode(Node):
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
+        self.get_logger().info(f"Deactivating Acquisition Node")
         self.destroy_subscription(self.subscription)
-
+        
         # Deactivate Camera Stream
         self.camera.deactivateAcquisition()
-        self.camera.OnClickClose()
 
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        # TODO: I need to deactivate stream and close cameras before 
-        # cleanup and shutdown
+        self.get_logger().info(f"Cleaning up Acquisition Node")
+        self.camera.cleanupCamera()
 
         del self.camera, self.bridge
         self.destroy_lifecycle_publisher(self.publisher_)
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        # TODO: I need to deactivate stream and close cameras before 
-        # cleanup and shutdown
+        self.get_logger().info(f"Shutting Down Acquisition Node")
+        self.camera.cleanupCamera()
 
         del self.camera, self.bridge
         self.destroy_lifecycle_publisher(self.publisher_)
         return TransitionCallbackReturn.SUCCESS
-
 
     def trigger_callback(self, msg):
         # Trigger camera and acquire image
@@ -146,14 +146,7 @@ def main(args=None):
     try:
         rclpy.spin(perception_handler, executor)
     except (KeyboardInterrupt, ExternalShutdownException):
-        # Close cameras, 
-        # TODO: needs to be tested THOUROUGHLY!!
-        device_manager = gx.DeviceManager()
-        dev_num, dev_info_list = device_manager.update_device_list()
-        for i in range(dev_num):
-            devSN = dev_info_list[i].get("sn")
-            camera = device_manager.open_device_by_sn(devSN)
-            camera.close_device()
+        pass
     finally:
         perception_handler.destroy_node()
         rclpy.shutdown()

@@ -1,4 +1,5 @@
 #include "mpc_node.h"
+
 using namespace mpc_cpp;
 using namespace std::chrono_literals;
 
@@ -19,9 +20,9 @@ class MinimalPublisher : public rclcpp::Node {
   private:
     void timer_callback() {
       //initialize interface
-      rclcpp::Time starting_time = this->now() ;
+      rclcpp::Time starting_time = this->now();
       std::cout << "Im at iteration " << global_int+1 << std::endl;
-        if(global_int==0){ 
+        if(global_int==0){
             readData();  //various needed initalizations before first run
             Initialize_all();
         }
@@ -59,6 +60,7 @@ class MinimalPublisher : public rclcpp::Node {
     double total_execution_time;
     int global_int=0;
 };
+
 } //namespace mpc
 
 int main(int argc, char * argv[]) {  

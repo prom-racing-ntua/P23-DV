@@ -1,0 +1,31 @@
+#include "lifecycle_manager_node.hpp"
+
+
+namespace lifecycle_manager_namespace
+{
+    void LifecycleManagerNode::loadConfigurationFileToNode(std::string nodeName, std::string configFile)
+    {
+        // RCLCPP_INFO(get_logger(), "Loading %s configuration", nodeName.c_str());
+
+        // auto client = parameterClientMap.at(nodeName);
+
+        // std::vector<std::string> parameter_names {};
+        // RCLCPP_INFO(get_logger(), "Calling get parameters for %s configuration", nodeName.c_str());
+
+        // using ListParametersResponseFuture = std::shared_future<rcl_interfaces::msg::ListParametersResult>;
+
+        // auto list_parameters_callback = [this, nodeName, client, configFile](ListParametersResponseFuture future) {
+        //     auto result = future.get();
+
+        //     if (result.names.size() == 1) {
+        //         RCLCPP_INFO(get_logger(), "Node %s has no parameters to load.", nodeName.c_str());
+        //     }
+        //     else {
+        //         RCLCPP_INFO(get_logger(), "Number of params: %ld", result.names.size());
+        //         client->load_parameters(configFile);
+        //     }
+        // };
+
+        // auto parameters = client->list_parameters(parameter_names, 0, list_parameters_callback);
+    }
+}

@@ -14,7 +14,8 @@
 #include "custom_msgs/msg/mission.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
-
+#include "custom_msgs/msg/pose_msg.hpp"
+#include "custom_msgs/msg/mpc_to_can.hpp"
 #include "custom_msgs/msg/can_control_command.hpp"
 #include "custom_msgs/msg/can_system_state.hpp"
 #include "custom_msgs/msg/can_vehicle_variables.hpp"
@@ -56,6 +57,7 @@ namespace p23_status_namespace
         uint16_t conesCountAll;
         uint8_t conesActual;
         int currentLap;
+        int maxLaps;
 
         // From Velocity Estimation - Speed Actual
         double velocityX, velocityY, yawRate; 
@@ -79,8 +81,8 @@ namespace p23_status_namespace
         rclcpp::Subscription<custom_msgs::msg::MissionSelection>::SharedPtr canbus_mission_subscription_;
         rclcpp::Subscription<custom_msgs::msg::AutonomousStatus>::SharedPtr canbus_status_subscription_;
         rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_estimation_subscription_;
-        // rclcpp::Subscription<custom_msg::msg::Slam>::SharedPtr slam_subscription_;
-        // rclcpp::Subscription<custom_msg::msg::Controls>::SharedPtr controls_subscription_;
+        rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr slam_subscription_;
+        rclcpp::Subscription<custom_msgs::msg::MpcToCan>::SharedPtr controls_subscription_;
 
         //Node Publishers
         rclcpp::Publisher<custom_msgs::msg::CanSystemState>::SharedPtr canbus_system_state_publisher_;
@@ -93,8 +95,8 @@ namespace p23_status_namespace
 
         // Timers of node
         rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;
-        rclcpp::TimerBase::SharedPtr pcToVCU_slow_;
-        rclcpp::TimerBase::SharedPtr pcToVCU_medium_;
+        rclcpp::TimerBase::SharedPtr systemStateTimer_;
+        rclcpp::TimerBase::SharedPtr vehicleVariablesTimer_;
 
         // Callback Groups
         rclcpp::CallbackGroup::SharedPtr mission_selection_group_;
@@ -105,17 +107,20 @@ namespace p23_status_namespace
         void setSubscribers();
         void setPublishers();
 
-        // These are called when receiving message from the CANBUS node
+        /* 
+            These are called when receiving message from the CANBUS node
+            As well as from the other nodes whose information we need to send
+            to the data logger.
+        */
         void updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg);
         void updateASStatus(const custom_msgs::msg::AutonomousStatus::SharedPtr msg);
         void updateVelocityInformation(const custom_msgs::msg::VelEstimation::SharedPtr msg);
-        // void updateSLAMInformation(const custom_msgs::msg::kati::SharedPtr msg);
-        // void updateControlsInput(const custom_msgs::msg::kati::SharedPtr msg);
+        void updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg);
+        void updateControlsInput(const custom_msgs::msg::MpcToCan::SharedPtr msg);
 
         // Callbacks that send information to the VCU
-        void PCtoVCU_slow();
-        void PCtoVCU_medium();
-        void PCtoVCU_controls();
+        void sendSystemState();
+        void sendVehicleVariables();
 
         void checkSensors();
         void requestINSStatus();

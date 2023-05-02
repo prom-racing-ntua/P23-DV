@@ -19,17 +19,16 @@ namespace p23_status_namespace
         accelerationY = static_cast<double>(msg->acceleration_y);
     }
 
-    // void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::Slam::SharedPtr msg)
-    // {
+    void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg)
+    {
+        conesCountAll = msg->cones_count_all;
+        currentLap = msg->lap_count;
 
-    // }
-
-    // void P23StatusNode::updateControlsInput(const custom_msgs::msg::Controls::SharedPtr msg)
-    // {
-
-        // Send updated inputs to VCU
-        // PCtoVCU_controls();
-    // }
+        if (currentLap >= maxLaps)
+        {
+            // Go to Mission Finished state and start braking
+        }
+    }
 
     void P23StatusNode::checkSensors()
     {
@@ -37,49 +36,49 @@ namespace p23_status_namespace
         requestINSStatus();
     }
 
-    void P23StatusNode::PCtoVCU_slow()
+    void P23StatusNode::sendSystemState()
     {
         custom_msgs::msg::CanSystemState systemStateMsg;
 
-         systemStateMsg.mission_finished = missionFinished;
-         systemStateMsg.standstill = standstill;
-         systemStateMsg.pc_error = pcError;
-         systemStateMsg.lap_counter = currentLap;
-         systemStateMsg.cones_count_actual = conesActual;
-         systemStateMsg.cones_count_all = conesCountAll;
+        systemStateMsg.mission_finished = missionFinished;
+        systemStateMsg.standstill = standstill;
+        systemStateMsg.pc_error = pcError;
+        systemStateMsg.lap_counter = currentLap;
+        systemStateMsg.cones_count_actual = conesActual;
+        systemStateMsg.cones_count_all = conesCountAll;
 
-         canbus_system_state_publisher_->publish(systemStateMsg);
+        canbus_system_state_publisher_->publish(systemStateMsg);
     }
 
-    void P23StatusNode::PCtoVCU_medium()
+    void P23StatusNode::sendVehicleVariables()
     {
         /*
-            Should send information that are semi-important to the car, mostly things that help with the traction control and such. These are:
-            acc_lateral(m/s^2, scale 1/512), acc_long(m/s^2, scale 1/512) and yaw_rate(degrees/s, scale 1/128). Refresh rate is 20Hz
-
-            Each one is 2 bytes (LSB then MSB)
+            Should send information that are semi-important to the car, mostly things that help with
+            the traction control and such.
         */
-       custom_msgs::msg::CanVehicleVariables vehicleVariablesMsg;
+        custom_msgs::msg::CanVehicleVariables vehicleVariablesMsg;
 
-       // These are obviously wrong, just a placeholder for the actual values.
-       vehicleVariablesMsg.lat_accel = accelerationY/512;
-       vehicleVariablesMsg.long_accel = accelerationX/512;
-       vehicleVariablesMsg.yaw_rate = yawRate/128;
-    
-       canbus_vehicle_variables_publisher_->publish(vehicleVariablesMsg);
+        vehicleVariablesMsg.lat_accel = accelerationY;
+        vehicleVariablesMsg.long_accel = accelerationX;
+        vehicleVariablesMsg.yaw_rate = yawRate;
+        
+        canbus_vehicle_variables_publisher_->publish(vehicleVariablesMsg);
     }
 
-    /*
-        The actual PCtoVCU_fast is the one that send the information that are returned by the control node. These should be sent as soon as they are 
-        ready and should not wait. The other ones are done on a timer basis (10Hz for Slow and 20Hz for Medium) as to not overflow the canbus channel.
-    */
-
-    void P23StatusNode::PCtoVCU_controls()
+    void P23StatusNode::updateControlsInput(const custom_msgs::msg::MpcToCan::SharedPtr msg)
     {
         custom_msgs::msg::CanControlCommand controlCommandMsg;
+        motorTorqueTarget = msg->mt;
+        steeringAngleTarget = msg->sa;
+        brakeHydraulicTarget = msg->bp;
 
-        // Need to fill this out (when the control node is done)
+        controlCommandMsg.speed_actual = velocityX;
+        // controlCommandMsg.speed_target = ;
 
+        controlCommandMsg.motor_torque_target = motorTorqueTarget;
+        controlCommandMsg.steering_angle_target = steeringAngleTarget;
+        controlCommandMsg.brake_pressure_target = brakeHydraulicTarget;
+        
         canbus_controls_publisher_->publish(controlCommandMsg);
     }
 }

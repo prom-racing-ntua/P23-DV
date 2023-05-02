@@ -68,6 +68,7 @@ class AcquisitionNode(Node):
         # Open Camera and set settings
         self.camera.OnClickOpen()
         self.camera.SetSettings()
+        self.camera.activateAcquisition()
 
         # Setup Publisher
         self.bridge = CvBridge()  #This is used to pass images as ros msgs

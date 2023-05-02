@@ -24,11 +24,20 @@ class SaltasNode(Node):
         super().__init__('saltas')
         self.global_index = 0
         self.send_index = 0
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+            ('velocity_estimation_frequency', 50),
+            ('perception_frequency', 10)
+            ]
+        )
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         '''Load all ros parameters from config files'''
-        self.velocity_estimation_frequency = self.declare_parameter('velocity_estimation_frequency', 50).value
-        self.perception_frequency = self.declare_parameter('perception_frequency', 10).value
+        self.get_logger().info(f'Configuring Saltas Clock')
+
+        self.velocity_estimation_frequency = self.get_parameter('velocity_estimation_frequency').get_parameter_value().integer_value
+        self.perception_frequency = self.get_parameter('perception_frequency').get_parameter_value().integer_value
 
         # Master clock configuration and configuration of each task publish frequency
         self.clock_frequency = calcClockFrequency(self.velocity_estimation_frequency, self.perception_frequency)
@@ -38,7 +47,6 @@ class SaltasNode(Node):
 
         # Service for nodes to get their frequencies from the master
         self.frequency_service = self.create_service(GetFrequencies, 'get_frequencies', self.frequency_srv_callback)
-
         self.get_logger().info(f'Master Clock is Configured:')
         self.get_logger().info(f'Velocity Estimation Frequency {self.velocity_estimation_frequency} Hz')
         self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
@@ -122,8 +130,7 @@ def calcClockFrequency(velocity_freq, perception_freq):
 
 def main(args=None):
     rclpy.init(args=args)
-
-    time.sleep(3)
+    
     # Spin Master Node
     p23_master_node = SaltasNode()
     executor = SingleThreadedExecutor()

@@ -39,6 +39,7 @@ SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
         std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
         slam_object_.loadMap(track_file);
     }
+    
     else map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
 
     //Initialize global lock
@@ -115,6 +116,8 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     pose_msg.position.x = current_pose[0];
     pose_msg.position.y = current_pose[1];
     pose_msg.theta = current_pose[2];
+    pose_msg.lap_counter = completed_laps_;
+    pose_msg.cones_count_all = slam_object_.getConeCount();
     pose_publisher_->publish(pose_msg);
 
     // Keep odometry log
@@ -276,7 +279,7 @@ void SlamHandler::loadParameters() {
 int SlamHandler::getNodeFrequency() {
     using namespace std::chrono_literals;
 
-    // Instead of a timer we get the node frequency from the mater node with the following client request
+    // Instead of a timer we get the node frequency from the master node with the following client request
     auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
     int call_counter{ 0 };
     while (!cli_->wait_for_service(1s) and call_counter < 15)

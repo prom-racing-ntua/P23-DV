@@ -9,6 +9,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     lifecycle_manager_dir = get_package_share_directory("lifecycle_manager")
+
     
     lifecycle_manager_node = Node(
         package="lifecycle_manager",
@@ -16,6 +17,7 @@ def generate_launch_description():
         executable="lifecycle_manager",
         output="screen",
         emulate_tty=True,
+        parameters=[os.path.join(lifecycle_manager_dir, 'config', 'lifecycle_parameters.yaml')]
     )
 
     ld.add_action(lifecycle_manager_node)

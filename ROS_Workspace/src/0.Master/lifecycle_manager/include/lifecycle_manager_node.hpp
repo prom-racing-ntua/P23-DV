@@ -11,10 +11,12 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
+#include <rmw/qos_profiles.h>
 
 #include "custom_msgs/srv/driverless_status.hpp"
 #include "custom_msgs/msg/driverless_status.hpp"
 #include "lifecycle_msgs/srv/get_state.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 #include "lifecycle_msgs/srv/change_state.hpp"
 #include "rclcpp/parameter_client.hpp"
 #include "rclcpp/utilities.hpp"
@@ -67,7 +69,6 @@ void removeElement(std::vector<T>& vector, T element)
 
 namespace lifecycle_manager_namespace
 {
-    
     class LifecycleManagerNode : public rclcpp::Node {
     private:
         Mission currentMission;
@@ -87,7 +88,7 @@ namespace lifecycle_manager_namespace
         */
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedPtr> lifecycleGetStateMap;
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedPtr> lifecycleChangeStateMap;
-        std::unordered_map<std::string, rclcpp::AsyncParametersClient::SharedPtr> parameterClients;
+        // std::unordered_map<std::string, rclcpp::AsyncParametersClient::SharedPtr> parameterClientMap;
 
         rclcpp::Service<custom_msgs::srv::DriverlessStatus>::SharedPtr dvStatusService_;
 
@@ -109,10 +110,10 @@ namespace lifecycle_manager_namespace
             the node_name as the key.
         */
 
-        unsigned int getNodeState(std::string nodeName);
-        bool changeNodeState(std::uint8_t transition, std::string nodeName);
+        void getNodeState(std::string nodeName);
+        void changeNodeState(std::uint8_t transition, std::string nodeName);
         
-        bool verifyDVState();
+        void verifyDVState();
         void loadParameters();
 
         // 4 Main Functions for controlling the whole state machine of P23

@@ -1,2 +1,5 @@
 Point2Struct position
 float64 theta
+uint8 lap_count
+uint8 cones_count_actual
+uint16 cones_count_all

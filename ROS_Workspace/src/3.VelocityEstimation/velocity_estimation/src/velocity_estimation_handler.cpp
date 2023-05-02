@@ -3,8 +3,6 @@
 
 #include "velocity_estimation_handler.h"
 
-// TODO: detect when vectornav goes into mode 2: INS Tracking
-
 namespace ns_vel_est
 {
 VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimation_node"), estimator_{ this } {

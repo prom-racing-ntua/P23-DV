@@ -316,6 +316,7 @@ void GraphSLAM::loadMap(std::string& map_file_path) {
 
 		landmark_id_map_[landmark_counter_++] = cone;
 	}
+	cone_count_ = landmark_id_map_.size();
 }
 
 int GraphSLAM::findNearestNeighbor(PerceptionMeasurement& observed_landmark, gtsam::Vector2& global_position) {

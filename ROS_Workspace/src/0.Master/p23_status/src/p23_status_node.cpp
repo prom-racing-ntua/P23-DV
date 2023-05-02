@@ -6,10 +6,7 @@
 
 /*
     TODO List:
-    1. Write a callback to receive controls message, convert it to the needed scale and send it to the canbus node. This
-        means that controls need to be complete first.
-    2. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
-    3. Convert data to correct scale before senting it to VCU in byte arrays.
+    1. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
 */
 
 namespace p23_status_namespace
@@ -31,15 +28,14 @@ namespace p23_status_namespace
         */
 
         RCLCPP_INFO(get_logger(), "Sending LV_ON state change");
-        // changeDVStatus(LV_ON);
+        changeDVStatus(LV_ON);
     }
 
     void P23StatusNode::initializeNode()
     {
         /*
             Initialize System state variables.
-        */
-
+        */ 
         conesCountAll = 0;
         conesActual = 0;
         insMode = 2;
@@ -49,11 +45,11 @@ namespace p23_status_namespace
         currentMission = MANUAL;
         missionLocked = false;
         currentDVStatus = STARTUP;
+        maxLaps = 0;
 
         /*
             Initialize speed/acceleration variables and such.
         */
-
         velocityX = 0.0;
         velocityY = 0.0;
         yawRate = 0.0;
@@ -61,14 +57,14 @@ namespace p23_status_namespace
         accelerationY = 0.0;
 
         /*
-            Initialize Timers. Slow VCU communication is set at 10Hz, Medium VCU communication is set at 20Hz. Controls communication
-            should be done as soon as new control decisions are made (ASAP). Sensor Checkups are set at 1Hz (temporarily, we will see).
+            Initialize Timers. System State communication is set at 10Hz, Vehicle Variables communication is set at 20Hz. 
+            Controls communication should be done as soon as new control decisions are made (ASAP). 
+            Sensor Checkups are set at 1Hz (temporarily, we will see).
             Might add a CPU/GPU temperature checkup.
         */
-
         sensorCheckupTimer_ = create_wall_timer(std::chrono::milliseconds(1000), std::bind(&P23StatusNode::checkSensors, this));
-        pcToVCU_slow_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&P23StatusNode::PCtoVCU_slow, this));
-        pcToVCU_medium_ = create_wall_timer(std::chrono::milliseconds(50), std::bind(&P23StatusNode::PCtoVCU_medium, this));
+        systemStateTimer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&P23StatusNode::sendSystemState, this));
+        vehicleVariablesTimer_ = create_wall_timer(std::chrono::milliseconds(50), std::bind(&P23StatusNode::sendVehicleVariables, this));
     }
 
     void P23StatusNode::setSubscribers()
@@ -79,7 +75,6 @@ namespace p23_status_namespace
             Add the mission_selection message handler on a mutex group. We only want to receive the first mission selected.
             The rest get ignored using a flag.
         */
-
         mission_selection_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
         rclcpp::SubscriptionOptions options;
         options.callback_group = mission_selection_group_;
@@ -93,11 +88,11 @@ namespace p23_status_namespace
         velocity_estimation_subscription_ = create_subscription<custom_msgs::msg::VelEstimation>(
             "velocity_estimation", 10, std::bind(&P23StatusNode::updateVelocityInformation, this, _1));
         
-        // slam_subscription_ = create_subscription<custom_msgs::msg::Slam>(
-        //     "", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
+        slam_subscription_ = create_subscription<custom_msgs::msg::PoseMsg>(
+            "pose", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
 
-        // controls_subscription_ = create_subscription<custom_msgs::msg::Controls>(
-        //         "", 10, std::bind(&P23StatusNode::updateControlsInput, this, _1));
+        controls_subscription_ = create_subscription<custom_msgs::msg::MpcToCan>(
+            "mpc_output", 10, std::bind(&P23StatusNode::updateControlsInput, this, _1));
     }
 
     void P23StatusNode::setPublishers()
@@ -121,18 +116,40 @@ namespace p23_status_namespace
     }
 
     void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg)
-    {   
+    {
         if (missionLocked)
             return;
 
         currentMission = static_cast<Mission>(msg->mission_selected);
 
-        if (currentMission == MANUAL) {
-            //Shutdown the System
+        switch (currentMission) {
+            case(ACCELERATION):
+                maxLaps = 1;
+                break;
+            case(SKIDPAD):
+                maxLaps = 0;
+                break;
+            case(TRACKDRIVE):
+                maxLaps = 0;
+                break;
+            case(EBS_TEST):
+                maxLaps = 0;
+                break;
+            case(INSPECTION):
+                maxLaps = 0;
+                break;
+            case(AUTOX):
+                maxLaps = 0;
+                break;
+            case(MANUAL):
+                // The PC will shutdown so no one cares what happens here...
+                break;
+            default:
+                maxLaps = 100;
+                break;
         }
 
         // changeDVStatus might need to become blocking. Will see.
-        // INS Status can (and should) remain non-blocking
         changeDVStatus(MISSION_SELECTED);
     }
 
@@ -174,7 +191,7 @@ namespace p23_status_namespace
         while (!ins_mode_client_->wait_for_service(1s))
         {
             if (!rclcpp::ok())
-            {   
+            {
                 // Error-Handling point
                 return;
             }
@@ -202,11 +219,10 @@ namespace p23_status_namespace
         request->new_status.id = newStatus;
         request->new_status.label = driverlessStatusList[newStatus];
 
-        if (newStatus == MISSION_SELECTED){
+        if (newStatus == MISSION_SELECTED) {
             request->mission.id = currentMission;
             request->mission.label = missionList[currentMission];
             RCLCPP_INFO(get_logger(), "Mission Selected is %s", missionList[currentMission].c_str());
-
         }
 
         if ((newStatus == DV_READY) || (newStatus == DV_DRIVING)) {
@@ -214,7 +230,7 @@ namespace p23_status_namespace
             while(insMode != 2) {
                 // Error-Handling point
                 RCLCPP_INFO(get_logger(), "IMU Still not in mode 2. Current mode: %u",insMode);
-            }   
+            }
         }
 
         RCLCPP_INFO(get_logger(), "Sending a %s request to Lifecycle Manager", driverlessStatusList[newStatus].c_str());

@@ -17,4 +17,3 @@ path_planning:
     selection_radius_small: 7
     selection_radius_big: 15
     selection_angle: 45
-

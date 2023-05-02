@@ -37,7 +37,6 @@ void Path_Planner_Node::parameter_load() {
     declare_parameter<float>("length_penalty", 0.1);
     declare_parameter<float>("angle_penalty", 0.1);
     declare_parameter<float>("total_length_reward", 0.075);
-
 }
 
 std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_map, const Point& position, const Point& direction, int radius_small, int radius_big, int angle) {
@@ -109,10 +108,10 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     total_execution_time += total_time.nanoseconds() / 1000000.0;
     std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
+
 Path_Planner_Node::~Path_Planner_Node() {
     std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
 }
-
 
 int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);

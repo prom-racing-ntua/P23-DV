@@ -48,8 +48,15 @@ class Camera:
         self.cam.Width.set(self.ROIx)
         self.cam.Height.set(self.ROIy)   
 
-        # Switch acquisition to ON
+    def activateAcquisition(self):
         self.cam.stream_on()
+    
+    def deactivateAcquisition(self):
+        self.cam.stream_off()
+
+    def cleanupCamera(self):
+        self.cam.stream_off()
+        self.OnClickClose()
 
     def TriggerCamera(self):
         self.cam.TriggerSoftware.send_command()

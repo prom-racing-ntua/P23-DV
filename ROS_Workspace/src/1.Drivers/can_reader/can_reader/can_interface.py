@@ -174,7 +174,7 @@ class CommonUtilities:
         can_id = self.makeXBytes(hex(ids), 1)
 
         # status_hex = self.makeXBytes(hex((mission_finished << 7) + (standstill << 6) + (pc_error << 5) + (lap_counter << 1)),1)
-        status_hex = self.makeXBytes(hex((lap_counter << 4) + (pc_error << 2) + (standstill << 1) + pc_error), 1)
+        status_hex = self.makeXBytes(hex((lap_counter << 3) + (pc_error << 2) + (standstill << 1) + pc_error), 1)
         cones_count_actual_hex = self.makeXBytes(hex(cones_count_actual), 1)
         cones_count_all_hex = self.makeXBytes(hex(cones_count_all), 2)
         

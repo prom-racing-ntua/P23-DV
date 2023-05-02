@@ -23,6 +23,7 @@ namespace can_reader_namespace {
             int baud_rate;
             char port_number;
             int serial_port;
+            // FILE* serial_port_struct;
             int timeout;
             int freq;
             int period;
