@@ -1,7 +1,7 @@
 extern "C" {
 #include <stdio.h>
-#include "FORCESNLPsolver/include/FORCESNLPsolver.h"
-#include "FORCESNLPsolver/include/FORCESNLPsolver_memory.h"
+#include "../src/FORCESNLPsolver/include/FORCESNLPsolver.h"
+#include "../src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h"
 
 /* AD tool - FORCESPRO interface */
 extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float *x,       /* primal vars                                         */
@@ -51,6 +51,8 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 #include "custom_msgs/msg/waypoints_msg.hpp"
 #include "custom_msgs/msg/can_control_command.hpp"
 #include "custom_msgs/msg/mpc_to_can.hpp"
+#include "arc_length_spline.h"
+#include "read_track.h"
 
 namespace mpc_cpp {
 // needed for reading data only
@@ -198,7 +200,7 @@ void Initialize_all(){
         X[i] = xinit_temp[i];
     }
     mem = FORCESNLPsolver_internal_mem(0);
-    node_out node_out;
+    // node_out node_out;
 }
 
 void readData() {

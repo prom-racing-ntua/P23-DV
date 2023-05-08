@@ -29,7 +29,7 @@ set(CPACK_DEFAULT_PACKAGE_DESCRIPTION_FILE "/home/subdiduntil2/.local/lib/python
 set(CPACK_DEFAULT_PACKAGE_DESCRIPTION_SUMMARY "mpc_cpp built using CMake")
 set(CPACK_GENERATOR "STGZ;TGZ;TZ")
 set(CPACK_INSTALL_CMAKE_PROJECTS "/home/subdiduntil2/P23-DV/MPC/mpc_official;mpc_cpp;ALL;/")
-set(CPACK_INSTALL_PREFIX "/usr/local")
+set(CPACK_INSTALL_PREFIX "/home/subdiduntil2/P23-DV/install/mpc_cpp")
 set(CPACK_MODULE_PATH "")
 set(CPACK_NSIS_DISPLAY_NAME "mpc_cpp 0.1.0")
 set(CPACK_NSIS_INSTALLER_ICON_CODE "")
