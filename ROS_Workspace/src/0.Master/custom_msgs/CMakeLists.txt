@@ -34,6 +34,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   ## Can-USB receive msgs
   "msg/CanInterface/RxWheelSpeed.msg"
   "msg/CanInterface/RxVehicleSensors.msg"
+  "msg/CanInterface/RxSteeringAngle.msg"
 
   ## Master node msgs
   "msg/NodeSync.msg"

@@ -12,7 +12,7 @@ from .Messages import *
 class CanInterface(Node):
     def __init__(self) -> None:
         super().__init__("can_interface")
-        
+
         # Load port and node parameters from config file
         self.load_parameters()
         CanInterfaceMessage.node_handle = self
@@ -26,28 +26,43 @@ class CanInterface(Node):
 
         # Define Incoming Messages
         self._in_msgs = {
-            MissionMsg.can_id : MissionMsg
-            # FrontWheelEncodersMsg.can_id : FrontWheelEncodersMsg,
-            # RearWheelEncodersMsg.can_id : RearWheelEncodersMsg,
-            # SteeringAngleMsg.can_id : SteeringAngleMsg,
-            # BrakePressureMsg.can_id : BrakePressureMsg
+            MissionMsg.can_id               : MissionMsg,
+            SensorVariablesMsg.can_id       : SensorVariablesMsg,
+            WheelEncodersMsg.can_id         : WheelEncodersMsg,
+            SteeringAngleMsg.can_id         : SteeringAngleMsg
         }
 
         # Define Outgoing Messages
         self._out_msgs = {
-            KinematicVariablesMsg.msg_type : KinematicVariablesMsg,
-            # SteeringAngleMsg.msg_type : SteeringAngleMsg
+            ActuatorCommandsMsg.msg_type    : ActuatorCommandsMsg,
+            KinematicVariablesMsg.msg_type  : KinematicVariablesMsg,
+            SystemHealthMsg.msg_type        : SystemHealthMsg
         }
 
         # Define ROS Publishers for the incoming messages
-        MissionMsg.ros_publisher = self.create_publisher(Mission, 'mission', 10)
+        MissionMsg.ros_publisher = self.create_publisher(Mission, 'mission_selection', 10)
+        SensorVariablesMsg.ros_publisher = self.create_publisher(RxVehicleSensors, 'sensor_values', 10)
+        WheelEncodersMsg.ros_publisher = self.create_publisher(RxWheelSpeed, 'wheel_encoders', 10)
+        SteeringAngleMsg.ros_publisher = self.create_publisher(RxSteeringAngle, 'steering_angle', 10)
+
+        # Define ROS Subscribers for the outgoing messages
+        ActuatorCommandsMsg.ros_subscriber = self.create_subscription(TxControlCommand, 'p23_status/control_commands', self.universal_callback, 10)
+        KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, 'velocity_estimation', self.universal_callback, 10)
+        SystemHealthMsg.ros_subscriber = self.create_subscription(TxSystemState, 'p23_status/system_state', self.universal_callback, 10)
+
+
+        ## --- For P22 --- ##
+        # self._in_msgs = {
+        #     FrontWheelEncodersMsg.can_id : FrontWheelEncodersMsg,
+        #     RearWheelEncodersMsg.can_id : RearWheelEncodersMsg,
+        #     SteeringAngleMsg.can_id : SteeringAngleMsg,
+        #     BrakePressureMsg.can_id : BrakePressureMsg
+        # }
         # FrontWheelEncodersMsg.ros_publisher = self.create_publisher(WheelSpeed, 'front_hall_sensors', 10)
         # RearWheelEncodersMsg.ros_publisher = self.create_publisher(WheelSpeed, 'rear_hall_sensors', 10)
         # SteeringAngleMsg.ros_publisher = self.create_publisher(SteeringAngle, 'steering_angle', 10)
         # BrakePressureMsg.ros_publisher = self.create_publisher(BrakePressure, 'brake_pressure', 10)
 
-        # Define ROS Subscribers for the outgoing messages
-        KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, 'state_pub', self.universal_callback, 10)
 
         # Timer to perform read actions from the Can/USB board
         self._read_timer = self.create_timer(1 / self.get_parameter('read_frequency').value, self.read_serial)
@@ -122,7 +137,10 @@ class CanInterface(Node):
 
             # Check if we received new mission and handle it
             if Message == MissionMsg:
-                mission_locked = temp_msg.handle_mission()
+                try:
+                    mission_locked = temp_msg.handle_mission()
+                except ValueError:
+                    return
                 # If mission is not locked wait for acknowledgment
                 # else push the mission to the rest of the system
                 if not mission_locked:

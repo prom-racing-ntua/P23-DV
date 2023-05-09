@@ -139,7 +139,7 @@ class BrakePressureMsg(CanInterfaceMessage):
         return msg
 
 
-### --------------------------- P22 CanBus Messages --------------------------- ###
+### --------------------------- P23 CanBus Messages --------------------------- ###
 
 class ActuatorCommandsMsg(CanInterfaceMessage):
     can_id = 0x01
@@ -185,33 +185,52 @@ class SystemHealthMsg(CanInterfaceMessage):
     msg_type = TxSystemState
 
     def to_CanMsg(self) -> bytearray:
+        self._ros_msg = TxSystemState()
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
 
-        # Set lap counter and dv-state flags TODO
-        first_byte = 0
-        out_msg[1] = first_byte
+        # Set lap counter and dv-state flags
+        dv_state = self._ros_msg.dv_status.id
+        if dv_state == DriverlessStatus.LV_ON:
+            state = 0x00
+        elif dv_state == DriverlessStatus.MISSION_SELECTED:
+            state = 0x01
+        elif dv_state == DriverlessStatus.DV_READY:
+            state = 0x02
+        elif dv_state == DriverlessStatus.DV_DRIVING:
+            state = 0x04
+        elif dv_state == DriverlessStatus.MISSION_FINISHED:
+            state = 0x08
+        elif dv_state == DriverlessStatus.NODE_PROBLEM:
+            state = 0x0F
+        else:
+            self.node_handle.get_logger().error(f"Unknown DV State received: {dv_state}")
+            state = 0x0F
+        out_msg[1] = ((self._ros_msg.lap_counter << 4) & state).to_bytes(1, byteorder='big')
 
-        out_msg[2] = self._ros_msg.cones_count_actual
-        out_msg[3:5] = self._ros_msg.cones_count_all
-        
-        # Set sensor status byte TODO
-        sensor_status = 0
-        out_msg[5] = sensor_status
-        
-        # Set node status byte TODO
-        node_status =0
-        out_msg[6] = node_status
+        out_msg[2] = self._ros_msg.cones_count_actual.to_bytes(1, byteorder='big')
+        out_msg[3:5] = self._ros_msg.cones_count_all.to_bytes(2, byteorder='big')
+
+        # Set sensor status byte
+        sensor_status_bits = [0,0,0,0,0,0,0,0]
+        sensor_status_bits[0] = self._ros_msg.vn_200_ok
+        sensor_status_bits[1] = self._ros_msg.vn_300_ok
+        sensor_status_bits[2] = self._ros_msg.camera_right_ok
+        sensor_status_bits[3] = self._ros_msg.camera_left_ok
+        out_msg[5] = bitsToByte(sensor_status_bits)
+
+        # Set node status byte
+        node_status_bits = [0,0,0,0,0,0,0,0]
+        node_status_bits[0] = self._ros_msg.clock_ok
+        node_status_bits[1] = self._ros_msg.camera_inference_ok
+        node_status_bits[2] = self._ros_msg.velocity_estimation_ok
+        node_status_bits[3] = self._ros_msg.slam_ok
+        node_status_bits[4] = self._ros_msg.mpc_controls_ok
+        node_status_bits[5] = self._ros_msg.path_planning_ok
+        node_status_bits[6] = self._ros_msg.pi_pp_controls_ok
+        out_msg[6] = bitsToByte(node_status_bits)
 
         return out_msg
-
-
-class MissionHandshakeMsg(CanInterfaceMessage):
-    can_id = 0x04
-    byte_size = 2
-
-    def __init__(self, received_message) -> None:
-        super().__init__(received_message)
 
 
 class MissionMsg(CanInterfaceMessage):
@@ -234,10 +253,9 @@ class MissionMsg(CanInterfaceMessage):
         ones = bits.count(True) - is_locked
         # This should not happen ever
         if ones != 1:
-            # TODO Error Handling so no reselection of mission
             self.node_handle.get_logger().error("Received Multiple Missions")
             out_msg = b'\x04\x00'
-            return False
+            raise ValueError("Received Multiple Missions")
         else:
             mission = bits.index(1) + 1
             assert mission != self.LOCKED + 1, "Mission Locked but non selected?!"
@@ -255,11 +273,79 @@ class MissionMsg(CanInterfaceMessage):
             out_msg[1] = mission_byte
         self.node_handle._serial_port.write(out_msg)
         return mission_confirmed
-    
+
     def to_ROS(self) -> msg_type:
         ros_msg = self.msg_type()
         ros_msg.id = self.node_handle._locked_mission
         return ros_msg
+
+
+class SensorVariablesMsg(CanInterfaceMessage):
+    can_id = 0x300
+    byte_size = 7
+    msg_type = RxVehicleSensors
+
+    def to_ROS(self) -> msg_type:
+        msg = self.msg_type()
+
+        # Set the AS-Status
+        received_status = int.from_bytes(self._can_msg[0:1], byteorder='big')
+        if received_status == 0x01:
+            msg.as_status.id = AutonomousStatus.AS_OFF
+        elif received_status == 0x02:
+            msg.as_status.id = AutonomousStatus.AS_READY
+        elif received_status == 0x04:
+            msg.as_status.id = AutonomousStatus.AS_DRIVING
+        elif received_status == 0x08:
+            msg.as_status.id = AutonomousStatus.AS_FINISHED
+        elif received_status == 0x10:
+            msg.as_status.id = AutonomousStatus.AS_EMERGENCY
+        else:
+            self.node_handle.get_logger().error(f"Invalid AS Status received: {received_status}")
+            msg.as_status.id = 0
+        
+        # Set Motor Torque
+        motor_torque = int.from_bytes(self.can_id[5:7], byteorder='big', signed=True)
+        msg.motor_torque_actual = motor_torque
+
+        # Set Brake Hydraulic Pressure
+        integer_part = int.from_bytes(self._can_msg[1:2], byteorder='big')
+        decimal_part = int.from_bytes(self._can_msg[2:3], byteorder='big')
+        msg.brake_pressure_front = integer_part + decimal_part / 10
+
+        integer_part = int.from_bytes(self._can_msg[3:4], byteorder='big')
+        decimal_part = int.from_bytes(self._can_msg[4:5], byteorder='big')
+        msg.brake_pressure_rear = integer_part + decimal_part / 10
+
+        return msg
+
+
+class WheelEncodersMsg(CanInterfaceMessage):
+    can_id = 0x301
+    byte_size = 8
+    msg_type = RxWheelSpeed
+
+    def to_ROS(self) -> msg_type:
+        msg = self.msg_type()
+
+        msg.front_left = int.from_bytes(self._can_msg[0:2], byteorder='big', signed=False)
+        msg.front_right = int.from_bytes(self._can_msg[2:4], byteorder='big', signed=False)
+        msg.rear_left = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=False)
+        msg.rear_right = int.from_bytes(self._can_msg[6:8], byteorder='big', signed=False)
+
+        return msg
+
+
+class SteeringAngleMsg(CanInterfaceMessage):
+    can_id = 0x05
+    byte_size = 1
+    msg_type = RxSteeringAngle
+
+    def to_ROS(self) -> msg_type:
+        msg = self.msg_type()
+        # TODO Transform from mm rack displacement to rad
+        msg.steering_angle = int.from_bytes(self._can_msg, byteorder='big', signed=True) / 256
+        return msg
 
 
 
