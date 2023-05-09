@@ -16,9 +16,9 @@
 #include "custom_msgs/msg/vel_estimation.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/mpc_to_can.hpp"
-#include "custom_msgs/msg/can_control_command.hpp"
-#include "custom_msgs/msg/can_system_state.hpp"
-#include "custom_msgs/msg/can_vehicle_variables.hpp"
+#include "custom_msgs/msg/tx_control_command.hpp"
+#include "custom_msgs/msg/tx_system_state.hpp"
+#include "custom_msgs/msg/tx_vehicle_variables.hpp"
 
 typedef enum Mission{
     ACCELERATION = 1,
@@ -85,9 +85,9 @@ namespace p23_status_namespace
         rclcpp::Subscription<custom_msgs::msg::MpcToCan>::SharedPtr controls_subscription_;
 
         //Node Publishers
-        rclcpp::Publisher<custom_msgs::msg::CanSystemState>::SharedPtr canbus_system_state_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::CanVehicleVariables>::SharedPtr canbus_vehicle_variables_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::CanControlCommand>::SharedPtr canbus_controls_publisher_;
+        rclcpp::Publisher<custom_msgs::msg::TxSystemState>::SharedPtr canbus_system_state_publisher_;
+        rclcpp::Publisher<custom_msgs::msg::TxVehicleVariables>::SharedPtr canbus_vehicle_variables_publisher_;
+        rclcpp::Publisher<custom_msgs::msg::TxControlCommand>::SharedPtr canbus_controls_publisher_;
         
         //Clients
         rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedPtr p23_status_client_;

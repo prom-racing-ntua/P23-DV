@@ -22,7 +22,7 @@ namespace ns_vel_est
 // Forward declaration of the VelocityEstimator class so it can be used for the estimator_ member variable
 class VelocityEstimator;
 
-class VelocityEstimationHandler: public rclcpp::Node {
+class VelocityEstimationHandler : public rclcpp::Node {
 private:
     int node_frequency_;
     unsigned long global_index_;

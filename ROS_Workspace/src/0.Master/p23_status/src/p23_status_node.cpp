@@ -75,13 +75,14 @@ namespace p23_status_namespace
             Add the mission_selection message handler on a mutex group. We only want to receive the first mission selected.
             The rest get ignored using a flag.
         */
-        mission_selection_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
+        mission_selection_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         rclcpp::SubscriptionOptions options;
         options.callback_group = mission_selection_group_;
 
         canbus_mission_subscription_ = create_subscription<custom_msgs::msg::MissionSelection>(
             "canbus/mission_selection", 10, std::bind(&P23StatusNode::updateMission, this, _1), options);
 
+        // Dimitris: AS State will probably be in the same message along with other variables
         canbus_status_subscription_ = create_subscription<custom_msgs::msg::AutonomousStatus>(
             "canbus/as_status", 10, std::bind(&P23StatusNode::updateASStatus, this, _1));
 
@@ -98,13 +99,14 @@ namespace p23_status_namespace
     void P23StatusNode::setPublishers()
     {
         // Set publisher towards CANBUS writer topic
-        canbus_system_state_publisher_ = create_publisher<custom_msgs::msg::CanSystemState>(
+        canbus_system_state_publisher_ = create_publisher<custom_msgs::msg::TxSystemState>(
             std::string(get_name()) + std::string("/system_state"), 10);
 
-        canbus_vehicle_variables_publisher_ = create_publisher<custom_msgs::msg::CanVehicleVariables>(
+        // Dimitris: No need for this, taking it straight from VelEstimation
+        canbus_vehicle_variables_publisher_ = create_publisher<custom_msgs::msg::TxVehicleVariables>(
             std::string(get_name()) + std::string("/vehicle_variables"), 10);
 
-        canbus_controls_publisher_ = create_publisher<custom_msgs::msg::CanControlCommand>(
+        canbus_controls_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>(
             std::string(get_name()) + std::string("/control_command"), 10);
     }
 

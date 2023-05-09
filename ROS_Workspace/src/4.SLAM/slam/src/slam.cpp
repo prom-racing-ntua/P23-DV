@@ -38,7 +38,7 @@ gtsam::NonlinearFactor::shared_ptr UnaryFactor::clone() const {
 		gtsam::NonlinearFactor::shared_ptr(new UnaryFactor(*this)));
 }
 
-GraphSLAM::GraphSLAM(rclcpp::Node* nh): node_handler_(nh) {
+GraphSLAM::GraphSLAM(rclcpp::Node* nh) : node_handler_(nh) {
 	previous_global_index_ = 0;
 	landmark_counter_ = 0;
 	cone_count_ = 0;
@@ -197,8 +197,8 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 			new_landmark.theta_vector.push_back(cone.theta);
 			new_landmark.variance_vector.push_back(cone.observation_noise);
 
-			if (cone.range > 7.5) new_landmark.score = 1;
-			else new_landmark.score = 5;
+			if (cone.range > 7.5) new_landmark.score = 3;
+			else new_landmark.score = 7;
 
 			landmark_id_map_[landmark_counter_++] = new_landmark;
 		}
@@ -218,10 +218,10 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 				best_match->estimated_pose[0] = (best_match->estimated_pose[0] + observed_position[0]) / 2.0;
 				best_match->estimated_pose[1] = (best_match->estimated_pose[1] + observed_position[1]) / 2.0;
 
-				if (cone.range > 7.5) best_match->score += 1;
-				else best_match->score += 5;
+				if (cone.range > 9.0) best_match->score += 3;
+				else best_match->score += 7;
 
-				if (best_match->score > 15)
+				if (best_match->score > 12)
 				{
 					best_match->is_verified = true;
 					cone_count_++;

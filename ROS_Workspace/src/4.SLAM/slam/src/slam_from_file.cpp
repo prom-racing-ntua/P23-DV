@@ -5,7 +5,7 @@
 
 namespace ns_slam
 {
-SlamFromFile::SlamFromFile(): Node("slam_from_file_node"), slam_object_(this) {
+SlamFromFile::SlamFromFile() : Node("slam_from_file_node"), slam_object_(this) {
 	global_index_ = 0;
 
 	perception_eof_ = false;

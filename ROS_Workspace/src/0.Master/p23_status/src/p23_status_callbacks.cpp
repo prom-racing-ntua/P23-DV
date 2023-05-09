@@ -38,7 +38,7 @@ namespace p23_status_namespace
 
     void P23StatusNode::sendSystemState()
     {
-        custom_msgs::msg::CanSystemState systemStateMsg;
+        custom_msgs::msg::TxSystemState systemStateMsg;
 
         systemStateMsg.mission_finished = missionFinished;
         systemStateMsg.standstill = standstill;
@@ -56,18 +56,18 @@ namespace p23_status_namespace
             Should send information that are semi-important to the car, mostly things that help with
             the traction control and such.
         */
-        custom_msgs::msg::CanVehicleVariables vehicleVariablesMsg;
+        custom_msgs::msg::TxVehicleVariables vehicleVariablesMsg;
 
-        vehicleVariablesMsg.lat_accel = accelerationY;
-        vehicleVariablesMsg.long_accel = accelerationX;
-        vehicleVariablesMsg.yaw_rate = yawRate;
+        // vehicleVariablesMsg.lat_accel = accelerationY;
+        // vehicleVariablesMsg.long_accel = accelerationX;
+        // vehicleVariablesMsg.yaw_rate = yawRate;
         
         canbus_vehicle_variables_publisher_->publish(vehicleVariablesMsg);
     }
 
     void P23StatusNode::updateControlsInput(const custom_msgs::msg::MpcToCan::SharedPtr msg)
     {
-        custom_msgs::msg::CanControlCommand controlCommandMsg;
+        custom_msgs::msg::TxControlCommand controlCommandMsg;
         motorTorqueTarget = msg->mt;
         steeringAngleTarget = msg->sa;
         brakeHydraulicTarget = msg->bp;

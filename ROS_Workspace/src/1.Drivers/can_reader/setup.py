@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'can_interface = can_reader.can_interface:main',
+            'can_interface = can_reader.can_interface_final:main',
             'test_pub = can_reader.simple_pub:main',
         ],
     },

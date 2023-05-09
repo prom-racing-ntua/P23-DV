@@ -26,14 +26,14 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ## Can-USB sent msgs
-  "msg/CanSystemState.msg"
-  "msg/CanControlCommand.msg"
-  "msg/CanVehicleVariables.msg"
+  "msg/CanInterface/TxSystemState.msg"
+  "msg/CanInterface/TxControlCommand.msg"
+  "msg/CanInterface/TxVehicleVariables.msg"   # Not actually used
   "msg/MpcToCan.msg"
 
   ## Can-USB receive msgs
-  "msg/CanWheelSpeed.msg"
-  "msg/CanVehicleSensors.msg"
+  "msg/CanInterface/RxWheelSpeed.msg"
+  "msg/CanInterface/RxVehicleSensors.msg"
 
   ## Master node msgs
   "msg/NodeSync.msg"
@@ -44,11 +44,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   ## Perception msgs
   "msg/AcquisitionMessage.msg"
   "msg/Perception2Slam.msg"
-
-  ## Msgs fot P22 testing
-  "msg/WheelSpeed.msg"
-  "msg/SteeringAngle.msg"
-  "msg/BrakePressure.msg"
 
   ## P23 Status Messages
   "msg/MissionSelection.msg"
@@ -67,6 +62,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetFrequencies.srv"
   "srv/DriverlessStatus.srv"
   "srv/InsMode.srv"
+
+  ## Messages for P22 testing
+  "msg/P22/WheelSpeed.msg"
+  "msg/P22/SteeringAngle.msg"
+  "msg/P22/BrakePressure.msg"
 
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS
