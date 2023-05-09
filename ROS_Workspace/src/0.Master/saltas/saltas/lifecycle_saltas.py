@@ -8,7 +8,7 @@ import time
 import rclpy
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.lifecycle import Node
-from rclpy.lifecycle import Publisher
+from rclpy.lifecycle import LifecyclePublisher
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.timer import Timer
@@ -35,6 +35,7 @@ class SaltasNode(Node):
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         '''Load all ros parameters from config files'''
         self.get_logger().info(f'Configuring Saltas Clock')
+        self.publishing = False
 
         self.velocity_estimation_frequency = self.get_parameter('velocity_estimation_frequency').get_parameter_value().integer_value
         self.perception_frequency = self.get_parameter('perception_frequency').get_parameter_value().integer_value
@@ -44,6 +45,10 @@ class SaltasNode(Node):
         self.send_velocity = int(self.clock_frequency / self.velocity_estimation_frequency)
         self.send_perception = int(self.clock_frequency / self.perception_frequency)
         self.send_reset = calcClockFrequency(self.send_velocity, self.send_perception)
+
+
+        self.saltas_clock = self.create_timer(1/self.clock_frequency, self.globalTimerCallback)
+        self.clock_publisher = self.create_lifecycle_publisher(NodeSync, 'saltas_clock', qos_profile=10)
 
         # Service for nodes to get their frequencies from the master
         self.frequency_service = self.create_service(GetFrequencies, 'get_frequencies', self.frequency_srv_callback)
@@ -55,27 +60,20 @@ class SaltasNode(Node):
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Publisher for the synchronization topic
-        # Start ticking the clock
-        self.saltas_clock = self.create_timer(1/self.clock_frequency, self.globalTimerCallback)
+        # Start ticking the clock        
+        self.publishing = True
 
-        self.clock_publisher = self.create_lifecycle_publisher(NodeSync, 'saltas_clock', 10)
-        
         self.get_logger().info(f'Master Clock is Active!')
-        self.get_logger().info(f'Velocity Estimation Frequency {self.velocity_estimation_frequency} Hz')
-        self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
-
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        self.destroy_lifecycle_publisher(self.clock_publisher)
-        self.destroy_timer(self.saltas_clock)
-
+        self.publishing = False
         self.get_logger().info(f'Master Clock Deactivated!')
 
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        # TODO: Fill out
+        self.publishing = False
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
@@ -88,6 +86,9 @@ class SaltasNode(Node):
         Didn't do that because it seems slower (global_index can reach very high values and maybe it slows down because of that??),
         but not 100% sure if that is true.
         '''
+        if not self.publishing:
+            return
+        
         if self.send_index >= self.send_reset:
             self.send_index = 0
 
@@ -126,7 +127,6 @@ def calcClockFrequency(velocity_freq, perception_freq):
             break
         greater += 1
     return clock_freq
-
 
 def main(args=None):
     rclpy.init(args=args)

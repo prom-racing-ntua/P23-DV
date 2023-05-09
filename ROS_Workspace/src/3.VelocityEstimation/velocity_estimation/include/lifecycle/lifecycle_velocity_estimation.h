@@ -1,5 +1,5 @@
-#ifndef VELOCITY_ESTIMATION_H
-#define VELOCITY_ESTIMATION_H
+#ifndef LIFECYCLE_VELOCITY_ESTIMATION_H
+#define LIFECYCLE_VELOCITY_ESTIMATION_H
 
 #include <memory>
 #include <array>
@@ -8,12 +8,12 @@
 #include <eigen3/Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
 
-#include "velocity_estimation_common.h"
+#include "../velocity_estimation_common.h"
 
 namespace ns_vel_est
 {
 // Forward declaration of the VelocityEstimationHandler class so it can be used for the Handle type
-class VelocityEstimationHandler;
+class LifecycleVelocityEstimationHandler;
 
 using StateVector = Eigen::Matrix<double, StateSize, 1>;
 using ObservationVector = Eigen::Matrix<double, ObservationSize, 1>;
@@ -23,9 +23,9 @@ using StateMatrix = Eigen::Matrix<double, StateSize, StateSize>;
 using ObservationMatrix = Eigen::Matrix<double, ObservationSize, StateSize>;
 using MeasurementNoiseMatrix = Eigen::Matrix<double, ObservationSize, ObservationSize>;
 
-using Handle = VelocityEstimationHandler*;
+using Handle = LifecycleVelocityEstimationHandler*;
 
-class VelocityEstimator {
+class LifecycleVelocityEstimator {
 private:
     Handle node_handler_;       // pointer to handler class
     double delta_time_;         // time between iterations in seconds
@@ -79,7 +79,7 @@ private:
     void predictObservations();
 
 public:
-    explicit VelocityEstimator(Handle nh);
+    explicit LifecycleVelocityEstimator(Handle nh);
     // ~VelocityEstimator();
 
     // Initializes the Kalman filter matrices and other variables
@@ -111,4 +111,4 @@ public:
 };
 } //namespace ns_vel_est
 
-#endif // VELOCITY_ESTIMATION_H
+#endif // LIFECYCLE_VELOCITY_ESTIMATION_H

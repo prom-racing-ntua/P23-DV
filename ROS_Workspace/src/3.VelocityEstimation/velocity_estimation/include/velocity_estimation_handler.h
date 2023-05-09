@@ -75,10 +75,7 @@ public:
     explicit VelocityEstimationHandler();
     //~VelocityEstimationHandler();
     void publishResults();
-
-    // Setters
-
-    // Getters
+    
     // Returns the frequency at witch the node executes the EKF algorithm
     int getNodeFrequency() const { return node_frequency_; }
 };

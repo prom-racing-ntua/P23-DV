@@ -49,7 +49,7 @@ include_directories(
 )
 
 add_executable(${PROJECT_NAME} src/path_planner.cpp src/triangulation_cgal.cpp)
-add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_pathplanning_node.cpp src/triangulation_cgal.cpp)
+add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_pathplanning_node.cpp src/triangulation_cgal.cpp src/lifecycle/lifecycle_states.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs CGAL custom_msgs)
 ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp std_msgs CGAL custom_msgs rclcpp_lifecycle)
 

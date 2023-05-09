@@ -1,5 +1,5 @@
-#include "velocity_estimation.h"
-#include "velocity_estimation_handler.h"
+#include "lifecycle/lifecycle_velocity_estimation.h"
+#include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
 
 // NOTE: wrap state angles in (-pi, pi) range. (only if we add angles in the state vector)
 // NOTE: If we do dynamic measurement covariance, we should check for negative and very small values.
@@ -9,9 +9,9 @@
 namespace ns_vel_est
 {
 // Gets the handle pointer, the filter matrices are initialized in the init() method
-VelocityEstimator::VelocityEstimator(Handle nh): node_handler_(nh) {}
+LifecycleVelocityEstimator::LifecycleVelocityEstimator(Handle nh): node_handler_(nh) {}
 
-void VelocityEstimator::init() {
+void LifecycleVelocityEstimator::init() {
     // RCLCPP_INFO(node_handler_->get_logger(), "Initializing Velocity Estimator");
 
     // Get the state initialization from the .yaml file
@@ -76,7 +76,7 @@ void VelocityEstimator::init() {
     identity_.setIdentity();
 }
 
-std::vector<int> VelocityEstimator::mahalanobisThreshold() {
+std::vector<int> LifecycleVelocityEstimator::mahalanobisThreshold() {
     std::vector<int> passed_idx{};
     // TODO: Check again if threshold works properly (for now it will be disabled)
     // Iterate through all sensors in the sensor map. Note that all the keys of the map are actually ints
@@ -120,7 +120,7 @@ std::vector<int> VelocityEstimator::mahalanobisThreshold() {
 }
 
 // The state equations of the filter can be modified through this function
-void VelocityEstimator::getNextState() {
+void LifecycleVelocityEstimator::getNextState() {
     state_(StateVx) = state_(StateVx) + (state_(StateAx) + state_(StateVyaw) * state_(StateVy)) * delta_time_;
 
     state_(StateVy) = state_(StateVy) + (state_(StateAy) - state_(StateVyaw) * state_(StateVx)) * delta_time_;
@@ -135,7 +135,7 @@ void VelocityEstimator::getNextState() {
 }
 
 // The measurement equations of the filter can be modified through this function
-void VelocityEstimator::predictObservations() {
+void LifecycleVelocityEstimator::predictObservations() {
     observations_(ObservationVx) = state_(StateVx) - state_(StateVyaw) * vn_300_ry_;
 
     observations_(ObservationVy) = state_(StateVy) + state_(StateVyaw) * vn_300_rx_;
@@ -153,7 +153,7 @@ void VelocityEstimator::predictObservations() {
     observations_(ObservationVhall_rear) = state_(StateVx) / wheel_radius_ * 9.5493;
 }
 
-bool VelocityEstimator::predict() {
+bool LifecycleVelocityEstimator::predict() {
     // Set the transfer function jacobian variables according to the current state
     transfer_function_jacobian_(StateVx, StateVy) = -state_(StateVyaw) * delta_time_;
     transfer_function_jacobian_(StateVx, StateVyaw) = -state_(StateVy) * delta_time_;
@@ -169,7 +169,7 @@ bool VelocityEstimator::predict() {
     return true;
 }
 
-bool VelocityEstimator::update() {
+bool LifecycleVelocityEstimator::update() {
     // Set the measurement function jacobian variables according to the current state
     measurement_function_jacobian_(ObservationAx, StateVyaw) = -2 * vn_200_rx_ * state_(StateVyaw);
     measurement_function_jacobian_(ObservationAy, StateVyaw) = -2 * vn_200_ry_ * state_(StateVyaw);

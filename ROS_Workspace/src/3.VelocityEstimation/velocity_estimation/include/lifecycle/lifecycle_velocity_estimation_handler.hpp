@@ -18,20 +18,19 @@
 #include "custom_msgs/msg/node_sync.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
-#include "velocity_estimation.h"
+#include "lifecycle_velocity_estimation.h"
 
 namespace ns_vel_est
 {
     // Forward declaration of the VelocityEstimator class so it can be used for the estimator_ member variable
-    class VelocityEstimator;
-
+    class LifecycleVelocityEstimator;
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecycleVelocityEstimationHandler: public rclcpp_lifecycle::LifecycleNode {
     private:
         int node_frequency_;
         unsigned long global_index_;
-        VelocityEstimator estimator_;
+        LifecycleVelocityEstimator estimator_;
 
         // ROS Subscriber members
         rclcpp::Subscription<vectornav_msgs::msg::InsGroup>::SharedPtr vn_velocity_sub_;     // vectornav vn-300
@@ -45,11 +44,8 @@ namespace ns_vel_est
         // this subscriber and is set in the master node config.
         rclcpp::Subscription<custom_msgs::msg::NodeSync>::SharedPtr master_sub_;
 
-        // ROS Timer to set the frequency of the algorithm
-        // rclcpp::TimerBase::SharedPtr timer_;
-
         // ROS Publisher to output results to the velocity estimation topic
-        rclcpp::Publisher<custom_msgs::msg::VelEstimation>::SharedPtr pub_;
+        rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::VelEstimation>::SharedPtr pub_;
 
         // ROS Client to get the node frequency from the master node
         rclcpp::Client<custom_msgs::srv::GetFrequencies>::SharedPtr cli_;
@@ -81,9 +77,6 @@ namespace ns_vel_est
         //~LifecycleVelocityEstimationHandler();
         void publishResults();
 
-        // Setters
-
-        // Getters
         // Returns the frequency at witch the node executes the EKF algorithm
         int getNodeFrequency() const { return node_frequency_; }
         
@@ -97,4 +90,4 @@ namespace ns_vel_est
     };
 } // namespace ns_vel_est
 
-#endif // VELOCITY_ESTIMATION_HANDLER_H
+#endif // VELOCITY_ESTIMATION_HANDLER_HPP
