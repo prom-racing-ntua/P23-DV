@@ -25,5 +25,8 @@ mkdir build
 
 # For the b-spline algorithm
 . b_spline.sh
+
+# For the arc-length spline algorithm
+. arc_length.sh
 ```
 

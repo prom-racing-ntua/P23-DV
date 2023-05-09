@@ -8,11 +8,11 @@
 
 namespace ns_slam
 {
-SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
+SlamHandler::SlamHandler() : Node("slam_node"), slam_object_(this) {
     loadParameters();
     cli_ = create_client<custom_msgs::srv::GetFrequencies>("get_frequencies");
 
-    competed_laps_ = -1;
+    completed_laps_ = -1;
     cooldown_ = 0;
 
     // Initialize slam
@@ -39,7 +39,7 @@ SlamHandler::SlamHandler(): Node("slam_node"), slam_object_(this) {
         std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
         slam_object_.loadMap(track_file);
     }
-    
+
     else map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
 
     //Initialize global lock
@@ -102,7 +102,7 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
 
     if (is_completed_lap && (cooldown_ == 0))
     {
-        competed_laps_++;
+        completed_laps_++;
         cooldown_ = cooldown_max_;
         RCLCPP_WARN(get_logger(), "Lap Completed!");
     }
@@ -116,7 +116,7 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     pose_msg.position.x = current_pose[0];
     pose_msg.position.y = current_pose[1];
     pose_msg.theta = current_pose[2];
-    pose_msg.lap_counter = completed_laps_;
+    pose_msg.lap_count = completed_laps_;
     pose_msg.cones_count_all = slam_object_.getConeCount();
     pose_publisher_->publish(pose_msg);
 

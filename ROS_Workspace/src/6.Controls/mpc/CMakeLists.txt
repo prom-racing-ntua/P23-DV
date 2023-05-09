@@ -22,6 +22,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -31,20 +32,44 @@ include_directories(
   custom_msgs
 )
 
+include_directories(
+    include
+    ${EIGEN3_INCLUDE_DIRS}
+)
+
+add_executable(mpc_from_file_exe src/mpc_from_file.cpp 
+include/mpc_from_file.h
+src/cubic_spline.cpp
+src/FORCESNLPsolver/FORCESNLPsolver_model.c
+src/FORCESNLPsolver/FORCESNLPsolver_model.h
+src/FORCESNLPsolver/FORCESNLPsolver_interface.c
+src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
+src/FORCESNLPsolver/include/FORCESNLPsolver.h)
+ament_target_dependencies(mpc_from_file_exe rclcpp std_msgs custom_msgs)
+target_link_libraries(mpc_from_file_exe ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+
 add_executable(${PROJECT_NAME} src/mpc_node.cpp 
-src/mpc_node.h
+include/mpc_node.h
+src/cubic_spline.cpp
 src/FORCESNLPsolver/FORCESNLPsolver_model.c
 src/FORCESNLPsolver/FORCESNLPsolver_model.h
 src/FORCESNLPsolver/FORCESNLPsolver_interface.c
 src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
 src/FORCESNLPsolver/include/FORCESNLPsolver.h)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+
 
 install(TARGETS
   ${PROJECT_NAME}
+  mpc_from_file_exe
   DESTINATION lib/${PROJECT_NAME})
 
-target_link_libraries(mpc ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

@@ -25,11 +25,12 @@ from Trackdrive import cones_blue, cones_orange_big, cones_yellow
 l_f = 0.9141
 l_r = 0.7359
 CdA = 1.8 # for drag
-ClA = 5.47    # for downforce
+ClA = 5.47 # for downforce
 pair = 1.225
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
+eff=0.85
 
 #for dynamic model
 B=-8.266
@@ -50,7 +51,6 @@ b=1.62
 def Dataloader(txt):
     with open(txt) as f:
         lines = f.readlines()
-
     # Convert the data to a numpy array
     data = []
     for line in lines:
@@ -86,8 +86,10 @@ def continuous_dynamics(x, u):
 
     #blending with changing lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
-    xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
-    ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
+    # xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
+    # ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
+    xdot = x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])
+    ydot = x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])
     phidot = x[5]
     vxdot = (1-l_a)*((x[6] - Fdrag)/ m) + (l_a)*((x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ m)
     vydot = (1-l_a)*((l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))) + (l_a)*(((-x[3]*x[5]) + (Fry + Ffy*casadi.cos(x[7])))/(1.0*m))
@@ -98,7 +100,7 @@ def continuous_dynamics(x, u):
 
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
-INDEX_MAX=2000
+INDEX_MAX=3000
 DINDEX_MAX=40
 err_array=[]
 def obj(z,current_target):
@@ -106,30 +108,37 @@ def obj(z,current_target):
     z = [dF,ddelta,dindex,xPos,yPos,phi, vx, vy, r, F, delta,index]
     current_target = point on path that is to be headed for
     """
+    saf=casadi.arctan((z[7]+l_f*z[8])/(z[6]+1e-3)) - z[10]
+    sar=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
     dyn_sa  = casadi.arctan(z[7]/(z[6]+1e-3))
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(z[10]))
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-    
-    return (
-        1e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 1e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
-            +0e1*(e_c)**2 # costs on deviating on the
-                                        #path in y-direction
-            + 0e1*(e_l)**2 # costs on deviating on the
-                                    #path in x-direction
+    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
+    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
+    Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[6]**2)
 
-            + 1e-4*z[0]**2 # penalty on input F, 
+    return (
+        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+            + 1e2*(e_c)**2 # costs on deviating on the
+                                        #path in y-direction
+            + 1e2*(e_l)**2 # costs on deviating on the
+                                    #path in x-direction
+            + 1e-3*z[0]**2 # penalty on input F,dF
             + 1e-3*z[9]**2
-            + 1e-2*z[1]**2 #penalty on delta,ddelta
-            + 1e3*z[10]**2
-            + 1e-5*(z[5]-current_target[2])**2 #dphi gap
-            + 1e-5*(dsa**2)
-            + 1e1*((1/(z[6]**2 +1e-3)))
-            - 2e1*(z[6])
-            - 2e1*(z[11]/INDEX_MAX)
-            - 2e1*(z[2]/DINDEX_MAX))
+            + 1e4*z[1]**2 #penalty on delta,ddelta
+            + 1e4*z[10]**2
+            + 5e-1*(z[5]-current_target[2])**2 #dphi gap
+            + 5e0*(sar**2)
+            + 5e0*(dsa**2)
+            + 5e0*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 2e1*((1/(z[6]**2 +1e-3))) #vx and index
+            - 1e-1*(z[6])
+            - 1e1*(z[11]/INDEX_MAX)
+            - 1e1*(z[2]/DINDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -143,7 +152,7 @@ def constr(z,current_target):
     Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
     Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[6]**2)
     constr1 = (z[3]-current_target[0])**2 + (z[4]-current_target[1])**2 #inside track constraint
-    constr2 = (z[9]/(a*Frz))**2 + (z[9]/(b*Frz))**2 #tyre constraints
+    constr2 = (z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
     constr3 = saf
     return (constr1,constr2,constr3) 
 
@@ -224,15 +233,16 @@ def generate_pathplanner():
 
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
-    model.lb = np.array([-4120.0,  -np.deg2rad(30), 1.0, -400.,   -400.,  -np.inf,  0.0, -20.0, -20.0, -4120., -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7,  np.deg2rad(+30), model.N, 400.,   400.,   +np.inf,  20.0, +20.0, 20.0, 3560.7, np.deg2rad(30), INDEX_MAX])
+    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 1.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), model.N, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
-    # model.hu = np.array([+35.0,1.0,0.3])
-    # model.hl = np.array([-np.inf,-np.inf,-0.3])
-    model.hu = np.array([+np.inf,+np.inf,np.inf])
+    model.hu = np.array([+np.inf,+1.0,np.inf])
     model.hl = np.array([-np.inf,-np.inf,-np.inf])
+    #track - tyres - sa
+    # model.hu = np.array([2.0,1.0,0.15])
+    # model.hl = np.array([-np.inf,-np.inf,-0.15])
 
     # Initial condition on vehicle states x
     model.xinitidx = range(num_ins,model.nvar) # use this to specify on which variables initial conditions
@@ -242,21 +252,22 @@ def generate_pathplanner():
     # -----------------
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 20000    # Maximum number of iterations
+    codeoptions.maxit = 10000    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 
     #                             2 optimize for speed, 3 optimize for size & speed
     codeoptions.cleanup = False
     codeoptions.timing = 1
+    # codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
+    codeoptions.sqp_nlp.reg_hessian = 5e-7 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
-    # codeoptions.server = 'https://forces.embotech.com'
+    codeoptions.server = 'https://forces.embotech.com'
     
     # Creates code for symbolic model formulation given above, then contacts 
     # server to generate new solver
@@ -312,7 +323,6 @@ def updatePlots(x,u,pred_x,pred_u,model,k):
     ax_list[3].plot(np.rad2deg(x[7, 0:k+2]),'b-')            # plot new steering angle
     ax_list[3].plot(range(k+1,k+model.N), \
         np.rad2deg(pred_x[7,1:]),'g-')                       # plot new prediction of steering angle
-    
     ax_list[4].step(x[6, 0:k+2],'b-')         # plot new acceleration force
     ax_list[4].step(range(k+1, k+model.N), pred_x[6,1:],'g-')   # plot new prediction of acceleration force
 
@@ -418,7 +428,7 @@ def main():
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    data_points=Dataloader("P23-DV/MPC/MPC_embotech/cubic_spline_data.txt")
+    data_points=Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
     
     print("c++ data are: ",data_points, np.shape(data_points))
     print()
@@ -427,7 +437,7 @@ def main():
     num_ins = model.nvar-model.neq
     
     # Simulation
-    sim_length = 1000 # simulate 8sec
+    sim_length = 2000 # simulate 8sec
 
     # Variables for storing simulation data
     x = np.zeros((model.neq,sim_length+1))  # states
@@ -439,8 +449,8 @@ def main():
     print("shape x0: ",np.shape(x0))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
-    vx0 = 0.0
-    Frx0 = 356.0
+    vx0 = 0.5
+    Frx0 = 300.0
     xinit = np.transpose(np.array([data_points[0][0], data_points[1][0],data_points[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
     print("xinit is: ",xinit)
     x[:,0] = xinit
@@ -502,13 +512,20 @@ def main():
 
         # Apply optimized input u of first stage to system and save simulation data
         # u[:,k] = pred_u[:,0]
-        u[:,k] = pred_u[:,2]
+        u[:,k] = pred_u[:,1]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
         print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
         wheel_torques_txt.append(x[:,k][6]*0.2)
         steering_txt.append(x[:,k][7])
         # plot results of current simulation step
+        if(k%100==0):
+            file = open("P23-DV/MPC/MPC_embotech/Data/steering.txt", "w+")
+            file.write(str(steering_txt))
+            file.close()
+            file2 = open("P23-DV/MPC/MPC_embotech/Data/torques.txt", "w+")
+            file2.write(str(wheel_torques_txt))
+            file2.close()
         if(k%10==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  
             if k == sim_length-1:
@@ -520,6 +537,7 @@ def main():
                 plt.show()
             else:
                 plt.draw()
+            
         print()
 
     print("steering_txt is:", steering_txt)

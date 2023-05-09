@@ -26,7 +26,7 @@ namespace ns_slam
 {
 class GraphSLAM;
 
-class SlamHandler: public rclcpp::Node {
+class SlamHandler : public rclcpp::Node {
 private:
     int node_frequency_;
     unsigned long global_index_;
@@ -48,7 +48,7 @@ private:
     std::ofstream perception_log_;
 
     // Lap counter variables
-    int competed_laps_;
+    int completed_laps_;
     int cooldown_;
     int cooldown_max_;
 

@@ -60,13 +60,13 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 
     /* Allocate working arrays for AD tool */
     
-    FORCESNLPsolver_callback_float w[296];
+    FORCESNLPsolver_callback_float w[250];
 	
     /* temporary storage for AD tool sparse output */
     FORCESNLPsolver_callback_float this_f = (FORCESNLPsolver_callback_float) 0.0;
-    FORCESNLPsolver_float nabla_f_sparse[11];
+    FORCESNLPsolver_float nabla_f_sparse[12];
     FORCESNLPsolver_float h_sparse[3];
-    FORCESNLPsolver_float nabla_h_sparse[8];
+    FORCESNLPsolver_float nabla_h_sparse[10];
     FORCESNLPsolver_float c_sparse[9];
     FORCESNLPsolver_float nabla_c_sparse[53];
             

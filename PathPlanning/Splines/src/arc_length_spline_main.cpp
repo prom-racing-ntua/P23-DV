@@ -33,9 +33,9 @@ int main() {
     spline_curve << spline.getSplineCurve(2000);
     spline_curve.close();
 
-    // std::ofstream spline_data("../../../MPC/MPC_embotech/cubic_spline_data.txt"); // !! renamed the file for arc length splines !!
-    // spline_data << spline.getSplineData(2000);
-    // spline_data.close();
+    std::ofstream spline_data("../../../MPC/MPC_embotech/Data/als_data.txt"); // !! renamed the file for arc length splines !!
+    spline_data << spline.getSplineData(1500);
+    spline_data.close();
 
     return 0;
 }
