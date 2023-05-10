@@ -49,7 +49,7 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 #include "custom_msgs/msg/point2_struct.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/waypoints_msg.hpp"
-#include "custom_msgs/msg/can_control_command.hpp"
+// #include "custom_msgs/msg/can_control_command.hpp"
 #include "custom_msgs/msg/mpc_to_can.hpp"
 #include "arc_length_spline.h"
 #include "read_track.h"
@@ -115,6 +115,7 @@ double k2[X_SIZE];
 double k3[X_SIZE];
 double k4[X_SIZE];
 clock_t st_int, end_int, st_params, end_params;
+// std::ofstream outputFile("../data/pathpoints.csv");
 
 struct node_out {
     double motor_torque;
@@ -204,13 +205,14 @@ void Initialize_all_local(){
     for (int i = 0; i < X_SIZE; ++i) {
         X[i] = xinit_temp[i];
     }
+    std::cout << "x, y and phi_init are: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
     mem = FORCESNLPsolver_internal_mem(0);
     // node_out node_out;
 }
 
 void writeParamsLocal() {
     for (int i = 0; i < params_array.rows(); i++) {
-        std:: cout << "params row" << i+1 << " is: " << params_array(i,0) << " " << params_array(i,1) << " " << params_array(i,2) << std::endl; 
+        // std:: cout << "params row" << i+1 << " is: " << params_array(i,0) << " " << params_array(i,1) << " " << params_array(i,2) << std::endl; 
         X_spl[i]=params_array(i, 0);
         Y_spl[i]=params_array(i, 1);
         tang_spl[i]=params_array(i, 2);
@@ -222,7 +224,8 @@ void writeParamsLocal() {
     X[0] = X_loc; //slam data update
     X[1] = Y_loc;
     X[2] = phi_loc;
-    std::cout << "I'm at: " << X_loc << " " << Y_loc << " " << phi_loc << std::endl; 
+    std::cout << "From integration I am: " << X[0] << " " << X[1] << " " << X[2] << std::endl; 
+    std::cout << "From slam.loc I am: " << X_loc << " " << Y_loc << " " << phi_loc << std::endl; 
     std::vector<double> ds_path;
     for(int i = 1; i<LOOKAHEAD-1; ++i) { //second to second to last for ds comparison
         ds_path.push_back(std::abs(std::sin(tang_spl[i])*(X_loc-X_spl[i]) - std::cos(tang_spl[i])*(Y_loc-Y_spl[i])));
@@ -235,19 +238,19 @@ void writeParamsLocal() {
         int mod_ = k%4;
         if (mod_ == 0) {
             params.all_parameters[k] = params_array(int(k/4),0); 
-            // std::cout << "added X at kappa  " << k << std::endl;
+            // std::cout << "added X " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
         }
         else if(mod_ == 1) {
             params.all_parameters[k] = params_array(int((k-1)/4),1);
-            // std::cout << "added Y at kappa " << k << std::endl;
+            // std::cout << "added Y " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
         }
         else if(mod_ == 2) {
             params.all_parameters[k] = params_array(int((k-2)/4),2);
-            // std::cout << "added tang at kappa " << k << std::endl;
+            // std::cout << "added phi " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
         }
-        else {
+        else if (mod_ == 3) {
             params.all_parameters[k] = params_array(int((k-3)/4),3);
-            // std::cout << "added curv at kappa " << k << std::endl;
+            // std::cout << "added curv " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
         }
     }
     std::cout << "finished writing of all params" << std::endl;

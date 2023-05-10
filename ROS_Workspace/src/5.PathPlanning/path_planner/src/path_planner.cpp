@@ -63,6 +63,7 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
 }
 
 void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
+    std::cout << "mpika callback" << std::endl;
     rclcpp::Time starting_time = this->now();
     int cone_count = msg->cone_count;
     std::vector<Cone> full_map, local_map;

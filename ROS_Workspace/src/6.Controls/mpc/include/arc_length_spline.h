@@ -22,7 +22,7 @@ private:
 
         for (int i{ 1 }; i < spline_size_; i++)
         {
-            if (parameter < target_indices_[i])
+            if (parameter <= target_indices_[i])
             {
                 local_index.spline_segment = i - 1;
                 local_index.local_parameter = (parameter - target_indices_[i - 1]) / (target_indices_[i] - target_indices_[i - 1]);
