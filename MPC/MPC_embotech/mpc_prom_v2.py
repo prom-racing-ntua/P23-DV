@@ -31,6 +31,7 @@ m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 eff=0.85
+window=10
 
 #for dynamic model
 B=-8.266
@@ -174,7 +175,29 @@ def find_closest_point(points, ref_point):
     diff = np.transpose(diff)
     squared_diff = np.power(diff,2)
     squared_dist = squared_diff[0,:] + squared_diff[1,:]
+    print("idx_before is : ",np.argmin(squared_dist))
     return np.argmin(squared_dist)
+
+def find_closest_point_vertical(data, ref_point):
+    """Find the index of the closest point in points from the current car position
+    points = array of points on path
+    ref_point = current car position
+    """
+    num_points = data.shape[1]
+    phi_array = data[2,:]
+    diff_x = -np.transpose(data[0,:]) + ref_point[0]
+    diff_x = np.transpose(diff_x)
+    diff_y = -np.transpose(data[1,:]) + ref_point[1]
+    diff_y = np.transpose(diff_y)
+    part_x = diff_x*np.sin(data[2,:])
+    part_y = diff_y*np.cos(data[2,:])
+    dist_final = np.abs(part_x - part_y)
+    # num_points = points.shape[1]
+    # diff = np.transpose(points) - ref_point
+    # diff = np.transpose(diff)
+    # squared_diff = np.power(diff,2)
+    # squared_dist = squared_diff[0,:] + squared_diff[1,:]
+    return np.argmin(dist_final)
 
     
 def extract_next_path_points(data_points, pos, N):
@@ -182,7 +205,30 @@ def extract_next_path_points(data_points, pos, N):
     the current car position pos
     """
     path_points=data_points[:2,:] #keep only X,Y coords
+    # idx = find_closest_point(path_points,pos) 
     idx = find_closest_point(path_points,pos)
+    num_points = path_points.shape[1]
+    num_ellipses = np.ceil((idx+N+1)/num_points)
+    path_points = np.tile(path_points,(1,int(num_ellipses)))
+    return data_points[:,idx+1:idx+N+1]
+
+def extract_next_path_points_official(data_points, pos, N):
+    """Extract the next N points on the path for the next N stages starting from 
+    the current car position pos
+    """
+    path_points=data_points[:2,:] #keep only X,Y coords
+    # idx = find_closest_point(path_points,pos) 
+    idx0 = find_closest_point(path_points,pos)
+    print("idx euclidian is: ",idx0)
+    print("eucledian closest point is: ",path_points[:,idx0])
+    if(idx0<2*window):
+        idx_ver = find_closest_point_vertical(data_points[:,0:2*window],pos)
+        idx = idx_ver 
+    else:
+        idx_ver = find_closest_point_vertical(data_points[:,idx0-window:idx0+window],pos)
+        idx = idx0 + (idx_ver-window)
+    print("idx_ver is: ",idx_ver)
+    print("idx final is: ", idx)
     num_points = path_points.shape[1]
     num_ellipses = np.ceil((idx+N+1)/num_points)
     path_points = np.tile(path_points,(1,int(num_ellipses)))
@@ -226,7 +272,7 @@ def generate_pathplanner():
     model.eq = lambda z: forcespro.nlp.integrate(continuous_dynamics, z[num_ins:model.nvar], z[0:num_ins],
                                                 integrator=forcespro.nlp.integrators.RK4,
                                                 stepsize=integrator_stepsize)
-
+    
     # Indices on LHS of dynamical constraint - for efficiency reasons, make
     # sure the matrix E has structure [0 I] where I is the identity matrix.
     model.E = np.concatenate([np.zeros((model.neq,num_ins)), np.eye(model.neq)], axis=1)
@@ -264,7 +310,7 @@ def generate_pathplanner():
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-7 # increase this if exitflag=-8
+    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
     codeoptions.server = 'https://forces.embotech.com'
@@ -425,6 +471,7 @@ def createPlot(x,u,start_pred,sim_length,model,path_points,xinit,cones_yellow,co
 
 def main():
     #import data from path planning
+    emergency_count=0
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
@@ -437,7 +484,7 @@ def main():
     num_ins = model.nvar-model.neq
     
     # Simulation
-    sim_length = 2000 # simulate 8sec
+    sim_length = 1000 # simulate 8sec
 
     # Variables for storing simulation data
     x = np.zeros((model.neq,sim_length+1))  # states
@@ -476,24 +523,37 @@ def main():
         problem["xinit"] = x[:,k]
         print("x_init is:",problem["xinit"],problem["xinit"][8])
         if(k>0):
-            where_i_am=extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
+            where_i_am = extract_next_path_points_official(data_points, x[0:num_ins-1,k], model.N)
             # print("where i am is:",where_i_am,np.shape(where_i_am))
             err_1= np.abs(np.sin(where_i_am[2][0])*(problem["xinit"][0]-where_i_am[0][0]) - np.cos(where_i_am[2][0])*(problem["xinit"][1]-where_i_am[1][0])) #katakorifi
-            err_2 = np.sqrt(problem["xinit"][0] - where_i_am[0][0])**2 + ((problem["xinit"][1] - where_i_am[1][0])**2)
+            err_2 = np.sqrt((problem["xinit"][0] - where_i_am[0][0])**2 + (problem["xinit"][1] - where_i_am[1][0])**2)
             err_array.append(err_1)
-            print("errors are:", err_1," ",err_2)
+            print("errors are:", err_1," ",err_2," ",np.max(err_array)," ",np.mean(err_array))
             # print("error array is:",err_array," ",np.max(err_array)," ",np.mean(err_array))
         # Set runtime parameters (here, the next N points on the path)
         if(err_1 < 0.9):
+            emergency_bool=0
             next_data_points = extract_next_path_points_new(data_points, x[0:num_ins-1,k], model.N, int(problem["xinit"][8]))
+            # next_data_points = extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
         else:
-            next_data_points = extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
+            print("mpika emergency!!!")
+            emergency_count+=1
+            emergency_bool=1
+            # next_data_points = extract_next_path_points_new(data_points, x[0:num_ins-1,k], model.N, int(problem["xinit"][8]))
+            next_data_points = extract_next_path_points_official(data_points, x[0:num_ins-1,k], model.N)
         # print("next N path points are: ",next_data_points,np.shape(next_data_points),type(next_data_points))
         problem["all_parameters"] = np.reshape(np.transpose(next_data_points), \
             (model.npar*model.N,1))
         # print("all_parameters are: ",problem["all_parameters"], np.shape(problem["all_parameters"]),type(problem["all_parameters"]))
 
         # Time to solve the NLP!
+        print("Im at: ", problem["xinit"][0], problem["xinit"][1])
+        print("Im trying to follow are at: ",data_points[0, int(problem["xinit"][8])], data_points[1, int(problem["xinit"][8])])
+        if(k>0):
+            print("Closest point to me is: ",where_i_am[0][0],where_i_am[1][0])
+        print("mpika emergency is: ",emergency_bool)
+        print("First param for MPC is : ",problem["all_parameters"][0],problem["all_parameters"][1])
+        print("dr between me and params is: ", np.sqrt((problem["xinit"][0]-problem["all_parameters"][0][0])**2 + (problem["xinit"][1]-problem["all_parameters"][1][0])**2))
         output, exitflag, info = solver.solve(problem)
 
         # Make sure the solver has exited properly.
@@ -510,12 +570,13 @@ def main():
         pred_u = temp[0:num_ins, :]
         pred_x = temp[num_ins:model.nvar, :]
 
-        # Apply optimized input u of first stage to system and save simulation data
+        # Apply optimized input u of first stJa suspended from all team activities pending league review after he allegedly flashed a gun on Instagram Liveage to system and save simulation data
         # u[:,k] = pred_u[:,0]
         u[:,k] = pred_u[:,1]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
         print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
+        print("i have used emergency manouvre: ",emergency_count," times")
         wheel_torques_txt.append(x[:,k][6]*0.2)
         steering_txt.append(x[:,k][7])
         # plot results of current simulation step
@@ -537,7 +598,6 @@ def main():
                 plt.show()
             else:
                 plt.draw()
-            
         print()
 
     print("steering_txt is:", steering_txt)

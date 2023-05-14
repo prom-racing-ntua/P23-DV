@@ -51,6 +51,7 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 #include "custom_msgs/msg/waypoints_msg.hpp"
 // #include "custom_msgs/msg/can_control_command.hpp"
 #include "custom_msgs/msg/mpc_to_can.hpp"
+#include "custom_msgs/msg/velocity_to_mpc.hpp"
 #include "arc_length_spline.h"
 #include "read_track.h"
 #include "Eigen/Dense"
@@ -123,6 +124,13 @@ struct node_out {
     double steering_angle;
 };
 
+struct velocity_data {
+    double velocity_x;
+    double velocity_y;
+    double yaw_rate;
+};
+
+velocity_data vel_struct;
 
 double custom_max(double aa, double bb){
     if(aa<bb){
@@ -224,8 +232,12 @@ void writeParamsLocal() {
     X[0] = X_loc; //slam data update
     X[1] = Y_loc;
     X[2] = phi_loc;
+    X[3] = vel_struct.velocity_x; //velocity data update
+    X[4] = vel_struct.velocity_y;
+    X[5] = vel_struct.yaw_rate;
     std::cout << "From integration I am: " << X[0] << " " << X[1] << " " << X[2] << std::endl; 
     std::cout << "From slam.loc I am: " << X_loc << " " << Y_loc << " " << phi_loc << std::endl; 
+    std::cout << "Velocity input is: " << X[3] << " " << X[4] << " " << X[5] << std::endl;
     std::vector<double> ds_path;
     for(int i = 1; i<LOOKAHEAD-1; ++i) { //second to second to last for ds comparison
         ds_path.push_back(std::abs(std::sin(tang_spl[i])*(X_loc-X_spl[i]) - std::cos(tang_spl[i])*(Y_loc-Y_spl[i])));

@@ -28,7 +28,12 @@ def lidar_2_camera(camera_str, lidar_point): #logiki cog -> lidar -> cone
     lidar_points = np.array([[-lidar_point[1]], [-lidar_point[0]], [-lidar_point[2]]])
     cog2lidar_rot = pitch_matrix(-pitch)
     cog2lidar_tr = np.array([[lidar_cog_dx], [0], [-lidar_cog_dz]])
+    # print("check pipeline 1")
+    # print(lidar_points)
+    # print(cog2lidar_rot @ lidar_points)
+    # print(cog2lidar_tr)
     checkpoint1 = (cog2lidar_rot @ lidar_points) + cog2lidar_tr
+    # print(checkpoint1)
     
     #second part (cam -> cog  -> cone)
     if (camera_str == "center"): 
@@ -74,9 +79,9 @@ for i in range(3):
         camera_selection="center"
         image=cv2.imread("DataKsi2/camera/test_center.png")
         print(np.shape(image))
-        for i in range (np.shape(clusters)[0]):
-            if(clusters[i][0]!="--"):
-                input_point=100*np.array([float(clusters[i][0]),float(clusters[i][1]),float(clusters[i][2])])
+        for j in range (np.shape(clusters)[0]):
+            if(clusters[j][0]!="--"):
+                input_point=np.array([float(clusters[j][0]),float(clusters[j][1]),float(clusters[j][2])])
                 res2,res1 = lidar_2_camera(camera_selection,100*input_point)
                 res3 = cam_2_pixel(camera_selection,100*res2)
                 u=res3[0]
@@ -86,9 +91,9 @@ for i in range(3):
     if(i==1):
         camera_selection="left"
         image=cv2.imread("DataKsi2/camera/test_left.png")
-        for i in range (np.shape(clusters)[0]):
-            if(clusters[i][0]!="--"):
-                input_point=100*np.array([float(clusters[i][0]),float(clusters[i][1]),float(clusters[i][2])])
+        for j in range (np.shape(clusters)[0]):
+            if(clusters[j][0]!="--"):
+                input_point=np.array([float(clusters[j][0]),float(clusters[j][1]),float(clusters[j][2])])
                 res2,res1 = lidar_2_camera(camera_selection,100*input_point)
                 res3 = cam_2_pixel(camera_selection,100*res2)
                 u=res3[0]
@@ -98,15 +103,20 @@ for i in range(3):
     if(i==2):
         camera_selection="right"
         image=cv2.imread("DataKsi2/camera/test_right.png")
-        for i in range (np.shape(clusters)[0]):
-            if(clusters[i][0]!="--"):
-                input_point=100*np.array([float(clusters[i][0]),float(clusters[i][1]),float(clusters[i][2])])
+        for j in range (np.shape(clusters)[0]):
+            if(clusters[j][0]!="--"):
+                input_point=np.array([float(clusters[j][0]),float(clusters[j][1]),float(clusters[j][2])])
+                print("lidar center point ",j)
+                print("from lidar points",input_point,"and distance ",np.sqrt(input_point[0]**2+input_point[1]**2))
                 res2,res1 = lidar_2_camera(camera_selection,100*input_point)
-                res3 = cam_2_pixel(camera_selection,100*res2)
+                print("from cog points",np.squeeze(res1),"and distance ",np.sqrt(np.squeeze(res1)[0]**2+np.squeeze(res1)[1]**2))
+                print("from camera points",np.squeeze(res2),"and distance ",np.sqrt(np.squeeze(res2)[0]**2+np.squeeze(res2)[2]**2))
+                res3 = cam_2_pixel(camera_selection,res2)
                 u=res3[0]
                 v=res3[1]
                 image[v-4:v+4, u-4:u+4] = np.array([0,0,255])
         cv2.imshow("projection right",image)
+    print("")
 cv2.waitKey(0)
 cv2.destroyAllWindows()     
 

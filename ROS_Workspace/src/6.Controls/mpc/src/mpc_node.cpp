@@ -11,25 +11,34 @@ namespace mpc_cpp {
 class MpcHandler : public rclcpp::Node {
   public: MpcHandler(): Node("mpc_node"), total_execution_time(0)
     {
-      subscription_ = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&MpcHandler::mpc_callback, this, std::placeholders::_1));  
+      path_subscriber_ = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&MpcHandler::mpc_callback, this, std::placeholders::_1));
+      velocity_subscriber_ = this->create_subscription<custom_msgs::msg::VelocityToMpc>("velocity_to_mpc", 10, std::bind(&MpcHandler::velocity_callback, this, std::placeholders::_1));  
       publisher_ = this->create_publisher<custom_msgs::msg::MpcToCan>("mpc_to_can", 10);
       std::cout << "mpc node class created" << std::endl;
     }
-
+  // const custom_msgs::msg::VelocityToMpc::SharedPtr vel_msg
   private:
-    void mpc_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg) {
+    void velocity_callback(const custom_msgs::msg::VelocityToMpc::SharedPtr vel_msg){
+      vel_struct.velocity_x = float(vel_msg->velocity_x);
+      vel_struct.velocity_y = float(vel_msg->velocity_y);
+      vel_struct.yaw_rate = float(vel_msg->yaw_rate);
+      std::cout << "velocity_x from slam_from_file is: " << vel_struct.velocity_x << std::endl;
+    }
+
+    void mpc_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
       //initialize interface
       std::cout << "I'm at mpc iteration " << global_int << std::endl;
+      std::cout << "from velocity callback i received r: " << vel_struct.velocity_x << std::endl;
       // rclcpp::Time starting_time = this->now();
-      int pp_points = int(msg->count);
-      Eigen::MatrixXd spline_input{ msg->count, 2 };
+      int pp_points = int(path_msg->count);
+      Eigen::MatrixXd spline_input{path_msg->count, 2 };
       if(pp_points==2) spline_input.resize(pp_points+1,2);
       int rows_temp=0;
-      std::ofstream outputFile("../data/pathplanner.csv");
+      outputFile.open("src/6.Controls/mpc/data/pathplanner.csv",std::ios::out | std::ios::app); //log path planning AutoX data
       std::cout << "started writing to file" << std::endl;
-      outputFile << "--,path_planner_save"<<global_int<<",--\n";
-      for (custom_msgs::msg::Point2Struct midpoints_new : msg->waypoints) {
+      for (custom_msgs::msg::Point2Struct midpoints_new : path_msg->waypoints) {
         std::cout << "path planning points are: " << midpoints_new.x << " " << midpoints_new.y << std::endl;
+        outputFile << midpoints_new.x << "," << midpoints_new.y << "\n";
         if((pp_points==2) && (rows_temp==1)) {
           spline_input(rows_temp,0) = (spline_input(0,0) + midpoints_new.x)/2;
           spline_input(rows_temp,1) = (spline_input(0,1) + midpoints_new.y)/2;
@@ -44,9 +53,10 @@ class MpcHandler : public rclcpp::Node {
         spline_input(rows_temp,1) = midpoints_new.y;
         rows_temp++;
       }
+      outputFile.close();
       std::cout << "rows_temp counter is: " << rows_temp << std::endl;
       std::cout << "spline input size is: " << spline_input.rows() << " " << spline_input.cols() << std::endl;
-      std::cout << "path planning counter is: " << int(msg->count) << std::endl;
+      std::cout << "path planning counter is: " << int(path_msg->count) << std::endl;
       rclcpp::Time starting_time = this->now();
       path_planning::PointsArray midpoints{spline_input};
       // midpoints.conservativeResize(midpoints.rows()+1 , midpoints.cols());
@@ -93,9 +103,11 @@ class MpcHandler : public rclcpp::Node {
         global_int++;
     }
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Subscription<custom_msgs::msg::WaypointsMsg>::SharedPtr subscription_;
+    rclcpp::Subscription<custom_msgs::msg::WaypointsMsg>::SharedPtr path_subscriber_;
+    rclcpp::Subscription<custom_msgs::msg::VelocityToMpc>::SharedPtr velocity_subscriber_;
     rclcpp::Publisher<custom_msgs::msg::MpcToCan>::SharedPtr publisher_;
     size_t count_;
+    std::ofstream outputFile;
     double total_execution_time;
     int global_int=0;
 };
