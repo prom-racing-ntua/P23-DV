@@ -14,6 +14,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "custom_msgs/msg/local_map_msg.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
+#include "custom_msgs/msg/vel_estimation.hpp"
+#include "custom_msgs/msg/velocity_to_mpc.hpp"
 
 #include "slam_common.h"
 #include "slam.h"
@@ -46,6 +48,7 @@ private:
     // Slam topics publishers
     rclcpp::Publisher<custom_msgs::msg::LocalMapMsg>::SharedPtr map_publisher_;
     rclcpp::Publisher<custom_msgs::msg::PoseMsg>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<custom_msgs::msg::VelocityToMpc>::SharedPtr velocity_publisher_;
 
     rclcpp::TimerBase::SharedPtr global_timer_;
 
