@@ -84,7 +84,7 @@ private:
     float total_length_reward;  // ^^
     int filtering_threshold; //above this threshold the selected path gets trimmed until it is below
     int cost_function(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
-    int cost_function_advanced(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
+    int cost_function_advanced(const std::vector<my_edge>&, const Point&, const Direction_2&, bool verbose = 0) const;
     std::pair<std::vector<my_edge>, int> find_best_path(const Point&, const Direction_2&, const my_edge&,  std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle&, int, const Point &);
     std::pair<std::vector<my_edge>, int> filter_best_path(std::pair<std::vector<my_edge>, int>, const Point &, const Direction_2 &);
 
@@ -92,7 +92,7 @@ public:
     // creates either empty or full triangulation
     //Triangulation(int, int, int, int, int, int);
     Triangulation();
-    void init(int maximum_angle = 90, int maximum_edge_angle = 90, int maximum_distance = 5, int minimum_angle = 0, int minimum_distance = 0, int target_depth = 10, int same_edge_penalty = 10, float length_penalty = 0.1, float angle_penalty = 0.1, float total_length_reward = 0.075, int filtering_threshold = 100);
+    void init(int maximum_angle = 90, int maximum_edge_angle = 45, int maximum_distance = 5, int minimum_angle = 0, int minimum_distance = 0, int target_depth = 10, int same_edge_penalty = 10, float length_penalty = 0.1, float angle_penalty = 0.1, float total_length_reward = 0.075, int filtering_threshold = 100);
     std::pair<std::vector<Point>, int> new_batch(const std::vector<Cone>&, const Point&, const Direction_2&);
     std::vector<Point> get_last_path() const;
     std::vector<Point> get_triangulation() const;

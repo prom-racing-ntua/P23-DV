@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+//#include <algorithm>
 
 #include "custom_msgs/msg/cone_struct.hpp"
 #include "custom_msgs/msg/local_map_msg.hpp"
@@ -31,6 +32,11 @@ class Path_Planner_Node: public rclcpp::Node
         int selection_radius_small, selection_radius_big, selection_angle;
         void parameter_load();
         double total_execution_time;
-        //Point last_position;
+        custom_msgs::msg::WaypointsMsg last_path;
+        float last_length;
+        Point last_position;
+        float average_angle;
+        float get_length(std::vector<Point> path)const;
+        float get_angle_avg(std::vector<Point> path)const;
         //Point last_direction;
 };
