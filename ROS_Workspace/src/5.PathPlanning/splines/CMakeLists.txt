@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(spline_recorder)
+project(splines)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -28,11 +28,36 @@ include_directories(
   custom_msgs
 )
 
-add_executable(${PROJECT_NAME} src/spline_recorder.cpp src/b-spline.cpp src/cubic_spline.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs ament_index_cpp)
+
+# ----
+# Create a spline library and export it so other packages can use it
+add_library(${PROJECT_NAME}_lib SHARED
+  src/b-spline.cpp 
+  src/cubic_spline.cpp
+)
+# This installs the library to the package and setting its parameters
+install(
+  TARGETS ${PROJECT_NAME}_lib
+  EXPORT ${PROJECT_NAME}_lib
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include/${PROJECT_NAME}_lib    # Setting the include dir which must be installed
+)
+# This exports the library so other packages can see it
+ament_export_targets(${PROJECT_NAME}_lib HAS_LIBRARY_TARGET)
+# The include dir of the library is installed to the package here
+install(DIRECTORY include/ DESTINATION include/${PROJECT_NAME}_lib)
+
+
+# ----
+# Create the spline recorder node executable
+add_executable(spline_recorder src/spline_recorder.cpp)
+target_link_libraries(spline_recorder ${PROJECT_NAME}_lib)
+ament_target_dependencies(spline_recorder rclcpp custom_msgs ament_index_cpp)
 
 install(TARGETS
-  ${PROJECT_NAME}
+  spline_recorder
   DESTINATION lib/${PROJECT_NAME}
 )
 

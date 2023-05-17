@@ -7,7 +7,7 @@ namespace path_planning
 {
 SplineRecorder::SplineRecorder() : Node("spline_recorder") {
     count_ = 0;
-    std::string share_dir{ ament_index_cpp::get_package_share_directory("spline_recorder") };
+    std::string share_dir{ ament_index_cpp::get_package_share_directory("splines") };
     RCLCPP_INFO(get_logger(), share_dir);
     spline_file_.open(share_dir + "/../../../../spline_log.txt");
 
@@ -22,20 +22,21 @@ void SplineRecorder::splineCallback(const custom_msgs::msg::WaypointsMsg::Shared
     RCLCPP_INFO(get_logger(), "Entered Callback");
     spline_file_ << ++count_ << '\n';
 
-    
+
     PointsArray midpoints{ msg->count, 2 };
-    for (int i{0}; i < msg->count; i++) {
-        midpoints(i,0) = msg->waypoints[i].x;
-        midpoints(i,1) = msg->waypoints[i].y;
+    for (int i{ 0 }; i < msg->count; i++)
+    {
+        midpoints(i, 0) = msg->waypoints[i].x;
+        midpoints(i, 1) = msg->waypoints[i].y;
     }
 
     if (msg->count <= 2)
     {
         spline_file_ << midpoints << '\n';
     }
-    else 
+    else
     {
-        ArcLengthSpline spline{ midpoints, BoundaryCondition::Anchored};
+        ArcLengthSpline spline{ midpoints, BoundaryCondition::Anchored };
         PointsArray spline_points{ spline.getSplineCurve(100) };
         spline_file_ << spline_points << '\n';
     }

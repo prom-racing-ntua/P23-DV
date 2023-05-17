@@ -13,6 +13,8 @@
   <depend>visualization_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>custom_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>splines</depend>
 
   <exec_depend>ros2launch</exec_depend>
 

@@ -11,6 +11,7 @@
 namespace path_planning
 {
 using PointsArray = Eigen::MatrixX2d;
+using PointsData = Eigen::MatrixX4d;
 using Point = Eigen::RowVector2d;
 
 // All boundary conditions that have been implemented for the b-spline
@@ -102,6 +103,8 @@ public:
     PointsArray getControlPoints();
     // Samples through the range of the curve returning as many sample points as defined by the resolution
     PointsArray getSplineCurve(const long int resolution = 2000);
+    // Gets to a txt file a number of different data for a certain resolution (X,Y,phi_track,curvature)
+    PointsData getSplineData(const long int resolution = 2000);
 };
 } // namespace path_planning
 #endif

@@ -213,6 +213,23 @@ PointsArray BSpline::getSplineCurve(const long int resolution) {
     return spline_curve;
 }
 
+PointsData BSpline::getSplineData(const long int resolution) {
+    PointsData spline_data{ resolution, 4 };
+    // Iterate through all points and data of interest (X,Y,tang,curv)
+    for (long int i{ 0 }; i <= resolution - 1; i++)
+    {
+        double param{ static_cast<double>(i) / static_cast<double>(resolution - 1) };
+        Point temp1 = getPoint(param);
+        double temp2 = getTangent(param);
+        double temp3 = getCurvature(param);
+        spline_data(i, 0) = temp1(0);
+        spline_data(i, 1) = temp1(1);
+        spline_data(i, 2) = temp2;
+        spline_data(i, 3) = temp3;
+    }
+    return spline_data;
+}
+
 double BSpline::getCurvature(double parameter) {
     Point first_der{ getFirstDerivative(parameter) };
     Point second_der{ getSecondDerivative(parameter) };
