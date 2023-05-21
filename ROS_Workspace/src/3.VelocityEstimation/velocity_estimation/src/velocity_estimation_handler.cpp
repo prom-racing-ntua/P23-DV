@@ -101,14 +101,13 @@ void VelocityEstimationHandler::publishResults() {
             msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
     }
-
     pub_->publish(msg);
 }
 
 int VelocityEstimationHandler::getNodeFrequency() {
     using namespace std::chrono_literals;
 
-    // Instead of a timer we get the node frequency from the mater node with the following client request
+    // Instead of a timer we get the node frequency from the master node with the following client request
     auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
     int call_counter{ 0 };
     while (!cli_->wait_for_service(1s) and call_counter < 15)

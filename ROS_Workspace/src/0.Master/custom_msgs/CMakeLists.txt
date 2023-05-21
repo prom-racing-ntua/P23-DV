@@ -29,7 +29,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CanInterface/TxSystemState.msg"
   "msg/CanInterface/TxControlCommand.msg"
   "msg/CanInterface/TxVehicleVariables.msg"   # Not actually used
-  "msg/MpcToCan.msg"
 
   ## Can-USB receive msgs
   "msg/CanInterface/RxWheelSpeed.msg"
@@ -59,6 +58,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Point2Struct.msg"
   "msg/PoseMsg.msg"
   "msg/WaypointsMsg.msg"
+
+  # MPC related Messages
+  "msg/VelocityToMpc.msg"
+  "msg/MpcToCan.msg"
 
   # Services
   "srv/GetFrequencies.srv"

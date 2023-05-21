@@ -1,6 +1,6 @@
 #include "path_planner.hpp"
 
-Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_execution_time(0) {
+Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_execution_time(0), last_length(0), average_angle(0) {
     //waymaker = Triangulation();
     parameter_load();
 
@@ -86,6 +86,23 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     {
         return;
     }
+    average_angle = std::max(average_angle, this->get_angle_avg(waypoints));
+    if(batch_output.second>100)
+    {
+        std::cout<<">>> MALAKIA <<<"<<std::endl;
+        for(Cone cone:local_map)
+        {
+            if(cone.color==0)std::cout<<"("<<cone.coords.x()<<","<<cone.coords.y()<<"),";
+        }
+        std::cout<<std::endl;
+        for(Cone cone:local_map)
+        {
+            if(cone.color==1)std::cout<<"("<<cone.coords.x()<<","<<cone.coords.y()<<"),";
+        }
+        std::cout<<std::endl<<"Position: ("<<current_position.x()<<","<<current_position.y()<<")"<<std::endl;
+        std::cout<<"Direction: ("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
+        std::cout<<"-------------"<<std::endl;
+    }
     //std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
     //std::cout<<"("<<current_position.x()<<","<<current_position.y()<<"),("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
     //std::cout<<"theta = "<<theta<<std::endl;
@@ -103,6 +120,30 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     }
     //std::cout<<std::endl;
     for_pub.waypoints = waypoints_ros;
+    if(last_length==0)
+    {
+        last_path = for_pub;
+        last_length = this->get_length(waypoints);
+        last_position = current_position;
+    }
+    else
+    {
+        float l = this->get_length(waypoints);
+        if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<last_length)
+        {
+            std::cout<<waymaker.get_batch_number()<<" Kept last: Last = "<<last_length<<" Current = "<<l + std::sqrt(CGAL::squared_distance(current_position, last_position))<<std::endl;
+            rclcpp::Duration total_time = this->now() - starting_time;
+            total_execution_time += total_time.nanoseconds() / 1000000.0;
+            std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
+            return ;
+        }
+        else
+        {
+            last_path = for_pub;
+            last_length = this->get_length(waypoints);
+            last_position = current_position;
+        }
+    }
     pub_waypoints->publish(for_pub);
     std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
     rclcpp::Duration total_time = this->now() - starting_time;
@@ -112,7 +153,34 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
 
 Path_Planner_Node::~Path_Planner_Node() {
     std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
+    std::cout << "Max angle: "<<average_angle <<std::endl;
 }
+
+float Path_Planner_Node::get_length(std::vector<Point> path)const
+{
+    float l = 0;
+    for(int i=1; i<path.size(); i++)
+    {
+        l += std::sqrt(CGAL::squared_distance(path[i],path[i-1]));
+    }
+    return l;
+}
+
+float Path_Planner_Node::get_angle_avg(std::vector<Point> path)const
+{
+    //if(path.size()-2==0)return 0;
+    float l = 0;
+    float mx=0;
+    for(int i=1; i<path.size()-1; i++)
+    {
+        l += std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]));
+        mx = std::max(mx, float(std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]))));
+        //std::cout<<std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]))<<", ";
+    }
+    //std::cout<<"Average angle = "<<l/(path.size()-2)<<std::endl;
+    return mx;
+}
+
 
 int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);

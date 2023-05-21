@@ -1,21 +1,23 @@
 #include <memory>
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "arc_length_spline.h"
 
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include "custom_msgs/msg/local_map_msg.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/waypoints_msg.hpp"
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 
 namespace ns_telemetry
 {
-class Telemetry: public rclcpp::Node {
+class Telemetry : public rclcpp::Node {
 private:
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr pose_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr map_subscriber_;
@@ -23,6 +25,7 @@ private:
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_publisher_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr spline_publisher_;
 
     void pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg);
     void map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg);
@@ -34,11 +37,12 @@ public:
 };
 
 
-Telemetry::Telemetry(): Node("telemetry") {
+Telemetry::Telemetry() : Node("telemetry") {
     using std::placeholders::_1;
     // Set publishers
     landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
     marker_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+    spline_publisher_ = create_publisher<nav_msgs::msg::Path>("spline_path", 10);
 
     rclcpp::CallbackGroup::SharedPtr callback_group{ create_callback_group(rclcpp::CallbackGroupType::Reentrant) };
     rclcpp::SubscriptionOptions options;
@@ -80,7 +84,7 @@ void Telemetry::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg) {
     car_marker.color.r = 0.839;
     car_marker.color.g = 0.224;
     car_marker.color.b = 0.082;
-    car_marker.color.a = 1.0;
+    car_marker.color.a = 0.7;
 
     marker_publisher_->publish(car_marker);
 }
@@ -144,67 +148,63 @@ void Telemetry::map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg)
 }
 
 void Telemetry::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg) {
-    visualization_msgs::msg::Marker delete_path{};
-    visualization_msgs::msg::Marker delete_points{};
-
-    delete_path.header.frame_id = "map";
-    delete_path.header.stamp = now();
-    delete_path.ns = "my_ns";
-    delete_path.id = 1;
-    delete_path.action = visualization_msgs::msg::Marker::DELETE;
-
-    delete_points.header.frame_id = "map";
-    delete_points.header.stamp = now();
-    delete_points.ns = "my_ns";
-    delete_points.id = 2;
-    delete_points.action = visualization_msgs::msg::Marker::DELETE;
-
-    visualization_msgs::msg::Marker path_marker{};
     visualization_msgs::msg::Marker points{};
+    nav_msgs::msg::Path path{};
 
-    path_marker.header.frame_id = "map";
-    path_marker.header.stamp = now();
-    path_marker.ns = "my_ns";
-    path_marker.id = 1;
-
-    path_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-    path_marker.action = visualization_msgs::msg::Marker::ADD;
-    path_marker.pose.orientation.w = 1.0;
-    path_marker.scale.x = 0.3;
-
-    path_marker.color.r = 0.8980;
-    path_marker.color.g = 0.0078;
-    path_marker.color.b = 0.9922;
-    path_marker.color.a = 1.0;
+    path.header.frame_id = "map";
+    path.header.stamp = now();
 
     points.header.frame_id = "map";
     points.header.stamp = now();
     points.ns = "my_ns";
     points.id = 2;
 
-    points.type = visualization_msgs::msg::Marker::POINTS;
+    points.type = visualization_msgs::msg::Marker::SPHERE_LIST;
     points.action = visualization_msgs::msg::Marker::ADD;
     points.pose.orientation.w = 1.0;
-    points.scale.x = 0.4;
-    points.scale.y = 0.4;
+    points.scale.x = 0.3;
+    points.scale.y = 0.3;
+    points.scale.z = 0.3;
 
-    points.color.r = 0.0;
-    points.color.g = 0.0;
-    points.color.b = 0.0;
+    points.color.r = 76.0 / 255.0;
+    points.color.g = 66.0 / 255.0;
+    points.color.b = 133.0 / 255.0;
     points.color.a = 1.0;
 
-    for (auto point : msg->waypoints)
+    constexpr int spline_size{ 40 };
+    path_planning::PointsArray targets{ msg->waypoints.size(), 2 };
+
+    for (size_t i{ 0 }; i < msg->waypoints.size(); i++)
     {
         geometry_msgs::msg::Point p;
-        p.x = point.y;
-        p.y = point.x;
+        p.x = msg->waypoints[i].y;
+        p.y = msg->waypoints[i].x;
         p.z = 0.0;
 
-        path_marker.points.push_back(p);
         points.points.push_back(p);
+        targets(i, 0) = p.x;
+        targets(i, 1) = p.y;
     }
+
+    path_planning::ArcLengthSpline spline{targets, path_planning::BoundaryCondition::Anchored};
+    path_planning::PointsData spline_data{ spline.getSplineData(spline_size) };
+    for (long int i{ 0 }; i < spline_data.rows(); i++)
+    {
+        geometry_msgs::msg::PoseStamped pose{};
+        pose.pose.position.x = spline_data(i, 0);
+        pose.pose.position.y = spline_data(i, 1);
+        pose.pose.position.z = 0.0;
+
+        tf2::Quaternion pose_orientation;
+        pose_orientation.setRPY(0.0, 0.0, M_PI / 2 - spline_data(i, 2));
+        pose_orientation.normalize();
+        pose.pose.orientation = tf2::toMsg(pose_orientation);
+
+        path.poses.push_back(pose);
+    }
+
     marker_publisher_->publish(points);
-    marker_publisher_->publish(path_marker);
+    spline_publisher_->publish(path);
 }
 } // ns_telemetry
 

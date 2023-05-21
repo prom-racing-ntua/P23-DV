@@ -255,17 +255,20 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         }
         best_best_path = best_path[best_index];
     }
+    //cost_function_advanced(best_best_path.first, position, direction ,1);
     best_best_path = filter_best_path(best_best_path, position, direction);
     std::vector<Point> out;
     out.reserve(selected_edges.size() + 1);
     out.push_back(position);
+    bool first=1;
     for (my_edge edge : best_best_path.first)
     {
         no_of_midpoints++;
-        out.push_back(edge.midpoint());
+        if(!first)out.push_back(edge.midpoint());
+        else first=0;
     }
     last_calculated_path = out;
-
+    
     return std::make_pair(out, best_best_path.second);
 }
 
@@ -361,7 +364,7 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point &
 
 std::pair<std::vector<my_edge>, int> Triangulation::filter_best_path(std::pair<std::vector<my_edge>, int> best_path, const Point &starting_position, const Direction_2 &starting_direction)
 {
-    if(best_path.second < filtering_threshold || best_path.first.size()==1) return best_path;
+    if(best_path.second < filtering_threshold || best_path.first.size()==2) return best_path;
     best_path.first.pop_back();
     best_path.second = cost_function_advanced(best_path.first, starting_position, starting_direction);
     return filter_best_path(best_path, starting_position, starting_direction);
@@ -386,7 +389,7 @@ int Triangulation::cost_function(const std::vector<my_edge> &selected_edges, con
     return cost;
 }
 
-int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_edges, const Point &starting_position, const Direction_2 &starting_direction) const
+int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_edges, const Point &starting_position, const Direction_2 &starting_direction, bool verbose) const
 {
     float cost = 0; // negatives should add, positives subtract
     float color_cost = 0, length_cost = 0, angle_cost = 0;
@@ -431,25 +434,50 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
         else if (length > maximum_distance)
             cost += same_edge_penalty;
         /* 3 */
+        /*
         if (i == 0)
         {
-            Point direction_from_position(starting_position.x() + starting_direction.dx(), starting_position.y() + starting_direction.dy());
-            angle = std::abs(angle_point_2(direction_from_position, starting_position, selected_edges[i].midpoint()));
+            //Point direction_from_position(starting_position.x() + starting_direction.dx(), starting_position.y() + starting_direction.dy());
+            angle = std::abs(angle_point_2(starting_position, selected_edges[i].midpoint(), selected_edges[i+1].midpoint()));
             // if (angle < maximum_angle && angle>minimum_edge_angle)angle_cost += angle_penalty * angle;
-            max_angle = std::max(max_angle, angle);
+            //max_angle = std::max(max_angle, angle);
             // else if (angle > maximum_angle) return INT_MAX - 1;
             angle_cost += angle_penalty * angle;
         }
         else if (i != total_number_of_edges - 1)
         {
-            Point direction_from_position(2 * selected_edges[i].midpoint().x() - selected_edges[i - 1].midpoint().x(), 2 * selected_edges[i].midpoint().y() - selected_edges[i - 1].midpoint().y());
-            angle = std::abs(angle_point_2(direction_from_position, selected_edges[i].midpoint(), selected_edges[i + 1].midpoint()));
+            //Point direction_from_position(2 * selected_edges[i].midpoint().x() - selected_edges[i - 1].midpoint().x(), 2 * selected_edges[i].midpoint().y() - selected_edges[i - 1].midpoint().y());
+            //angle = std::abs(angle_point_2(direction_from_position, selected_edges[i].midpoint(), selected_edges[i + 1].midpoint()));
+            angle = std::abs(180 - angle_point_2(selected_edges[i-1].midpoint(),selected_edges[i].midpoint(),selected_edges[i+1].midpoint()));
+            if(verbose)std::cout<<angle<<", ";
             max_angle = std::max(max_angle, angle);
-            if (angle < maximum_edge_angle && angle > minimum_edge_angle)
+            if (angle < maximum_edge_angle)
                 angle_cost += angle_penalty * angle;
-            else if (angle > maximum_edge_angle)
+            else //if (angle > maximum_edge_angle)
+            {
+                if(verbose)std::cout<<std::endl<<"> *** <"<<std::endl;
                 cost += same_edge_penalty;//if angle exceeds max angle, the penalty is applied to the total cost(to avoid scaling it by total_number_of_edges)
+            }
+        }*/
+        if(i==1)angle = std::abs(180-angle_point_2(starting_position, selected_edges[i].midpoint(), selected_edges[i+1].midpoint()));
+        else if (i!=total_number_of_edges-1 && i!=0)angle = std::abs(180 - angle_point_2(selected_edges[i-1].midpoint(),selected_edges[i].midpoint(),selected_edges[i+1].midpoint()));
+        if(i!=total_number_of_edges-1 && i!=0)
+        {
+            if(verbose)std::cout<<angle<<", ";
+            max_angle = std::max(max_angle, angle);
+            if (angle < maximum_edge_angle)
+                angle_cost += angle_penalty * angle;
+            else //if (angle > maximum_edge_angle)
+            {
+                if(verbose)std::cout<<std::endl<<"> *** <"<<std::endl;
+                cost += same_edge_penalty;//if angle exceeds max angle, the penalty is applied to the total cost(to avoid scaling it by total_number_of_edges)
+            }
         }
+    }
+    if(verbose)
+    {
+        std::cout<<std::endl<<"Average angle: "<<(angle_cost / total_number_of_edges)/angle_penalty<<std::endl;
+        std::cout<<"Max angle: "<<max_angle<<std::endl;
     }
     cost += length_cost / total_number_of_edges + angle_cost / total_number_of_edges - total_length * total_length_reward;
     // f(total_number_of_edges == 21)std::cout << ']' << std::endl;
