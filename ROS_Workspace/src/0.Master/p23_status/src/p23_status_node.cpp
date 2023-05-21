@@ -16,9 +16,17 @@ namespace p23_status_namespace
         RCLCPP_INFO(get_logger(), "Initializing P23 Status Node");
 
         initializeNode();
+        loadParameters();
         setSubscribers();
         setServices();
         setPublishers();
+
+        get_parameter("managing_node_list", nodeList);
+        get_parameter("sensor_checkup_frequency", sensorCheckupFrequency);
+        get_parameter("system_state_publish_frequency", systemStateFrequency);
+
+        systemStatePeriod = 1000/systemStateFrequency;
+        sensorCheckupPeriod = 1000/sensorCheckupFrequency;
 
         RCLCPP_INFO(get_logger(), "P23 Status Node Initialized");
 
@@ -26,7 +34,6 @@ namespace p23_status_namespace
             We need to get the Lifecycle Manager to an LV_ON state. This will ensure that every node is alive but unconfigured.
             The configuration will happen when the Mission Selected DV Change happens.
         */
-
         RCLCPP_INFO(get_logger(), "Sending LV_ON state change");
         changeDVStatus(LV_ON);
     }
@@ -38,43 +45,28 @@ namespace p23_status_namespace
         */ 
         conesCountAll = 0;
         conesActual = 0;
-        insMode = 2;
+        insMode = 0;
         currentLap = -1;
+        maxLaps = 0;
+        pcError = 0;
+
         missionFinished = false;
         currentASStatus = AS_OFF;
         currentMission = MANUAL;
-        missionLocked = false;
         currentDVStatus = STARTUP;
-        maxLaps = 0;
+        
+        sensorCheckupTimer_ = create_wall_timer(std::chrono::milliseconds(sensorCheckupPeriod), std::bind(&P23StatusNode::checkSensors, this));
+        systemStateTimer_ = create_wall_timer(std::chrono::milliseconds(systemStatePeriod), std::bind(&P23StatusNode::sendSystemState, this));
 
-        /*
-            Initialize speed/acceleration variables and such.
-        */
-        velocityX = 0.0;
-        velocityY = 0.0;
-        yawRate = 0.0;
-        accelerationX = 0.0;
-        accelerationY = 0.0;
-
-        /*
-            Initialize Timers. System State communication is set at 10Hz, Vehicle Variables communication is set at 20Hz. 
-            Controls communication should be done as soon as new control decisions are made (ASAP). 
-            Sensor Checkups are set at 1Hz (temporarily, we will see).
-            Might add a CPU/GPU temperature checkup.
-        */
-        sensorCheckupTimer_ = create_wall_timer(std::chrono::milliseconds(1000), std::bind(&P23StatusNode::checkSensors, this));
-        systemStateTimer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&P23StatusNode::sendSystemState, this));
-        vehicleVariablesTimer_ = create_wall_timer(std::chrono::milliseconds(50), std::bind(&P23StatusNode::sendVehicleVariables, this));
+        for (std::string node: nodeList) {
+            nodeStatusMap[node] = false;
+        }
     }
 
     void P23StatusNode::setSubscribers()
     {   
         using std::placeholders::_1;
 
-        /*
-            Add the mission_selection message handler on a mutex group. We only want to receive the first mission selected.
-            The rest get ignored using a flag.
-        */
         mission_selection_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         rclcpp::SubscriptionOptions options;
         options.callback_group = mission_selection_group_;
@@ -85,15 +77,12 @@ namespace p23_status_namespace
         // Dimitris: AS State will probably be in the same message along with other variables
         canbus_status_subscription_ = create_subscription<custom_msgs::msg::AutonomousStatus>(
             "canbus/as_status", 10, std::bind(&P23StatusNode::updateASStatus, this, _1));
-
-        velocity_estimation_subscription_ = create_subscription<custom_msgs::msg::VelEstimation>(
-            "velocity_estimation", 10, std::bind(&P23StatusNode::updateVelocityInformation, this, _1));
         
         slam_subscription_ = create_subscription<custom_msgs::msg::PoseMsg>(
             "pose", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
-
-        controls_subscription_ = create_subscription<custom_msgs::msg::MpcToCan>(
-            "mpc_output", 10, std::bind(&P23StatusNode::updateControlsInput, this, _1));
+        
+        lifecycle_node_status_subscription_ = create_subscription<custom_msgs::msg::LifecycleNodeStatus>(
+            "lifecycle_manager/lifecycle_node_status", 10, std::bind(&P23StatusNode::receiveNodeStatus, this, _1));
     }
 
     void P23StatusNode::setPublishers()
@@ -101,13 +90,6 @@ namespace p23_status_namespace
         // Set publisher towards CANBUS writer topic
         canbus_system_state_publisher_ = create_publisher<custom_msgs::msg::TxSystemState>(
             std::string(get_name()) + std::string("/system_state"), 10);
-
-        // Dimitris: No need for this, taking it straight from VelEstimation
-        canbus_vehicle_variables_publisher_ = create_publisher<custom_msgs::msg::TxVehicleVariables>(
-            std::string(get_name()) + std::string("/vehicle_variables"), 10);
-
-        canbus_controls_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>(
-            std::string(get_name()) + std::string("/control_command"), 10);
     }
 
     void P23StatusNode::setServices()
@@ -115,13 +97,11 @@ namespace p23_status_namespace
         // Set a service to change DV Status and to receive IMU Mode
         p23_status_client_ = create_client<custom_msgs::srv::DriverlessStatus>("lifecycle_manager/change_driverless_status");
         ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("vn_300/update_ins_mode");
+        vectornav_heartbeat_client_ = create_client<custom_msgs::srv::VectornavHeartbeat>("vn_200/vectornav_heartbeat");
     }
 
     void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg)
     {
-        if (missionLocked)
-            return;
-
         currentMission = static_cast<Mission>(msg->mission_selected);
 
         switch (currentMission) {
@@ -145,13 +125,12 @@ namespace p23_status_namespace
                 break;
             case(MANUAL):
                 // The PC will shutdown so no one cares what happens here...
+                std::system("shutdown -n 0.5");
                 break;
             default:
                 maxLaps = 100;
                 break;
         }
-
-        // changeDVStatus might need to become blocking. Will see.
         changeDVStatus(MISSION_SELECTED);
     }
 
@@ -161,7 +140,6 @@ namespace p23_status_namespace
 
         switch(statusReceived) {
             case(AS_OFF):
-                // Error Handling point
                 RCLCPP_INFO(get_logger(), "Den paizei re...");
                 break;
             case(AS_READY):
@@ -176,39 +154,11 @@ namespace p23_status_namespace
                 RCLCPP_INFO(get_logger(), "Den paizei re... egw ta stelnw afta");
                 break;
             case(AS_EMERGENCY):
-                // Error Handling point
+                /* Send a deactivation signal to the nodes.*/
                 RCLCPP_INFO(get_logger(), "H egw ekana malakia, h oi eletronix kapsane kouti :(");
                 break;    
         }
-
         currentASStatus = statusReceived;
-    }
-
-    void P23StatusNode::requestINSStatus()
-    {
-        using namespace std::chrono_literals;
-
-        auto request = std::make_shared<custom_msgs::srv::InsMode::Request>();
-        
-        while (!ins_mode_client_->wait_for_service(1s))
-        {
-            if (!rclcpp::ok())
-            {
-                // Error-Handling point
-                return;
-            }
-            RCLCPP_INFO(get_logger(), "INS Service not available, waiting...");
-        }
-
-        // Send INS Mode request
-        using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::InsMode>::SharedFuture;
-        auto response_received_callback = [this](ServiceResponseFuture future) {
-            auto result = future.get();
-            insMode = result.get()->ins_mode;
-            RCLCPP_INFO(get_logger(), "Received INS Mode from Vectornav %u", insMode);
-        };
-
-        auto future_result = ins_mode_client_->async_send_request(request, response_received_callback);
     }
 
     void P23StatusNode::changeDVStatus(DV_Status newStatus)
@@ -225,14 +175,6 @@ namespace p23_status_namespace
             request->mission.id = currentMission;
             request->mission.label = missionList[currentMission];
             RCLCPP_INFO(get_logger(), "Mission Selected is %s", missionList[currentMission].c_str());
-        }
-
-        if ((newStatus == DV_READY) || (newStatus == DV_DRIVING)) {
-            RCLCPP_INFO(get_logger(), "Want to change to DV_READY or DV_DRIVING --> CHECK INS MODE");
-            while(insMode != 2) {
-                // Error-Handling point
-                RCLCPP_INFO(get_logger(), "IMU Still not in mode 2. Current mode: %u",insMode);
-            }
         }
 
         RCLCPP_INFO(get_logger(), "Sending a %s request to Lifecycle Manager", driverlessStatusList[newStatus].c_str());
@@ -260,8 +202,6 @@ namespace p23_status_namespace
             {
                 RCLCPP_INFO(get_logger(), "Driverless Status successfully changed to: %s", driverlessStatusList[newStatus].c_str());
                 currentDVStatus = newStatus;
-                if (currentDVStatus == MISSION_SELECTED)
-                    missionLocked = true;
             }
             else
             {
@@ -272,5 +212,15 @@ namespace p23_status_namespace
 
         auto future_result = p23_status_client_->async_send_request(request, response_received_callback);
         RCLCPP_INFO(get_logger(), "%s request sent to Lifecycle Manager, waiting for response...", driverlessStatusList[newStatus].c_str());
+    }
+
+    void P23StatusNode::loadParameters()
+    {
+        declare_parameter<std::vector<std::string>>("managing_node_list",
+        {   "acquisition_left", "acquisition_right", "acquisition_center", "inference",
+            "velocity_estimation", "slam", "saltas", "path_planning"
+        });
+        declare_parameter<int>("system_state_publish_frequency", 10);
+        declare_parameter<float>("sensor_checkup_frequency", 1);
     }
 }

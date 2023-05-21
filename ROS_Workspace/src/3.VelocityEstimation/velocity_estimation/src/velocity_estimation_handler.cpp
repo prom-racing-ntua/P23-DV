@@ -125,6 +125,7 @@ int VelocityEstimationHandler::getNodeFrequency() {
         RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
         return 0;
     }
+
     // Send empty request
     auto result{ cli_->async_send_request(request) };
     // Await for response (TODO: Set a timeout for response time)

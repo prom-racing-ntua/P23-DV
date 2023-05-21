@@ -28,7 +28,7 @@ def getEpoch():
 
 class AcquisitionLifecycleNode(Node):
     def __init__(self):
-        super().__init__('acquisition_lifecycle_node')
+        super().__init__('acquisition')
         # Init Devices
         # Get Device info - see if cameras are connected
         device_manager = gx.DeviceManager()
@@ -74,6 +74,14 @@ class AcquisitionLifecycleNode(Node):
         self.camera.OnClickOpen()
         self.camera.SetSettings()
 
+        # Setup saltas clock node
+        self.subscription = self.create_subscription(
+            NodeSync,
+            'saltas_clock',
+            self.trigger_callback,
+            10
+        )
+
         # Setup Publisher
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_lifecycle_publisher(AcquisitionMessage, 'acquisition_topic', 10)
@@ -86,13 +94,6 @@ class AcquisitionLifecycleNode(Node):
 
         self.camera.activateAcquisition()
 
-        # Setup saltas clock node
-        self.subscription = self.create_subscription(
-            NodeSync,
-            'saltas_clock',
-            self.trigger_callback,
-            10
-        )
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:

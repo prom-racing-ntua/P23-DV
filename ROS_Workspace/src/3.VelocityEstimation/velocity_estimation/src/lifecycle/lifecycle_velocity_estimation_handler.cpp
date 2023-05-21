@@ -3,6 +3,7 @@
 #include <rclcpp/qos.hpp>
 
 #include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
+#include <pthread.h>
 
 
 namespace ns_vel_est
@@ -77,41 +78,33 @@ namespace ns_vel_est
         pub_->publish(msg);
     }
 
-    int LifecycleVelocityEstimationHandler::getNodeFrequency() {
+    void LifecycleVelocityEstimationHandler::getNodeFrequency() {
         using namespace std::chrono_literals;
 
         // Instead of a timer we get the node frequency from the mater node with the following client request
-        auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
-        int call_counter{ 0 };
-        while (!cli_->wait_for_service(1s) and call_counter < 15)
+        auto request = std::make_shared<custom_msgs::srv::GetFrequencies::Request>();
+        int call_counter = 0;
+
+        RCLCPP_INFO(get_logger(), "Before wait for service");
+
+        while (!cli_->wait_for_service(1s))
         {
             if (!rclcpp::ok())
             {
-                return 0;
+                // return;
             }
-            // RCLCPP_INFO(rclcpp::get_logger(), "Could not get node frequency. Master service not available, waiting...");
-            // call_counter++;
         }
-        if (call_counter == 15)
-        {
-            // RCLCPP_ERROR(rclcpp::get_logger(), "Client call timeout, the service is not available. Check master node.");
-            return 0;
-        }
-        // Send empty request
-        auto result{ cli_->async_send_request(request) };
-        // Await for response (TODO: Set a timeout for response time)
-        if (rclcpp::spin_until_future_complete(get_node_base_interface(), result, 5s) == rclcpp::FutureReturnCode::SUCCESS)
-        {
-            // If get successful response return the node frequency
-            // RCLCPP_INFO_STREAM(rclcpp::get_logger(), "Node frequency has been set to" << result.get()->velocity_estimation_frequency);
-            return result.get()->velocity_estimation_frequency;
-        }
-        else
-        {
-            // Otherwise raise an error (TODO: should actually do something else, or handle the error)
-            // RCLCPP_ERROR(rclcpp::get_logger(), "Failed to get node frequency");
-            return 0;
-        }
+
+        using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::GetFrequencies>::SharedFuture;
+        auto responseReceivedCallback = [this](ServiceResponseFuture future) {
+            auto result = future.get();
+            node_frequency_ = result.get()->velocity_estimation_frequency;
+            /* Unblock Semaphore */
+            RCLCPP_INFO(get_logger(), "Before sem_post");
+            sem_post(&clientSemaphore);
+        };
+
+        auto future_result = cli_->async_send_request(request, responseReceivedCallback);
     }
 
     Eigen::Matrix<double, 3, 3> LifecycleVelocityEstimationHandler::getRotationMatrix(double roll, double pitch, double yaw) {
@@ -308,9 +301,17 @@ namespace ns_vel_est
 int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);
 
+    // auto lifecycleVelocityEstimationNode = std::make_shared<ns_vel_est::LifecycleVelocityEstimationHandler>();
     ns_vel_est::LifecycleVelocityEstimationHandler lifecycleVelocityEstimationNode{};
-
     rclcpp::spin(lifecycleVelocityEstimationNode.get_node_base_interface());
+    rclcpp::shutdown();
+
+    // auto options{ rclcpp::ExecutorOptions() };
+    // rclcpp::executors::MultiThreadedExecutor executor{ options, 4 };
+
+    // executor.add_node(lifecycleVelocityEstimationNode);
+    // executor.spin();
+
     rclcpp::shutdown();
     return 0;
 }

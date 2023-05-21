@@ -33,9 +33,6 @@ class InferenceLifecycleNode(Node):
         phase. Also open a log file if you want to idk.
         """
 
-        # Create Perception/SLAM topic
-        self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
-
         # Initialize Models
         self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.75, iou=0.45)
         self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
@@ -43,11 +40,9 @@ class InferenceLifecycleNode(Node):
         # Setup Message Transcoder
         self.bridge = CvBridge()
 
-        self.get_logger().info("Inference Configuration Complete")
-        return TransitionCallbackReturn.SUCCESS
-    
-    def on_activate(self, state: State) -> TransitionCallbackReturn:
-        # Subscribe to acquisition topic
+        # Create Perception/SLAM topic
+        self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
+
         self.subscription = self.create_subscription(
             AcquisitionMessage,
             'acquisition_topic',
@@ -55,6 +50,11 @@ class InferenceLifecycleNode(Node):
             10
         )
 
+        self.get_logger().info("Inference Configuration Complete")
+        return TransitionCallbackReturn.SUCCESS
+    
+    def on_activate(self, state: State) -> TransitionCallbackReturn:
+        # Subscribe to acquisition topic
         self.get_logger().info("Inference Activation Complete")
         return super().on_activate(state)
     

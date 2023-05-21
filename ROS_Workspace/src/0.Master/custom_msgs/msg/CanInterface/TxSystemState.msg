@@ -13,7 +13,6 @@ bool        camera_right_ok
 bool        camera_left_ok
 # bool        camera_center_ok
 
-
 # Node Status Flags
 bool        clock_ok
 bool        camera_inference_ok

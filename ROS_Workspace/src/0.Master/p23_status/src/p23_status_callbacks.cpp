@@ -7,18 +7,6 @@
 
 namespace p23_status_namespace
 {
-    void P23StatusNode::updateVelocityInformation(const custom_msgs::msg::VelEstimation::SharedPtr msg)
-    {
-        // Speed Actual
-        velocityX = static_cast<double>(msg->velocity_x);
-        velocityY = static_cast<double>(msg->velocity_y);
-        yawRate = static_cast<double>(msg->yaw_rate);
-
-        // Acceleration Values
-        accelerationX = static_cast<double>(msg->acceleration_x);
-        accelerationY = static_cast<double>(msg->acceleration_y);
-    }
-
     void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     {
         conesCountAll = msg->cones_count_all;
@@ -32,53 +20,92 @@ namespace p23_status_namespace
 
     void P23StatusNode::checkSensors()
     {
-        //For IMU, request from Vectornav the IMU Mode Status
         requestINSStatus();
+        vn200Heartbeat();
+    }
+
+    void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatus::SharedPtr msg)
+    {
+        nodeStatusMap["saltas"] = msg->clock_ok;
+        nodeStatusMap["acquisition_left"] = msg->camera_left_ok;
+        nodeStatusMap["acquisition_right"] = msg->camera_right_ok;
+        nodeStatusMap["pure_pursuit"] = msg->pi_pp_controls_ok;
+        nodeStatusMap["mpc"] = msg->mpc_controls_ok;
+        nodeStatusMap["slam"] = msg->slam_ok;
+        nodeStatusMap["velocity_estimation"] = msg->velocity_estimation_ok;
+        nodeStatusMap["inference"] = msg->inference_ok;
+        nodeStatusMap["path_planning"] = msg->path_planning_ok;
     }
 
     void P23StatusNode::sendSystemState()
     {
         custom_msgs::msg::TxSystemState systemStateMsg;
 
-        systemStateMsg.mission_finished = missionFinished;
-        systemStateMsg.standstill = standstill;
-        systemStateMsg.pc_error = pcError;
+        /* Information that is sent by the P23 Status Node */
         systemStateMsg.lap_counter = currentLap;
         systemStateMsg.cones_count_actual = conesActual;
         systemStateMsg.cones_count_all = conesCountAll;
+        systemStateMsg.dv_status.id = currentDVStatus;
+
+        systemStateMsg.vn_200_ok = nodeStatusMap["vn_200"];
+        systemStateMsg.vn_300_ok = nodeStatusMap["vn_300"];
+
+        /* Information that is sent by the Lifecycle Manager Node*/
+        systemStateMsg.camera_left_ok = nodeStatusMap["acquisition_left"];
+        systemStateMsg.camera_right_ok = nodeStatusMap["acquisition_right"];
+        
+        systemStateMsg.clock_ok = nodeStatusMap["saltas"];
+        systemStateMsg.camera_inference_ok = nodeStatusMap["inference"];
+        systemStateMsg.velocity_estimation_ok = nodeStatusMap["velocity_estimation"];
+        systemStateMsg.slam_ok = nodeStatusMap["slam"];
+        systemStateMsg.mpc_controls_ok = nodeStatusMap["mpc"];
+        systemStateMsg.path_planning_ok = nodeStatusMap["path_planning"];
+        systemStateMsg.pi_pp_controls_ok = nodeStatusMap["pure_pursuit"];
 
         canbus_system_state_publisher_->publish(systemStateMsg);
     }
 
-    void P23StatusNode::sendVehicleVariables()
+    void P23StatusNode::requestINSStatus()
     {
-        /*
-            Should send information that are semi-important to the car, mostly things that help with
-            the traction control and such.
-        */
-        custom_msgs::msg::TxVehicleVariables vehicleVariablesMsg;
-
-        // vehicleVariablesMsg.lat_accel = accelerationY;
-        // vehicleVariablesMsg.long_accel = accelerationX;
-        // vehicleVariablesMsg.yaw_rate = yawRate;
+        using namespace std::chrono_literals;
+        auto vn300_request = std::make_shared<custom_msgs::srv::InsMode::Request>();
         
-        canbus_vehicle_variables_publisher_->publish(vehicleVariablesMsg);
+        while (!ins_mode_client_->wait_for_service(std::chrono::milliseconds(100)))
+        {
+            nodeStatusMap["vn_300"] = true;
+            RCLCPP_INFO(get_logger(), "INS Service not available, waiting...");
+        }
+
+        using vn300ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::InsMode>::SharedFuture;
+        
+        auto vn300_heartbeat_callback = [this](vn300ServiceResponseFuture future) {
+            auto result = future.get();
+            insMode = result.get()->ins_mode;
+            nodeStatusMap["vn_300"] = false;
+            RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
+        };
+
+        auto future_result = ins_mode_client_->async_send_request(vn300_request, vn300_heartbeat_callback);
     }
 
-    void P23StatusNode::updateControlsInput(const custom_msgs::msg::MpcToCan::SharedPtr msg)
+    void P23StatusNode::vn200Heartbeat()
     {
-        custom_msgs::msg::TxControlCommand controlCommandMsg;
-        motorTorqueTarget = msg->mt;
-        steeringAngleTarget = msg->sa;
-        brakeHydraulicTarget = msg->bp;
+        using namespace std::chrono_literals;
+        auto vn200_request = std::make_shared<custom_msgs::srv::VectornavHeartbeat::Request>();
 
-        controlCommandMsg.speed_actual = velocityX;
-        // controlCommandMsg.speed_target = ;
+        while (!vectornav_heartbeat_client_->wait_for_service(std::chrono::milliseconds(100)))
+        {
+            nodeStatusMap["vn_200"] = true;
+            RCLCPP_INFO(get_logger(), "Vectornav Heartbeat service not available, waiting...");
+        }
 
-        controlCommandMsg.motor_torque_target = motorTorqueTarget;
-        controlCommandMsg.steering_angle_target = steeringAngleTarget;
-        controlCommandMsg.brake_pressure_target = brakeHydraulicTarget;
-        
-        canbus_controls_publisher_->publish(controlCommandMsg);
+        using vn200ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::VectornavHeartbeat>::SharedFuture;
+
+        auto vn200_heartbeat_callback = [this](vn200ServiceResponseFuture future) {
+            auto result = future.get();
+            nodeStatusMap["vn_200"] = false;
+        };
+
+        auto future_result = vectornav_heartbeat_client_->async_send_request(vn200_request, vn200_heartbeat_callback);
     }
 }

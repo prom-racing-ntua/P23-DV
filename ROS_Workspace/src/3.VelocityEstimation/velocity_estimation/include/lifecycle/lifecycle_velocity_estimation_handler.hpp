@@ -18,6 +18,9 @@
 #include "custom_msgs/msg/node_sync.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
+#include <semaphore.h> 
+#include <pthread.h>  /* My beloved :3 */
+
 #include "lifecycle_velocity_estimation.h"
 
 namespace ns_vel_est
@@ -61,8 +64,7 @@ namespace ns_vel_est
 
         void loadParameters();
         void setSubscribers();
-        int getNodeFrequency();
-
+        
         // Callbacks
         void masterCallback(const custom_msgs::msg::NodeSync::SharedPtr msg);
         void velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg);
@@ -72,21 +74,25 @@ namespace ns_vel_est
         void rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg);
         void steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg);
 
+        /* Synchronization method for creating a "blocking" async client :)  - CURRENTLY NOT USED*/
+        sem_t clientSemaphore; 
+
     public:
         explicit LifecycleVelocityEstimationHandler();
         //~LifecycleVelocityEstimationHandler();
         void publishResults();
+        void getNodeFrequency();
 
         // Returns the frequency at witch the node executes the EKF algorithm
-        int getNodeFrequency() const { return node_frequency_; }
+        // int getNodeFrequency() const { return node_frequency_; }
         
     protected:
-            ns_vel_est::CallbackReturn on_configure(const rclcpp_lifecycle::State & state);
-            ns_vel_est::CallbackReturn on_activate(const rclcpp_lifecycle::State & state);
-            ns_vel_est::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state);
-            ns_vel_est::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state);
-            ns_vel_est::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state);
-            ns_vel_est::CallbackReturn on_error(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_configure(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_activate(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state);
+        ns_vel_est::CallbackReturn on_error(const rclcpp_lifecycle::State & state);
     };
 } // namespace ns_vel_est
 

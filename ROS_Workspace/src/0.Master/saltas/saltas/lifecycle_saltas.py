@@ -46,7 +46,6 @@ class SaltasNode(Node):
         self.send_perception = int(self.clock_frequency / self.perception_frequency)
         self.send_reset = calcClockFrequency(self.send_velocity, self.send_perception)
 
-
         self.saltas_clock = self.create_timer(1/self.clock_frequency, self.globalTimerCallback)
         self.clock_publisher = self.create_lifecycle_publisher(NodeSync, 'saltas_clock', qos_profile=10)
 
@@ -61,23 +60,20 @@ class SaltasNode(Node):
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Publisher for the synchronization topic
         # Start ticking the clock        
-        self.publishing = True
-
         self.get_logger().info(f'Master Clock is Active!')
+        self.clock_publisher.on_activate()
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        self.publishing = False
         self.get_logger().info(f'Master Clock Deactivated!')
 
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.publishing = False
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        # TODO: Fill out
+        self.clock_publisher.destroy()
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:

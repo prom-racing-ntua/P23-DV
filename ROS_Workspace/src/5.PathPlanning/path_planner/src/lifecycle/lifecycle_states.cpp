@@ -23,41 +23,46 @@ namespace path_planner
             get_parameter("filtering_threshold").as_int()
         );
 
+        using std::placeholders::_1;
+        sub_mapper = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecyclePathPlanner::mapping_callback, this, _1));
         pub_waypoints = this->create_publisher<custom_msgs::msg::WaypointsMsg>("waypoints", 10);
         RCLCPP_INFO(get_logger(), "Path Planner configured");
 
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        return path_planner::CallbackReturn::SUCCESS;
     }
 
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_activate(const rclcpp_lifecycle::State &state)
     {
-        using std::placeholders::_1;
-        sub_mapper = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecyclePathPlanner::mapping_callback, this, _1));
         RCLCPP_INFO(get_logger(), "Path Planner activated");
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        pub_waypoints->on_activate();
+        return path_planner::CallbackReturn::SUCCESS;
     }
 
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_deactivate(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Path Planner de-activated");
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        pub_waypoints->on_deactivate();
+        return path_planner::CallbackReturn::SUCCESS;
     }
+
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_cleanup(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Path Planner unconfigured");
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        return path_planner::CallbackReturn::SUCCESS;
     }
+
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_shutdown(const rclcpp_lifecycle::State &state)
     {
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        return path_planner::CallbackReturn::SUCCESS;
     }
+
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_error(const rclcpp_lifecycle::State &state)
     {
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+        return path_planner::CallbackReturn::SUCCESS;
     }
 }

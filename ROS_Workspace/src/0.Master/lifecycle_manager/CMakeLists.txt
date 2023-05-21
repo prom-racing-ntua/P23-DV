@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -17,7 +18,7 @@ find_package(rclcpp_components REQUIRED)
 
 add_executable(${PROJECT_NAME} src/main.cpp src/lifecycle_manager_node.cpp src/dv_state_handling.cpp src/configuration_handling.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp 
-  custom_msgs lifecycle_msgs rclcpp_lifecycle ament_index_cpp rclcpp_components)
+  custom_msgs lifecycle_msgs rclcpp_lifecycle ament_index_cpp rclcpp_components rclcpp_lifecycle)
 
 install(TARGETS
   ${PROJECT_NAME}

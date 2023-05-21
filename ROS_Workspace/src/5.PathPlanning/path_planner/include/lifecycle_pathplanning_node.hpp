@@ -22,7 +22,7 @@ namespace path_planner
     class LifecyclePathPlanner: public rclcpp_lifecycle::LifecycleNode {
         private:
             rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr sub_mapper;
-            rclcpp::Publisher<custom_msgs::msg::WaypointsMsg>::SharedPtr pub_waypoints;
+            rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::WaypointsMsg>::SharedPtr pub_waypoints;
             void mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr);
             Triangulation waymaker;
             int selection_radius_small, selection_radius_big, selection_angle;

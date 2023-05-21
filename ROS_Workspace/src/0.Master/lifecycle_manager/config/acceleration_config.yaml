@@ -65,7 +65,7 @@ slam:
     logger: true
     telemetry: true
 
-saltas:
+/saltas:
   ros__parameters:
       velocity_estimation_frequency: 40          # Hz
       perception_frequency: 5                # Hz

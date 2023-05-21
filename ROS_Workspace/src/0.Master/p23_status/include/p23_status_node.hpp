@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
+#include <unordered_map>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
@@ -19,6 +20,10 @@
 #include "custom_msgs/msg/tx_control_command.hpp"
 #include "custom_msgs/msg/tx_system_state.hpp"
 #include "custom_msgs/msg/tx_vehicle_variables.hpp"
+
+#include "custom_msgs/srv/vectornav_heartbeat.hpp"
+
+#include "custom_msgs/msg/lifecycle_node_status.hpp"
 
 typedef enum Mission{
     ACCELERATION = 1,
@@ -51,7 +56,6 @@ namespace p23_status_namespace
 {
     class P23StatusNode : public rclcpp::Node{
     private:
-
         // Thewrw oti conesActual einai oi kwnoi tou sygkekrimenou lap
         // From SLAM
         uint16_t conesCountAll;
@@ -59,44 +63,38 @@ namespace p23_status_namespace
         int currentLap;
         int maxLaps;
 
-        // From Velocity Estimation - Speed Actual
-        double velocityX, velocityY, yawRate; 
-        double accelerationX, accelerationY;
-
         // From Vectornav Service
         uint insMode;
+        int sensorCheckupFrequency, systemStateFrequency, sensorCheckupPeriod, systemStatePeriod;
         
-        // State input from Controls - Speed Target
-        double targetVelocityX, targetVelocityY, targetYawRate; 
-        double motorTorqueTarget, steeringAngleTarget, brakeHydraulicTarget;
-
         // Current state of the car
         Mission currentMission;
         AS_Status currentASStatus;
         DV_Status currentDVStatus;
-        bool missionLocked;
         bool missionFinished, standstill, pcError;
+
+        /* Map of all the current statuses of the nodes. Might not keep it and just
+            send a message directly from the lifecycle manager, will see */
+        std::unordered_map<std::string, bool> nodeStatusMap;
+        std::vector<std::string> nodeList;
 
         //Node Subscriptions
         rclcpp::Subscription<custom_msgs::msg::MissionSelection>::SharedPtr canbus_mission_subscription_;
         rclcpp::Subscription<custom_msgs::msg::AutonomousStatus>::SharedPtr canbus_status_subscription_;
-        rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_estimation_subscription_;
         rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr slam_subscription_;
-        rclcpp::Subscription<custom_msgs::msg::MpcToCan>::SharedPtr controls_subscription_;
+        rclcpp::Subscription<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr lifecycle_node_status_subscription_;
 
         //Node Publishers
         rclcpp::Publisher<custom_msgs::msg::TxSystemState>::SharedPtr canbus_system_state_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::TxVehicleVariables>::SharedPtr canbus_vehicle_variables_publisher_;
-        rclcpp::Publisher<custom_msgs::msg::TxControlCommand>::SharedPtr canbus_controls_publisher_;
         
         //Clients
         rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedPtr p23_status_client_;
         rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
+        rclcpp::Client<custom_msgs::srv::VectornavHeartbeat>::SharedPtr vectornav_heartbeat_client_;
 
         // Timers of node
         rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;
         rclcpp::TimerBase::SharedPtr systemStateTimer_;
-        rclcpp::TimerBase::SharedPtr vehicleVariablesTimer_;
 
         // Callback Groups
         rclcpp::CallbackGroup::SharedPtr mission_selection_group_;
@@ -106,24 +104,28 @@ namespace p23_status_namespace
         void setServices();
         void setSubscribers();
         void setPublishers();
+        void loadParameters();
 
         /* 
             These are called when receiving message from the CANBUS node
             As well as from the other nodes whose information we need to send
             to the data logger.
         */
+
         void updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg);
         void updateASStatus(const custom_msgs::msg::AutonomousStatus::SharedPtr msg);
-        void updateVelocityInformation(const custom_msgs::msg::VelEstimation::SharedPtr msg);
         void updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg);
-        void updateControlsInput(const custom_msgs::msg::MpcToCan::SharedPtr msg);
+        void receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatus::SharedPtr msg);
 
         // Callbacks that send information to the VCU
         void sendSystemState();
-        void sendVehicleVariables();
 
+        /* Sensor Checkup functions */
         void checkSensors();
         void requestINSStatus();
+        void vn200Heartbeat();
+
+        /* DV Status Client function */
         void changeDVStatus(DV_Status newStatus);
 
         std::vector<std::string> autonomousStatusList = {"padding","AS_OFF", "AS_READY",

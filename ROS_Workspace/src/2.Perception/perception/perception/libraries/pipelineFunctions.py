@@ -38,7 +38,6 @@ def inferenceYOLO(model, imgpath, res):
     results = model(imgpath, size=res).pandas().xyxy[0]
     return results
 
-
 def initKeypoint(small_modelpath, large_modelpath):
     small_model = VGGLikeV3()
     small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))

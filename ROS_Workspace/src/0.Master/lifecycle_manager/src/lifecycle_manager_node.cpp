@@ -13,6 +13,7 @@
         2. Make the configuration loading client safer.
         3. Better Error Handling, all around.
 */
+
 namespace lifecycle_manager_namespace
 {
     LifecycleManagerNode::LifecycleManagerNode() : Node("lifecycle_manager")
@@ -34,20 +35,13 @@ namespace lifecycle_manager_namespace
         configFolder = packageShareDirectory + std::string("/config");
         launchFolder = packageShareDirectory + std::string("/launch");
 
-        RCLCPP_INFO(get_logger(), "Config Share Directory %s", configFolder.c_str());
-
-        // Read Node List from parameters
         get_parameter("managing_node_list", nodeList);
+        get_parameter("heartbeat_timeout_period", heartbeatTimeoutPeriod);
+        get_parameter("heartbeat_frequency", heartbeatFrequency);
+
+        heartbeatTimerDuration = (1000/heartbeatFrequency);
 
         initializeLifecycleClients(nodeList);
-
-        /*
-            Create a timer that checks for a heartbeat of every node every X milliseconds. Also
-            verifies the state.
-        */
-
-        // heartbeatTimer = create_wall_timer(std::chrono::milliseconds(1000), std::bind(&LifecycleManagerNode::verifyDVState, this));
-
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
 
@@ -63,36 +57,34 @@ namespace lifecycle_manager_namespace
 
     void LifecycleManagerNode::initializeLifecycleClients(std::vector<std::string> nodeList)
     {
-        // auto callbackGroup = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
-        
         for (auto s: nodeList) {
             std::string getStateServiceName = s + std::string("/get_state");
             std::string changeStateServiceName = s + std::string("/change_state");
+
             lifecycleGetStateMap[s] = create_client<lifecycle_msgs::srv::GetState>(getStateServiceName);
             lifecycleChangeStateMap[s] = create_client<lifecycle_msgs::srv::ChangeState>(changeStateServiceName);
-            // parameterClientMap[s] = std::make_shared<rclcpp::AsyncParametersClient>(this, s, 10, callbackGroup);
+            /* Make the assumption that every node that you manage is alive and well :) */
+            nodeStateMap[s] = false;
         }
-    }
 
-    void LifecycleManagerNode::verifyDVState()
-    {
-        for (auto node: nodeList) {
-            getNodeState(node);
-        }
+        node_state_publisher_ = create_publisher<custom_msgs::msg::LifecycleNodeStatus>(
+            std::string(get_name()) + std::string("/lifecycle_node_status"), 10);
     }
 
     void LifecycleManagerNode::getNodeState(std::string nodeName)
     {
         using namespace std::chrono_literals;
+        using lifecycle_msgs::msg::State;
 
         auto getStateServiceHandler = lifecycleGetStateMap.at(nodeName);
         auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
-
-        if (!getStateServiceHandler->wait_for_service(5s)) {
+        
+        if (!getStateServiceHandler->wait_for_service(std::chrono::milliseconds(heartbeatTimeoutPeriod))) {
         RCLCPP_ERROR(
             get_logger(),
-            "Service %s is not available.",
+            "Service %s is not available",
             getStateServiceHandler->get_service_name());
+            nodeStateMap[nodeName] = true;
         }
 
         using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedFuture;
@@ -101,6 +93,14 @@ namespace lifecycle_manager_namespace
 
             std::string nodeStatus = result->current_state.label.c_str();
             RCLCPP_INFO(get_logger(), "Status of node %s is %s", nodeName.c_str(), nodeStatus.c_str());
+            bool nodeError = false;
+
+            if (result->current_state.id == State::PRIMARY_STATE_UNKNOWN) {
+                RCLCPP_INFO(get_logger(), "Cannot get the state of Node %s. Going to NODE_PROBLEM State", nodeName.c_str());
+                nodeError = true;
+            }
+            
+            nodeStateMap[nodeName] = nodeError;
             return result->current_state.id;
         };
 
@@ -133,7 +133,6 @@ namespace lifecycle_manager_namespace
             }
             else {
                 RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
-                // Handle error
             }
         };
 
@@ -146,35 +145,38 @@ namespace lifecycle_manager_namespace
         DV_Status newDVStatus = static_cast<DV_Status>(request->new_status.id);
         Mission missionSent = static_cast<Mission>(request->mission.id);
 
-        // check if dv status changes successfully
-        bool success = false;
-
-        if (currentDVStatus == newDVStatus) {
+        if ((currentDVStatus == newDVStatus) && (newDVStatus == MISSION_SELECTED) && (missionSent != currentMission)) {
+            RCLCPP_INFO(get_logger(), "Re-selecting mission, reset every other node and re-configure");
+            reselectMission(missionSent);
+        }
+        else if (currentDVStatus == newDVStatus) {
             RCLCPP_INFO(get_logger(), "Already in this state, skipping request");
         }
+
         else if (currentDVStatus > newDVStatus) {
             RCLCPP_INFO(get_logger(), "Should not go back to a previous state");
         }
+
         else {
-            switch(newDVStatus){
+            switch(newDVStatus) {
                 case(STARTUP):
                     RCLCPP_INFO(get_logger(), "Should never get here... :3");
                     break;
                 case(LV_ON):
                     RCLCPP_INFO(get_logger(), "Received LV_ON state change. Make sure that everyone is alive but unconfigured");
-                    success = LV_On();
+                    LV_On();
                     break;
                 case(MISSION_SELECTED):
                     RCLCPP_INFO(get_logger(), "Received MISSION_SELECTED state change. Configure the nodes based on mission selection");
-                    success = Mission_Selected(missionSent);
+                    Mission_Selected(missionSent);
                     break;
                 case(DV_READY):
                     RCLCPP_INFO(get_logger(), "Received DV_READY state change. Activate everyone except Controls");
-                    success = DV_Ready();
+                    DV_Ready();
                     break;
                 case(DV_DRIVING):
                     RCLCPP_INFO(get_logger(), "Received DV_DRIVING state change. Activate controls and pray that P23 doesn't unalive anyone");
-                    success = DV_Driving();
+                    DV_Driving();
                     break;
                 case(NODE_PROBLEM):
                     RCLCPP_INFO(get_logger(), "TODO!");
@@ -182,14 +184,11 @@ namespace lifecycle_manager_namespace
             }
         }
 
-        if (success) {
-            currentDVStatus = newDVStatus;
-            if (currentDVStatus == MISSION_SELECTED)
-                currentMission = missionSent;
+        currentDVStatus = newDVStatus;
+        if (currentDVStatus == MISSION_SELECTED)
+            currentMission = missionSent;
             
-            RCLCPP_INFO(get_logger(), "Successfully Changed DV Status to %d", currentDVStatus);
-        }
-        response->success = success;
+        response->success = true;
     }
 
     void LifecycleManagerNode::loadParameters()
@@ -198,5 +197,7 @@ namespace lifecycle_manager_namespace
         {   "acquisition_left", "acquisition_right", "acquisition_center", "inference",
             "velocity_estimation", "slam", "saltas", "path_planning"
         });
+        declare_parameter<int>("heartbeat_timeout_period",2000);
+        declare_parameter<int>("heartbeat_frequency", 5);
     }
 }

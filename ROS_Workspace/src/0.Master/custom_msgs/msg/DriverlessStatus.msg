@@ -12,6 +12,5 @@ uint8 NODE_PROBLEM = 5
 
 uint8 MISSION_FINISHED = 6
 
-
 uint8 id
 string label

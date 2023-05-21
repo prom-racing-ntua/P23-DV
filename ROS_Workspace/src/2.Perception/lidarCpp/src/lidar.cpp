@@ -37,9 +37,6 @@ LidarNode::LidarNode(): Node("lidar_node") {
     );
 
     RCLCPP_INFO(this->get_logger(), "Initialization Lidar Inference node finished");
-
-    
-
 }
 
 LidarNode::~LidarNode() {

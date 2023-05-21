@@ -28,6 +28,7 @@
 #include "vectornav_msgs/msg/ins_group.hpp"
 #include "vectornav_msgs/msg/time_group.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
+#include "custom_msgs/srv/vectornav_heartbeat.hpp"
 
 // VectorNav libvncxx
 #include "vn/compositedata.h"
@@ -228,8 +229,13 @@ private:
   */
 
   rclcpp::Service<custom_msgs::srv::InsMode>::SharedPtr update_ins_service_ = create_service<custom_msgs::srv::InsMode>(
-      std::string("vn_300/update_ins_mode"),
+      std::string(get_name()) + std::string("/update_ins_mode"),
       std::bind(&Vectornav::updateInsMode, this, std::placeholders::_1, std::placeholders::_2)
+  );
+
+  rclcpp::Service<custom_msgs::srv::VectornavHeartbeat>::SharedPtr heartbeat_service = create_service<custom_msgs::srv::VectornavHeartbeat>(
+      std::string(get_name()) + std::string("/vectornav_heartbeat"),
+      std::bind(&Vectornav::sendHeartbeat, this, std::placeholders::_1, std::placeholders::_2)
   );
   
   uint currentInsMode;
@@ -238,6 +244,12 @@ private:
     std::shared_ptr<custom_msgs::srv::InsMode::Response> response)
   {
     response->ins_mode = currentInsMode;
+  }
+
+  void sendHeartbeat(const std::shared_ptr<custom_msgs::srv::VectornavHeartbeat::Request> request,
+    std::shared_ptr<custom_msgs::srv::VectornavHeartbeat::Response> response)
+  {
+    response->heartbeat = true;
   }
 
   /**

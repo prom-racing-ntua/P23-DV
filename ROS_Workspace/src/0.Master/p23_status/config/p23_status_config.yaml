@@ -1,0 +1,8 @@
+p23_status:
+  ros__parameters:
+    managing_node_list: ["acquisition_left", "acquisition_right", 
+     "inference", "slam", "velocity_estimation", "saltas", "mpc", 
+     "path_planning", "pure_pursuit"] # Just like the lifecycle manager, we need to
+     # know all the nodes that are needed by the DV Circuit.
+    system_state_publish_frequency: 10 #in Hz
+    sensor_checkup_frequency: 1 #in Hz
