@@ -5,13 +5,14 @@ from custom_msgs.msg import *
 from math import sin, pi
 
 
-COMMAND_FREQUENCY = 20  # [Hz]
+COMMAND_FREQUENCY = 60  # [Hz]
 STATE_FREQUENCY = 5     # [Hz]
 
-TORQUE_COMMAND = 20.0   # [N*m]
-MAX_STEERING = 0.35     # [rad]
-STEERING_PERIOD = 8     # [sec]
-
+TORQUE_COMMAND = 10.0   # [N*m]
+MAX_STEERING = -24.0     # [mm]
+STEERING_PERIOD = 1     # [sec]
+WAIT_TIME = 2           # [sec]
+MISSION_DURATION = 10   # [sec]
 
 class InspectionMission(Node):
     def __init__(self) -> None:
@@ -19,10 +20,11 @@ class InspectionMission(Node):
         self._mission_finished = False
         self._steering_angle = 0
         self._start_time = self.get_time()
+        self._send_time = None
 
         self._command_publisher = self.create_publisher(TxControlCommand ,'p23_status/control_commands', 10)
         self._state_publisher = self.create_publisher(TxSystemState ,'p23_status/system_state', 10)
-        self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
+        self._steering_sub = self.create_subscription(RxSteeringAngle, 'steering_angle', self.set_steering, 10)
 
         self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
         self._state_timer = self.create_timer(1/STATE_FREQUENCY, self.send_state)
@@ -32,28 +34,38 @@ class InspectionMission(Node):
 
     def set_steering(self, msg:RxSteeringAngle) -> None:
         self._steering_angle = msg.steering_angle
+        self.get_logger().info(f"Received rack displacement {self._steering_angle}")
+        if abs(self._steering_angle - MAX_STEERING) < 1e-3:
+            response_time = self.get_time() - self._send_time
+            self.get_logger().warn(f"Response time to reach {MAX_STEERING} mm: {response_time}", once=True)
         return
 
 
     def send_commands(self) -> None:
-        if self._mission_finished:
+        time = self.get_time() - self._start_time
+        if self._mission_finished or time < WAIT_TIME:
             return
         
         msg = TxControlCommand()
 
-        msg.brake_pressure_target = False
+        if int(time) % 2 == 0:
+            msg.brake_pressure_target = True
+        else:
+            msg.brake_pressure_target = False
         msg.speed_actual = 0
         msg.speed_target = 0
         msg.motor_torque_target = TORQUE_COMMAND
 
-        time = self.get_time() - self._start_time
-        msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)
+        msg.steering_angle_target = MAX_STEERING #* sin(2*pi/STEERING_PERIOD * time)
+        if self._send_time is None:
+            self._send_time = self.get_time()
         
         self._command_publisher.publish(msg)        
         
-        self.get_logger().info(f"Time passed: {time}")
-        if time > 26.0:
+        # self.get_logger().info(f"Time passed: {time}")
+        if time > MISSION_DURATION + WAIT_TIME:
             self._mission_finished = True
+            self.get_logger().warn("Mission Finished", once=True)
         return
 
 

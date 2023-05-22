@@ -29,7 +29,8 @@ class CanInterface(Node):
             MissionMsg.can_id               : MissionMsg,
             SensorVariablesMsg.can_id       : SensorVariablesMsg,
             WheelEncodersMsg.can_id         : WheelEncodersMsg,
-            SteeringAngleMsg.can_id         : SteeringAngleMsg
+            SteeringAngleMsg.can_id         : SteeringAngleMsg,
+            AsStatusMsg.can_id              : AsStatusMsg
         }
 
         # Define Outgoing Messages
@@ -41,14 +42,15 @@ class CanInterface(Node):
 
         # Define ROS Publishers for the incoming messages
         MissionMsg.ros_publisher = self.create_publisher(Mission, 'mission_selection', 10)
-        SensorVariablesMsg.ros_publisher = self.create_publisher(RxVehicleSensors, 'sensor_values', 10)
+        SensorVariablesMsg.ros_publisher = self.create_publisher(RxVehicleSensors, 'sensor_data', 10)
         WheelEncodersMsg.ros_publisher = self.create_publisher(RxWheelSpeed, 'wheel_encoders', 10)
         SteeringAngleMsg.ros_publisher = self.create_publisher(RxSteeringAngle, 'steering_angle', 10)
+        AsStatusMsg.ros_publisher = self.create_publisher(AutonomousStatus, 'autonomous_status', 10)
 
         # Define ROS Subscribers for the outgoing messages
-        ActuatorCommandsMsg.ros_subscriber = self.create_subscription(TxControlCommand, 'p23_status/control_commands', self.universal_callback, 10)
-        KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, 'velocity_estimation', self.universal_callback, 10)
-        SystemHealthMsg.ros_subscriber = self.create_subscription(TxSystemState, 'p23_status/system_state', self.universal_callback, 10)
+        ActuatorCommandsMsg.ros_subscriber = self.create_subscription(TxControlCommand, '/control_commands', self.universal_callback, 10)
+        KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, '/velocity_estimation', self.universal_callback, 10)
+        SystemHealthMsg.ros_subscriber = self.create_subscription(TxSystemState, '/system_state', self.universal_callback, 10)
 
 
         ## --- For P22 --- ##
@@ -94,7 +96,7 @@ class CanInterface(Node):
         out_bytes = temp_msg.to_CanMsg()
 
         # Write message to terminal and serial port
-        self.get_logger().info(f"Outgoing CanVehicleVariables message in bytes:\n{out_bytes}\n")
+        self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
         self._serial_port.write(out_bytes)
 
         # Print the total processing time
@@ -138,12 +140,12 @@ class CanInterface(Node):
             # Check if we received new mission and handle it
             if Message == MissionMsg:
                 try:
-                    mission_locked = temp_msg.handle_mission()
+                    confirmed = temp_msg.handle_mission()
                 except ValueError:
                     return
                 # If mission is not locked wait for acknowledgment
                 # else push the mission to the rest of the system
-                if not mission_locked:
+                if not confirmed:
                     self.get_logger().warn(f"Received new mission {hex(self._received_mission)}")
                     return
             
