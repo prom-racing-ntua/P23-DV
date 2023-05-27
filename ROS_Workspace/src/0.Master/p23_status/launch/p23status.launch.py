@@ -15,6 +15,7 @@ def generate_launch_description():
         executable="p23_status",
         output="screen",
         emulate_tty=True,
+        parameters=[os.path.join(p23_status_dir, 'config', 'p23_status_config.yaml')]
     )
 
     ld.add_action(p23_status_node)

@@ -42,7 +42,7 @@ using namespace std::chrono_literals;
 
 class Vectornav : public rclcpp::Node {
 public:
-  Vectornav() : Node("vectornav") {
+  Vectornav() : Node("vectornav_node") {
     //
     // Parameters
     //
@@ -229,27 +229,17 @@ private:
   */
 
   rclcpp::Service<custom_msgs::srv::InsMode>::SharedPtr update_ins_service_ = create_service<custom_msgs::srv::InsMode>(
-      std::string(get_name()) + std::string("/update_ins_mode"),
-      std::bind(&Vectornav::updateInsMode, this, std::placeholders::_1, std::placeholders::_2)
-  );
-
-  rclcpp::Service<custom_msgs::srv::VectornavHeartbeat>::SharedPtr heartbeat_service = create_service<custom_msgs::srv::VectornavHeartbeat>(
-      std::string(get_name()) + std::string("/vectornav_heartbeat"),
-      std::bind(&Vectornav::sendHeartbeat, this, std::placeholders::_1, std::placeholders::_2)
+      "get_ins_mode", std::bind(&Vectornav::updateInsMode, this, std::placeholders::_1, std::placeholders::_2)
   );
   
-  uint currentInsMode;
+  bool sensor_is_connected_{false};
+  uint currentInsMode{0};
 
   void updateInsMode(const std::shared_ptr<custom_msgs::srv::InsMode::Request> request,
     std::shared_ptr<custom_msgs::srv::InsMode::Response> response)
   {
     response->ins_mode = currentInsMode;
-  }
-
-  void sendHeartbeat(const std::shared_ptr<custom_msgs::srv::VectornavHeartbeat::Request> request,
-    std::shared_ptr<custom_msgs::srv::VectornavHeartbeat::Response> response)
-  {
-    response->heartbeat = true;
+    response->sensor_connected = sensor_is_connected_;
   }
 
   /**
@@ -261,9 +251,12 @@ private:
     // Check if the sensor is connected
     if (vs_.verifySensorConnectivity())
     {
+      sensor_is_connected_ = true;
       return;
     }
 
+    sensor_is_connected_ = false;
+    RCLCPP_ERROR(get_logger(), "Vectornav has disconnected. Trying to reconnect");
     // Try to reconnect
     try
     {
@@ -313,6 +306,7 @@ private:
 
         if (vs_.verifySensorConnectivity())
         {
+          sensor_is_connected_ = true;
           break;
         }
       }
@@ -335,6 +329,7 @@ private:
     // Verify connection one more time
     if (!vs_.verifySensorConnectivity())
     {
+      sensor_is_connected_ = false;
       RCLCPP_ERROR(get_logger(), "Unable to connect via %s", port.c_str());
       return false;
     }

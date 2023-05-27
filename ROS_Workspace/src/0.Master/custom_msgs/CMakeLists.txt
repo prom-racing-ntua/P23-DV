@@ -67,7 +67,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetFrequencies.srv"
   "srv/DriverlessStatus.srv"
   "srv/InsMode.srv"
-  "srv/VectornavHeartbeat.srv"
 
   ## Messages for P22 testing
   "msg/P22/WheelSpeed.msg"

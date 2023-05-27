@@ -28,33 +28,8 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
 #include "yaml-cpp/yaml.h"
+#include "p23_common.h"
 
-typedef enum Mission{
-    ACCELERATION = 1,
-    SKIDPAD = 2,
-    TRACKDRIVE = 3,
-    EBS_TEST = 4,
-    INSPECTION = 5,
-    AUTOX = 6,
-    MANUAL = 7
-} Mission;
-
-typedef enum AS_Status{
-    AS_OFF = 1,
-    AS_READY = 2,
-    AS_DRIVING = 3,
-    AS_FINISHED = 4,
-    AS_EMERGENCY = 5
-} AS_Status;
-
-typedef enum DV_Status{
-    STARTUP = 0,
-    LV_ON = 1,
-    MISSION_SELECTED = 2,
-    DV_READY = 3,
-    DV_DRIVING = 4,
-    NODE_PROBLEM = 5
-} DV_Status;
 
 template<typename T>
 void printVector(std::vector<T>& vector)
@@ -77,9 +52,9 @@ namespace lifecycle_manager_namespace
 {
     class LifecycleManagerNode : public rclcpp::Node {
     private:
-        Mission currentMission;
-        AS_Status currentASStatus;
-        DV_Status currentDVStatus;
+        p23::Mission currentMission;
+        p23::AS_Status currentASStatus;
+        p23::DV_Status currentDVStatus;
 
         // Configuration and Launch folders
         std::string packageShareDirectory, configFolder, launchFolder;
@@ -132,13 +107,22 @@ namespace lifecycle_manager_namespace
         void loadParameters();
 
         // 4 Main Functions for controlling the whole state machine of P23
-        void LV_On();
-        void Mission_Selected(Mission mission);
-        void DV_Ready();
-        void DV_Driving();
-
-        void reselectMission(Mission newMission);
+        
+        //Transitions from Startup to LV_On. Just activate the heartbeat clock
+        void startup();
+        // Transitions from Mission_Selected or DV_Ready to LV_On. All nodes should go to unconfigured state.
+        // void cleanupNodes();
+        // Transitions from Mission Selected to DV_Ready. All nodes should be inactive (set parameters)
+        void configureNodes(p23::Mission mission);
+        // Is called when we enter AS_Ready. All nodes except controls should be active.
+        void activateSystem();
+        // Transition from DV_Ready to DV_Driving. Called when we enter AS_Driving (have received Go-Signal). Control node should get activated here
+        void activateControls();
+        
         void shutdownSelectedNodes(std::vector<std::string> nodesToShutdown);
+        
+        // Probably to be used instead of cleanupNodes() or configureNodes() ...
+        void reselectMission(p23::Mission newMission);
 
         /* Experimental Code - Should not be used by anyone (yet). Egw den metraw... */
         pid_t launchNode(std::string nodeName, std::string packageName, std::string runCommand);

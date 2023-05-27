@@ -10,10 +10,11 @@ def generate_launch_description():
     
     # Vectornav VN-200
     start_vn_200_cmd = Node(
-        name='node',
+        name='vectornav_node',
         package='vectornav', 
         executable='vectornav',
         output='screen',
+        emulate_tty=True,
         parameters=[os.path.join(this_dir, 'config', 'vn_200.yaml')],
         namespace='vn_200')
     
@@ -22,15 +23,17 @@ def generate_launch_description():
         package='vectornav', 
         executable='vn_sensor_msgs',
         output='screen',
+        emulate_tty=True,
         parameters=[os.path.join(this_dir, 'config', 'vn_200.yaml')],
         namespace='vn_200')
 
     # Vectornav VN-300
     start_vn_300_cmd = Node(
-        name='node',
+        name='vectornav_node',
         package='vectornav', 
         executable='vectornav',
         output='screen',
+        emulate_tty=True,
         parameters=[os.path.join(this_dir, 'config', 'vn_300.yaml')],
         namespace='vn_300')
     
@@ -39,6 +42,7 @@ def generate_launch_description():
         package='vectornav', 
         executable='vn_sensor_msgs',
         output='screen',
+        emulate_tty=True,
         parameters=[os.path.join(this_dir, 'config', 'vn_300.yaml')],
         namespace='vn_300')
 

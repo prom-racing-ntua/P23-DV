@@ -1,5 +1,5 @@
 vectornav:
-  node:
+  vectornav_node:
     ros__parameters:
       port: "/dev/ttyUSB0"
       baud: 115200

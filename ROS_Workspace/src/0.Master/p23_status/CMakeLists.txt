@@ -10,22 +10,43 @@ find_package(ament_cmake REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 
+include_directories(
+  include
+  include/common
+)
+
+
+# --- Common Lib
+add_library(p23_common INTERFACE)
+
+install(
+  TARGETS p23_common
+  EXPORT p23_common
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+ament_export_targets(p23_common HAS_LIBRARY_TARGET)
+
+install(DIRECTORY include/common/ DESTINATION include/)
+
+
+# --- P23 Node
 add_executable(${PROJECT_NAME} src/main.cpp src/p23_status_node.cpp src/p23_status_callbacks.cpp)
+target_link_libraries(${PROJECT_NAME} p23_common)
 ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs)
+
+install(DIRECTORY
+  config launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 install(TARGETS
   ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME}
 )
 
-include_directories(
-  include
-)
-
-install(DIRECTORY
-  config launch
-  DESTINATION share/${PROJECT_NAME}/
-)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-
 #include "lifecycle_manager_node.hpp"
 
 /*
@@ -20,12 +19,12 @@ namespace lifecycle_manager_namespace
     {
         RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
 
-        currentDVStatus = STARTUP;
-        currentASStatus = AS_OFF;
-        currentMission = INSPECTION;
+        currentDVStatus = p23::DV_Status::STARTUP;
+        currentASStatus = p23::AS_Status::AS_OFF;
+        currentMission = p23::Mission::MISSION_UNLOCKED;
 
-        initializeServices();
         loadParameters();
+        initializeServices();
 
         /*
             Setup folders for controlling the configuartion and the launch files of the nodes through
@@ -80,28 +79,28 @@ namespace lifecycle_manager_namespace
         auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
         
         if (!getStateServiceHandler->wait_for_service(std::chrono::milliseconds(heartbeatTimeoutPeriod))) {
-        RCLCPP_ERROR(
-            get_logger(),
-            "Service %s is not available",
-            getStateServiceHandler->get_service_name());
+            RCLCPP_ERROR_STREAM(get_logger(), "Service " << getStateServiceHandler->get_service_name() << " is not available");
             nodeStateMap[nodeName] = true;
         }
 
         using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedFuture;
         auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
             auto result = future.get();
+            bool nodeError{ true };
 
-            std::string nodeStatus = result->current_state.label.c_str();
-            RCLCPP_INFO(get_logger(), "Status of node %s is %s", nodeName.c_str(), nodeStatus.c_str());
-            bool nodeError = false;
-
-            if (result->current_state.id == State::PRIMARY_STATE_UNKNOWN) {
-                RCLCPP_INFO(get_logger(), "Cannot get the state of Node %s. Going to NODE_PROBLEM State", nodeName.c_str());
+            if (result->current_state.id == State::PRIMARY_STATE_UNKNOWN)
+            {
+                RCLCPP_ERROR_STREAM(get_logger(), "Cannot get the state of Node " << nodeName << ". Going to NODE_PROBLEM State");
+                // Actually go to node problem...
                 nodeError = true;
             }
-            
+            else
+            {
+                std::string nodeStatus{ result->current_state.label };
+                RCLCPP_INFO_STREAM(get_logger(), "Status of node "<< nodeName << " is "<< nodeStatus);
+                bool nodeError = false;
+            }
             nodeStateMap[nodeName] = nodeError;
-            return result->current_state.id;
         };
 
         auto future_result = getStateServiceHandler->async_send_request(request, response_received_callback);
@@ -142,10 +141,11 @@ namespace lifecycle_manager_namespace
     void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessStatus::Request> request,
         std::shared_ptr<custom_msgs::srv::DriverlessStatus::Response> response)
     {
-        DV_Status newDVStatus = static_cast<DV_Status>(request->new_status.id);
-        Mission missionSent = static_cast<Mission>(request->mission.id);
+        p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->new_status.id);
+        p23::Mission missionSent = static_cast<p23::Mission>(request->mission.id);
 
-        if ((currentDVStatus == newDVStatus) && (newDVStatus == MISSION_SELECTED) && (missionSent != currentMission)) {
+        // These checks should be done by p23 status
+        if ((currentDVStatus == newDVStatus) && (newDVStatus == p23::MISSION_SELECTED) && (missionSent != currentMission)) {
             RCLCPP_INFO(get_logger(), "Re-selecting mission, reset every other node and re-configure");
             reselectMission(missionSent);
         }
@@ -159,45 +159,46 @@ namespace lifecycle_manager_namespace
 
         else {
             switch(newDVStatus) {
-                case(STARTUP):
-                    RCLCPP_INFO(get_logger(), "Should never get here... :3");
+                case(p23::DV_Transitions::ON_STARTUP):
+                    // RCLCPP_INFO(get_logger(), "Should never get here... :3");
+                    startup();
                     break;
-                case(LV_ON):
-                    RCLCPP_INFO(get_logger(), "Received LV_ON state change. Make sure that everyone is alive but unconfigured");
-                    LV_On();
+                case(p23::DV_Transitions::SHUTDOWN_NODES):
+                    // RCLCPP_INFO(get_logger(), "Received LV_ON state change. Make sure that everyone is alive but unconfigured");
                     break;
-                case(MISSION_SELECTED):
+                case(p23::DV_Transitions::ON_MISSION_LOCKED):
                     RCLCPP_INFO(get_logger(), "Received MISSION_SELECTED state change. Configure the nodes based on mission selection");
-                    Mission_Selected(missionSent);
+                    configureNodes(missionSent);
                     break;
-                case(DV_READY):
+                case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
                     RCLCPP_INFO(get_logger(), "Received DV_READY state change. Activate everyone except Controls");
-                    DV_Ready();
+                    // cleanupNodes();
                     break;
-                case(DV_DRIVING):
+                case(p23::DV_Transitions::ON_AS_READY):
                     RCLCPP_INFO(get_logger(), "Received DV_DRIVING state change. Activate controls and pray that P23 doesn't unalive anyone");
-                    DV_Driving();
+                    activateSystem();
                     break;
-                case(NODE_PROBLEM):
-                    RCLCPP_INFO(get_logger(), "TODO!");
+                case(p23::DV_Transitions::ON_AS_DRIVING):
+                    // RCLCPP_INFO(get_logger(), "TODO!");
+                    activateControls();
                     break;
             }
         }
 
-        currentDVStatus = newDVStatus;
-        if (currentDVStatus == MISSION_SELECTED)
+        // These may be unecessary
+        // currentDVStatus = newDVStatus;
+        if (currentDVStatus == p23::MISSION_SELECTED)
             currentMission = missionSent;
-            
+
         response->success = true;
     }
 
-    void LifecycleManagerNode::loadParameters()
-    {
-        declare_parameter<std::vector<std::string>>("managing_node_list",
-        {   "acquisition_left", "acquisition_right", "acquisition_center", "inference",
-            "velocity_estimation", "slam", "saltas", "path_planning"
-        });
-        declare_parameter<int>("heartbeat_timeout_period",2000);
-        declare_parameter<int>("heartbeat_frequency", 5);
+    void LifecycleManagerNode::loadParameters() {
+        nodeList = declare_parameter<std::vector<std::string>>("managing_node_list",
+            { "acquisition_left", "acquisition_right", "acquisition_center", "inference",
+                "velocity_estimation", "slam", "saltas", "path_planning"
+            });
+        heartbeatTimeoutPeriod = declare_parameter<int>("heartbeat_timeout_period", 2000);
+        heartbeatFrequency = declare_parameter<int>("heartbeat_frequency", 5);
     }
 }

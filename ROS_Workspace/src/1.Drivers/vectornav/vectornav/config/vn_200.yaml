@@ -1,5 +1,5 @@
 vn_200:
-  node:
+  vectornav_node:
     ros__parameters:
       port: "/dev/vectornav_vn200"
       baud: 230400

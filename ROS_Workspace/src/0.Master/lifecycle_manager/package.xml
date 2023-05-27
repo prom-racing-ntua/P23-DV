@@ -9,6 +9,7 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>custom_msgs</depend>
+  <depend>p23_status</depend>
   <depend>rclcpp</depend>
   <depend>lifecycle_msgs</depend>
   <depend>rclcpp_lifestyle</depend>

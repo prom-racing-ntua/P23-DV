@@ -4,13 +4,13 @@
 
 # bool=1 means ERROR (so as to match with the rest of the EV system)
 
-bool        clock_ok
-bool        inference_ok
-bool        velocity_estimation_ok
-bool        slam_ok
-bool        mpc_controls_ok
-bool        path_planning_ok
-bool        pi_pp_controls_ok
+bool        clock_error
+bool        inference_error
+bool        velocity_estimation_error
+bool        slam_error
+bool        mpc_controls_error
+bool        path_planning_error
+bool        pi_pp_controls_error
 
-bool        camera_right_ok
-bool        camera_left_ok
+bool        camera_right_error
+bool        camera_left_error
