@@ -7,25 +7,18 @@
 
 #include "lifecycle_manager_node.hpp"
 
-/*
-    TODO List:
-        2. Make the configuration loading client safer.
-        3. Better Error Handling, all around.
-*/
+using lifecycle_msgs::msg::Transition;
 
 namespace lifecycle_manager_namespace
 {
     LifecycleManagerNode::LifecycleManagerNode() : Node("lifecycle_manager")
     {
         RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
-
-        currentDVStatus = p23::DV_Status::STARTUP;
-        currentASStatus = p23::AS_Status::AS_OFF;
+        
         currentMission = p23::Mission::MISSION_UNLOCKED;
 
         loadParameters();
         initializeServices();
-
         /*
             Setup folders for controlling the configuartion and the launch files of the nodes through
             the lifecycle manager.
@@ -81,24 +74,26 @@ namespace lifecycle_manager_namespace
         if (!getStateServiceHandler->wait_for_service(std::chrono::milliseconds(heartbeatTimeoutPeriod))) {
             RCLCPP_ERROR_STREAM(get_logger(), "Service " << getStateServiceHandler->get_service_name() << " is not available");
             nodeStateMap[nodeName] = true;
+            return;
         }
 
         using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedFuture;
         auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
             auto result = future.get();
-            bool nodeError{ true };
+            bool nodeError = true;
 
             if (result->current_state.id == State::PRIMARY_STATE_UNKNOWN)
             {
                 RCLCPP_ERROR_STREAM(get_logger(), "Cannot get the state of Node " << nodeName << ". Going to NODE_PROBLEM State");
                 // Actually go to node problem...
+                // Vasilis: This is going to happen from the P23 Status Node
                 nodeError = true;
             }
             else
             {
                 std::string nodeStatus{ result->current_state.label };
                 RCLCPP_INFO_STREAM(get_logger(), "Status of node "<< nodeName << " is "<< nodeStatus);
-                bool nodeError = false;
+                nodeError = false;
             }
             nodeStateMap[nodeName] = nodeError;
         };
@@ -115,11 +110,12 @@ namespace lifecycle_manager_namespace
 
         request->transition.id = transition;
 
-        if (!changeStateServiceHandler->wait_for_service(5s)) {
+        if (!changeStateServiceHandler->wait_for_service(1s)) {
              RCLCPP_ERROR(
                 get_logger(),
                 "Service %s is not available.",
                 changeStateServiceHandler->get_service_name());
+            nodeStateMap[nodeName] = true;
         }
 
         using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedFuture;
@@ -132,6 +128,8 @@ namespace lifecycle_manager_namespace
             }
             else {
                 RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
+                /* This will throw up a NODE_PROBLEM error */
+                nodeStateMap[nodeName] = true;
             }
         };
 
@@ -144,52 +142,32 @@ namespace lifecycle_manager_namespace
         p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->new_status.id);
         p23::Mission missionSent = static_cast<p23::Mission>(request->mission.id);
 
-        // These checks should be done by p23 status
-        if ((currentDVStatus == newDVStatus) && (newDVStatus == p23::MISSION_SELECTED) && (missionSent != currentMission)) {
-            RCLCPP_INFO(get_logger(), "Re-selecting mission, reset every other node and re-configure");
-            reselectMission(missionSent);
+        switch(newDVStatus) {
+            case(p23::DV_Transitions::ON_STARTUP):
+                RCLCPP_INFO(get_logger(), "Received Startup signal, start a heartbeat check for each node managed");
+                startup();
+                break;
+            case(p23::DV_Transitions::SHUTDOWN_NODES):
+                RCLCPP_INFO(get_logger(), "Either Mission Finished or AS Emergency, shutting down currently running nodes");
+                shutdownSelectedNodes(nodeList, Transition::TRANSITION_ACTIVE_SHUTDOWN);
+                break;
+            case(p23::DV_Transitions::ON_MISSION_LOCKED):
+                RCLCPP_INFO(get_logger(), "Received mission, configure the nodes");
+                configureNodes(missionSent);
+                break;
+            case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
+                RCLCPP_INFO(get_logger(), "Unlocking mission, waiting for new mission to arrive, cleanup nodes");
+                cleanupNodes();
+                break;
+            case(p23::DV_Transitions::ON_AS_READY):
+                RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
+                activateSystem();
+                break;
+            case(p23::DV_Transitions::ON_AS_DRIVING):
+                RCLCPP_INFO(get_logger(), "Received AS Driving, activate control node");
+                activateControls();
+                break;
         }
-        else if (currentDVStatus == newDVStatus) {
-            RCLCPP_INFO(get_logger(), "Already in this state, skipping request");
-        }
-
-        else if (currentDVStatus > newDVStatus) {
-            RCLCPP_INFO(get_logger(), "Should not go back to a previous state");
-        }
-
-        else {
-            switch(newDVStatus) {
-                case(p23::DV_Transitions::ON_STARTUP):
-                    // RCLCPP_INFO(get_logger(), "Should never get here... :3");
-                    startup();
-                    break;
-                case(p23::DV_Transitions::SHUTDOWN_NODES):
-                    // RCLCPP_INFO(get_logger(), "Received LV_ON state change. Make sure that everyone is alive but unconfigured");
-                    break;
-                case(p23::DV_Transitions::ON_MISSION_LOCKED):
-                    RCLCPP_INFO(get_logger(), "Received MISSION_SELECTED state change. Configure the nodes based on mission selection");
-                    configureNodes(missionSent);
-                    break;
-                case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
-                    RCLCPP_INFO(get_logger(), "Received DV_READY state change. Activate everyone except Controls");
-                    // cleanupNodes();
-                    break;
-                case(p23::DV_Transitions::ON_AS_READY):
-                    RCLCPP_INFO(get_logger(), "Received DV_DRIVING state change. Activate controls and pray that P23 doesn't unalive anyone");
-                    activateSystem();
-                    break;
-                case(p23::DV_Transitions::ON_AS_DRIVING):
-                    // RCLCPP_INFO(get_logger(), "TODO!");
-                    activateControls();
-                    break;
-            }
-        }
-
-        // These may be unecessary
-        // currentDVStatus = newDVStatus;
-        if (currentDVStatus == p23::MISSION_SELECTED)
-            currentMission = missionSent;
-
         response->success = true;
     }
 

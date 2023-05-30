@@ -8,13 +8,14 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::PoseMsg::Share
     conesCountAll = msg->cones_count_all;
     // TODO: Fix in SLAM -> Message is uint_8 ... but takes value -1
     currentLap = msg->lap_count;
+    // standstill = msg->standstill;
+    
 
     if (currentLap >= maxLaps)
     {
         // TODO: Go to Mission Finished state and start braking
     }
 }
-
 
 void P23StatusNode::checkVectornav() {
     using namespace std::chrono_literals;
@@ -29,7 +30,7 @@ void P23StatusNode::checkVectornav() {
         {
             insMode = result->ins_mode;
 
-            if (insMode == 2 and nodesReady and currentDvStatus != p23::DV_READY and currentAsStatus == p23::AS_OFF)
+            if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
             {
                 RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
                 currentDvStatus = p23::DV_READY;
@@ -63,7 +64,6 @@ void P23StatusNode::checkVectornav() {
     else { auto future_result = vectornav_heartbeat_client_->async_send_request(vn200_request, vn200_heartbeat_callback); }
 }
 
-
 void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatus::SharedPtr msg) {
     nodeStatusMap["saltas"] = msg->clock_error;
     nodeStatusMap["acquisition_left"] = msg->camera_left_error;
@@ -74,12 +74,20 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
     nodeStatusMap["velocity_estimation"] = msg->velocity_estimation_error;
     nodeStatusMap["inference"] = msg->inference_error;
     nodeStatusMap["path_planning"] = msg->path_planning_error;
+
+    /* Iterate through map and check if any node is dead. If a critical node has failed, go to pc_error */
+    for (auto const& [key, error] : nodeStatusMap) {
+        /* If a node has a problem then check if this node is a critical one */
+        if (error) {
+            currentDvStatus = p23::NODE_PROBLEM;
+            if (std::find(nodeList.begin(), nodeList.end(), key) != nodeList.end()) {
+                /* TODO: Talk about which node should send us to AS_EMERGENCY mode */
+            }
+        }
+    }
 }
 
-
 void P23StatusNode::sendSystemState() {
-    // TODO: Here we should check if a critical node has failed and go to pc_error
-
     custom_msgs::msg::TxSystemState systemStateMsg;
 
     /* Information that is sent by the P23 Status Node */

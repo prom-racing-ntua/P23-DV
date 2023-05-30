@@ -9,7 +9,6 @@ from rclpy.lifecycle import Node
 from rclpy.lifecycle import Publisher
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
-from rclpy.timer import Timer
 
 from custom_msgs.msg import AcquisitionMessage, Perception2Slam
 from cv_bridge import CvBridge, CvBridgeError
@@ -32,6 +31,7 @@ class InferenceLifecycleNode(Node):
         Inference node needs to configure all the models in the configuration
         phase. Also open a log file if you want to idk.
         """
+        self.publishing = False
 
         # Initialize Models
         self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.75, iou=0.45)
@@ -54,34 +54,35 @@ class InferenceLifecycleNode(Node):
         return TransitionCallbackReturn.SUCCESS
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
-        # Subscribe to acquisition topic
+        # Start Publishing
+        self.publishing = True
         self.get_logger().info("Inference Activation Complete")
         return super().on_activate(state)
     
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        # Stop Receiving frames from Acquisition Nodes
-        self.destroy_subscription(self.subscription)
-
+        # Stop Publishing
+        self.publishing = False
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
+        self.publishing = False
         del self.yoloModel, self.smallModel, self.largeModel
-        # Delete Publisher
-        self.destroy_lifecycle_publisher(self.publisher_)
+        self.destroy_publisher(self.publisher_)
 
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         del self.yoloModel, self.smallModel, self.largeModel
-        # Delete Publisher
-        self.destroy_lifecycle_publisher(self.publisher_)
+        self.destroy_publisher(self.publisher_)
 
         return TransitionCallbackReturn.SUCCESS
 
-
     def listener_callback(self, msg):
+        if not self.publishing:
+            return
+        
         try:
             # Get data from message
             globalIndex = msg.global_index
@@ -90,7 +91,6 @@ class InferenceLifecycleNode(Node):
         except CvBridgeError as bridgeError:
             # Print error if image conversion was not succseful
             self.get_logger().info(f"Failed to get image from acquisition node {cameraOrientation}, on Index {globalIndex}")
-
         else:
             # Perform Perception Pipeline
             inferenceTiming = time.time()
@@ -121,6 +121,8 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
 
+    # EdgeTPU YOLO
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6_edgetpu.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"
     # Medium Yolo v5
@@ -133,7 +135,7 @@ def main(args=None):
     largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
     
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5m_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:

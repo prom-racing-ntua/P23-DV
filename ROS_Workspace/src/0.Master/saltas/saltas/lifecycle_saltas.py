@@ -8,7 +8,6 @@ import time
 import rclpy
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.lifecycle import Node
-from rclpy.lifecycle import LifecyclePublisher
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.timer import Timer
@@ -47,7 +46,7 @@ class SaltasNode(Node):
         self.send_reset = calcClockFrequency(self.send_velocity, self.send_perception)
 
         self.saltas_clock = self.create_timer(1/self.clock_frequency, self.globalTimerCallback)
-        self.clock_publisher = self.create_lifecycle_publisher(NodeSync, 'saltas_clock', qos_profile=10)
+        self.clock_publisher = self.create_publisher(NodeSync, 'saltas_clock', qos_profile=10)
 
         # Service for nodes to get their frequencies from the master
         self.frequency_service = self.create_service(GetFrequencies, 'get_frequencies', self.frequency_srv_callback)
@@ -59,21 +58,22 @@ class SaltasNode(Node):
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Publisher for the synchronization topic
-        # Start ticking the clock        
+        # Start ticking the clock
+        self.publishing = True
         self.get_logger().info(f'Master Clock is Active!')
-        self.clock_publisher.on_activate()
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().info(f'Master Clock Deactivated!')
-
+        self.publishing = False
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
+        self.publishing = False
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.clock_publisher.destroy()
+        self.publishing = False
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:

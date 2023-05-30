@@ -26,6 +26,7 @@ P23StatusNode::P23StatusNode() : Node("p23_status") {
         We need to get the Lifecycle Manager to an LV_ON state. This will ensure that every node is alive but unconfigured.
         The configuration will happen when the Mission Selected DV Change happens.
     */
+    RCLCPP_INFO(get_logger(), "Sending Startup signal to Lifecycle Manager");
     changeDVStatus(p23::ON_STARTUP);
 }
 
@@ -42,7 +43,7 @@ void P23StatusNode::initializeNode() {
     currentLap = -1;
     // Initialize to 255 because current lap received might be 0
     maxLaps = 255;
-    pcError = 0;
+    pcError = false;
 
     missionFinished = false;
     currentAsStatus = p23::AS_OFF;
@@ -58,7 +59,6 @@ void P23StatusNode::initializeNode() {
     sensorCheckupTimer_ = create_wall_timer(std::chrono::milliseconds(1000 / sensorCheckupFrequency), std::bind(&P23StatusNode::checkVectornav, this));
     systemStateTimer_ = create_wall_timer(std::chrono::milliseconds(1000 / systemStateFrequency), std::bind(&P23StatusNode::sendSystemState, this));
 }
-
 
 void P23StatusNode::setSubscribers() {
     using std::placeholders::_1;
@@ -182,7 +182,8 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         RCLCPP_INFO(get_logger(), "Current AS Status: AS_FINISHED. De-activating nodes");
 
         // TODO: If in standstill shutdown nodes
-        // changeDVStatus(p23::CLEANUP_NODES);
+        if (standstill)
+            changeDVStatus(p23::SHUTDOWN_NODES);
         break;
 
     case(p23::AS_Status::AS_EMERGENCY):
@@ -191,7 +192,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         RCLCPP_INFO(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
 
         // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
-        // changeDVStatus(p23::CLEANUP_NODES);
+        // changeDVStatus(p23::SHUTDOWN_NODES);
         break;
     }
     currentAsStatus = statusReceived;
@@ -291,8 +292,11 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     if (!p23_status_client_->wait_for_service(3s))
     {
-        // TODO: Transition to pc_error if lifecycle doesn't respond
+        /*
+            Just set pc_error bool to True and it will automatically send to the LV system.
+        */
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Service not responding");
+        pcError = true;
         return;
     }
 

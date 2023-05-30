@@ -13,8 +13,10 @@ from torch.utils.data import Dataset
 import json
 import torchvision
 from torch.utils.data import SubsetRandomSampler, DataLoader
-
 import torch.optim as optim
+
+# TPU Imports
+from .edgetpumodel import EdgeTPUModel
 
 from .cnn import *
 
@@ -33,9 +35,11 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolo_model.iou = iou
     return yolo_model
 
-
 def inferenceYOLO(model, imgpath, res):
     results = model(imgpath, size=res).pandas().xyxy[0]
+    return results
+def tpuInference(model, image:np.ndarray):
+    results = model.forward(image)
     return results
 
 def initKeypoint(small_modelpath, large_modelpath):

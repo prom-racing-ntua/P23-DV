@@ -30,6 +30,11 @@ namespace lifecycle_manager
     /* This is called when a heartbeat fails (twice). */
     void LifecycleManagerNode::resurrectNode(std::string nodeName)
     {
-        
+        /*
+            1. Relaunch the node
+            2. Pass the configuration file
+            3. Configure it -> Activate it.
+        */
+        pid_t launchedNodePID = launchNode(nodeName, "8a doume", "8a doume...");
     }
 }

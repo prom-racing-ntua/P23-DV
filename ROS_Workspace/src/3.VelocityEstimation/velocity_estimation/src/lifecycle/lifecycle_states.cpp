@@ -7,8 +7,7 @@ namespace ns_vel_est
         LifecycleVelocityEstimationHandler::on_configure(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Configuring Lifecycle Velocity Estimation node");
-
-        loadParameters();
+        
         get_parameter("frequency", node_frequency_);
 
         if (!node_frequency_)

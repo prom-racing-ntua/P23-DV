@@ -1,7 +1,7 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
-#include "rclcpp/rclcpp.h"
+#include "rclcpp/rclcpp.hpp"
 #include "lifecycle_msgs/srv/get_state.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 #include "lifecycle_msgs/srv/change_state.hpp"
@@ -15,10 +15,11 @@ class ManagedNode
 {
     public:
         std::string nodeName;
+        std::string packageName;
         pid_t nodePID;
         bool nodeError;
         bool toBeShutdown;
-        uint8 currentState;
+        uint8_t currentState;
         
         rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedPtr getStateClient;
         rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedPtr changeStateClient;
@@ -26,4 +27,5 @@ class ManagedNode
         explicit ManagedNode();
         ~ManagedNode();
     private:
+        
 };

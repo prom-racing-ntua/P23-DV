@@ -28,6 +28,7 @@ install(
   INCLUDES DESTINATION include
 )
 ament_export_targets(p23_common HAS_LIBRARY_TARGET)
+# ament_export_include_directories(include)
 
 install(DIRECTORY include/common/ DESTINATION include/)
 

@@ -18,7 +18,7 @@ namespace lifecycle_manager_namespace{
             Pathplanning: Unconfigured
             Controls: Unconfigured
         */
-        heartbeatTimer = create_wall_timer(std::chrono::milliseconds(heartbeatTimerDuration), std::bind(&LifecycleManagerNode::verifyDVState, this));
+        heartbeatTimer = create_wall_timer(std::chrono::milliseconds(heartbeatTimerDuration), std::bind(&LifecycleManagerNode::heartbeatCheck, this));
     }
 
     void LifecycleManagerNode::configureNodes(p23::Mission mission)
@@ -34,6 +34,11 @@ namespace lifecycle_manager_namespace{
                 1. Select the correct configuartion file based on the mission selected - DONE
                 2. Send a changeNodeState transition call to every node remaining - DONE
         */
+
+        /* Skip configuration if mission is repeated */
+        if (mission == currentMission)
+            return;
+        
         std::string configurationFileSelected = configFolder;
 
         switch(mission) {
@@ -70,7 +75,10 @@ namespace lifecycle_manager_namespace{
                 break;
             case(p23::MANUAL):
                 RCLCPP_INFO(get_logger(), "Mission is in manual mode, PC will shutdown");
-                break;
+                return;
+            case(p23::MISSION_UNLOCKED):
+                RCLCPP_INFO(get_logger(), "Mission unlocked... should never get here");
+                return;
             }
 
             for (auto nodeToRemove: nodesToShutdown) {
@@ -82,7 +90,7 @@ namespace lifecycle_manager_namespace{
                 load parameter file. This works only if all the parameters are set on the initialization of the node.
                 I think that this is the best way to setup things.
             */
-            
+
             for (auto node: nodeList) {
                 loadConfigurationFileToNode(node, configurationFileSelected);
                 changeNodeState(Transition::TRANSITION_CONFIGURE, node);
@@ -100,7 +108,7 @@ namespace lifecycle_manager_namespace{
             Mission reselection should not happen in this state, shutdown the nodes that should
             not run in this mission. If you want to reselect mission, do an LV reset.
        */
-        shutdownSelectedNodes(nodesToShutdown);
+        shutdownSelectedNodes(nodesToShutdown, Transition::TRANSITION_UNCONFIGURED_SHUTDOWN);
 
         // Activate the rest (except controls)
         for (auto node: nodeList) {
@@ -122,43 +130,35 @@ namespace lifecycle_manager_namespace{
         RCLCPP_INFO(get_logger(), "DV_Driving change complete, Good Luck Have Fun :3");
     }
 
-    void LifecycleManagerNode::reselectMission(p23::Mission newMission)
+    void LifecycleManagerNode::cleanupNodes()
     {
-        /*
-            1. If you have already selected a mission, then you have already
-            shutdown the other nodes and removed them from your node list. cleanup the
-            already open nodes and reconfigure your managing node list.
+        /*  1. Cleanup the already open nodes and reconfigure your managing node 
+            list.
             2. Purge the client/service maps and re-initialize them.
-            3. Re run the Mission_Selection function.
         */
-
+    
         for (auto node: nodeList) {
             changeNodeState(Transition::TRANSITION_CLEANUP, node);
         }
         get_parameter("managing_node_list", nodeList);
         initializeLifecycleClients(nodeList);
-        configureNodes(newMission);
     }
 
-    void LifecycleManagerNode::shutdownSelectedNodes(std::vector<std::string> nodesToShutdown) 
+    void LifecycleManagerNode::shutdownSelectedNodes(std::vector<std::string> nodesToShutdown, uint8_t shutdownTransition) 
     {
         /*
             This functions is only to be called when going to DV Ready mode. If you shutdown a node
             then you cannot re-open it (only through some very questionable methods which might get
-            implemented in the future)
+            implemented in the future).
         */
-        uint8_t shutdownTransition = Transition::TRANSITION_UNCONFIGURED_SHUTDOWN;
-
         for (auto node: nodesToShutdown) {
             changeNodeState(shutdownTransition, node);
-            //TODO: Find a way to actually de-allocate the services
             lifecycleGetStateMap.erase(node);
             lifecycleChangeStateMap.erase(node);
-            removeElement(nodeList, node);        
         }
     }
 
-    void LifecycleManagerNode::verifyDVState()
+    void LifecycleManagerNode::heartbeatCheck()
     {
         for (auto node: nodeList) {
             getNodeState(node);
