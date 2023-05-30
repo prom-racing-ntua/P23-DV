@@ -36,7 +36,8 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     return yolo_model
 
 def inferenceYOLO(model, imgpath, res):
-    results = model(imgpath, size=res).pandas().xyxy[0]
+    results = model(imgpath, size=res).xyxy[0].cpu().numpy()
+    # now results are a numpy array containing xmin, ymin, xmax, ymax, confidence, class in each row
     return results
 def tpuInference(model, image:np.ndarray):
     results = model.forward(image)
@@ -49,12 +50,16 @@ def initKeypoint(small_modelpath, large_modelpath):
     large_model.load_state_dict(torch.load(large_modelpath,map_location=torch.device('cpu')))
     return small_model, large_model
 
-def cropResizeCones(yolo_results, image, margin):
-    img_h = len(image)
-    img_w = len(image[0])
+def cropResizeCones(yolo_results, image, size_cutoff_small, size_cutoff_large, margin):
+    img_h = image.shape[0] # camera image height
+    img_w = image.shape[1] # camera image width
     
-    small_bounding_boxes = yolo_results[yolo_results['class']<3]
-    large_bounding_boxes = yolo_results[yolo_results['class']==3]
+    # small_bounding_boxes contains (xmin,ymin,xmax,ymax,confidence,class) of small cones from the camera image
+    # large_bounding_boxes contains (xmin,ymin,xmax,ymax,confidence,class) of large cones from the camera image
+    # bounding boxes with less pixels than size_cutoff are ignored 
+    # bounding boxes with width > height are also ignored to avoid dropped cones
+    small_bounding_boxes = yolo_results[(yolo_results[:,5]<3) * ((yolo_results[:,2]-yolo_results[:,0])*(yolo_results[:,3]-yolo_results[:,1])>size_cutoff_small) * ((yolo_results[:,2]-yolo_results[:,0])<(yolo_results[:,3]-yolo_results[:,1]))]
+    large_bounding_boxes = yolo_results[(yolo_results[:,5]==3) * ((yolo_results[:,2]-yolo_results[:,0])*(yolo_results[:,3]-yolo_results[:,1])>size_cutoff_large) * ((yolo_results[:,2]-yolo_results[:,0])<(yolo_results[:,3]-yolo_results[:,1]))]
     small_cones_imgs = []
     large_cones_imgs = []
     
@@ -62,15 +67,13 @@ def cropResizeCones(yolo_results, image, margin):
     cropped_img_corners = []
     
     for i in range(len(small_bounding_boxes)):
-        bb_dict = small_bounding_boxes.iloc[i].to_dict()
+        # Find corners of cropped images and add a bit of margin. Be careful of margins pushing the corners out of the original image size!
+        xmin = max(math.floor(small_bounding_boxes[i,0])-margin, 0)
+        xmax = min(math.floor(small_bounding_boxes[i,2])+margin, img_w-1)
+        ymin = max(math.floor(small_bounding_boxes[i,1])-margin, 0)
+        ymax = min(math.floor(small_bounding_boxes[i,3])+margin, img_h-1)
         
-        # Find corners of cropped images
-        xmin = max(math.floor(bb_dict['xmin'])-margin, 0)
-        xmax = min(math.floor(bb_dict['xmax'])+margin, img_w-1)
-        ymin = max(math.floor(bb_dict['ymin'])-margin, 0)
-        ymax = min(math.floor(bb_dict['ymax'])+margin, img_h-1)
-        
-        # Stack cropped images
+        # Stack cropped images after they are resized to (48,64), which is the expected input size of VggNet
         cone_img = image[ymin:ymax, xmin:xmax]
         cone_img = cv2.resize(cone_img,dsize=(48,64))
         small_cones_imgs.append(cone_img)
@@ -79,18 +82,16 @@ def cropResizeCones(yolo_results, image, margin):
         cropped_img_corners.append([xmin, ymin, xmax, ymax])
 
         # Stack classes of cropped images
-        classes.append(bb_dict['class'])
+        classes.append(small_bounding_boxes[i,5])
     
     for i in range(len(large_bounding_boxes)):
-        bb_dict = large_bounding_boxes.iloc[i].to_dict()
+        # Find corners of cropped images and add a bit of margin. Be careful of margins pushing the corners out of the original image size!
+        xmin = max(math.floor(large_bounding_boxes[i,0])-margin, 0)
+        xmax = min(math.floor(large_bounding_boxes[i,2])+margin, img_w-1)
+        ymin = max(math.floor(large_bounding_boxes[i,1])-margin, 0)
+        ymax = min(math.floor(large_bounding_boxes[i,3])+margin, img_h-1)
         
-        # Find corners of cropped images
-        xmin = max(math.floor(bb_dict['xmin'])-margin, 0)
-        xmax = min(math.floor(bb_dict['xmax'])+margin, img_w-1)
-        ymin = max(math.floor(bb_dict['ymin'])-margin, 0)
-        ymax = min(math.floor(bb_dict['ymax'])+margin, img_h-1)
-        
-        # Stack cropped images
+        # Stack cropped images after they are resized to (48,64), which is the expected input size of VggNet
         cone_img = image[ymin:ymax, xmin:xmax]
         cone_img = cv2.resize(cone_img,dsize=(48,64))
         large_cones_imgs.append(cone_img)
@@ -99,7 +100,7 @@ def cropResizeCones(yolo_results, image, margin):
         cropped_img_corners.append([xmin, ymin, xmax, ymax])
         
         # Stack classes of cropped images
-        classes.append(bb_dict['class'])
+        classes.append(large_bounding_boxes[i,5])
 
     return small_cones_imgs, large_cones_imgs, classes, cropped_img_corners
 
