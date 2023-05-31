@@ -14,10 +14,10 @@ def generate_launch_description():
         output='screen',
         parameters=[os.path.join(this_dir, 'config', 'params.yaml')],
         namespace='canbus',
-        remappings=[
-            ('/p23_status/control_commands', '/control_commands', ),
-            ('/p23_status/system_state', '/system_state')
-        ],
+        # remappings=[
+        #     ('/p23_status/control_commands', '/control_commands', ),
+        #     ('/p23_status/system_state', '/system_state')
+        # ],
         emulate_tty=True)
 
     ld = LaunchDescription()

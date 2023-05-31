@@ -8,27 +8,46 @@ from math import pi
 
 ### --------------------------- Helper Functions --------------------------- ###
 
-# These are a bit changed from the VD values due to toe angle conventions [...]
+# These are specific to P23 steering geometry. Positive displacement and wheel angle is to the right of the car as the positive x-axis.
 RACK_DISPLACEMENT_LOOKUP = np.array([
-  # Steer Travel   # Avg Wheel Angle
-    [ 24.0,           31.22029785],
-    [ 19.2,           24.45648575],
-    [ 14.4,           18.07310295],
-    [  9.6,           11.9302311 ],
-    [  4.8,            5.93125271],
-    [  0.0,            0.0       ],
-    [ -4.8,           -5.93125271],
-    [ -9.6,          -11.9302311 ],
-    [-14.4,          -18.07310295],
-    [-19.2,          -24.45648575],
-    [-24.0,          -31.22029785]
+# Steer Travel [mm] # Avg Wheel Angle [deg]
+    [ 24.0,              31.22029785],
+    [ 19.2,              24.45648575],
+    [ 14.4,              18.07310295],
+    [  9.6,              11.9302311 ],
+    [  4.8,               5.93125271],
+    [  0.0,               0.0       ],
+    [ -4.8,              -5.93125271],
+    [ -9.6,             -11.9302311 ],
+    [-14.4,             -18.07310295],
+    [-19.2,             -24.45648575],
+    [-24.0,             -31.22029785]
 ])
 
-def floatToBytes(num:float, byteorder:str='big', multiplier:int=256, signed=False) -> bytes:
+def floatToBytes(num:float, byteorder:str='big', multiplier:int=256, signed=False, num_bytes=2) -> bytes:
+    '''
+    Transforms a floating point value to a byte array of *num_bytes*. The value is first multiplied by a standard number in order
+    keep its decimal accuracy and then converted into an integer value which is then converted to bytes.
+    
+    :param num: The floating point value to be transformed into bytes
+    :param byteorder: If the bytes should be in 'big; endian or 'little' endian order
+    :param multiplier: The number the floating point value is multiplied by
+    :param signed: If the input value is signed or not
+    :param num_bytes: The number of bytes that should be returned
+
+    :returns: The input value in bytes
+    '''
     i_num = int(num * multiplier)
-    return i_num.to_bytes(2, byteorder, signed=signed)
+    return i_num.to_bytes(num_bytes, byteorder, signed=signed)
 
 def bitsToByte(bit_list:list) -> bytes:
+    '''
+    Given a list of 8 bits with true or false values (0s and 1s) returns the same bit values in a python byte object.
+
+    :param bit_list: The list of bit values to be transformed into the byte object
+    :raises ValueError: Input size not equal to 8
+    :returns: A single byte consisting of the input bits
+    '''
     if len(bit_list) != 8:
         raise ValueError("bitsToByte() -> Input not equal to 8 bits, cannot convert to byte")
     bits = iter(bit_list)
@@ -41,11 +60,32 @@ def bitsToByte(bit_list:list) -> bytes:
         out = (out << 1) | bit
     return out
 
-def get_bit(value, bit):
-    return (value >> bit) & 1
+def get_bit(value: int, bit: int) -> bool:
+    '''
+    Gets a specific bit from a byte.
+
+    :param value: The byte in integer value from which the bit is to be extracted
+    :param bit: The number of the bit that is needed
+
+    :returns: The value of the requested bit
+    '''
+    return bool((value >> bit) & 1)
+
 
 def rad2rackDisplacement(steering_angle: float) -> float:
-    if abs(steering_angle) > 31.2202: raise ValueError(f"The steering angle given is out of range: {steering_angle}")
+    '''
+    Transforms the wheel angle from rad to the rack displacement in mm. Note that values are for p23 steering assembly and kinematics.
+    The method does not take into account Ackermann steering.
+
+    :param steering_angle: The wheel angle in rad
+    :raises ValueError: Angle out of range due to steering geometry
+
+    :returns: The rack displacement
+    '''
+    # Input should be in rad, so transform to deg
+    steering_angle = steering_angle * 180/pi
+    # Check if input is in range of the possible values
+    if abs(steering_angle) > 31.2202: raise ValueError(f"The steering angle given is out of range: {steering_angle} deg")
 
     for i in range(RACK_DISPLACEMENT_LOOKUP.shape[0]):
         # Current angle is bigger
@@ -56,7 +96,17 @@ def rad2rackDisplacement(steering_angle: float) -> float:
         return rack_displacement
 
 def rackDisplacement2rad(displacement: float) -> float:
-    if abs(displacement) > 24.0: raise ValueError(f"The rack displacement given is out of range: {displacement}")
+    '''
+    Transforms the steering rack displacement from mm rad to the wheel angle in rad. Note that values are for p23 steering assembly and kinematics.
+    The method does not take into account Ackermann steering.
+
+    :param displacement: The steering rack displacement in mm
+    :raises ValueError: Displacement out of range due to steering geometry
+
+    :returns: The average wheel angle
+    '''
+    # Check if input is in range of the possible values
+    if abs(displacement) > 24.0: raise ValueError(f"The rack displacement given is out of range: {displacement} mm")
 
     for i in range(RACK_DISPLACEMENT_LOOKUP.shape[0]):
         # Current angle is bigger
@@ -64,6 +114,9 @@ def rackDisplacement2rad(displacement: float) -> float:
 
         # Found a smaller angle, do linear interpolation
         wheel_angle = RACK_DISPLACEMENT_LOOKUP[i-1,1] + (displacement - RACK_DISPLACEMENT_LOOKUP[i-1,0]) * (RACK_DISPLACEMENT_LOOKUP[i,1] - RACK_DISPLACEMENT_LOOKUP[i-1,1]) / (RACK_DISPLACEMENT_LOOKUP[i,0] - RACK_DISPLACEMENT_LOOKUP[i-1,0])
+
+        # Output should be in rad, so transform output angle
+        wheel_angle = wheel_angle * pi/180 
         return wheel_angle
 
 
@@ -72,6 +125,16 @@ def rackDisplacement2rad(displacement: float) -> float:
 class CanInterfaceMessage():
     '''
     The base class for every message of the CanBus to/from ROS Interface
+
+    :attr node_handle: The parent ROS2 node this object is part of
+    :attr can_id: The canbus identifier of the message this object represents
+    :attr byte_size: The size of the canbus message NOT including can id or DLC bytes
+    :attr msg_type: The ROS2 message type this message corresponds to
+    :attr ros_publisher: The ROS2 publisher object to which the received message from the can2usb module is published to
+    :attr ros_subscriber: The ROS2 subscriber object from which dv system messages are received
+
+    :param received_message: The message received either from the ros_subscriber or the serial port. Is respectively bytes or bytearray 
+    containing the can id and DLC bytes or the ROS2 msg_type specified by the class attribute.
     '''
     # Node Handle for the CanInterface Node
     node_handle : Node
@@ -86,6 +149,9 @@ class CanInterfaceMessage():
     ros_subscriber : Subscription = None
 
     def __init__(self, received_message) -> None:
+        '''
+        Class constructor, identifies if message is from ROS2 or can2usb module
+        '''
         # Check if the given message is from CanBus or from ROS
         if (isinstance(received_message, (bytes, bytearray))):
             # If it is from CanBus process it and send it to ROS
@@ -99,7 +165,6 @@ class CanInterfaceMessage():
             if received_id != self.can_id: raise ValueError('Received message id does not match the default value')
             if received_byte_size != self.byte_size: raise ValueError('Received message id does not match the default value')
 
-            self.node_handle.get_logger().info(f"{received_message[3:]}")
             self._can_msg = received_message[3:]
             return
 
@@ -112,9 +177,23 @@ class CanInterfaceMessage():
             raise TypeError(f"The given message is of unknown type {type(received_message)}")
 
     def to_ROS(self) -> msg_type:
+        '''
+        Transforms the input message from a canbus style message to a ROS2 message
+
+        :raises NotImplementedError: Inside the base class, functionality not implemented yet
+
+        :returns: The input message data in a ROS2 message 
+        '''
         raise NotImplementedError("To ROS parser has not been defined in child class")
 
     def to_CanMsg(self) -> bytearray:
+        '''
+        Transforms the input message from a ROS2 message to a canbus style message
+        
+        :raises NotImplementedError: Inside the base class, functionality not implemented yet
+
+        :returns: The data of the input message to a canbus message as a bytearray
+        '''
         raise NotImplementedError("To CanBus parser has not been defined in child class")
 
 
@@ -131,10 +210,10 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
 
-        temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
+        # temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
         out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
         #out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
-        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, signed=True)
+        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
         
         # Brake pressure target is bool so we output a standard brake pressure to the service brake
         out_msg[5] = DEFAULT_SERVICE_BRAKE_PRESSURE if self._ros_msg.brake_pressure_target else int(DEFAULT_SERVICE_BRAKE_PRESSURE/2)
@@ -186,6 +265,8 @@ class SystemHealthMsg(CanInterfaceMessage):
         else:
             self.node_handle.get_logger().error(f"Unknown DV State received: {dv_state}")
             state = 0x0F
+        
+        if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
         out_msg[1] = (self._ros_msg.lap_counter << 4) | state
 
         out_msg[2] = self._ros_msg.cones_count_actual
@@ -193,21 +274,21 @@ class SystemHealthMsg(CanInterfaceMessage):
 
         # Set sensor status byte
         sensor_status_bits = [0,0,0,0,0,0,0,0]
-        sensor_status_bits[0] = int(self._ros_msg.vn_200_ok)
-        sensor_status_bits[1] = int(self._ros_msg.vn_300_ok)
-        sensor_status_bits[2] = int(self._ros_msg.camera_right_ok)
-        sensor_status_bits[3] = int(self._ros_msg.camera_left_ok)
+        sensor_status_bits[0] = int(self._ros_msg.vn_200_error)
+        sensor_status_bits[1] = int(self._ros_msg.vn_300_error)
+        sensor_status_bits[2] = int(self._ros_msg.camera_right_error)
+        sensor_status_bits[3] = int(self._ros_msg.camera_left_error)
         out_msg[5] = bitsToByte(sensor_status_bits)
 
         # Set node status byte
         node_status_bits = [0,0,0,0,0,0,0,0]
-        node_status_bits[0] = self._ros_msg.clock_ok
-        node_status_bits[1] = self._ros_msg.camera_inference_ok
-        node_status_bits[2] = self._ros_msg.velocity_estimation_ok
-        node_status_bits[3] = self._ros_msg.slam_ok
-        node_status_bits[4] = self._ros_msg.mpc_controls_ok
-        node_status_bits[5] = self._ros_msg.path_planning_ok
-        node_status_bits[6] = self._ros_msg.pi_pp_controls_ok
+        node_status_bits[0] = self._ros_msg.clock_error
+        node_status_bits[1] = self._ros_msg.camera_inference_error
+        node_status_bits[2] = self._ros_msg.velocity_estimation_error
+        node_status_bits[3] = self._ros_msg.slam_error
+        node_status_bits[4] = self._ros_msg.mpc_controls_error
+        node_status_bits[5] = self._ros_msg.path_planning_error
+        node_status_bits[6] = self._ros_msg.pi_pp_controls_error
         out_msg[6] = bitsToByte(node_status_bits)
 
         return out_msg
@@ -224,24 +305,29 @@ class AsStatusMsg(CanInterfaceMessage):
         # Set the AS-Status
         received_status = int.from_bytes(self._can_msg[0:1], byteorder='big')
         if received_status == 0x01:
-            ros_msg.as_status.id = AutonomousStatus.AS_OFF
+            ros_msg.id = AutonomousStatus.AS_OFF
+            ros_msg.label = "AS_OFF"
         elif received_status == 0x02:
-            ros_msg.as_status.id = AutonomousStatus.AS_READY
+            ros_msg.id = AutonomousStatus.AS_READY
+            ros_msg.label = "AS_READY"
         elif received_status == 0x04:
-            ros_msg.as_status.id = AutonomousStatus.AS_DRIVING
+            ros_msg.id = AutonomousStatus.AS_DRIVING
+            ros_msg.label = "AS_DRIVING"
         elif received_status == 0x08:
-            ros_msg.as_status.id = AutonomousStatus.AS_FINISHED
+            ros_msg.id = AutonomousStatus.AS_FINISHED
+            ros_msg.label = "AS_FINISHED"
         elif received_status == 0x10:
-            ros_msg.as_status.id = AutonomousStatus.AS_EMERGENCY
+            ros_msg.id = AutonomousStatus.AS_EMERGENCY
+            ros_msg.label = "AS_EMERGENCY"
         else:
             self.node_handle.get_logger().error(f"Invalid AS Status received: {received_status}")
-            ros_msg.as_status.id = 0
+            ros_msg.id = 0
         return ros_msg
 
 class MissionMsg(CanInterfaceMessage):
     can_id = 0x304
     byte_size = 1
-    msg_type = Mission
+    msg_type = MissionSelection
 
     LOCKED = 7
 
@@ -256,54 +342,66 @@ class MissionMsg(CanInterfaceMessage):
         self.node_handle.get_logger().info(f"{bits}")
         is_locked = bits[self.LOCKED]
         ones = bits.count(True) - is_locked
-        # This should not happen ever
-        if ones != 1:
+        
+        if ones > 1:
+            # This should not happen ever
             self.node_handle.get_logger().error("Received Multiple Missions")
-            out_msg = b'\x04\x00'
             raise ValueError("Received Multiple Missions")
+
+        elif ones == 0:
+            # Unlock mission
+            self.node_handle.get_logger().warn("Mission Unlocked")
+            mission_confirmed = True
+            self.node_handle._locked_mission = 0
+            self.node_handle._received_mission = None
+            
         else:
+            # Received valid mission
             mission = bits.index(1) + 1
             assert mission != self.LOCKED + 1, "Mission Locked but non selected?!"
 
             if is_locked and self.node_handle._received_mission == mission:
+                # Received mission a second time with the locked flag
                 mission_confirmed = True
                 self.node_handle._locked_mission = mission
                 self.node_handle.get_logger().warn(f"Mission Confirmed {hex(self.node_handle._locked_mission)}")
+            
             else:
+                # Received mission the first time
                 self.node_handle._received_mission = mission
             
-            # Send back received message for acknowledgment
-            out_msg = bytearray(2)
-            out_msg[0] = 0x04
-            out_msg[1] = mission_byte
+        # Send back received message for acknowledgment
+        out_msg = bytearray(2)
+        out_msg[0] = 0x04
+        out_msg[1] = mission_byte
         self.node_handle._serial_port.write(out_msg)
         return mission_confirmed
 
     def to_ROS(self) -> msg_type:
         ros_msg = self.msg_type()
-        ros_msg.id = self.node_handle._locked_mission
+        ros_msg.mission_selected = self.node_handle._locked_mission
         return ros_msg
 
 
 class SensorVariablesMsg(CanInterfaceMessage):
     can_id = 0x300
-    byte_size = 7
+    byte_size = 6
     msg_type = RxVehicleSensors
 
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         
         # Set Motor Torque
-        motor_torque = int.from_bytes(self.can_id[5:7], byteorder='big', signed=True)
+        motor_torque = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=True)
         msg.motor_torque_actual = motor_torque
 
         # Set Brake Hydraulic Pressure
-        integer_part = int.from_bytes(self._can_msg[1:2], byteorder='big')
-        decimal_part = int.from_bytes(self._can_msg[2:3], byteorder='big')
+        integer_part = int.from_bytes(self._can_msg[0:1], byteorder='big')
+        decimal_part = int.from_bytes(self._can_msg[1:2], byteorder='big')
         msg.brake_pressure_front = integer_part + decimal_part / 10
 
-        integer_part = int.from_bytes(self._can_msg[3:4], byteorder='big')
-        decimal_part = int.from_bytes(self._can_msg[4:5], byteorder='big')
+        integer_part = int.from_bytes(self._can_msg[2:3], byteorder='big')
+        decimal_part = int.from_bytes(self._can_msg[3:4], byteorder='big')
         msg.brake_pressure_rear = integer_part + decimal_part / 10
 
         return msg
@@ -340,7 +438,7 @@ class SteeringAngleMsg(CanInterfaceMessage):
 
 ### --------------------------- P22 CanBus Messages --------------------------- ###
 
-class FrontWheelEncodersMsg(CanInterfaceMessage):
+class FrontWheelEncodersMsgP22(CanInterfaceMessage):
     can_id = 0x310
     byte_size = 8
     msg_type = WheelSpeed
@@ -355,7 +453,7 @@ class FrontWheelEncodersMsg(CanInterfaceMessage):
         return msg
 
 
-class RearWheelEncodersMsg(CanInterfaceMessage):
+class RearWheelEncodersMsgP22(CanInterfaceMessage):
     can_id = 0x4D1
     byte_size = 8
     msg_type = WheelSpeed
@@ -383,7 +481,7 @@ class SteeringAngleMsgP22(CanInterfaceMessage):
         return msg
 
 
-class BrakePressureMsg(CanInterfaceMessage):
+class BrakePressureMsgP22(CanInterfaceMessage):
     can_id = 0x301
     byte_size = 8
     msg_type = BrakePressure

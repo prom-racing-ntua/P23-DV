@@ -16,6 +16,8 @@ class CanInterface(Node):
         # Load port and node parameters from config file
         self.load_parameters()
         CanInterfaceMessage.node_handle = self
+
+        # Mission Selection Variables
         self._received_mission = None
         self._locked_mission = None
 
@@ -41,7 +43,7 @@ class CanInterface(Node):
         }
 
         # Define ROS Publishers for the incoming messages
-        MissionMsg.ros_publisher = self.create_publisher(Mission, 'mission_selection', 10)
+        MissionMsg.ros_publisher = self.create_publisher(MissionSelection, 'mission_selection', 10)
         SensorVariablesMsg.ros_publisher = self.create_publisher(RxVehicleSensors, 'sensor_data', 10)
         WheelEncodersMsg.ros_publisher = self.create_publisher(RxWheelSpeed, 'wheel_encoders', 10)
         SteeringAngleMsg.ros_publisher = self.create_publisher(RxSteeringAngle, 'steering_angle', 10)
@@ -55,10 +57,10 @@ class CanInterface(Node):
 
         ## --- For P22 --- ##
         # self._in_msgs = {
-        #     FrontWheelEncodersMsg.can_id : FrontWheelEncodersMsg,
-        #     RearWheelEncodersMsg.can_id : RearWheelEncodersMsg,
-        #     SteeringAngleMsg.can_id : SteeringAngleMsg,
-        #     BrakePressureMsg.can_id : BrakePressureMsg
+        #     FrontWheelEncodersMsgP22.can_id : FrontWheelEncodersMsgP22,
+        #     RearWheelEncodersMsgP22.can_id : RearWheelEncodersMsgP22,
+        #     SteeringAngleMsgP22.can_id : SteeringAngleMsgP22,
+        #     BrakePressureMsgP22.can_id : BrakePressureMsgP22
         # }
         # FrontWheelEncodersMsg.ros_publisher = self.create_publisher(WheelSpeed, 'front_hall_sensors', 10)
         # RearWheelEncodersMsg.ros_publisher = self.create_publisher(WheelSpeed, 'rear_hall_sensors', 10)
@@ -71,6 +73,7 @@ class CanInterface(Node):
 
         # Close port at exit
         atexit.register(self._serial_port.close)
+        self.get_logger().info("Can Interface Node is online")
 
 
     def load_parameters(self) -> None:
@@ -84,6 +87,9 @@ class CanInterface(Node):
 
 
     def universal_callback(self, msg) -> None:
+        '''
+        Callback for all subscribers calling the to_CanMsg method of the Message class
+        '''
         start_time = self.get_clock().now()
 
         try:
@@ -123,7 +129,13 @@ class CanInterface(Node):
         start_time = self.get_clock().now()
         serial_msg = self._serial_port.readline()
         if serial_msg != b'':
-            serial_msg = bytearray.fromhex(serial_msg.strip().decode())
+            # Receiving strange message that cannot be decoded, don't know why... [b'\xa8\xfe\x01 P\x00\x00\x00\x00\x00\x00\x00\xc8S\x00']
+            try:
+                serial_msg = bytearray.fromhex(serial_msg.strip().decode())
+            except UnicodeDecodeError:
+                self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
+                return
+
             self.get_logger().info(f"Received message: {serial_msg}")
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
