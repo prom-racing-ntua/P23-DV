@@ -31,16 +31,16 @@ struct LandmarkInfo {
     // Color of the cone
     ConeColor color;
 
+    int times_observed;
+
     // Previous Observations
     // Symbol of the car's pose when the landmark was first observed
-    std::vector<gtsam::Symbol> car_pose_symbols;
+    // std::vector<gtsam::Symbol> car_pose_symbols;
     // Measured transform from the car (at observation time) to landmark (range, theta)
-    std::vector<double> range_vector;
-    std::vector<double> theta_vector; //in radians
+    // std::vector<double> range_vector;
+    // std::vector<double> theta_vector; //in radians
     // First observation variance matrix (range, theta)
-    std::vector<gtsam::Matrix2> variance_vector;
-
-    int score;
+    // std::vector<gtsam::Matrix2> variance_vector;
 };
 
 

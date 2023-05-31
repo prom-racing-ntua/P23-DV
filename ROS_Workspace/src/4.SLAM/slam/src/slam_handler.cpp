@@ -89,8 +89,7 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     OdometryMeasurement odometry{};
     odometry.global_index = static_cast<unsigned long>(msg->global_index);
     odometry.velocity_x = static_cast<double>(msg->velocity_x);
-    // odometry.velocity_y = static_cast<double>(msg->velocity_y);
-    odometry.velocity_y = 0.0;
+    odometry.velocity_y = static_cast<double>(msg->velocity_y);
     odometry.yaw_rate = static_cast<double>(msg->yaw_rate);
     auto variance_array = static_cast<std::array<double, 9>>(msg->variance_matrix);
     odometry.measurement_noise = odometry_weight_ * Eigen::Map<gtsam::Matrix3>(variance_array.data());
@@ -116,8 +115,7 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
     pose_msg.position.x = current_pose[0];
     pose_msg.position.y = current_pose[1];
     pose_msg.theta = current_pose[2];
-    pose_msg.lap_count = completed_laps_;
-    pose_msg.cones_count_all = slam_object_.getConeCount();
+    pose_msg.velocity_state = *msg;
     pose_publisher_->publish(pose_msg);
 
     // Keep odometry log
@@ -156,16 +154,15 @@ void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::Sh
             // Setting observation noise depending on type of cone
             if (landmark.color == ConeColor::LargeOrange)
             {
-                observation_noise << 0.001, 0.0,
-                    0.0, perception_weight_* landmark.range / 10.0;
-                landmark.observation_noise = observation_noise;
+                observation_noise << 0.0001, 0.002,
+                    0.002, 0.109 * landmark.range - 0.44;
             }
             else
             {
-                observation_noise << 0.01, 0.0,
-                    0.0, 3.0 * perception_weight_ * landmark.range / 10.0;
-                landmark.observation_noise = observation_noise;
+                observation_noise << 0.0001, 0.002,
+                    0.002, 0.109 * landmark.range - 0.44;
             }
+
             // RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
             landmark_list.push_back(landmark);
         }
@@ -230,6 +227,10 @@ void SlamHandler::optimizationCallback() {
         map_msg.pose.position.x = current_pose[0];
         map_msg.pose.position.y = current_pose[1];
         map_msg.pose.theta = current_pose[2];
+
+        if (completed_laps_ < 0) { map_msg.lap_count = 0; }
+        else { map_msg.lap_count = completed_laps_; }
+        map_msg.cones_count_all = slam_object_.getConeCount();
 
         for (auto cone : track)
         {

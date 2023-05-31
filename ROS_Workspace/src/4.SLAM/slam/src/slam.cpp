@@ -145,7 +145,6 @@ bool GraphSLAM::addOdometryMeasurement(OdometryMeasurement& odometry) {
 	return completed_lap;
 }
 
-// !!!! TODO: Olo redo...
 // Adds landmark measurements in SLAM mode
 void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
 	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
@@ -192,74 +191,85 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 			new_landmark.symbol = new_landmark_symbol;
 			new_landmark.color = cone.color;
 			new_landmark.estimated_pose = observed_position;
-			new_landmark.car_pose_symbols.push_back(observation_pose_symbol);
-			new_landmark.range_vector.push_back(cone.range);
-			new_landmark.theta_vector.push_back(cone.theta);
-			new_landmark.variance_vector.push_back(cone.observation_noise);
+			new_landmark.times_observed = 0;
 
-			if (cone.range > 7.5) new_landmark.score = 3;
-			else new_landmark.score = 7;
+			// new_landmark.car_pose_symbols.push_back(observation_pose_symbol);
+			// new_landmark.range_vector.push_back(cone.range);
+			// new_landmark.theta_vector.push_back(cone.theta);
+			// new_landmark.variance_vector.push_back(cone.observation_noise);
 
-			landmark_id_map_[landmark_counter_++] = new_landmark;
+			// if (cone.range > 12) new_landmark.score = 2;
+			// else if (cone.range > 8) new_landmark.score = 4;
+			// else if (cone.range > 2) new_landmark.score = 10;
+			// else new_landmark.score = 5;
+
+			landmark_id_map_[landmark_counter_] = new_landmark;
+			best_match_id = landmark_counter_++;
+
+			new_variable_values_.insert(new_landmark.symbol, gtsam::Point2(new_landmark.estimated_pose[0], new_landmark.estimated_pose[1]));
 		}
 		// Case where the landmark has been observed before
-		else
-		{
-			LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
+		LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
 
-			// If the landmark was observed only once, put the previous landmark measurement into the factor graph and add the initial estimate 
-			// of the landmark's position (x,y)
-			if (!best_match->is_verified)
-			{
-				best_match->car_pose_symbols.push_back(observation_pose_symbol);
-				best_match->range_vector.push_back(cone.range);
-				best_match->theta_vector.push_back(cone.theta);
-				best_match->variance_vector.push_back(cone.observation_noise);
-				best_match->estimated_pose[0] = (best_match->estimated_pose[0] + observed_position[0]) / 2.0;
-				best_match->estimated_pose[1] = (best_match->estimated_pose[1] + observed_position[1]) / 2.0;
+		// Check how many times the landmark has been observed before
+		best_match->times_observed++;
+		if (best_match->times_observed > 3) { best_match->is_verified = true; }
 
-				if (cone.range > 9.0) best_match->score += 3;
-				else best_match->score += 7;
+		// Construct the current landmark observation Factor and add it to the temporary variable
+		gtsam::noiseModel::Gaussian::shared_ptr noise_model {
+			gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
+		};
 
-				if (best_match->score > 12)
-				{
-					best_match->is_verified = true;
-					cone_count_++;
+		new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+			observation_pose_symbol, best_match->symbol, gtsam::Rot2(cone.theta), cone.range, noise_model)
+		);
 
-					// Add the previous landmark measurements to the factor graph from the car_pose_symbol with the first observation values
-					for (int i{ 0 }; i < best_match->car_pose_symbols.size(); i++)
-					{
-						gtsam::noiseModel::Gaussian::shared_ptr noise_model {
-							gtsam::noiseModel::Gaussian::Covariance(best_match->variance_vector[i])
-						};
+		// If the landmark was observed only once, put the previous landmark measurement into the factor graph and add the initial estimate 
+		// of the landmark's position (x,y)
+		// if (!best_match->is_verified)
+		// {
+		// 	best_match->car_pose_symbols.push_back(observation_pose_symbol);
+		// 	best_match->range_vector.push_back(cone.range);
+		// 	best_match->theta_vector.push_back(cone.theta);
+		// 	best_match->variance_vector.push_back(cone.observation_noise);
+		// 	best_match->estimated_pose[0] = (best_match->estimated_pose[0] + observed_position[0]) / 2.0;
+		// 	best_match->estimated_pose[1] = (best_match->estimated_pose[1] + observed_position[1]) / 2.0;
 
-						new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
-							best_match->car_pose_symbols[i], best_match->symbol, gtsam::Rot2(best_match->theta_vector[i]), best_match->range_vector[i], noise_model)
-						);
-					}
-					// Add the initial estimate of the newly added landmark pose
-					new_variable_values_.insert(best_match->symbol, gtsam::Point2(best_match->estimated_pose[0], best_match->estimated_pose[1]));
-				}
-			}
-			else
-			{
-				best_match->car_pose_symbols.push_back(observation_pose_symbol);
-				best_match->range_vector.push_back(cone.range);
-				best_match->theta_vector.push_back(cone.theta);
-				best_match->variance_vector.push_back(cone.observation_noise);
+		// 	if (cone.range > 12) best_match->score += 2;
+		// 	else if (cone.range > 8) best_match->score += 4;
+		// 	else if (cone.range > 2) best_match->score += 10;
+		// 	else best_match->score += 5;
 
-				// Construct the current landmark observation Factor and add it to the temporary variable
-				gtsam::noiseModel::Gaussian::shared_ptr noise_model {
-					gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
-				};
+		// 	if (best_match->score >= 15)
+		// 	{
+		// 		best_match->is_verified = true;
+		// 		cone_count_++;
 
-				new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
-					observation_pose_symbol, best_match->symbol, gtsam::Rot2(cone.theta), cone.range, noise_model)
-				);
-			}
-		}
+		// 		// Add the previous landmark measurements to the factor graph from the car_pose_symbol with the first observation values
+		// 		for (int i{ 0 }; i < best_match->car_pose_symbols.size(); i++)
+		// 		{
+		// 			gtsam::noiseModel::Gaussian::shared_ptr noise_model {
+		// 				gtsam::noiseModel::Gaussian::Covariance(best_match->variance_vector[i])
+		// 			};
+
+		// 			new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+		// 				best_match->car_pose_symbols[i], best_match->symbol, gtsam::Rot2(best_match->theta_vector[i]), best_match->range_vector[i], noise_model)
+		// 			);
+		// 		}
+		// 		// Add the initial estimate of the newly added landmark pose
+		// 		new_variable_values_.insert(best_match->symbol, gtsam::Point2(best_match->estimated_pose[0], best_match->estimated_pose[1]));
+		// 	}
+		// }
+		// else
+		// {
+		// 	best_match->car_pose_symbols.push_back(observation_pose_symbol);
+		// 	best_match->range_vector.push_back(cone.range);
+		// 	best_match->theta_vector.push_back(cone.theta);
+		// 	best_match->variance_vector.push_back(cone.observation_noise);
+		// }
 	}
 }
+
 
 // Adds landmark measurements in LOCALIZATION mode
 void GraphSLAM::addLandmarkMeasurementsLocalization(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {

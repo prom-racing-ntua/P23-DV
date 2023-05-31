@@ -12,7 +12,7 @@
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
-#include "custom_msgs/msg/pose_msg.hpp"
+#include "custom_msgs/msg/local_map_msg.hpp"
 #include "custom_msgs/msg/tx_system_state.hpp"
 #include "custom_msgs/msg/tx_vehicle_variables.hpp"
 #include "custom_msgs/msg/lifecycle_node_status.hpp"
@@ -55,7 +55,7 @@ private:
     //Node Subscriptions
     rclcpp::Subscription<custom_msgs::msg::MissionSelection>::SharedPtr canbus_mission_subscription_;
     rclcpp::Subscription<custom_msgs::msg::AutonomousStatus>::SharedPtr canbus_status_subscription_;
-    rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr slam_subscription_;
+    rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr slam_subscription_;
     rclcpp::Subscription<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr lifecycle_node_status_subscription_;
 
     //Node Publishers
@@ -88,7 +88,7 @@ private:
 
     void updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg);
     void updateASStatus(const custom_msgs::msg::AutonomousStatus::SharedPtr msg);
-    void updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg);
+    void updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::SharedPtr msg);
     void receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatus::SharedPtr msg);
 
     // Callbacks that send information to the VCU

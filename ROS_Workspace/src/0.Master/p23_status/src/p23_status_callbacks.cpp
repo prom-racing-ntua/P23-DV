@@ -4,12 +4,9 @@
 
 namespace p23_status_namespace
 {
-void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::PoseMsg::SharedPtr msg) {
+void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
     conesCountAll = msg->cones_count_all;
-    // TODO: Fix in SLAM -> Message is uint_8 ... but takes value -1
     currentLap = msg->lap_count;
-    // standstill = msg->standstill;
-    
 
     if (currentLap >= maxLaps)
     {
@@ -76,11 +73,14 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
     nodeStatusMap["path_planning"] = msg->path_planning_error;
 
     /* Iterate through map and check if any node is dead. If a critical node has failed, go to pc_error */
-    for (auto const& [key, error] : nodeStatusMap) {
+    for (auto const& it : nodeStatusMap)
+    {
         /* If a node has a problem then check if this node is a critical one */
-        if (error) {
+        if (it.second)
+        {
             currentDvStatus = p23::NODE_PROBLEM;
-            if (std::find(nodeList.begin(), nodeList.end(), key) != nodeList.end()) {
+            if (std::find(nodeList.begin(), nodeList.end(), it.first) != nodeList.end())
+            {
                 /* TODO: Talk about which node should send us to AS_EMERGENCY mode */
             }
         }

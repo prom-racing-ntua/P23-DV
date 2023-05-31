@@ -56,12 +56,12 @@ void SlamFromFile::run_slam() {
 		odometry_measurement.yaw_rate = odometry_.yaw_rate;
 		odometry_measurement.measurement_noise = odometry_weight_ * odometry_.covariance_matrix;
 
-		auto vel_final = custom_msgs::msg::VelocityToMpc();  
-        vel_final.velocity_x = (float)(odometry_.velocity_x);
-        vel_final.velocity_y = (float)(odometry_.velocity_y);
-        vel_final.yaw_rate = (float)(odometry_.yaw_rate);
-        // RCLCPP_INFO(this->get_logger(), "Publishing velocity_x: %.6f" " ,velocity_y: %.6f" " , yaw_rate: %.6f" , vel_final.velocity_x, vel_final.velocity_y, vel_final.yaw_rate);
-        velocity_publisher_->publish(vel_final);
+		auto vel_final = custom_msgs::msg::VelocityToMpc();
+		vel_final.velocity_x = (float)(odometry_.velocity_x);
+		vel_final.velocity_y = (float)(odometry_.velocity_y);
+		vel_final.yaw_rate = (float)(odometry_.yaw_rate);
+		// RCLCPP_INFO(this->get_logger(), "Publishing velocity_x: %.6f" " ,velocity_y: %.6f" " , yaw_rate: %.6f" , vel_final.velocity_x, vel_final.velocity_y, vel_final.yaw_rate);
+		velocity_publisher_->publish(vel_final);
 
 		slam_object_.addOdometryMeasurement(odometry_measurement);
 
@@ -106,7 +106,7 @@ void SlamFromFile::run_slam() {
 			landmark.observation_noise = obs_noise;
 
 			// Only accept cones that are within the specified range
-			if (landmark.range <= perception_range_)
+			if (landmark.range <= 6.0 or (landmark.theta <= 0.4 and landmark.range <= perception_range_))
 			{
 				// RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
 				all_observed_landmarks.push_back(landmark);
@@ -114,17 +114,14 @@ void SlamFromFile::run_slam() {
 		}
 		perception_eof_ = readNextPerception();
 	}
+
 	if (!all_observed_landmarks.empty())
 	{
 		if (is_mapping_) slam_object_.addLandmarkMeasurementSLAM(global_index_, all_observed_landmarks);
 		else slam_object_.addLandmarkMeasurementsLocalization(global_index_, all_observed_landmarks);
 		all_observed_landmarks.clear();
-	}
-	total_time = this->now() - starting_time;
-	RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 
-	if (global_index_ % optimization_interval_ == 0)
-	{
+		// Optimize with perception
 		starting_time = this->now();
 
 		gtsam::NonlinearFactorGraph opt_new_factors{ slam_object_.getNewFactors() };
@@ -137,39 +134,83 @@ void SlamFromFile::run_slam() {
 		slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
 
 		// Publish map
-		if (is_mapping_)
+		std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
+		custom_msgs::msg::LocalMapMsg map_msg{};
+		custom_msgs::msg::ConeStruct cone_msg{};
+
+		map_msg.pose.position.x = current_pose[0];
+		map_msg.pose.position.y = current_pose[1];
+		map_msg.pose.theta = current_pose[2];
+
+		if (track.empty())
 		{
-			std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
-			custom_msgs::msg::LocalMapMsg map_msg{};
-			custom_msgs::msg::ConeStruct cone_msg{};
-
-			map_msg.pose.position.x = current_pose[0];
-			map_msg.pose.position.y = current_pose[1];
-			map_msg.pose.theta = current_pose[2];
-
-			if (track.empty())
-			{
-				map_msg.cone_count = 0;
-			}
-			else
-			{
-				map_msg.cone_count = track.size();
-				for (auto cone : track)
-				{
-					cone_msg.color = cone[0];
-					cone_msg.coords.x = cone[1];
-					cone_msg.coords.y = cone[2];
-					map_msg.local_map.push_back(cone_msg);
-				}
-			}
-			map_publisher_->publish(map_msg);
+			map_msg.cone_count = 0;
 		}
+		else
+		{
+			map_msg.cone_count = track.size();
+			for (auto cone : track)
+			{
+				cone_msg.color = cone[0];
+				cone_msg.coords.x = cone[1];
+				cone_msg.coords.y = cone[2];
+				map_msg.local_map.push_back(cone_msg);
+			}
+		}
+		map_publisher_->publish(map_msg);
 
 		total_time = this->now() - starting_time;
 		RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 	}
+	total_time = this->now() - starting_time;
+	RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 
-	// visualize();
+	// if (global_index_ % optimization_interval_ == 0)
+	// {
+	// 	starting_time = this->now();
+
+	// 	gtsam::NonlinearFactorGraph opt_new_factors{ slam_object_.getNewFactors() };
+	// 	gtsam::Values opt_new_variable_values{ slam_object_.getNewValues() };
+	// 	gtsam::Vector3 pre_optimization_pose{ slam_object_.getEstimatedCarPose() };
+	// 	gtsam::Symbol optimization_pose_symbol{ slam_object_.getCurrentPoseSymbol() };
+	// 	slam_object_.resetTemporaryGraph();
+
+	// 	slam_object_.optimizeFactorGraph(opt_new_factors, opt_new_variable_values);
+	// 	slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
+
+	// 	// Publish map
+	// 	if (is_mapping_)
+	// 	{
+	// 		std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
+	// 		custom_msgs::msg::LocalMapMsg map_msg{};
+	// 		custom_msgs::msg::ConeStruct cone_msg{};
+
+	// 		map_msg.pose.position.x = current_pose[0];
+	// 		map_msg.pose.position.y = current_pose[1];
+	// 		map_msg.pose.theta = current_pose[2];
+
+	// 		if (track.empty())
+	// 		{
+	// 			map_msg.cone_count = 0;
+	// 		}
+	// 		else
+	// 		{
+	// 			map_msg.cone_count = track.size();
+	// 			for (auto cone : track)
+	// 			{
+	// 				cone_msg.color = cone[0];
+	// 				cone_msg.coords.x = cone[1];
+	// 				cone_msg.coords.y = cone[2];
+	// 				map_msg.local_map.push_back(cone_msg);
+	// 			}
+	// 		}
+	// 		map_publisher_->publish(map_msg);
+	// 	}
+
+	// 	total_time = this->now() - starting_time;
+	// 	RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
+	// }
+
 	global_index_++;
 
 	if (perception_eof_ or odometry_eof_)

@@ -73,8 +73,8 @@ void P23StatusNode::setSubscribers() {
     canbus_status_subscription_ = create_subscription<custom_msgs::msg::AutonomousStatus>(
         "/canbus/as_status", 10, std::bind(&P23StatusNode::updateASStatus, this, _1));
 
-    slam_subscription_ = create_subscription<custom_msgs::msg::PoseMsg>(
-        "pose", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
+    slam_subscription_ = create_subscription<custom_msgs::msg::LocalMapMsg>(
+        "local_map", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
 
     lifecycle_node_status_subscription_ = create_subscription<custom_msgs::msg::LifecycleNodeStatus>(
         "lifecycle_manager/lifecycle_node_status", 10, std::bind(&P23StatusNode::receiveNodeStatus, this, _1));
