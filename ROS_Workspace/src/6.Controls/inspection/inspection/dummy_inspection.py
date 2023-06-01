@@ -150,13 +150,13 @@ class InspectionMission(Node):
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    can_interface = InspectionMission()
+    inspection = InspectionMission()
     executor = SingleThreadedExecutor()
 
     try:
-        rclpy.spin(can_interface, executor)
+        rclpy.spin(inspection, executor)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        can_interface.destroy_node()
+        inspection.destroy_node()
         rclpy.shutdown()

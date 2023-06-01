@@ -20,9 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'run = inspection.inspection:main',
+            'run = inspection.dummy_inspection:main',
             'pc_error = inspection.pc_error:main',
-            'list_nodes = inspection.node_names:main'
+            'lifecycle = inspection.lifecycle_inspection:main'
         ],
     },
 )
