@@ -56,17 +56,20 @@ void SlamFromFile::run_slam() {
 		odometry_measurement.yaw_rate = odometry_.yaw_rate;
 		odometry_measurement.measurement_noise = odometry_weight_ * odometry_.covariance_matrix;
 
-		auto vel_final = custom_msgs::msg::VelocityToMpc();
-		vel_final.velocity_x = (float)(odometry_.velocity_x);
-		vel_final.velocity_y = (float)(odometry_.velocity_y);
-		vel_final.yaw_rate = (float)(odometry_.yaw_rate);
-		// RCLCPP_INFO(this->get_logger(), "Publishing velocity_x: %.6f" " ,velocity_y: %.6f" " , yaw_rate: %.6f" , vel_final.velocity_x, vel_final.velocity_y, vel_final.yaw_rate);
-		velocity_publisher_->publish(vel_final);
+
 
 		slam_object_.addOdometryMeasurement(odometry_measurement);
 
 		odometry_eof_ = readNextOdometry();
 	}
+
+	//Publish velocity msgs
+	auto vel_final = custom_msgs::msg::VelocityToMpc();
+	vel_final.velocity_x = (float)(odometry_.velocity_x);
+	vel_final.velocity_y = (float)(odometry_.velocity_y);
+	vel_final.yaw_rate = (float)(odometry_.yaw_rate);
+	// RCLCPP_INFO(this->get_logger(), "Publishing velocity_x: %.6f" " ,velocity_y: %.6f" " , yaw_rate: %.6f" , vel_final.velocity_x, vel_final.velocity_y, vel_final.yaw_rate);
+	velocity_publisher_->publish(vel_final);
 
 	// Publish pose message
 	custom_msgs::msg::PoseMsg pose_msg{};
@@ -74,7 +77,15 @@ void SlamFromFile::run_slam() {
 	pose_msg.position.x = current_pose[0];
 	pose_msg.position.y = current_pose[1];
 	pose_msg.theta = current_pose[2];
+	pose_msg.velocity_state.global_index = global_index_;
+	pose_msg.velocity_state.velocity_x = odometry_.velocity_x;
+	pose_msg.velocity_state.velocity_y = odometry_.velocity_y;
+	pose_msg.velocity_state.yaw_rate = odometry_.yaw_rate;
+	for (int i{ 0 }; i < 9;i++) { pose_msg.velocity_state.variance_matrix[i] = odometry_.covariance_matrix(i / 3, i % 3); }
+
 	pose_publisher_->publish(pose_msg);
+
+
 
 	rclcpp::Duration total_time{ this->now() - starting_time };
 	RCLCPP_INFO_STREAM(get_logger(), "\n-- Odometry --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
