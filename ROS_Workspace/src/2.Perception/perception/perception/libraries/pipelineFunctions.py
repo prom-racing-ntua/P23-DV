@@ -35,8 +35,12 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolo_model.iou = iou
     return yolo_model
 
-def inferenceYOLO(model, imgpath, res):
-    results = model(imgpath, size=res).xyxy[0].cpu().numpy()
+def inferenceYOLO(model, img, res):
+    # YOLO in TPU works only for square input i.e. (640,640) so we pad zeros below the actual image
+    padded_img = np.zeros((640,640,3))
+    # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
+    padded_img[:512] = cv2.resize(img, (640,512))
+    results = model(padded_img).xyxy[0].cpu().numpy()
     # now results are a numpy array containing xmin, ymin, xmax, ymax, confidence, class in each row
     return results
 def tpuInference(model, image:np.ndarray):
@@ -68,10 +72,11 @@ def cropResizeCones(yolo_results, image, size_cutoff_small, size_cutoff_large, m
     
     for i in range(len(small_bounding_boxes)):
         # Find corners of cropped images and add a bit of margin. Be careful of margins pushing the corners out of the original image size!
-        xmin = max(math.floor(small_bounding_boxes[i,0])-margin, 0)
-        xmax = min(math.floor(small_bounding_boxes[i,2])+margin, img_w-1)
-        ymin = max(math.floor(small_bounding_boxes[i,1])-margin, 0)
-        ymax = min(math.floor(small_bounding_boxes[i,3])+margin, img_h-1)
+        # The coordinates in small_bounding_boxes refer to a reduced (512,640) image but now that we are working on a (1024,1280) image a multiplication by 2 is required
+        xmin = max(2*math.floor(small_bounding_boxes[i,0])-margin, 0)
+        xmax = min(2*math.floor(small_bounding_boxes[i,2])+margin, img_w-1)
+        ymin = max(2*math.floor(small_bounding_boxes[i,1])-margin, 0)
+        ymax = min(2*math.floor(small_bounding_boxes[i,3])+margin, img_h-1)
         
         # Stack cropped images after they are resized to (48,64), which is the expected input size of VggNet
         cone_img = image[ymin:ymax, xmin:xmax]
@@ -86,10 +91,11 @@ def cropResizeCones(yolo_results, image, size_cutoff_small, size_cutoff_large, m
     
     for i in range(len(large_bounding_boxes)):
         # Find corners of cropped images and add a bit of margin. Be careful of margins pushing the corners out of the original image size!
-        xmin = max(math.floor(large_bounding_boxes[i,0])-margin, 0)
-        xmax = min(math.floor(large_bounding_boxes[i,2])+margin, img_w-1)
-        ymin = max(math.floor(large_bounding_boxes[i,1])-margin, 0)
-        ymax = min(math.floor(large_bounding_boxes[i,3])+margin, img_h-1)
+        # The coordinates in large_bounding_boxes refer to a reduced (512,640) image but now that we are working on a (1024,1280) image a multiplication by 2 is required
+        xmin = max(2*math.floor(large_bounding_boxes[i,0])-margin, 0)
+        xmax = min(2*math.floor(large_bounding_boxes[i,2])+margin, img_w-1)
+        ymin = max(2*math.floor(large_bounding_boxes[i,1])-margin, 0)
+        ymax = min(2*math.floor(large_bounding_boxes[i,3])+margin, img_h-1)
         
         # Stack cropped images after they are resized to (48,64), which is the expected input size of VggNet
         cone_img = image[ymin:ymax, xmin:xmax]

@@ -57,7 +57,7 @@ class InferenceNode(Node):
             if results.empty:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
-                smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 2000, 2500, 3)
+                smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
                 keypointsTiming = time.time()
                 keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
                 finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
