@@ -6,7 +6,6 @@ import time
 import rclpy
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.lifecycle import Node
-from rclpy.lifecycle import Publisher
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 
@@ -94,7 +93,7 @@ class InferenceLifecycleNode(Node):
         else:
             # Perform Perception Pipeline
             inferenceTiming = time.time()
-            results = inferenceYOLO(self.yoloModel, image, 640)
+            results = inferenceYOLO(model=self.yoloModel, img=image, tpu=True, debug=True)
             if results.empty:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
@@ -120,7 +119,6 @@ def main(args=None):
     
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
-
     # EdgeTPU YOLO
     yolov5_edgetpu_model_path = f"{models}/yolov5n6_edgetpu.tflite"
     # Yolo v7

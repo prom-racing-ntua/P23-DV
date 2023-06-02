@@ -32,3 +32,4 @@ slam_node:
     lap_counter_cooldown: 10
 
     logger: true
+    velocity_estimation_frequency: 40

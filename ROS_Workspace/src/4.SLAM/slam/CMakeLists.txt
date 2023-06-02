@@ -20,6 +20,9 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(TBB REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
@@ -30,25 +33,34 @@ find_package(GTSAM REQUIRED)
 
 include_directories(
   include
+  include/lifecycle
   ${GTSAM_INCLUDE_DIRS}
   ${EIGEN_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_geometry_msgs_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME} src/slam_handler.cpp src/slam.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp visualization_msgs custom_msgs ament_index_cpp)
+ament_target_dependencies(${PROJECT_NAME} rclcpp visualization_msgs custom_msgs ament_index_cpp tf2_geometry_msgs)
 target_link_libraries(${PROJECT_NAME} gtsam)
 
 add_executable(read_files src/slam_from_file.cpp src/slam.cpp)
-ament_target_dependencies(read_files rclcpp visualization_msgs custom_msgs ament_index_cpp)
+ament_target_dependencies(read_files rclcpp visualization_msgs custom_msgs ament_index_cpp tf2_geometry_msgs)
 target_link_libraries(read_files gtsam)
 
 add_executable(test_run src/test_visual.cpp)
-ament_target_dependencies(test_run rclcpp visualization_msgs ament_index_cpp)
+ament_target_dependencies(test_run rclcpp visualization_msgs ament_index_cpp tf2_geometry_msgs)
+
+# Lifecycle Node
+add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_slam_handler.cpp src/lifecycle/lifecycle_slam.cpp src/lifecycle/lifecycle_states.cpp)
+ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle visualization_msgs custom_msgs ament_index_cpp tf2_geometry_msgs)
+target_link_libraries(lifecycle_${PROJECT_NAME} gtsam ${catkin_LIBRARIES})
 
 install(TARGETS
   ${PROJECT_NAME}
   read_files
   test_run
+  lifecycle_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME}
 )
 

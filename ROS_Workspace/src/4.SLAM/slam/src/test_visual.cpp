@@ -11,7 +11,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 
 class Visualization: public rclcpp::Node {
@@ -141,7 +141,7 @@ public:
 
         std::string line;
         std::getline(car_path_file_, line);
-        RCLCPP_INFO(get_logger(), line);
+        RCLCPP_INFO(get_logger(), line.c_str());
 
         std::stringstream stream(line);
 

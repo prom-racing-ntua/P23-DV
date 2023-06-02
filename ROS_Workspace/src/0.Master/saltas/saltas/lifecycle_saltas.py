@@ -16,7 +16,6 @@ from std_msgs.msg import Header
 from custom_msgs.msg import NodeSync
 from custom_msgs.srv import GetFrequencies
 
-
 class SaltasNode(Node):
     '''P23 Master Node (me to kalytero onoma)'''
     def __init__(self) -> None:

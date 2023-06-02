@@ -1,27 +1,15 @@
 import cv2
 import torch
-from PIL import Image
 import time
-
-import pandas as pd
 import numpy as np
-
-import matplotlib.pyplot as plt
 import math
-
-from torch.utils.data import Dataset
-import json
-import torchvision
-from torch.utils.data import SubsetRandomSampler, DataLoader
-import torch.optim as optim
-
-# TPU Imports
-from .edgetpumodel import EdgeTPUModel
 
 from .cnn import *
 
 def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     # Local load has way slower performance for some reason...
+
+    # TODO: See if loading locally makes any difference in the tpu inference performance
     yolov5_local_path = "/home/prom/YOLO_models/yolov5"
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
 
@@ -35,16 +23,20 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolo_model.iou = iou
     return yolo_model
 
-def inferenceYOLO(model, img, res):
-    # YOLO in TPU works only for square input i.e. (640,640) so we pad zeros below the actual image
-    padded_img = np.zeros((640,640,3))
-    # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
-    padded_img[:512] = cv2.resize(img, (640,512))
-    results = model(padded_img).xyxy[0].cpu().numpy()
+def inferenceYOLO(model, img, tpu=True, debug=False):
+    inferenceTime = time.time()
+    if tpu:    
+        # YOLO in TPU works only for square input i.e. (640,640) so we pad zeros below the actual image
+        padded_img = np.zeros((640,640,3))
+        # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
+        padded_img[:512] = cv2.resize(img, (640,512))
+        results = model(padded_img).xyxy[0].cpu().numpy()
+    else:
+        results = model(img).xyxy[0].cpu().numpy()
+    inferenceTime = time.time() - inferenceTime
+    if debug:
+        print(f"Inference Time: {inferenceTime*1000}")
     # now results are a numpy array containing xmin, ymin, xmax, ymax, confidence, class in each row
-    return results
-def tpuInference(model, image:np.ndarray):
-    results = model.forward(image)
     return results
 
 def initKeypoint(small_modelpath, large_modelpath):
