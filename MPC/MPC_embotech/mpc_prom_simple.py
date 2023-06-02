@@ -36,10 +36,13 @@ def arc_length_parameterization(x, y):
     return s
 
 # set physical constants
-l_f = 0.9141
-l_r = 0.7359
-CdA = 1.8 # for drag
-ClA = 5.47 # for downforce
+#up to date
+lol = 1.59 
+WD_front = 0.467
+l_f = lol*(1-WD_front)
+l_r = lol*WD_front
+CdA = 2.0 # for drag (changed)
+ClA = 7.0 # for downforce (changed)
 pair = 1.225
 mi_y_max=1.0
 u_upper=15.0
@@ -62,7 +65,7 @@ dt_integration=0.025
 umin=4.0
 umax=7.0
 INDEX_MAX=310.0
-DINDEX_MAX=310.0
+DINDEX_MAX=310.0 #just for one lap (TBC)
 
 #ellipse params
 a=1.46
@@ -141,14 +144,14 @@ def obj(z,current_target):
     print("Forces are: ",z[9]," ", Fry, " ",Frz)
 
     return (
-        2e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-           + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+        1e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+           + 1e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             # + 1e-3*(e_c)**2 # costs on deviating on the
                                         #path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
                                 #path in x-direction0.025
             + 1e-3*(z[5]-current_target[2])**2 #dphi gap
-            + 1e2*(z[6]-current_target[3])**2
+            + 1e1*(z[6]-current_target[3])**2
             + 1e-3*z[0]**2 # penalty on input F,dF
             + 1e-3*z[9]**2
             + 1e3*z[1]**2 #penalty on delta,ddelta

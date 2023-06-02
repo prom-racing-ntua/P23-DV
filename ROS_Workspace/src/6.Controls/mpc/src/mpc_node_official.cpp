@@ -15,7 +15,7 @@ MpcHandler::MpcHandler():Node("mpc"), count_(0){
     else {
         ReadKnownTrack();
     }
-    velocity_subscriber_ = this->create_subscription<custom_msgs::msg::VelEstimation>("velocity_estimation", 10, std::bind(&MpcHandler::velocity_callback, this, std::placeholders::_1));
+
     pose_subscriber_ = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&MpcHandler::pose_callback, this, std::placeholders::_1));
     mpc_publisher_ = this->create_publisher<custom_msgs::msg::TxControlCommand>("tx_control", 10);
     mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&MpcHandler::mpc_callback, this));
@@ -37,20 +37,17 @@ void MpcHandler::loadParameters() {
     std::cout << "declared params" << std::endl;
 }
     
-void MpcHandler::velocity_callback(const custom_msgs::msg::VelEstimation::SharedPtr vel_msg) {
-    std::cout << "mpika vel_callback" << std::endl;
-    mpc_solver.vel_struct.velocity_x = float(vel_msg->velocity_x);
-    mpc_solver.vel_struct.velocity_y = float(vel_msg->velocity_y);
-    mpc_solver.vel_struct.yaw_rate = float(vel_msg->yaw_rate);
-    std::cout << "Velocity callback gives: " << mpc_solver.vel_struct.velocity_x << " " << mpc_solver.vel_struct.velocity_y << " " << mpc_solver.vel_struct.yaw_rate << std::endl;
-}
 
 void MpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg) {
     std::cout << "mpika pose_call" << std::endl;
     mpc_solver.pose_struct.theta = float(pose_msg->theta);
     mpc_solver.pose_struct.x = float(pose_msg->position.x);
     mpc_solver.pose_struct.y = float(pose_msg->position.y);
-    std::cout << "Pose callback gives " << mpc_solver.pose_struct.x << " " << mpc_solver.pose_struct.y << " " << mpc_solver.pose_struct.theta << std::endl;
+    mpc_solver.vel_struct.velocity_x = float(pose_msg->velocity_state.velocity_x);
+    mpc_solver.vel_struct.velocity_y = float(pose_msg->velocity_state.velocity_y);
+    mpc_solver.vel_struct.yaw_rate = float(pose_msg->velocity_state.yaw_rate);
+    std::cout << "I get pose " << mpc_solver.pose_struct.x << " " << mpc_solver.pose_struct.y << " " << mpc_solver.pose_struct.theta << std::endl;
+    std::cout << "I get velocity " << mpc_solver.vel_struct.velocity_x << " " << mpc_solver.vel_struct.velocity_y << " " << mpc_solver.vel_struct.yaw_rate << std::endl;
 }
 
 void MpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {

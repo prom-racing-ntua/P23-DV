@@ -28,7 +28,6 @@ SlamFromFile::SlamFromFile() : Node("slam_from_file_node"), slam_object_(this) {
 	// Set ROS objects
 	map_publisher_ = create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);
 	pose_publisher_ = create_publisher<custom_msgs::msg::PoseMsg>("pose", 10);
-	velocity_publisher_ = create_publisher<custom_msgs::msg::VelocityToMpc>("velocity_to_mpc", 10);
 
 	global_timer_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000 / sampling_rate_)), std::bind(&SlamFromFile::run_slam, this));
 }
@@ -63,13 +62,6 @@ void SlamFromFile::run_slam() {
 		odometry_eof_ = readNextOdometry();
 	}
 
-	//Publish velocity msgs
-	auto vel_final = custom_msgs::msg::VelocityToMpc();
-	vel_final.velocity_x = (float)(odometry_.velocity_x);
-	vel_final.velocity_y = (float)(odometry_.velocity_y);
-	vel_final.yaw_rate = (float)(odometry_.yaw_rate);
-	// RCLCPP_INFO(this->get_logger(), "Publishing velocity_x: %.6f" " ,velocity_y: %.6f" " , yaw_rate: %.6f" , vel_final.velocity_x, vel_final.velocity_y, vel_final.yaw_rate);
-	velocity_publisher_->publish(vel_final);
 
 	// Publish pose message
 	custom_msgs::msg::PoseMsg pose_msg{};
@@ -84,8 +76,6 @@ void SlamFromFile::run_slam() {
 	for (int i{ 0 }; i < 9;i++) { pose_msg.velocity_state.variance_matrix[i] = odometry_.covariance_matrix(i / 3, i % 3); }
 
 	pose_publisher_->publish(pose_msg);
-
-
 
 	rclcpp::Duration total_time{ this->now() - starting_time };
 	RCLCPP_INFO_STREAM(get_logger(), "\n-- Odometry --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");

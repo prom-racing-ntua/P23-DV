@@ -137,10 +137,12 @@ class MpcSolver {
         double X3[X_SIZE];
         double X4[X_SIZE];
         //set physical constants
-        const double l_f = 0.9141;
-        const double l_r = 0.7359;
-        const double CdA = 1.8; // for drag
-        const double ClA = 5.47; // for downforce
+        const double wb = 1.590;
+        const double wd_front = 0.467;
+        const double l_f = wb*(1-wd_front);
+        const double l_r = wb*wd_front;
+        const double CdA = 2.0; // for drag (updated)
+        const double ClA = 7.0; // for downforce
         const double p_air = 1.225;
         const double gr = 3.9;
         const double sr = 3.17;
