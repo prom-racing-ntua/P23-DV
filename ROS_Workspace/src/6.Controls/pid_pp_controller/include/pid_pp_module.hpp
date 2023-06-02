@@ -5,6 +5,7 @@
 #include <string>
 #include <climits>
 #include <cfloat>
+#include <iostream>
 
 #include "arc_length_spline.h"
 
@@ -39,8 +40,8 @@ namespace pid_pp
         int proportional_dampener;
         int integral_dampener;
         int derivative_dampener;
-        int error_integral;
-        int last_error;
+        double error_integral;
+        double last_error;
         double filter(double value, int dampener);
 
         double request_sum; // in kN
@@ -48,9 +49,9 @@ namespace pid_pp
 
     public:
         PID(); // Default Constructor
-        void init(int kp, int ki, int kd, int dt, int damp, int prop_damp = INT_MAX, int integ_damp = INT_MAX, int der_damp = INT_MAX);
-        double operator()(int error);            // main operation. Get controller output as object_name(error)
-        double operator()(int error, double dt); // same but also provides different dt than one from constructor
+        void init(int kp, int ki, int kd, int dt, int damp, int integ_damp = INT_MAX, int prop_damp = INT_MAX, int der_damp = INT_MAX);
+        double operator()(double error);            // main operation. Get controller output as object_name(error)
+        double operator()(double error, double dt); // same but also provides different dt than one from constructor
         void flush_error();                      // sets error integral to 0
         ~PID();                                  // stats
     };
@@ -71,7 +72,7 @@ namespace pid_pp
     public:
         PurePursuit();
         void init(double ld_min, double ld_max, double v_min, double v_max, double wb, double emergency_factor);
-        double operator()(const Point &taret, double theta, double minimum_radius) const; // target coords should be in the reference frame of the rear axle
+        double operator()(const Point &target, double theta, double minimum_radius) const; // target coords should be in the reference frame of the rear axle
         double lookahead(double velocity, bool emergency = 0) const;
         ~PurePursuit();
     };
@@ -144,7 +145,7 @@ namespace pid_pp
         int last_visited_index;                                        // saves last visited i so as to only consider projection further along the track
         double total_length;                                           // spline_length
         int get_projection(const Point &position, double theta) const; // returns index of projection
-
+        int max_idx;
         void solve_profile(int resolution, double initial_speed, bool is_end);
     };
 

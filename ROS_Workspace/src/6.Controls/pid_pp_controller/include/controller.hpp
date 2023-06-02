@@ -57,10 +57,14 @@ private:
 
     bool is_end;
 
+    //Multithreading shit
     pthread_spinlock_t global_lock_;
+    rclcpp::CallbackGroup::SharedPtr callback_group_waypoints;
+    rclcpp::CallbackGroup::SharedPtr callback_group_pose;
 
     // BEGINNING SAFETY CHECKS
     bool has_run_waypoints; // needed to run pose_callback
+    int count_wp;
 };
 
 /*

@@ -1,5 +1,6 @@
 #include "controller.hpp"
 #include <pthread.h>
+#include <iomanip>
 
 void PID_PP_Node::parameter_load()
 {
@@ -39,7 +40,7 @@ void PID_PP_Node::parameter_load()
     declare_parameter<int>("total_laps", 1);
 }
 
-PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false)
+PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0)
 {
     // PARAMETER LOADING
     parameter_load();
@@ -95,27 +96,60 @@ PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(
         RCLCPP_ERROR(get_logger(), "Global lock initialization failed: exit program");
         exit(1);
     }
+
+    //CALLBACK GROUPS
+    callback_group_waypoints = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    //callback_group_pose = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto sub_opt = rclcpp::SubscriptionOptions();
+    sub_opt.callback_group = callback_group_waypoints;
+    ///auto sub_opt_2 = rclcpp::SubscriptionOptions();
+    //sub_opt_2.callback_group = callback_group_pose;
+
+
+
     // SUB/PUB CREATION
-    sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&PID_PP_Node::waypoints_callback, this, _1));
-    sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&PID_PP_Node::pose_callback, this, _1));
+    sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&PID_PP_Node::waypoints_callback, this, _1), sub_opt);
+    // sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&PID_PP_Node::pose_callback, this, _1), sub_opt);
     pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
+    std::cout<<"Object created"<<std::endl;
 }
 
 PID_PP_Node::~PID_PP_Node()
 {
     delete profile;
     delete spline;
+    std::cout<<"Object destroyed"<<std::endl;
 }
 
 void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
 {
-
+    std::cout<<++count_wp<<" Entered Waypoints callback"<<std::endl;
+    rclcpp::Time starting_time = this->now();
     // Object variables should only be updated in the end
-    path_planning::PointsArray midpoints(msg->count, 2);
-    for (int i = 0; i < msg->count; i++)
+    path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
+    if(msg->count>=3)
     {
-        midpoints(i, 0) = msg->waypoints[i].x;
-        midpoints(i, 1) = msg->waypoints[i].y;
+        //std::cout<<"3+ "<<std::endl;
+        for (int i = 0; i < msg->count; i++)
+        {
+            midpoints(i, 0) = msg->waypoints[i].x;
+            midpoints(i, 1) = msg->waypoints[i].y;
+        }
+    }
+    else if(msg->count==2)
+    {
+        //std::cout<<"2 "<<std::endl;
+        midpoints(0,0) = msg->waypoints[0].x;
+        midpoints(0,1) = msg->waypoints[0].y;
+        midpoints(1,0) = 0.5 * msg->waypoints[0].x + 0.5 * msg->waypoints[1].x;
+        midpoints(1,1) = 0.5 * msg->waypoints[0].y + 0.5 * msg->waypoints[1].y;
+        midpoints(2,0) = msg->waypoints[1].x;
+        midpoints(2,1) = msg->waypoints[1].y;
+    }
+    else
+    {
+        //std::cout<<"1? "<<std::endl;
+        return ;
     }
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
     bool is_end = msg->lap_count == laps_to_do;
@@ -130,7 +164,7 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
     */
 
     /* VARIABLE LOCK */
-    pthread_spin_lock(&global_lock_);
+    //pthread_spin_lock(&global_lock_);
     path_planning::ArcLengthSpline *spline_to_delete = this->spline;
     VelocityProfile *profile_to_delete = this->profile;
     this->has_run_waypoints = true;
@@ -138,41 +172,55 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
     this->profile = profile;
     this->spline = spline;
     /* VARIABLE UNLOCK */
-    pthread_spin_unlock(&global_lock_);
+    //pthread_spin_unlock(&global_lock_);
 
     delete spline_to_delete;
     delete profile_to_delete;
+    rclcpp::Duration total_time = this->now() - starting_time;
+    //total_execution_time += total_time.nanoseconds() / 1000000.0;
+    std::cout << "Time of Waypoints Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
 
 void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 {
+    return ;
+    //std::cout<<"Entered Pose Callback"<<std::endl;
+    //std::cout<<"Pos: "<<msg->position.x<<", "<<msg->position.y<<". theta: "<<msg->theta<<". v_o : "<<msg->velocity_state.velocity_x<<std::endl;
+    //std::cout<<"1.. ";
+    rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
         return;
-
+    //std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
     v_y = msg->velocity_state.velocity_y;
     r = msg->velocity_state.yaw_rate;
     a_x = msg->velocity_state.acceleration_x;
     a_y = msg->velocity_state.acceleration_y;
-
+    //std::cout<<"3.. ";
+    
     Point position(msg->position.x, msg->position.y);
     // Point direction(std::cos(theta), std::sin(theta));
     double theta = msg->theta;
-
-    std::pair<double, double> projection = (*this->profile)(position, theta);
-
+    //std::cout<<"4.. ";
+    //std::pair<double, double> projection = (*this->profile)(position, theta);
+    std::pair<double, double> projection = this->profile->operator()(position, theta);
+    //std::cout<<"5.. ";
+    //std::cout<<"target : "<<projection.first<<". error : "<<projection.second<<std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
-    for_publish.speed_actual = this->v_x;
-    for_publish.speed_target = projection.first;
-
+    for_publish.speed_actual = this->v_x * 3.6;
+    for_publish.speed_target = projection.first * 3.6;
+    //std::cout<<"6.. ";
     double min_radius;
     double force = pid_controller(projection.first - this->v_x);
     // Checking Force
     double fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
-    double fx = std::max(model.m * a_x, fx_next); // old fx, new fx
+    double fx; // old fx, new fx
+    fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m*a_x;
     // COG TBD
     double fz = model.Fz_calc("full", 1,0, v_x);
+    //std::cout<<"Fz = "<<fz<<". Fx = "<<fx_next<<std::endl;
     double rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
+    //std::cout<<"7.. ";
     if (rem < 0)
     {
         // exei ginei malakia
@@ -189,6 +237,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
             rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
         }
     }
+    //std::cout<<"8.. ";
     for_publish.motor_torque_target = model.Torque(force);
 
     // CALCULATING MIN RADIUS
@@ -199,24 +248,35 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
         mu**2/R <= rem
         R >= mu**2 / rem
     */
-    min_radius = model.m * v_x * v_x / rem;
+    
+    //min_radius = model.m * v_x * v_x / rem;
+    min_radius = v_x * v_x / (model.my_max(fz) * model.g);
+
     Point tp;
     double ld;
+    //std::cout<<"9.. ";
     if (projection.second < emergency_threshold)
         ld = pp_controller.lookahead(v_x, false);
     else
         ld = pp_controller.lookahead(v_x, true);
-
+    //std::cout<<"10.. ";
     tp = this->profile->get_target_point(ld, position, min_radius, theta);
     //double R1 = ld * ld / (2 * (-tp.x() * std::sin(theta) + tp.y() * std::cos(theta)));
     //double R = R1 > 0 ? std::max(min_radius, R1) : std::min(-min_radius, R1);
-
+    //std::cout<<"11.. ";
     double heading_angle = pp_controller(tp, theta, min_radius);
-
+    //std::cout<<"12.. ";
     for_publish.steering_angle_target = heading_angle;
     for_publish.brake_pressure_target = is_end && v_x < safe_speed_to_break;
-
+    //std::cout<<"13.. ";
     pub_actuators->publish(for_publish);
+    //std::cout<<"Command: Torque = "<<std::fixed<<std::setprecision(4)<<for_publish.motor_torque_target<<" Nm, Heading = "<<std::fixed<<std::setprecision(4)<<heading_angle<<" rad, BP = "<< (is_end && v_x < safe_speed_to_break)?1:0;
+    //std::cout<<" , ld = "<<std::fixed<<std::setprecision(4)<<ld<<std::endl;
+    
+    rclcpp::Duration total_time = this->now() - starting_time;
+    //total_execution_time += total_time.nanoseconds() / 1000000.0;
+    
+    //std::cout << "Time of Pose Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
 
 /* REMAINING TASKS */
@@ -229,7 +289,13 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 
 int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<PID_PP_Node>());
+    //rclcpp::spin(std::make_shared<PID_PP_Node>());
+    auto options = rclcpp::ExecutorOptions();
+
+    rclcpp::Node::SharedPtr node = std::make_shared<PID_PP_Node>();
+    rclcpp::executors::MultiThreadedExecutor executor {options, 2};
+    executor.add_node(node);
+    executor.spin();
     rclcpp::shutdown();
     return 0;
 }

@@ -43,13 +43,13 @@ double Point::distance(const Point &a, const Point &b)
 PID::PID()
     : request_sum(0), total_requests(0), error_integral(0), last_error(-1) {}
 
-void PID::init(int kp, int ki, int kd, int dt, int damp, int prop_damp, int integ_damp, int der_damp)
+void PID::init(int kp, int ki, int kd, int dt, int damp, int integ_damp, int prop_damp, int der_damp)
 {
     Kp = kp;
     Ki = ki;
     Kd = kd;
     this->dt = dt;
-    this->dampener = dampener;
+    this->dampener = damp;
     proportional_dampener = prop_damp;
     integral_dampener = integ_damp;
     derivative_dampener = der_damp;
@@ -57,10 +57,28 @@ void PID::init(int kp, int ki, int kd, int dt, int damp, int prop_damp, int inte
 
 double PID::filter(double value, int dampener)
 {
-    return std::min(std::max(-dampener * 1.0, value), dampener * 1.0);
+    if (value > dampener * 1.0)
+        return dampener * 1.0;
+    if (value < -dampener * 1.0)
+        return -dampener * 1.0;
+    return value;
 }
 
-double PID::operator()(int error)
+double PID::operator()(double error)
+{
+    error_integral += error * dt;
+    double proportional = this->filter(error * Kp, proportional_dampener);
+    double integral = this->filter(error_integral * Ki, integral_dampener);
+    double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
+
+    double correction = this->filter(proportional + integral + derivative, dampener);
+    request_sum += correction / 1000;
+    total_requests++;
+    //std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
+    return correction;
+}
+
+double PID::operator()(double error, double dt)
 {
     error_integral += error * dt;
     double proportional = this->filter(error * Kp, proportional_dampener);
@@ -75,22 +93,7 @@ double PID::operator()(int error)
     return correction;
 }
 
-double PID::operator()(int error, double dt)
-{
-    error_integral += error * dt;
-    double proportional = this->filter(error * Kp, proportional_dampener);
-    double integral = this->filter(error_integral * Ki, integral_dampener);
-    double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
-
-    double correction = this->filter(proportional + integral + derivative, dampener);
-
-    request_sum += correction / 1000;
-    total_requests++;
-
-    return correction;
-}
-
-void PID::flush_error() 
+void PID::flush_error()
 {
     error_integral = 0;
 }
@@ -122,14 +125,25 @@ double PurePursuit::lookahead(double velocity, bool emergency) const
     else
         factor = 1;
     double ratio = (velocity - velocity_min) / (velocity_max - velocity_min);
-    return std::min(lookahead_max, std::max(lookahead_min, factor * (lookahead_max * ratio + lookahead_min*(1 - ratio))));
+    return std::min(lookahead_max, std::max(lookahead_min, factor * (lookahead_max * ratio + lookahead_min * (1 - ratio))));
 }
 
 double PurePursuit::operator()(const Point &target, double theta, double minimum_radius) const
 {
-    double ld = Point::distance(target, Point(0,0));
-    double turn_radius = std::max(minimum_radius, ld * ld / (2 * (-std::sin(theta) * target.x() + std::cos(theta) * target.y())));
-    double heading = std::atan(wheelbase / turn_radius);
+
+    double ld = Point::distance(target, Point(0, 0));
+    double heading;
+    if(std::abs((-std::sin(theta) * target.x() + std::cos(theta) * target.y()))>0.001)
+    {
+        double turn_radius_1 = ld * ld / (2 * (-std::sin(theta) * target.x() + std::cos(theta) * target.y()));
+        double turn_radius = turn_radius_1>0 ? std::max(turn_radius_1, minimum_radius) : std::min(turn_radius_1, -minimum_radius);
+        heading = std::atan(wheelbase / turn_radius);
+        //std::cout<<"target: ("<<target.x()<<", "<<target.y()<<"). R1: "<<turn_radius_1<<". Rmin:"<<minimum_radius<<" "<<ld<<" "<<theta<<std::endl;
+    }else
+    {
+        heading = 0;
+    }
+    //std::cout<<"target: ("<<target.x()<<", "<<target.y()<<"). R1: "<<turn_radius_1<<". Rmin:"<<minimum_radius<<std::endl;
     return heading;
 }
 
@@ -163,8 +177,9 @@ double Model::Fz_calc(std::string type, bool aero, bool moved_cog, double vx, do
 {
     double weight = m * g;
     double aero_f = 0.5 * cd_A * vx * vx;
-    double w_d=wd;
-    if(moved_cog)w_d = wdist;
+    double w_d = wd;
+    if (moved_cog)
+        w_d = wdist;
     if (type == "full")
     {
         if (aero)
@@ -203,27 +218,27 @@ SplinePoint::SplinePoint(Point pos, double s, double phi, double k)
 
 SplinePoint::SplinePoint() {}
 
-double SplinePoint::s()const
+double SplinePoint::s() const
 {
     return s_priv;
 }
 
-double SplinePoint::phi()const
+double SplinePoint::phi() const
 {
     return phi_priv;
 }
 
-double SplinePoint::k()const
+double SplinePoint::k() const
 {
     return k_priv;
 }
 
-Point SplinePoint::position()const
+Point SplinePoint::position() const
 {
     return position_priv;
 }
 
-double SplinePoint::target_speed()const
+double SplinePoint::target_speed() const
 {
     return target_speed_priv;
 }
@@ -235,28 +250,36 @@ void SplinePoint::set_target_speed(double v)
 
 // class VelocityProfile TBD
 VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end)
-    : model(&model_),
-max_speed(max_speed_), samples_per_meter(samples_per_meter_)
+    : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0)
 {
     this->total_length = spline.getApproximateLength();
+    // std::cout<<"TOTAL LENGTH = "<<total_length<<std::endl;
     int resolution = total_length * samples_per_meter;
+    max_idx = resolution;
     path_planning::PointsData spline_data = spline.getSplineData(resolution = resolution);
     spline_samples = new SplinePoint[resolution];
     for (int i = 0; i < resolution; i++)
     {
-        spline_samples[i] = SplinePoint(Point(spline_data(i, 0), spline_data(i, 1)), spline_data(i, 4), spline_data(i, 2),spline_data(i, 3));
+        spline_samples[i] = SplinePoint(Point(spline_data(i, 0), spline_data(i, 1)), spline_data(i, 4), spline_data(i, 2), spline_data(i, 3));
+        // std::cout<<spline_samples[i].position().x() <<" "<<spline_samples[i].position().y() <<" "<<spline_samples[i].s() <<" "<<spline_samples[i].phi() <<" "<<spline_samples[i].k() <<std::endl;
     }
-    solve_profile(resolution, initial_speed, is_end);
+    //solve_profile(resolution, initial_speed, is_end);
+    //for (int i = 0; i < resolution; i++)
+    //{
+    //    std::cout<<spline_samples[i].target_speed()<<", ";
+    //}
+    //std::cout<<std::endl;
 }
 
 VelocityProfile::~VelocityProfile()
 {
     delete[] spline_samples;
-    delete model;
+    // delete model;
 }
 
-std::pair<double, double> VelocityProfile::operator()(const Point &position, double theta) 
+std::pair<double, double> VelocityProfile::operator()(const Point &position, double theta)
 {
+    // return std::make_pair(0,0);
     int i = get_projection(position, theta);
     last_visited_index = i;
     double cross_track = Point::distance(spline_samples[i].position(), position);
@@ -264,23 +287,30 @@ std::pair<double, double> VelocityProfile::operator()(const Point &position, dou
     return std::make_pair(target, cross_track);
 }
 
-int VelocityProfile::get_projection(const Point &position, double theta)const
+int VelocityProfile::get_projection(const Point &position, double theta) const
 {
-    double min_error = INT_MAX, min_error_index, error_x, error_y, error;
-    for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
+    double min_error = DBL_MAX, min_error_index = -1, error_x, error_y, error;
+    //std::cout << "max index = " << max_idx << std::endl;
+    for (int i = last_visited_index; i < max_idx; i++)
     {
+        /*
         error_x = std::sin(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::cos(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
 
         error_y = -std::cos(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::sin(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
-
+        */
+        // std::cout<<spline_samples[i].position().x()<<" "<<position.x()<<" "<<spline_samples[i].position().y()<<" "<<position.y()<<std::endl;
+        error_x = spline_samples[i].position().x() - position.x();
+        error_y = spline_samples[i].position().y() - position.y();
         error = error_x * error_x + error_y * error_y;
-
+        // std::cout<<error<<std::endl;
         if (error < min_error)
         {
             min_error = error;
             min_error_index = i;
         }
     }
+    if (min_error_index == -1)
+        std::exit(48);
     return min_error_index;
 }
 
