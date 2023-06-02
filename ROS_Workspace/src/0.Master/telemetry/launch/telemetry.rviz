@@ -5,8 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /CarMarker1/Topic1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.6176470518112183
     Tree Height: 735
   - Class: rviz_common/Selection
     Name: Selection
@@ -46,7 +45,7 @@ Visualization Manager:
       Enabled: true
       Name: CarMarker
       Namespaces:
-        my_ns: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -58,13 +57,25 @@ Visualization Manager:
       Enabled: true
       Name: Track
       Namespaces:
-        my_ns: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /landmark_marker_array
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Midpoints
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /midpoint_markers
       Value: true
     - Alpha: 1
       Buffer Length: 1
@@ -92,6 +103,18 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /spline_path
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: LookAheadPoint
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /look_ahead_marker
       Value: true
   Enabled: true
   Global Options:
@@ -171,4 +194,4 @@ Window Geometry:
     collapsed: true
   Width: 1920
   X: 0
-  Y: 344
+  Y: 27

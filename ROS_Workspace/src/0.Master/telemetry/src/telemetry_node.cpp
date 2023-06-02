@@ -13,6 +13,7 @@
 #include "custom_msgs/msg/local_map_msg.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/waypoints_msg.hpp"
+#include "custom_msgs/msg/point2_struct.hpp"
 
 
 namespace ns_telemetry
@@ -22,14 +23,18 @@ private:
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr pose_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr map_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::WaypointsMsg>::SharedPtr waypoints_subscriber_;
+    rclcpp::Subscription<custom_msgs::msg::Point2Struct>::SharedPtr look_ahead_subscriber_;
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr landmark_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr car_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr midpoints_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr look_ahead_publisher_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr spline_publisher_;
 
     void pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg);
     void map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg);
     void waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg);
+    void look_ahead_callback(const custom_msgs::msg::Point2Struct::SharedPtr msg);
 
 public:
     Telemetry();
@@ -41,8 +46,11 @@ Telemetry::Telemetry() : Node("telemetry") {
     using std::placeholders::_1;
     // Set publishers
     landmark_publisher_ = create_publisher<visualization_msgs::msg::MarkerArray>("landmark_marker_array", 10);
-    marker_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+    car_publisher_ = create_publisher<visualization_msgs::msg::Marker>("car_pose_marker", 10);
+    midpoints_publisher_ = create_publisher<visualization_msgs::msg::Marker>("midpoint_markers", 10);
+    look_ahead_publisher_ = create_publisher<visualization_msgs::msg::Marker>("look_ahead_marker", 10);
     spline_publisher_ = create_publisher<nav_msgs::msg::Path>("spline_path", 10);
+
 
     rclcpp::CallbackGroup::SharedPtr callback_group{ create_callback_group(rclcpp::CallbackGroupType::Reentrant) };
     rclcpp::SubscriptionOptions options;
@@ -52,6 +60,7 @@ Telemetry::Telemetry() : Node("telemetry") {
     pose_subscriber_ = create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&Telemetry::pose_callback, this, _1), options);
     map_subscriber_ = create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&Telemetry::map_callback, this, _1), options);
     waypoints_subscriber_ = create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&Telemetry::waypoints_callback, this, _1), options);
+    look_ahead_subscriber_ = create_subscription<custom_msgs::msg::Point2Struct>("pp_target_point", 10, std::bind(&Telemetry::look_ahead_callback, this, _1), options);
 }
 
 Telemetry::~Telemetry() {}
@@ -86,7 +95,33 @@ void Telemetry::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg) {
     car_marker.color.b = 0.082;
     car_marker.color.a = 0.7;
 
-    marker_publisher_->publish(car_marker);
+    car_publisher_->publish(car_marker);
+}
+
+void Telemetry::look_ahead_callback(const custom_msgs::msg::Point2Struct::SharedPtr msg) {
+    visualization_msgs::msg::Marker look_ahead{};
+    look_ahead.header.frame_id = "map";
+    look_ahead.header.stamp = now();
+    look_ahead.ns = "my_ns";
+    look_ahead.id = 1;
+
+    look_ahead.type = visualization_msgs::msg::Marker::SPHERE;
+    look_ahead.action = visualization_msgs::msg::Marker::ADD;
+
+    look_ahead.pose.orientation.w = 1.0;
+    look_ahead.scale.x = 0.6;
+    look_ahead.scale.y = 0.6;
+    look_ahead.scale.z = 0.6;
+
+    look_ahead.color.r = 204.0 / 255.0;
+    look_ahead.color.g = 219.0 / 255.0;
+    look_ahead.color.b = 136.0 / 255.0;
+    look_ahead.color.a = 0.5;
+
+    look_ahead.pose.position.x = msg->y;
+    look_ahead.pose.position.y = msg->x;
+
+    look_ahead_publisher_->publish(look_ahead);
 }
 
 void Telemetry::map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
@@ -203,7 +238,7 @@ void Telemetry::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedP
         path.poses.push_back(pose);
     }
 
-    marker_publisher_->publish(points);
+    midpoints_publisher_->publish(points);
     spline_publisher_->publish(path);
 }
 } // ns_telemetry
