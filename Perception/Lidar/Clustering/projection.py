@@ -72,7 +72,7 @@ def cam_2_pixel(camera_str,cam_point):
     v = int(frv*(cam_point[1][0]/cam_point[2][0]) + cy)
     return np.array([u,v])
 
-clusters=pd.read_csv("DataKsi2/output_clustering.csv").to_numpy()
+clusters=pd.read_csv("DataError/output_clustering.csv").to_numpy()
 print(np.shape(clusters),type(clusters))
 for i in range(3):
     if(i==0):

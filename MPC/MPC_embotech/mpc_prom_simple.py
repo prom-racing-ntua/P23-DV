@@ -9,17 +9,31 @@ import forcespro.nlp
 import matplotlib.pyplot as plt
 import matplotlib.patches
 from matplotlib.gridspec import GridSpec
+from scipy.interpolate import CubicSpline
 import casadi
 
 #imports from path planning
 import numpy as np
 from scipy.linalg import solve_banded
 from scipy.sparse import diags
-import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from Trackdrive import cones_blue, cones_orange_big, cones_yellow
 
 #global params
+
+def arc_length_parameterization(x, y):
+    # Calculate the cumulative arc length
+    dx = np.diff(x)
+    dy = np.diff(y)
+    ds = np.sqrt(dx**2 + dy**2)
+    s = np.cumsum(ds)
+    global s_max
+    s_max = s[-1]
+    print(s_max)
+    # s /= s[-1]
+    s = np.insert(s,0,0)
+    print(s)
+    return s
 
 # set physical constants
 l_f = 0.9141
@@ -27,9 +41,12 @@ l_r = 0.7359
 CdA = 1.8 # for drag
 ClA = 5.47 # for downforce
 pair = 1.225
+mi_y_max=1.0
+u_upper=15.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
+ds_wanted=0.1
 eff=0.85
 window=10
 
@@ -39,10 +56,13 @@ C=1.456
 C_tire=0.66
 D= 1739.47
 cs=-16419.31
+dt_integration=0.025
 
 #compute l_a
 umin=4.0
 umax=7.0
+INDEX_MAX=310.0
+DINDEX_MAX=310.0
 
 #ellipse params
 a=1.46
@@ -98,11 +118,9 @@ def continuous_dynamics(x, u):
     Fdot= u[0]
     deltadot = u[1]
     dindexdot = u[2]
-
+    
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
-INDEX_MAX=3000
-DINDEX_MAX=40
 err_array=[]
 def obj(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -120,26 +138,28 @@ def obj(z,current_target):
     Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
     Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
     Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[6]**2)
+    print("Forces are: ",z[9]," ", Fry, " ",Frz)
 
     return (
-        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
-            + 1e2*(e_c)**2 # costs on deviating on the
+        2e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+           + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+            # + 1e-3*(e_c)**2 # costs on deviating on the
                                         #path in y-direction
-            + 1e2*(e_l)**2 # costs on deviating on the
-                                    #path in x-direction
+            # + 1e3*(e_l)**2 # costs on deviating on the
+                                #path in x-direction0.025
+            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            + 1e2*(z[6]-current_target[3])**2
             + 1e-3*z[0]**2 # penalty on input F,dF
             + 1e-3*z[9]**2
-            + 1e4*z[1]**2 #penalty on delta,ddelta
-            + 1e4*z[10]**2
-            + 5e-1*(z[5]-current_target[2])**2 #dphi gap
-            + 5e0*(sar**2)
-            + 5e0*(dsa**2)
-            + 5e0*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
-            + 2e1*((1/(z[6]**2 +1e-3))) #vx and index
-            - 1e-1*(z[6])
-            - 1e1*(z[11]/INDEX_MAX)
-            - 1e1*(z[2]/DINDEX_MAX))
+            + 1e3*z[1]**2 #penalty on delta,ddelta
+            + 1e3*z[10]**2
+            + 1e-3*(sar**2)
+            + 1e-3*(dsa**2)
+            + 1e-3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 1e-3*((1/(z[6]**2 +1e-3))) #vx and index
+            - 1e-3*(z[6])
+            - 1e-3*(z[11]/INDEX_MAX)
+            - 1e-1*(z[2]/INDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -157,14 +177,6 @@ def constr(z,current_target):
     constr3 = saf
     return (constr1,constr2,constr3) 
 
-def calc_points_on_ellipse(num_points):
-    """Desired trajectory on ellipoid represented by 2D points"""
-    dT = 2 * np.pi / num_points
-    t = np.arange(dT,(num_points+1)*dT,dT)
-    path_points = np.array([0.5*np.cos(t),
-                    2.0*np.sin(t)])
-    return path_points
-
 def find_closest_point(points, ref_point):
     """Find the index of the closest point in points from the current car position
     points = array of points on path
@@ -175,7 +187,6 @@ def find_closest_point(points, ref_point):
     diff = np.transpose(diff)
     squared_diff = np.power(diff,2)
     squared_dist = squared_diff[0,:] + squared_diff[1,:]
-    print("idx_before is : ",np.argmin(squared_dist))
     return np.argmin(squared_dist)
 
 def find_closest_point_vertical(data, ref_point):
@@ -192,6 +203,9 @@ def find_closest_point_vertical(data, ref_point):
     part_x = diff_x*np.sin(data[2,:])
     part_y = diff_y*np.cos(data[2,:])
     dist_final = np.abs(part_x - part_y)
+    dist_final_no_abs = part_x - part_y
+    print("vertical distance array is ", dist_final, " ",dist_final_no_abs)
+    dist_final = dist_final_no_abs #remove absolute value
     # num_points = points.shape[1]
     # diff = np.transpose(points) - ref_point
     # diff = np.transpose(diff)
@@ -212,38 +226,24 @@ def extract_next_path_points(data_points, pos, N):
     path_points = np.tile(path_points,(1,int(num_ellipses)))
     return data_points[:,idx+1:idx+N+1]
 
-def extract_next_path_points_official(data_points, pos, N):
+def generate_closest_s(reference_track, pos,emergency_bool):
     """Extract the next N points on the path for the next N stages starting from 
     the current car position pos
     """
-    path_points=data_points[:2,:] #keep only X,Y coords
-    # idx = find_closest_point(path_points,pos) 
-    idx0 = find_closest_point(path_points,pos)
-    print("idx euclidian is: ",idx0)
-    print("eucledian closest point is: ",path_points[:,idx0])
-    if(idx0<2*window):
-        idx_ver = find_closest_point_vertical(data_points[:,0:2*window],pos)
-        idx = idx_ver 
+    path_points=reference_track[:2,:]
+    if(emergency_bool):
+        idx = find_closest_point(path_points,pos) 
     else:
-        idx_ver = find_closest_point_vertical(data_points[:,idx0-window:idx0+window],pos)
-        idx = idx0 + (idx_ver-window)
-    print("idx_ver is: ",idx_ver)
-    print("idx final is: ", idx)
-    num_points = path_points.shape[1]
-    num_ellipses = np.ceil((idx+N+1)/num_points)
-    path_points = np.tile(path_points,(1,int(num_ellipses)))
-    return data_points[:,idx+1:idx+N+1]
-
-def extract_next_path_points_new(data_points, pos, N,idx):
-    """Extract the next N points on the path for the next N stages starting from 
-    the current car position pos
-    """
-    path_points=data_points[:2,:] #keep only X,Y coords
-    num_points = path_points.shape[1]
-    num_ellipses = np.ceil((idx+N+1)/num_points)
-    path_points = np.tile(path_points,(1,int(num_ellipses)))
-    return data_points[:,idx+1:idx+N+1]
-
+        idx = find_closest_point(path_points,pos) + int((1/ds_wanted))
+    # idx0 = find_closest_point(path_points,pos)
+    print("final(=euclidean) closest point is: ",path_points[:,idx]," ",idx)
+    # if(idx0<2*window):
+    #     idx_ver = find_closest_point_vertical(reference_track[:,0:2*window],pos)
+    #     idx = idx_ver 
+    # else:
+    #     idx_ver = find_closest_point_vertical(reference_track[:,idx0-window:idx0+window],pos)
+    #     idx = idx0 + (idx_ver-window)
+    return (idx/(np.shape(reference_track)[1]))*INDEX_MAX, idx
 
 def generate_pathplanner():
     """Generates and returns a FORCESPRO solver that calculates a path based on
@@ -268,7 +268,7 @@ def generate_pathplanner():
     # available.
 
     # We use an explicit RK4 integrator here to discretize continuous dynamics
-    integrator_stepsize = 0.05
+    integrator_stepsize = dt_integration
     model.eq = lambda z: forcespro.nlp.integrate(continuous_dynamics, z[num_ins:model.nvar], z[0:num_ins],
                                                 integrator=forcespro.nlp.integrators.RK4,
                                                 stepsize=integrator_stepsize)
@@ -279,15 +279,15 @@ def generate_pathplanner():
 
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
-    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 1.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), model.N, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX])
+    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*10])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
-    model.hu = np.array([+np.inf,+1.0,np.inf])
+    model.hu = np.array([+np.inf,1.0,np.inf])
     model.hl = np.array([-np.inf,-np.inf,-np.inf])
     #track - tyres - sa
-    # model.hu = np.array([2.0,1.0,0.15])
+    # model.hu = np.array([2.0,1.0,0.15])p.
     # model.hl = np.array([-np.inf,-np.inf,-0.15])
 
     # Initial condition on vehicle states x
@@ -305,12 +305,13 @@ def generate_pathplanner():
     #                             2 optimize for speed, 3 optimize for size & speed
     codeoptions.cleanup = False
     codeoptions.timing = 1
+    codeoptions.mip.inttol = 0.1
     # codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
-    codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
-    codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
+    codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
+    codeoptions.sqp_nlp.maxqps = 1   # maximum number of quadratic problems to be solved
+    codeoptions.sqp_nlp.reg_hessian = 1e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
     codeoptions.server = 'https://forces.embotech.com'
@@ -467,7 +468,50 @@ def createPlot(x,u,start_pred,sim_length,model,path_points,xinit,cones_yellow,co
 
     # Make plot fullscreen. Comment out if platform dependent errors occur.
     mng = plt.get_current_fig_manager()
+    
+def cubic_spline_generation(x, y):
+    dx = np.diff(x)
+    dy = np.diff(y)
+    ds = np.sqrt(dx**2 + dy**2)
+    s = np.cumsum(ds)
+    num_points = int(s[-1]/ds_wanted)
+    s = arc_length_parameterization(x, y)
+    t = np.linspace(0,s_max,num_points)
+    cs = CubicSpline(s, np.column_stack((x, y)), axis=0,bc_type='natural')
+    interpolated_points = cs(t).T
+    dy = cs.derivative(1)(t)[:,1]
+    dx = cs.derivative(1)(t)[:,0]
+    ddy = cs.derivative(2)(t)[:,1]
+    ddx = cs.derivative(2)(t)[:,0]
+    # Compute curvature, heading_angle and u_ref
+    local_angle = np.arctan2(dy, dx)
+    curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
+    interpolated_points = np.vstack([interpolated_points,local_angle,curvature])
+    return cs, interpolated_points
 
+def cubic_spline_inference(cs,parameter):
+    parameter_array=[]
+    for i in range(np.shape(parameter)[0]):
+        interpolated_points = cs(parameter[i])
+        # Compute derivatives
+        dx = cs.derivative(1)(parameter)[i,0]
+        ddx = cs.derivative(2)(parameter)[i,0]
+        dy = cs.derivative(1)(parameter)[i,1]
+        ddy = cs.derivative(2)(parameter)[i,1]
+        # Compute curvature, heading_angle and u_ref
+        local_angle = np.arctan2(dy, dx)
+        curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
+        u_ref=np.sqrt((mi_y_max*g/curvature))
+        print("uref is:",u_ref)
+        if(u_ref>u_upper): u_ref=u_upper
+        parameter_array.append([interpolated_points[0]])
+        parameter_array.append([interpolated_points[1]])
+        parameter_array.append([local_angle])
+        # parameter_array.append([curvature])
+        parameter_array.append([u_ref])
+        # parameter_array.append([u_ref])
+    # print(np.shape(parameter_array))
+    return parameter_array
 
 def main():
     #import data from path planning
@@ -476,15 +520,17 @@ def main():
     fig.set_size_inches(13,9)
     #from C++ path planning
     data_points=Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
-    
-    print("c++ data are: ",data_points, np.shape(data_points))
-    print()
+    midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
+    print(np.shape(1))
+    cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
+    print("reference track: ",reference_track, np.shape(reference_track))
+    for_mpc = cubic_spline_inference(cs,[0.0,0.0])
     # generate code for estimator
     model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
     
     # Simulation
-    sim_length = 1000 # simulate 8sec
+    sim_length = 5000 # simulate sim_length*0.05
 
     # Variables for storing simulation data
     x = np.zeros((model.neq,sim_length+1))  # states
@@ -496,9 +542,9 @@ def main():
     print("shape x0: ",np.shape(x0))
     # Set initial condition
     #  x    y     theta    vx   vy  r F delta
-    vx0 = 0.5
-    Frx0 = 300.0
-    xinit = np.transpose(np.array([data_points[0][0], data_points[1][0],data_points[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
+    vx0 = 0.1
+    Frx0 = 300
+    xinit = np.transpose(np.array([reference_track[0][0], reference_track[1][0],reference_track[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
     print("xinit is: ",xinit)
     x[:,0] = xinit
 
@@ -508,7 +554,7 @@ def main():
     start_pred = np.reshape(problem["x0"],(model.nvar,model.N)) # first prdicition corresponds to initial guess
 
     # generate plot with initial values
-    createPlot(x,u,start_pred,sim_length,model,data_points[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
+    createPlot(x,u,start_pred,sim_length,model,reference_track[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
     wheel_torques_txt=[]
     steering_txt=[]
     time_array=[]
@@ -521,39 +567,69 @@ def main():
         print("shape x0: ",np.shape(x0))
         # Set initial condition
         problem["xinit"] = x[:,k]
+        parameters_array = []
+        parameters_array_temp = []
         print("x_init is:",problem["xinit"],problem["xinit"][8])
-        if(k>0):
-            where_i_am = extract_next_path_points_official(data_points, x[0:num_ins-1,k], model.N)
-            # print("where i am is:",where_i_am,np.shape(where_i_am))
-            err_1= np.abs(np.sin(where_i_am[2][0])*(problem["xinit"][0]-where_i_am[0][0]) - np.cos(where_i_am[2][0])*(problem["xinit"][1]-where_i_am[1][0])) #katakorifi
-            err_2 = np.sqrt((problem["xinit"][0] - where_i_am[0][0])**2 + (problem["xinit"][1] - where_i_am[1][0])**2)
-            err_array.append(err_1)
-            print("errors are:", err_1," ",err_2," ",np.max(err_array)," ",np.mean(err_array))
-            # print("error array is:",err_array," ",np.max(err_array)," ",np.mean(err_array))
-        # Set runtime parameters (here, the next N points on the path)
-        if(err_1 < 0.9):
-            emergency_bool=0
-            next_data_points = extract_next_path_points_new(data_points, x[0:num_ins-1,k], model.N, int(problem["xinit"][8]))
-            # next_data_points = extract_next_path_points(data_points, x[0:num_ins-1,k], model.N)
-        else:
-            print("mpika emergency!!!")
-            emergency_count+=1
-            emergency_bool=1
-            # next_data_points = extract_next_path_points_new(data_points, x[0:num_ins-1,k], model.N, int(problem["xinit"][8]))
-            next_data_points = extract_next_path_points_official(data_points, x[0:num_ins-1,k], model.N)
-        # print("next N path points are: ",next_data_points,np.shape(next_data_points),type(next_data_points))
-        problem["all_parameters"] = np.reshape(np.transpose(next_data_points), \
-            (model.npar*model.N,1))
-        # print("all_parameters are: ",problem["all_parameters"], np.shape(problem["all_parameters"]),type(problem["all_parameters"]))
-
-        # Time to solve the NLP!
         print("Im at: ", problem["xinit"][0], problem["xinit"][1])
-        print("Im trying to follow are at: ",data_points[0, int(problem["xinit"][8])], data_points[1, int(problem["xinit"][8])])
+        if(k==0):
+            s_start=0.0
+            next_data_points = reference_track[:,1:model.N+1]
+            problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
         if(k>0):
-            print("Closest point to me is: ",where_i_am[0][0],where_i_am[1][0])
-        print("mpika emergency is: ",emergency_bool)
+            s_start = problem["xinit"][8]
+            if(s_start>309.90): s_start=0.0
+            splines_loc = cubic_spline_inference(cs,[s_start,s_start])
+            print("splines_loc is:",splines_loc[0][0]," ", splines_loc[1][0], " ",s_start)
+            s_closest, _ = generate_closest_s(reference_track, x[0:num_ins-1,k],0)
+            closest_loc = cubic_spline_inference(cs,[s_closest,s_closest])
+            print("closest loc is:",closest_loc[0][0]," ", closest_loc[1][0], " ",s_closest)
+            # print("where i am is:",where_i_am,np.shape(where_i_am))
+            err_1= np.abs(np.sin(closest_loc[2][0])*(problem["xinit"][0]-closest_loc[0][0]) - np.cos(closest_loc[2][0])*(problem["xinit"][1]-closest_loc[1][0])) #katakorifi
+            err_2 = np.sqrt((problem["xinit"][0] - closest_loc[0][0])**2 + (problem["xinit"][1] - closest_loc[1][0])**2)
+            err_array.append(err_1)
+            print("errors from closest are are:", err_1," ",err_2," ",np.max(err_array)," ",np.mean(err_array))
+            if(err_1 < 0.9):
+                print("no emergency!")
+                emergency_bool=0
+                parameters_array = [s_closest]
+                parameters_array_temp = [s_closest]
+                s_new=s_closest
+                if(s_closest>309.990): s_closest = 0.0 #reset index for next lap
+                for i in range (model.N-1):
+                    ds_step=pred_u[2,i]*dt_integration
+                    if(ds_step<0.1):
+                        ds_step=0.1
+                    if((ds_step>0.5) and (i<4)): 
+                        ds_step=0.5
+                        print("mpika ds1 at index: ",i)
+                    if((ds_step>0.5) and (i>=5)): 
+                        ds_step=0.5
+                        print("mpika ds2 at index: ",i)
+                    # ds_step=0.25 #constant with vel.profile 
+                    s_new+=ds_step
+                    s_solver=pred_x[8,i] 
+                    parameters_array.append(s_new)
+                    parameters_array_temp.append(s_solver)
+                    next_data_points = cubic_spline_inference(cs,np.array(parameters_array))
+                    problem["all_parameters"] = next_data_points
+                print("parameters array with s(not_used) is: ",parameters_array_temp,np.shape(parameters_array_temp))
+                print("parameters array with ds(used) is: ",parameters_array,np.shape(parameters_array))
+            else:
+                print("mpika emergency!!!")
+                emergency_count+=1
+                emergency_bool=1
+                s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool)
+                next_data_points = reference_track[:,idx_start:idx_start+model.N]
+                problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
+            print("ds array is: ",pred_u[2,:])
+            print("s_array is: ",pred_x[8,:])
+            print("min,max and mean ds values, ",np.min(pred_u[2,:model.N])," ",np.max(pred_u[2,:model.N])," ",np.mean(pred_u[2,:model.N]))
+        # print("final parameters are: ", problem["all_parameters"],np.shape(problem["all_parameters"]))
+        # Time to solve the NLP!
+        # print("Im trying to follow are at: ",data_points[0, int(problem["xinit"][8])], data_points[1, int(problem["xinit"][8])])
         print("First param for MPC is : ",problem["all_parameters"][0],problem["all_parameters"][1])
-        print("dr between me and params is: ", np.sqrt((problem["xinit"][0]-problem["all_parameters"][0][0])**2 + (problem["xinit"][1]-problem["all_parameters"][1][0])**2))
+        print("Second param for MPC is : ",problem["all_parameters"][4],problem["all_parameters"][5])
+        # print("dr between me and params is: ", np.sqrt((problem["xinit"][0]-problem["all_parameters"][0][0])**2 + (problem["xinit"][1]-problem["all_parameters"][1][0])**2))
         output, exitflag, info = solver.solve(problem)
 
         # Make sure the solver has exited properly.
@@ -569,13 +645,13 @@ def main():
             temp[:, i] = output['x{0:02d}'.format(i+1)]
         pred_u = temp[0:num_ins, :]
         pred_x = temp[num_ins:model.nvar, :]
-
         # Apply optimized input u of first stJa suspended from all team activities pending league review after he allegedly flashed a gun on Instagram Liveage to system and save simulation data
         # u[:,k] = pred_u[:,0]
         u[:,k] = pred_u[:,1]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
         print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
+        print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))
         print("i have used emergency manouvre: ",emergency_count," times")
         wheel_torques_txt.append(x[:,k][6]*0.2)
         steering_txt.append(x[:,k][7])
@@ -587,7 +663,7 @@ def main():
             file2 = open("P23-DV/MPC/MPC_embotech/Data/torques.txt", "w+")
             file2.write(str(wheel_torques_txt))
             file2.close()
-        if(k%10==0):
+        if(k%20==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  
             if k == sim_length-1:
                 fig=plt.gcf()

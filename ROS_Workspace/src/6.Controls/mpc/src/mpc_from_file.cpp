@@ -31,7 +31,6 @@ class MpcFromFile : public rclcpp::Node {
       std::cout << "Spline coordinates: " << spline.getPoint(0.67) << '\n';
       std::cout << "Spline curvature: " << spline.getCurvature(0.67) << '\n';
       std::cout << "Spline tangent: " << spline.getTangent(0.67) << "\n\n";
-
         if(global_int==0){
             readData();  //various needed initalizations before first run
             Initialize_all();
@@ -52,7 +51,7 @@ class MpcFromFile : public rclcpp::Node {
         }
         //dF ddelta dindex
         for(int k = 0; k<3; k++){
-            U[k]=output.x02[k];
+            U[k]=output.x01[k];
         }
         std::cout << "U array is: " << U[0] << " " << U[1] << " " << U[2] << std::endl;
         Integrator();

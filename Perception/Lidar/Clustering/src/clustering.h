@@ -62,6 +62,7 @@ int clusterMax;
 double clusterTol;
 double thres;
 double hc;
+std::string path1,path2;
 double wc;
 float a,b,c,d;
 
@@ -100,7 +101,10 @@ float a,b,c,d;
 
 void loadParams() {
     std::ifstream ifs("../config/params.json");
-    nlohmann::json config = nlohmann::json::parse(ifs);
+    nlohmann::json config; 
+    ifs >> config;
+    
+    // = nlohmann::json::parse(ifs);
 
     minX = config["minX"];
     maxX = config["maxX"];
@@ -110,6 +114,8 @@ void loadParams() {
 
     minZ = config["minZ"];
     maxZ = config["maxZ"];
+    path1 = config["path_1"];
+    path2 = config["path_2"]; 
 
     maxIterations=config["MaxIterations"];
     DistanceThreshold=config["DistanceThreshold"];
@@ -249,7 +255,7 @@ void CsvToPcd(std::vector<PointT> input_){
         cloud_temp->points[i] = input_[i];
     }
     //write to point cloud
-    pcl::io::savePCDFileBinary("../DataKsi2/pcd/cloud_cluster_init.pcd", *cloud_temp);
+    pcl::io::savePCDFileBinary("../DataError/pcd/cloud_cluster_init.pcd", *cloud_temp);
     std::cout << "Saved " << cloud_temp->size() << " data points to file: " << "cloud_cluster_init.pcd" << std::endl;
 }
 }//end namespace

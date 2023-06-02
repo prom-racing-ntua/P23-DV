@@ -59,10 +59,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PoseMsg.msg"
   "msg/WaypointsMsg.msg"
 
-  # MPC related Messages
-  "msg/VelocityToMpc.msg"
-  "msg/MpcToCan.msg"
-
   # Services
   "srv/GetFrequencies.srv"
   "srv/DriverlessStatus.srv"

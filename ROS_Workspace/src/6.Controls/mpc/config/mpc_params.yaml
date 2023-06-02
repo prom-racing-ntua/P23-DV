@@ -1,0 +1,13 @@
+mpc_node:
+  ros__parameters:
+    known_track: true
+    simulation: true
+    midpoints_txt: "src/6.Controls/mpc/data/trackdrive_midpoints.txt"
+    node_freq: 40
+    search_window: 10
+    s_interval: 0.1
+    distance_safe: 0.95
+    emergency_forward: 1.0
+    lookahead: 40
+    F_init: 300.0
+    v_limit: 15.0

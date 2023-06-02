@@ -6,16 +6,16 @@ using namespace clustering;
 int main () {
     // pcl::uindex_t index = 0;
     std::cout << "pcl version is: " <<PCL_VERSION << std::endl; 
-    
-    pcd_csv=reader_csv("../DataKsi2/lidar/datastatic_lidar.csv");
+    loadParams();
+    std::cout << "for_pcd_csv is: " << path1 << std::endl;
+    pcd_csv=reader_csv(path1);
     std::cout << "read csv" << std::endl; 
 
-    loadParams();
     std::cout << "loaded params" << std::endl; 
     CsvToPcd(pcd_csv);
 
      pcl::PCDReader reader;
-     reader.read ("../DataKsi2/pcd/cloud_cluster_init.pcd", *cloud_init);
+     reader.read ("../DataError/pcd/cloud_cluster_init.pcd", *cloud_init);
      std::cout << "PointCloud before filtering has: " << cloud_init->size () << " data points." << std::endl; 
 
     // crop box filtering
@@ -24,7 +24,7 @@ int main () {
      end1 = clock();
      pcl::PCDWriter writer;
      std::cout << "PointCloud after crop box filtering has: " << cloud_box_out->size ()  << " data points." << std::endl; //*
-     writer.write<pcl::PointXYZ> ("../DataKsi2/pcd/cloud_cluster_box.pcd", *cloud_box_out, false); //*
+     writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_box.pcd", *cloud_box_out, false); //*
 
      //segmentation
      start2=clock();
@@ -32,7 +32,7 @@ int main () {
      end2=clock();
      std::cout << "coeffs of planar are: " << a << " " << b  << " " << c << " " << d << std::endl;
      std::cout << "PointCloud after segmentation has: " << cloud_segm_out->size ()  << " data points." << std::endl;
-     writer.write<pcl::PointXYZ> ("../DataKsi2/pcd/cloud_cluster_segm.pcd", *cloud_segm_out, false); //*
+     writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_segm.pcd", *cloud_segm_out, false); //*
 
      //clustering
      start3 = clock();
@@ -42,8 +42,9 @@ int main () {
      cloud_final = c_o.cl;
      end3 = clock(); 
      
-     ofstream outputFile("../DataKsi2/output_clustering.csv");
-     outputFile << "X,Y,Z\n";
+     std::cout << "for output path is: " << path2 << std::endl;
+     ofstream outputFile(path2);
+     outputFile << "X,Y,Z,r3d,r2d,theta\n";
     
      for (const auto& cluster : cluster_indices) {
        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster_temp (new pcl::PointCloud<pcl::PointXYZ>); 
@@ -79,11 +80,12 @@ int main () {
               }
           }
           outputFile << "--,cluster"<<cluster_count<<",--\n";
-          outputFile << centre.x << "," << centre.y << "," << centre.z << "\n";
-          outputFile << minX.x << "," << minX.y << "," << minX.z << "\n";
-          outputFile << maxX.x << "," << maxX.y << "," << maxX.z << "\n";
-          outputFile << minZ.x << "," << minZ.y << "," << minZ.z << "\n";
-          outputFile << maxZ.x << "," << maxZ.y << "," << maxZ.z << "\n";
+
+          outputFile << centre.x << "," << centre.y << "," << centre.z << "," << std::sqrt(std::pow(centre.x,2) + std::pow(centre.y,2) + std::pow(centre.z,2)) << "," << std::sqrt(std::pow(centre.x,2) + std::pow(centre.y,2)) <<"," << std::atan2(-centre.x,-centre.y) <<"\n";
+          // outputFile << minX.x << "," << minX.y << "," << minX.z << "\n";
+          // outputFile << maxX.x << "," << maxX.y << "," << maxX.z << "\n";
+          // outputFile << minZ.x << "," << minZ.y << "," << minZ.z << "\n";
+          // outputFile << maxZ.x << "," << maxZ.y << "," << maxZ.z << "\n";
           for (const auto& idx : cluster.indices)
             cloud_cluster->push_back((*cloud_final)[idx]); //for visualization
           std::cout << "centre of cluster is: " << centre.x << "," << centre.y << "," << centre.z << std::endl;
@@ -119,6 +121,6 @@ int main () {
     std::cout << "Number of clusters: " << cluster_count << std::endl;
     // std::stringstream ss;
     // ss << std::setw(4) << std::setfill('0') << j;
-    writer.write<pcl::PointXYZ> ("../DataKsi2/pcd/cloud_cluster_final.pcd", *cloud_cluster, false); //*
+    writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_final.pcd", *cloud_cluster, false); //*
     return (0);
 }

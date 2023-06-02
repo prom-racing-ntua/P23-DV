@@ -37,37 +37,54 @@ include_directories(
     ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_executable(mpc_from_file_exe src/mpc_from_file.cpp 
-include/mpc_from_file.h
-src/cubic_spline.cpp
-src/FORCESNLPsolver/FORCESNLPsolver_model.c
-src/FORCESNLPsolver/FORCESNLPsolver_model.h
-src/FORCESNLPsolver/FORCESNLPsolver_interface.c
-src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
-src/FORCESNLPsolver/include/FORCESNLPsolver.h)
-ament_target_dependencies(mpc_from_file_exe rclcpp std_msgs custom_msgs)
-target_link_libraries(mpc_from_file_exe ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+# add_executable(
+# ${PROJECT_NAME} src/mpc_from_file.cpp 
+# include/mpc_from_file.h
+# src/cubic_spline.cpp
+# src/FORCESNLPsolver/FORCESNLPsolver_model.c
+# src/FORCESNLPsolver/FORCESNLPsolver_model.h
+# src/FORCESNLPsolver/FORCESNLPsolver_interface.c
+# src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
+# src/FORCESNLPsolver/include/FORCESNLPsolver.h)
+# ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
+# target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
 
-add_executable(${PROJECT_NAME} src/mpc_node.cpp 
-include/mpc_node.h
+add_executable(${PROJECT_NAME} src/mpc_node_official.cpp 
+src/mpc_solver.cpp
 src/cubic_spline.cpp
 src/FORCESNLPsolver/FORCESNLPsolver_model.c
 src/FORCESNLPsolver/FORCESNLPsolver_model.h
 src/FORCESNLPsolver/FORCESNLPsolver_interface.c
 src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
-src/FORCESNLPsolver/include/FORCESNLPsolver.h)
+src/FORCESNLPsolver/include/FORCESNLPsolver.h
+# src/mpc_node_official.h
+)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+
+# add_executable(
+# mpc_name src/mpc_node_official.cpp 
+# include/mpc_node_official.hpp
+# mpc_name src/mpc_solver.cpp 
+# include/mpc_solver.hpp
+# src/cubic_spline.cpp
+# src/FORCESNLPsolver/FORCESNLPsolver_model.c
+# src/FORCESNLPsolver/FORCESNLPsolver_model.h
+# src/FORCESNLPsolver/FORCESNLPsolver_interface.c
+# src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
+# src/FORCESNLPsolver/include/FORCESNLPsolver.h)
+# ament_target_dependencies(mpc_name rclcpp std_msgs custom_msgs)
+# target_link_libraries(mpc_name ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
 
 
 install(TARGETS
   ${PROJECT_NAME}
-  mpc_from_file_exe
+  # mpc_name
+  # mpc_from_file_exe
   DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}/
+install(DIRECTORY config launch
+DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)

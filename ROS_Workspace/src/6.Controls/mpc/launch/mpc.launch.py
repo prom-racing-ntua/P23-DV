@@ -13,8 +13,8 @@ def generate_launch_description():
         name="mpc_node",
         executable="mpc",
         output="screen",
-        emulate_tty=True
-        # ,parameters=[os.path.join(mpc_dir, "config", "parameters.yaml")]
+        emulate_tty=True,
+        parameters=[os.path.join(mpc_dir, "config", "mpc_params.yaml")]
     )
 
     ld.add_action(mpc_node)

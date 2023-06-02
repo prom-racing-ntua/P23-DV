@@ -225,6 +225,7 @@ PointsData CubicSpline::getSplineData(const long int resolution) {
     return spline_data;
 }
 
+
 double CubicSpline::getCurvature(double parameter) {
     Point first_der{ getFirstDerivative(parameter) };
     Point second_der{ getSecondDerivative(parameter) };
@@ -233,6 +234,19 @@ double CubicSpline::getCurvature(double parameter) {
         (first_der(0) * second_der(1) - first_der(1) * second_der(0)) / (std::pow(std::pow(first_der(0), 2) + std::pow(first_der(1), 2), 3.0 / 2.0))
     };
     return curvature;
+}
+
+double CubicSpline::getVelocity(double parameter,double a,double v_limit_) {
+    Point first_der{ getFirstDerivative(parameter) };
+    Point second_der{ getSecondDerivative(parameter) };
+    // Should probably be checked again if it is correct
+    double curvature{
+        (first_der(0) * second_der(1) - first_der(1) * second_der(0)) / (std::pow(std::pow(first_der(0), 2) + std::pow(first_der(1), 2), 3.0 / 2.0))
+    };
+    if(curvature<0.01) curvature=0.01;
+    double velocity = std::sqrt(a*9.81/curvature); 
+    if(velocity>v_limit_) velocity=v_limit_;
+    return velocity;
 }
 
 double CubicSpline::getTangent(double parameter) {

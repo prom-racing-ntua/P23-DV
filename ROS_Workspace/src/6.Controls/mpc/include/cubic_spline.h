@@ -13,7 +13,6 @@ namespace path_planning
 using PointsArray = Eigen::MatrixX2d;
 using PointsData = Eigen::MatrixX4d;
 using Point = Eigen::RowVector2d;
-
 // All boundary conditions that have been implemented for the cubic spline
 enum BoundaryCondition {
     NaturalSpline,
@@ -27,6 +26,13 @@ enum BoundaryCondition {
 struct LocalSplineIndex {
     int spline_segment;
     double local_parameter;
+};
+
+struct PointsParameter{
+    double X;
+    double Y;
+    double tangent;
+    double curvature;
 };
 
 class CubicSpline {
@@ -98,6 +104,7 @@ public:
     Point getPoint(double parameter);
     // Returns the spline curvature at the point represented by the given parameter
     double getCurvature(double parameter);
+    double getVelocity(double parameter,double a,double v_limit_);
     // Returns the spline tangent angle in radians at the point represented by the given parameter
     double getTangent(double parameter);
     // Only returns the calculated second derivatives at the interpolated points
