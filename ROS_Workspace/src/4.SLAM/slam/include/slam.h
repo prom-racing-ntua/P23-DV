@@ -49,7 +49,7 @@ namespace ns_slam
  * Inherits from the NoiseModelFactor1 class of gtsam.
  * For more info see here: https://gtsam.org/doxygen/a04452.html#a85c649f81b216f5b5d7e321febc7762c
  */
-class UnaryFactor: public gtsam::NoiseModelFactor1<gtsam::Pose2> {
+class UnaryFactor : public gtsam::NoiseModelFactor1<gtsam::Pose2> {
 	// Measured cone range and angle with respect to the car derived from perception observations
 	double measured_range;
 	double measured_angle;
@@ -105,6 +105,8 @@ private:
 
 	// Distance above which it is considered to be a different cone
 	double association_distance_threshold_;
+	// Minimum amount of landmark observations before it becomes verified
+	int min_observations_;
 	// Time quantum
 	double delta_time_;
 	// Total confirmed cone count

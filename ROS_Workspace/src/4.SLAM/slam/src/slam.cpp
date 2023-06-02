@@ -52,6 +52,7 @@ GraphSLAM::~GraphSLAM() {
 
 void GraphSLAM::init() {
 	association_distance_threshold_ = node_handler_->get_parameter("association_threshold").as_double();
+	min_observations_ = node_handler_->get_parameter("min_observations").as_int();
 
 	// Initialize iSAM2 with specified parameters
 	gtsam::ISAM2Params parameters;
@@ -213,7 +214,7 @@ void GraphSLAM::addLandmarkMeasurementSLAM(const unsigned long global_index, std
 
 		// Check how many times the landmark has been observed before
 		best_match->times_observed++;
-		if (best_match->times_observed > 3) { best_match->is_verified = true; }
+		if (best_match->times_observed >= min_observations_) { best_match->is_verified = true; }
 
 		// Construct the current landmark observation Factor and add it to the temporary variable
 		gtsam::noiseModel::Gaussian::shared_ptr noise_model {

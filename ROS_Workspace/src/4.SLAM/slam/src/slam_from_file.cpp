@@ -152,6 +152,11 @@ void SlamFromFile::run_slam() {
 		map_msg.pose.position.x = current_pose[0];
 		map_msg.pose.position.y = current_pose[1];
 		map_msg.pose.theta = current_pose[2];
+		map_msg.pose.velocity_state.global_index = global_index_;
+		map_msg.pose.velocity_state.velocity_x = odometry_.velocity_x;
+		map_msg.pose.velocity_state.velocity_y = odometry_.velocity_y;
+		map_msg.pose.velocity_state.yaw_rate = odometry_.yaw_rate;
+		for (int i{ 0 }; i < 9;i++) { map_msg.pose.velocity_state.variance_matrix[i] = odometry_.covariance_matrix(i / 3, i % 3); }
 
 		if (track.empty())
 		{
@@ -312,6 +317,7 @@ void SlamFromFile::loadParameters() {
 	optimization_interval_ = declare_parameter<int>("optimization_interval", 50);
 
 	declare_parameter<double>("association_threshold", 1.0);
+	declare_parameter<int>("min_observations", 3);
 
 	declare_parameter<double>("relinearize_threshold", 0.1);
 	declare_parameter<int>("relinearize_skip", 10);

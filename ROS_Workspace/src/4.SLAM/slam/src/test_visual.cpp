@@ -11,10 +11,10 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 
-class Visualization: public rclcpp::Node {
+class Visualization : public rclcpp::Node {
 private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr track_pub_;
@@ -131,7 +131,7 @@ private:
         }
     }
 public:
-    explicit Visualization(): Node("slam_visual") {
+    explicit Visualization() : Node("slam_visual") {
         double fps{ 10 };
 
         share_dir_ = ament_index_cpp::get_package_share_directory("slam_visual");

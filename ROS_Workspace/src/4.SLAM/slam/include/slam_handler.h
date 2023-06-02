@@ -16,7 +16,7 @@
 #include "custom_msgs/srv/get_frequencies.hpp"
 
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include "slam_common.h"
 #include "slam.h"
@@ -51,6 +51,9 @@ private:
     int completed_laps_;
     int cooldown_;
     int cooldown_max_;
+
+    // Last velocity msg received
+    custom_msgs::msg::VelEstimation last_vel_msg_;
 
     // Global lock for SLAM node
     pthread_spinlock_t global_lock_;

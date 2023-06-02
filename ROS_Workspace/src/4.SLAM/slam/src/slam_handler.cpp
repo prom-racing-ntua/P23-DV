@@ -110,12 +110,14 @@ void SlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::Shared
         cooldown_--;
     }
 
+    last_vel_msg_ = *msg;
+
     // Publish pose message
     custom_msgs::msg::PoseMsg pose_msg{};
     pose_msg.position.x = current_pose[0];
     pose_msg.position.y = current_pose[1];
     pose_msg.theta = current_pose[2];
-    pose_msg.velocity_state = *msg;
+    pose_msg.velocity_state = last_vel_msg_;
     pose_publisher_->publish(pose_msg);
 
     // Keep odometry log
@@ -227,6 +229,7 @@ void SlamHandler::optimizationCallback() {
         map_msg.pose.position.x = current_pose[0];
         map_msg.pose.position.y = current_pose[1];
         map_msg.pose.theta = current_pose[2];
+        map_msg.pose.velocity_state = last_vel_msg_;
 
         if (completed_laps_ < 0) { map_msg.lap_count = 0; }
         else { map_msg.lap_count = completed_laps_; }
@@ -257,6 +260,7 @@ void SlamHandler::loadParameters() {
     optimization_interval_ = declare_parameter<int>("optimization_interval", 20);
 
     declare_parameter<double>("association_threshold", 1.9);
+    declare_parameter<int>("min_observations", 3);
 
     declare_parameter<double>("relinearize_threshold", 0.1);
     declare_parameter<int>("relinearize_skip", 1);

@@ -17,5 +17,16 @@ def generate_launch_description():
         parameters=[os.path.join(slam_dir, "config", "from_file_params.yaml")]
     )
 
+    path_planning_dir = get_package_share_directory("path_planner")
+    path_planning_node = Node(
+        package="path_planner",
+        name="path_planner",
+        executable="path_planner",
+        output="screen",
+        emulate_tty=True,
+        parameters=[os.path.join(path_planning_dir, "config", "parameters.yaml")]
+    )
+
     ld.add_action(slam_from_file_node)
+    ld.add_action(path_planning_node)
     return ld
