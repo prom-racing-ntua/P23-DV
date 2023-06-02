@@ -29,6 +29,7 @@ private:
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr sub_pose;
     // PUBLISHER
     rclcpp::Publisher<custom_msgs::msg::TxControlCommand>::SharedPtr pub_actuators;
+    rclcpp::Publisher<custom_msgs::msg::Point2Struct>::SharedPtr pub_target;
 
     // OBJECTS
     VelocityProfile *profile;
