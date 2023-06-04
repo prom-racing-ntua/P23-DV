@@ -10,6 +10,8 @@ namespace ns_slam
 {
 LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam_node"), slam_object_(this) {
     loadParameters();
+    completed_laps_ = -1;
+    cooldown_ = 0;
 
     RCLCPP_WARN(get_logger(), "Created LifecycleSlamHandler");
 }
@@ -196,6 +198,7 @@ void LifecycleSlamHandler::loadParameters() {
     is_mapping_ = declare_parameter<bool>("mapping_mode", true);
     declare_parameter<std::string>("track_map", "");
     declare_parameter<int>("velocity_estimation_frequency", 40);
+    declare_parameter<int>("perception_frequency", 10);
 
     perception_range_ = declare_parameter<double>("perception_range", 14.0);
     optimization_interval_ = declare_parameter<int>("optimization_interval", 20);

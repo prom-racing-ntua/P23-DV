@@ -5,7 +5,6 @@
 # DV Status Flags
 DriverlessStatus dv_status
 
-
 # Sensor Status Flags
 bool        vn_200_error
 bool        vn_300_error

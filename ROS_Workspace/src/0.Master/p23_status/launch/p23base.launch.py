@@ -16,7 +16,7 @@ AND different node launches in general, depending on the mission.
 def generate_launch_description():
     p23_status_dir = get_package_share_directory('p23_status')
     lifecycle_manager_dir = get_package_share_directory('lifecycle_manager')
-    canbus_dir = get_package_share_directory('can_reader_cpp')
+    canbus_dir = get_package_share_directory('can_reader')
     vectornav_dir = get_package_share_directory('vectornav')
 
     # P23 Status Node
@@ -28,7 +28,7 @@ def generate_launch_description():
     lifecycle_manager = IncludeLaunchDescription(PythonLaunchDescriptionSource(lifecycle_manager_launch))
 
     # CANBUS Module
-    canbus_launch = os.path.join(canbus_dir, 'launch', 'can_reader_cpp.launch.py')
+    canbus_launch = os.path.join(canbus_dir, 'launch', 'can_interface.launch.py')
     canbus = IncludeLaunchDescription(PythonLaunchDescriptionSource(canbus_launch))
 
     # Vectornav Sensors

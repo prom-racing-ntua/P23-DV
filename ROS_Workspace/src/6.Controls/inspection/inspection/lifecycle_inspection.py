@@ -30,18 +30,27 @@ class InspectionMission(Node):
         self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
 
+        self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+        self._command_timer.cancel()
+
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state:State) -> TransitionCallbackReturn:
-        self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+        self._command_timer.cancel()
+        self._command_timer.reset()
+
         self._start_time = self.get_time()
         return super().on_activate(state)
     
     def on_deactivate(self, state:State) -> TransitionCallbackReturn:
-        self._command_timer.destroy()
+        self._command_timer.cancel()
+        
         return TransitionCallbackReturn.SUCCESS
 
     def on_cleanup(self, state:State) -> TransitionCallbackReturn:
+        self._command_timer.cancel()
+        self._command_timer.destroy()
+
         self._command_publisher.destroy()
         self._state_publisher.destroy()
 
@@ -54,6 +63,15 @@ class InspectionMission(Node):
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state:State) -> TransitionCallbackReturn:
+        self._command_timer.cancel()
+        self._command_timer.destroy()
+
+        self._command_publisher.destroy()
+        self._state_publisher.destroy()
+
+        self._steering_sub.destroy()
+        self._motor_sub.destroy()
+
         return TransitionCallbackReturn.SUCCESS
 
     def send_commands(self) -> None:
@@ -70,6 +88,7 @@ class InspectionMission(Node):
         
         if time > MISSION_DURATION:
             # Mission Finished, should call p23_status or something
+            # Send a SLAM message that has the mission_finished flag set
             self.get_logger().warn("Mission Finished", once=True)
         return
 

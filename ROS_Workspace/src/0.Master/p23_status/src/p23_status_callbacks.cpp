@@ -6,11 +6,13 @@ namespace p23_status_namespace
 {
 void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
     conesCountAll = msg->cones_count_all;
+    conesActual = msg->cones_count_actual;
     currentLap = msg->lap_count;
 
     if (currentLap >= maxLaps)
     {
-        // TODO: Go to Mission Finished state and start braking
+        currentDvStatus = p23::MISSION_FINISHED;
+        /* Tha doume... */
     }
 }
 

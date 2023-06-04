@@ -6,11 +6,8 @@ namespace ns_slam
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State &state)
     {   
-        completed_laps_ = -1;
-        cooldown_ = 0;
-
-        // Initialize slam
         get_parameter("velocity_estimation_frequency", node_frequency_);
+        // get_parameter("perception_frequency")
 
         if (!node_frequency_)
         {
@@ -35,15 +32,14 @@ namespace ns_slam
             std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
             slam_object_.loadMap(track_file);
         }
-
         else 
             map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
 
         //Initialize global lock
         if (pthread_spin_init(&global_lock_, PTHREAD_PROCESS_SHARED))
         {
-            RCLCPP_ERROR(get_logger(), "Global lock initialization failed: exit program");
-            exit(1);
+            RCLCPP_ERROR(get_logger(), "Global lock initialization failed. Cannot configure node");
+            return ns_slam::CallbackReturn::FAILURE;
         }
 
         auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
@@ -75,7 +71,10 @@ namespace ns_slam
         LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Activating Lifecycle SLAM node");
-        /* Activate Publishers and optimization Timer */
+        /* Activate Publishers and optimization Timer 
+            These calls cannot fail so there is nothing to stop us from 
+            going to active mode. */
+
         pose_publisher_->on_activate();
         map_publisher_->on_activate();
         optimization_clock_->cancel();
@@ -88,7 +87,9 @@ namespace ns_slam
         LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
-        /* De-activate Publishers and optimization Timer */
+        /* De-activate Publishers and optimization Timer 
+            These calls cannot fail so there is nothing to stop us from 
+            going to inactive mode. */
         pose_publisher_->on_deactivate();
         map_publisher_->on_deactivate();
         optimization_clock_->cancel();
@@ -99,12 +100,12 @@ namespace ns_slam
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State &state)
     {
-        // pose_publisher_->reset();
-        // map_publisher_->reset();
+        pose_publisher_.reset();
+        map_publisher_.reset();
         if (pthread_spin_destroy(&global_lock_))
         {
-            RCLCPP_ERROR(get_logger(), "Global lock destruction failed: exit program");
-            exit(1);
+            RCLCPP_ERROR(get_logger(), "Global lock destruction failed cannot go to unconfigured state");
+            return ns_slam::CallbackReturn::FAILURE;
         }
         return ns_slam::CallbackReturn::SUCCESS;
     }
@@ -112,6 +113,17 @@ namespace ns_slam
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State &state)
     {
+        RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
+        /* De-activate Publishers and optimization Timer 
+            These calls cannot fail so there is nothing to stop us from 
+            going to inactive mode. */
+        pose_publisher_->on_deactivate();
+        map_publisher_->on_deactivate();
+        optimization_clock_->cancel();
+
+        pose_publisher_.reset();
+        map_publisher_.reset();
+
         return ns_slam::CallbackReturn::SUCCESS;
     }
 

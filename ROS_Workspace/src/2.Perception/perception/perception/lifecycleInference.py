@@ -33,7 +33,7 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
 
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.75, iou=0.45)
+        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.70, iou=0.35)
         self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
 
         # Setup Message Transcoder
@@ -61,20 +61,24 @@ class InferenceLifecycleNode(Node):
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         # Stop Publishing
         self.publishing = False
+        self.get_logger().info("Inference Deactivation Complete")
+
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         self.publishing = False
         del self.yoloModel, self.smallModel, self.largeModel
-        self.destroy_publisher(self.publisher_)
+        self.publisher_.destroy()
+        self.get_logger().info("Inference Cleanup Complete")
 
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         del self.yoloModel, self.smallModel, self.largeModel
-        self.destroy_publisher(self.publisher_)
+        self.publisher_.destroy()
+        self.get_logger().info("Inference Shutdown Complete")
 
         return TransitionCallbackReturn.SUCCESS
 
@@ -93,7 +97,7 @@ class InferenceLifecycleNode(Node):
         else:
             # Perform Perception Pipeline
             inferenceTiming = time.time()
-            results = inferenceYOLO(model=self.yoloModel, img=image, tpu=True, debug=True)
+            results = inferenceYOLO(model=self.yoloModel, img=image, tpu=True, debug=False)
             if results.empty:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
@@ -112,6 +116,7 @@ class InferenceLifecycleNode(Node):
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
+                self.get_logger().info(f"Inference Time (including keypoints) {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):

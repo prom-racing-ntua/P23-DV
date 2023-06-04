@@ -19,16 +19,6 @@ acquisition_right:
     ROIy: 1024
     orientation: "right"
 
-acquisition_center:
-  ros__parameters:
-    serialNumber: "KE0220030138"
-    exposureTime: 1500
-    autoExposure: False
-    expectedGrayValue: 50
-    ROIx: 1280
-    ROIy: 1024
-    orientation: "center"
-
 slam:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 

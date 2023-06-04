@@ -11,7 +11,7 @@ This folder consists of all the ROS2 packages that P23 needs to run the DV circu
 ## Dependencies
 Each package needs some dependencies installed. You can find these in the folders of the packages. Later, a script will be provided installing everything needed to run DV.
 
-The P23 System is running using Ubuntu 20.04 as its OS and ROS2 Foxy as the ROS disto.
+The P23 System is running using Ubuntu 22.04 as its OS and ROS2 Humble as the ROS distro.
 
 ## Build
 To build the P23 project, run the colcon build command while your current working directory is this folder. 

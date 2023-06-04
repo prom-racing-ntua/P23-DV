@@ -45,6 +45,8 @@ class SaltasNode(Node):
         self.send_reset = calcClockFrequency(self.send_velocity, self.send_perception)
 
         self.saltas_clock = self.create_timer(1/self.clock_frequency, self.globalTimerCallback)
+        self.saltas_clock.cancel()
+
         self.clock_publisher = self.create_publisher(NodeSync, 'saltas_clock', qos_profile=10)
 
         # Service for nodes to get their frequencies from the master
@@ -58,21 +60,34 @@ class SaltasNode(Node):
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Publisher for the synchronization topic
         # Start ticking the clock
-        self.publishing = True
+        self.saltas_clock.cancel()
+        self.saltas_clock.reset()
+
         self.get_logger().info(f'Master Clock is Active!')
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().info(f'Master Clock Deactivated!')
-        self.publishing = False
+
+        self.saltas_clock.cancel()
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.publishing = False
+        self.get_logger().info(f'Cleaning Up Saltas Node')
+        self.saltas_clock.cancel()
+        self.saltas_clock.destroy()
+        self.clock_publisher.destroy()
+        self.get_logger().info(f'Saltas Node unconfigured')
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.publishing = False
+        self.get_logger().info(f'Shutting Down Saltas Node')
+
+        self.saltas_clock.cancel()
+        self.saltas_clock.destroy()
+        self.clock_publisher.destroy()
+
+        self.get_logger().info(f'Saltas Node shut down')
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:
@@ -81,9 +96,8 @@ class SaltasNode(Node):
         Didn't do that because it seems slower (global_index can reach very high values and maybe it slows down because of that??),
         but not 100% sure if that is true.
         '''
-        if not self.publishing:
-            return
-        
+
+        self.get_logger().info(f'Sending clock signal')
         if self.send_index >= self.send_reset:
             self.send_index = 0
 
@@ -103,6 +117,7 @@ class SaltasNode(Node):
 
         self.global_index += 1
         self.send_index += 1
+        
     
     def frequency_srv_callback(self, request, response):
         '''Callback for the GetFrequencies service. Enters all the node frequencies into the response and returns it to the client.'''

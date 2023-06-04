@@ -135,7 +135,7 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
         break;
     case(p23::MANUAL):
         // The PC will shutdown so no one cares what happens here...
-        std::system("shutdown -n 0.5");
+        std::system("shutdown -h 1");
         return;
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid mission received " << currentMission);

@@ -23,12 +23,14 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 include_directories(
   include
+  include/lifecycle
   custom_msgs
 )
 
@@ -62,6 +64,19 @@ src/FORCESNLPsolver/include/FORCESNLPsolver.h
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
 
+add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_mpc_node.cpp src/lifecycle/lifecycle_states.cpp
+src/mpc_solver.cpp
+src/cubic_spline.cpp
+src/FORCESNLPsolver/FORCESNLPsolver_model.c
+src/FORCESNLPsolver/FORCESNLPsolver_model.h
+src/FORCESNLPsolver/FORCESNLPsolver_interface.c
+src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
+src/FORCESNLPsolver/include/FORCESNLPsolver.h
+)
+
+ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle custom_msgs)
+target_link_libraries(lifecycle_${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+
 # add_executable(
 # mpc_name src/mpc_node_official.cpp 
 # include/mpc_node_official.hpp
@@ -79,6 +94,7 @@ target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/li
 
 install(TARGETS
   ${PROJECT_NAME}
+  lifecycle_${PROJECT_NAME}
   # mpc_name
   # mpc_from_file_exe
   DESTINATION lib/${PROJECT_NAME})

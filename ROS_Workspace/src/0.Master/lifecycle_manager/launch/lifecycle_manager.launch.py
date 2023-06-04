@@ -17,7 +17,7 @@ def generate_launch_description():
         executable="lifecycle_manager",
         output="screen",
         emulate_tty=True,
-        parameters=[os.path.join(lifecycle_manager_dir, 'config', 'lifecycle_parameters.yaml')]
+        parameters=[os.path.join(lifecycle_manager_dir, 'config', 'lifecycle_manager_config.yaml')]
     )
 
     ld.add_action(lifecycle_manager_node)
