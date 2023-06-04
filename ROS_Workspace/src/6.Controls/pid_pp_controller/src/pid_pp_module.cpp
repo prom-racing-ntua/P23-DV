@@ -263,12 +263,16 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
         spline_samples[i] = SplinePoint(Point(spline_data(i, 0), spline_data(i, 1)), spline_data(i, 4), spline_data(i, 2), spline_data(i, 3));
         // std::cout<<spline_samples[i].position().x() <<" "<<spline_samples[i].position().y() <<" "<<spline_samples[i].s() <<" "<<spline_samples[i].phi() <<" "<<spline_samples[i].k() <<std::endl;
     }
-    //solve_profile(resolution, initial_speed, is_end);
-    //for (int i = 0; i < resolution; i++)
-    //{
-    //    std::cout<<spline_samples[i].target_speed()<<", ";
-    //}
-    //std::cout<<std::endl;
+    
+    solve_profile(resolution, initial_speed, is_end);
+    /*
+    std::cout<<std::endl<<"------"<<std::endl;
+    for (int i = 0; i < resolution; i++)
+    {
+        std::cout<<spline_samples[i].target_speed()<<", ";
+    }
+    std::cout<<std::endl<<"------"<<std::endl;
+    */
 }
 
 VelocityProfile::~VelocityProfile()
@@ -338,6 +342,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
 
 void VelocityProfile::solve_profile(int resolution, double initial_speed, bool is_end)
 {
+    //std::cout<<'*';
     /* FIRST PASS */
     /* For formula derivation, check ADR-Controls intro*/
     // steady-state cornering asssumes no longit. acceleration, therefore my_max will be calculated with Fz = mg
@@ -345,12 +350,17 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     double g = model->g;
     double m = model->m;
     double mu = model->my_max(m * g);
-
+    
     for (int i = 0; i < resolution; i++)
     {
-        double k = spline_samples[i].k();
-        spline_samples[i].set_target_speed(std::min(max_speed, std::sqrt(mu * g / k)));
+        double k = std::abs(spline_samples[i].k());
+        if(k!=0)
+            spline_samples[i].set_target_speed(std::min(max_speed, std::sqrt(mu * g / k)));
+        else
+            spline_samples[i].set_target_speed(max_speed);
+        
     }
+    //std::cout<<initial_speed<<" "<<spline_samples[0].target_speed()<<std::endl;
     spline_samples[0].set_target_speed(initial_speed);
     spline_samples[resolution - 1].set_target_speed(0); // Safety Check
     /* SECOND PASS */
@@ -360,29 +370,42 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         We calc the fz with a static cog because (a)no accel info is a priori available and (b) when accelerating the cog is moved back, which increases rear wheel friction. Thus, assuming a=0, the error drives us in safe territory.
         Downforce should be calculated with u=0, because if we use the local_speed, which is the upper limit, when the local_speed is decreased in passes 2 and 3, downforce will decrease and fz will decrease, decreasing the safe limit of a. By assuming the lower limit of the speed, aka 0, the error will increase fz, thus driving us in safe territory.
         Drag should be calculated with u=local_speed, because when the speed will decrease, drag will decrease, and the max_engine accel will increase. Thus by assuming the upper limit, the error will drive us in safe territory.
-   */
+    */
+    /*
+        (fx/mx)**2 + (fy/my)**2 = fz**2
+        (fx/mx)**2 = fz**2 - (fy/my)**2
+        fx = mx * sqrt(fz**2 - (fy/my)**2)
+    */
+    /*
+        ds = u_0*dt + 0.5*a*dt**2 => 0.5*a*dt**2+u_0*dt-ds=0
+        dt = (-u_0+sqrt(u_0**2+2a*ds))/a
+        u_1 = u_0 + a*dt = u_0 - u_0 + sqrt(u_0**2 + 2*a*ds)
+    */
     double ds;
     double max_accel_eng, drag; //= model->max_positive_force / m;
     double local_accel, fy_req, fz_avail, local_speed, u_accel, fx_rem;
     for (int i = 0; i < resolution - 1; i++)
     {
         local_speed = spline_samples[i].target_speed();
-
-        fy_req = m * std::pow(local_speed, 2) * spline_samples[i].k();
-
+        
+        fy_req = m * std::pow(local_speed, 2) * std::abs(spline_samples[i].k());
+        
         fz_avail = model->Fz_calc("full", 0, 0);
-
+        
         drag = 0.5 * model->cd_A * std::pow(local_speed, 2);
         max_accel_eng = (model->max_positive_force - drag) / m;
-
-        fx_rem = (fz_avail - model->my_max(fz_avail) * fy_req) / model->mx_max(fz_avail);
+        
+        fx_rem = model->mx_max(fz_avail) * std::sqrt(std::max(0.0,std::pow(fz_avail, 2) - std::pow(fy_req / model->my_max(fz_avail), 2)));
+        
+        //std::cout<<fx_rem<<" "<<local_speed<<" "<<spline_samples[i+1].target_speed()<<std::endl;
+        //if(std::isnan(fx_rem)&&!std::isnan(local_speed))exit(50);
 
         local_accel = std::min(fx_rem / m, max_accel_eng);
 
-        ds = spline_samples[i + 1].s() - spline_samples[i].s();
-
+        ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
+        std::cout<<ds<<", ";
         u_accel = std::sqrt(local_speed * local_speed + 2 * local_accel * ds);
-
+        
         spline_samples[i + 1].set_target_speed(std::min(u_accel, spline_samples[i + 1].target_speed()));
     }
 
@@ -399,21 +422,23 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     {
         local_speed = spline_samples[i].target_speed();
 
-        fy_req = m * std::pow(local_speed, 2) * spline_samples[i].k();
+        fy_req = m * std::pow(local_speed, 2) * std::abs(spline_samples[i].k());
 
         fz_avail = model->Fz_calc("full", 1, 1, local_speed, model->min_wd);
 
-        fx_rem = (fz_avail - model->my_max(fz_avail) * fy_req) / model->mx_max(fz_avail);
+        fx_rem = - model->mx_max(fz_avail) * std::sqrt(std::max(0.0,std::pow(fz_avail, 2) - std::pow(fy_req / model->my_max(fz_avail), 2)));
 
         drag = 0.5 * model->cd_A * std::pow(local_speed, 2);
         max_decel_eng = (model->max_negative_force + drag) / m;
 
-        local_decel = std::min(fx_rem / m, max_decel_eng);
+        local_decel = std::max(fx_rem / m, max_decel_eng);
+
+        //std::cout<<local_decel<<", ";
 
         ds = spline_samples[i].s() - spline_samples[i - 1].s();
 
         u_decel = std::sqrt(local_speed * local_speed - 2 * local_decel * ds);
-
+        
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
     }
 }

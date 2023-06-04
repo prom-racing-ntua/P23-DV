@@ -19,10 +19,10 @@ pid_pp_controller:
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 2.0                   
-    ld_max: 7.0
+    ld_min: 1.0                   
+    ld_max: 5.0
     v_min: 0.0
-    v_max: 10.0
+    v_max: 7.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
