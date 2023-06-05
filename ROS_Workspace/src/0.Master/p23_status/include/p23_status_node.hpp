@@ -44,7 +44,7 @@ private:
     p23::Mission currentMission;
     p23::AS_Status currentAsStatus;
     p23::DV_Status currentDvStatus;
-    bool missionFinished, standstill, pcError;
+    bool missionLocked, missionFinished, standstill, pcError;
 
     /* Map of all the current statuses of the nodes. Might not keep it and just
         send a message directly from the lifecycle manager, will see */

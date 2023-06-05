@@ -4,13 +4,9 @@
 #include <string>
 #include <limits>
 #include <chrono>
-#include <rclcpp/rclcpp.hpp>
-
 #include <functional>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include <visualization_msgs/msg/marker.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 #include "custom_msgs/msg/vel_estimation.hpp"
 #include "custom_msgs/msg/perception2_slam.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
@@ -22,19 +18,18 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 
-#include "slam_common.h"
-#include "lifecycle_slam.h"
+#include "slam.h"
+
 
 namespace ns_slam
 {
-    class GraphSLAM;
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecycleSlamHandler : public rclcpp_lifecycle::LifecycleNode {
     private:
         int node_frequency_;
         unsigned long global_index_;
-        GraphSLAM slam_object_;
+        GraphSLAM<LifecycleSlamHandler> slam_object_;
 
         bool is_mapping_;
         std::ofstream map_log_;
@@ -55,6 +50,9 @@ namespace ns_slam
         int completed_laps_;
         int cooldown_;
         int cooldown_max_;
+
+        // Last velocity msg received
+        custom_msgs::msg::VelEstimation last_vel_msg_;
 
         // Global lock for SLAM node
         pthread_spinlock_t global_lock_;

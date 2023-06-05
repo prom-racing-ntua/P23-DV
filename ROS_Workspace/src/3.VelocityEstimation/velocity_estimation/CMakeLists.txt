@@ -5,6 +5,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -14,27 +15,23 @@ find_package(custom_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
+
 # executable commands
 # Normal Velocity Estimation Node
 add_executable(${PROJECT_NAME} 
-  src/main.cpp 
-  src/velocity_estimation.cpp 
   src/velocity_estimation_handler.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} rclcpp vectornav_msgs custom_msgs)
 
-
-
 # Lifecycle Velocity Estimation Node
 set(LIFECYCLE_FOLDER "src/lifecycle")
 
-add_executable(lifecycle_${PROJECT_NAME} 
+add_executable(lifecycle_${PROJECT_NAME}
   ${LIFECYCLE_FOLDER}/lifecycle_velocity_estimation_handler.cpp 
-  ${LIFECYCLE_FOLDER}/lifecycle_velocity_estimation.cpp 
   ${LIFECYCLE_FOLDER}/lifecycle_states.cpp
-)  
+)
+ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
 
-ament_target_dependencies(lifecycle_velocity_estimation rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
 
 # install excutables to lib directory
 install(TARGETS

@@ -81,7 +81,7 @@ typedef enum DV_Transitions {
 const std::unordered_map<DV_Transitions, std::string> transition_list{
     { ON_STARTUP, "ON_STARTUP" },
     { SHUTDOWN_NODES, "SHUTDOWN_NODES" },
-    { ON_MISSION_LOCKED, "ON_MISSION_UNLOCKED" },
+    { ON_MISSION_LOCKED, "ON_MISSION_LOCKED" },
     { ON_MISSION_UNLOCKED, "ON_MISSION_UNLOCKED" },
     { ON_AS_READY, "ON_AS_READY" },
     { ON_AS_DRIVING, "ON_AS_DRIVING" }

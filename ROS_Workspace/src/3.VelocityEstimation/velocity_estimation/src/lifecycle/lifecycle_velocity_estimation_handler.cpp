@@ -1,17 +1,15 @@
-#include "rclcpp/rclcpp.hpp"
+#include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
+
 #include "rmw/qos_profiles.h"
 #include <rclcpp/qos.hpp>
-
-#include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
-#include <pthread.h>
 
 
 namespace ns_vel_est
 {
     LifecycleVelocityEstimationHandler::LifecycleVelocityEstimationHandler(): LifecycleNode("velocity_estimation"), estimator_{ this } {
         loadParameters();
-        RCLCPP_INFO(get_logger(), "Launched Lifecycle Velocity Estimation node");
-        RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimator is Online (but not configured)");
+        RCLCPP_WARN(get_logger(), "Launched Lifecycle Velocity Estimation node");
+        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimator is Online (but not configured)");
     }
 
     // Set node subscribers
@@ -84,7 +82,6 @@ namespace ns_vel_est
 
         // Instead of a timer we get the node frequency from the mater node with the following client request
         auto request = std::make_shared<custom_msgs::srv::GetFrequencies::Request>();
-        int call_counter = 0;
 
         RCLCPP_INFO(get_logger(), "Before wait for service");
 
@@ -251,7 +248,7 @@ namespace ns_vel_est
 
     // Loads the node parameters from the .yaml file
     void LifecycleVelocityEstimationHandler::loadParameters() {
-        declare_parameter<int>("frequency", 50);
+        declare_parameter<int>("frequency", 0);
 
         declare_parameter<std::vector<double>>("initial_state_vector",
             { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });

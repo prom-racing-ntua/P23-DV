@@ -18,22 +18,20 @@
 #include "custom_msgs/msg/node_sync.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
-#include <semaphore.h> 
+#include <semaphore.h>
 #include <pthread.h>  /* My beloved :3 */
 
-#include "lifecycle_velocity_estimation.h"
+#include "velocity_estimation.h"
 
 namespace ns_vel_est
 {
-    // Forward declaration of the VelocityEstimator class so it can be used for the estimator_ member variable
-    class LifecycleVelocityEstimator;
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecycleVelocityEstimationHandler: public rclcpp_lifecycle::LifecycleNode {
     private:
         int node_frequency_;
         unsigned long global_index_;
-        LifecycleVelocityEstimator estimator_;
+        VelocityEstimator<LifecycleVelocityEstimationHandler> estimator_;
 
         // ROS Subscriber members
         rclcpp::Subscription<vectornav_msgs::msg::InsGroup>::SharedPtr vn_velocity_sub_;     // vectornav vn-300

@@ -1,13 +1,11 @@
-#include "lifecycle/lifecycle_velocity_estimation.h"
 #include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
+
 
 namespace ns_vel_est
 {
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_configure(const rclcpp_lifecycle::State &state)
-    {
-        RCLCPP_INFO(get_logger(), "Configuring Lifecycle Velocity Estimation node");
-        
+    {        
         get_parameter("frequency", node_frequency_);
 
         if (!node_frequency_)
@@ -26,12 +24,10 @@ namespace ns_vel_est
             get_parameter("vectornav-vn-300.pitch").as_double());
 
         // Initialize the measurement and update vector with zeros
-        measurement_vector_.setZero();
-        updated_sensors_.fill(false);
         setSubscribers();
 
         pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
-        RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimation Configured!");
+        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Configured!");
 
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
@@ -39,25 +35,27 @@ namespace ns_vel_est
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_activate(const rclcpp_lifecycle::State &state) 
     {
-        RCLCPP_INFO(get_logger(), "Activating Lifecycle Velocity Estimation node");
+        measurement_vector_.setZero();
+        updated_sensors_.fill(false);
         pub_->on_activate();
-        RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimation Activated!");
+        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Activated!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_deactivate(const rclcpp_lifecycle::State &state) 
     {   
-        RCLCPP_INFO(get_logger(), "Deactivating Lifecycle Velocity Estimation node");
         pub_->on_deactivate();
-        RCLCPP_INFO(get_logger(), "Lifecycle Velocity Estimation Deactivated!");
+        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Deactivated!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_cleanup(const rclcpp_lifecycle::State &state) 
     {
+        estimator_.reset();
         pub_.reset();
+        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Un-Configured!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

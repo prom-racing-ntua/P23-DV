@@ -285,7 +285,7 @@ void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::Steerin
 
 // Loads the node parameters from the .yaml file
 void VelocityEstimationHandler::loadParameters() {
-    declare_parameter<int>("frequency", 50);
+    declare_parameter<int>("frequency", 40);
 
     declare_parameter<std::vector<double>>("initial_state_vector",
         { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
@@ -332,3 +332,14 @@ void VelocityEstimationHandler::loadParameters() {
     declare_parameter<double>("rear_axle", 1.0);
 }
 } // namespace ns_vel_est
+
+
+
+int main(int argc, char** argv) {
+    rclcpp::init(argc, argv);
+
+    ns_vel_est::VelocityEstimationHandler velocity_node{};
+    rclcpp::spin(velocity_node.get_node_base_interface());
+    rclcpp::shutdown();
+    return 0;
+}

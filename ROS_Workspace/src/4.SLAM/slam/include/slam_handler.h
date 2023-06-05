@@ -7,8 +7,6 @@
 #include <functional>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include <visualization_msgs/msg/marker.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 #include "custom_msgs/msg/vel_estimation.hpp"
 #include "custom_msgs/msg/perception2_slam.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
@@ -18,19 +16,16 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-#include "slam_common.h"
 #include "slam.h"
 
 
 namespace ns_slam
 {
-class GraphSLAM;
-
 class SlamHandler : public rclcpp::Node {
 private:
     int node_frequency_;
     unsigned long global_index_;
-    GraphSLAM slam_object_;
+    GraphSLAM<SlamHandler> slam_object_;
 
     bool is_mapping_;
     std::ofstream map_log_;

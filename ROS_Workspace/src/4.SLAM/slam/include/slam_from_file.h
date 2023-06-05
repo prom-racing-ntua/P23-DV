@@ -5,9 +5,6 @@
 #include <limits>
 #include <chrono>
 #include <functional>
-
-#include <visualization_msgs/msg/marker.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -16,14 +13,11 @@
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
 
-#include "slam_common.h"
 #include "slam.h"
 
 
 namespace ns_slam
 {
-class GraphSLAM;
-
 class SlamFromFile: public rclcpp::Node {
 public:
     // The file paths are passed as arguments to the constructor and can be modified in the main function
@@ -32,7 +26,7 @@ public:
     ~SlamFromFile();
 
 private:
-    ns_slam::GraphSLAM slam_object_;
+    GraphSLAM<SlamFromFile> slam_object_;
 
     std::string share_dir_;
     std::fstream perception_file_;

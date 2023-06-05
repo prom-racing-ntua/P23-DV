@@ -8,7 +8,7 @@
 
 namespace ns_slam
 {
-LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam_node"), slam_object_(this) {
+LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam"), slam_object_(this) {
     loadParameters();
     completed_laps_ = -1;
     cooldown_ = 0;
@@ -16,15 +16,7 @@ LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam_node"), slam_
     RCLCPP_WARN(get_logger(), "Created LifecycleSlamHandler");
 }
 
-LifecycleSlamHandler::~LifecycleSlamHandler() {
-    if (is_logging_)
-    {
-        velocity_log_.close();
-        perception_log_.close();
-    }
-
-    if (is_mapping_) map_log_.close();
-}
+LifecycleSlamHandler::~LifecycleSlamHandler() {}
 
 void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimation::SharedPtr msg) {
     rclcpp::Time starting_time{ this->now() };
@@ -53,6 +45,8 @@ void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimatio
     {
         cooldown_--;
     }
+
+    last_vel_msg_ = *msg;
 
     // Publish pose message
     custom_msgs::msg::PoseMsg pose_msg{};
@@ -172,6 +166,7 @@ void LifecycleSlamHandler::optimizationCallback() {
         map_msg.pose.position.x = current_pose[0];
         map_msg.pose.position.y = current_pose[1];
         map_msg.pose.theta = current_pose[2];
+        map_msg.pose.velocity_state = last_vel_msg_;
 
         if (completed_laps_ < 0) { map_msg.lap_count = 0; }
         else { map_msg.lap_count = completed_laps_; }
@@ -195,21 +190,22 @@ void LifecycleSlamHandler::optimizationCallback() {
 }
 
 void LifecycleSlamHandler::loadParameters() {
-    is_mapping_ = declare_parameter<bool>("mapping_mode", true);
+    declare_parameter<bool>("mapping_mode", true);
     declare_parameter<std::string>("track_map", "");
-    declare_parameter<int>("velocity_estimation_frequency", 40);
+    declare_parameter<int>("velocity_estimation_frequency", 0);
     declare_parameter<int>("perception_frequency", 10);
 
-    perception_range_ = declare_parameter<double>("perception_range", 14.0);
-    optimization_interval_ = declare_parameter<int>("optimization_interval", 20);
+    declare_parameter<double>("perception_range", 14.0);
+    declare_parameter<int>("optimization_interval", 20);
 
     declare_parameter<double>("association_threshold", 1.9);
+    declare_parameter<int>("min_observations", 3);
 
     declare_parameter<double>("relinearize_threshold", 0.1);
     declare_parameter<int>("relinearize_skip", 1);
 
-    odometry_weight_ = declare_parameter<double>("odometry_covariance_weight", 10.0);
-    perception_weight_ = declare_parameter<double>("perception_covariance_weight", 0.01);
+    declare_parameter<double>("odometry_covariance_weight", 10.0);
+    declare_parameter<double>("perception_covariance_weight", 0.01);
 
     // Starting position variables
     declare_parameter<std::vector<double>>("starting_position", { -7.5, 0.0, 0.0 });
@@ -217,11 +213,11 @@ void LifecycleSlamHandler::loadParameters() {
 
     declare_parameter<std::vector<double>>("left_orange", { 6.0, -3.0 });
     declare_parameter<std::vector<double>>("right_orange", { 6.0, 3.0 });
-    cooldown_max_ = declare_parameter<int>("lap_counter_cooldown", 10);
+    declare_parameter<int>("lap_counter_cooldown", 10);
 
     share_dir_ = ament_index_cpp::get_package_share_directory("slam");
 
-    is_logging_ = declare_parameter<bool>("logger", true);
+    declare_parameter<bool>("logger", true);
 }
 
 int LifecycleSlamHandler::getNodeFrequency() {

@@ -45,6 +45,7 @@ void P23StatusNode::initializeNode() {
     maxLaps = 255;
     pcError = false;
 
+    missionLocked = false;
     missionFinished = false;
     currentAsStatus = p23::AS_OFF;
     currentMission = p23::MISSION_UNLOCKED;
@@ -167,19 +168,19 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
 
     case(p23::AS_Status::AS_READY):
         // Activate all nodes except controls. We are waiting for go signal now.
-        RCLCPP_INFO(get_logger(), "Current AS Status: AS_READY. Activating nodes");
+        RCLCPP_WARN(get_logger(), "Current AS Status: AS_READY. Activating nodes");
         changeDVStatus(p23::ON_AS_READY);
         break;
 
     case(p23::AS_Status::AS_DRIVING):
         // This happens when we receive the go signal. Activate controls if we are not in DV_DRIVING.
-        RCLCPP_INFO(get_logger(), "Current AS Status: AS_DRIVING. Activating controls");
+        RCLCPP_WARN(get_logger(), "Current AS Status: AS_DRIVING. Activating controls");
         changeDVStatus(p23::ON_AS_DRIVING);
         break;
 
     case(p23::AS_Status::AS_FINISHED):
         // Mission is finished, probably shutdown nodes
-        RCLCPP_INFO(get_logger(), "Current AS Status: AS_FINISHED. De-activating nodes");
+        RCLCPP_WARN(get_logger(), "Current AS Status: AS_FINISHED. De-activating nodes");
 
         // TODO: If in standstill shutdown nodes
         if (standstill)
@@ -189,7 +190,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
     case(p23::AS_Status::AS_EMERGENCY):
         /* Send a deactivation signal to the nodes.*/
         // Safely stop then shutdown nodes. Activate service brakes for redundancy.
-        RCLCPP_INFO(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
+        RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
 
         // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
         // changeDVStatus(p23::SHUTDOWN_NODES);
@@ -225,11 +226,12 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
                 ". Current mission is " << p23::mission_list.at(currentMission));
             return;
         }
-        else if (currentDvStatus == p23::DV_READY)
+        else if (currentDvStatus == p23::DV_READY or missionLocked)
         {
-            RCLCPP_ERROR_STREAM(get_logger(), "Mission already locked, currently in DV_READY and " << p23::mission_list.at(currentMission));
+            RCLCPP_ERROR_STREAM(get_logger(), "Mission already locked, currently in DV_READY and " << p23::mission_list.at(currentMission) << ". Try to MISSION_UNLOCK");
             return;
         }
+        missionLocked = true;
         transition_to = p23::DV_Status::DV_READY;
         break;
 
@@ -241,11 +243,12 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
                 ". Current mission is " << p23::mission_list.at(currentMission));
             return;
         }
-        else if (currentDvStatus == p23::LV_ON)
+        else if (currentDvStatus == p23::LV_ON or !missionLocked)
         {
             RCLCPP_ERROR(get_logger(), "Mission is already unlocked, currently in LV_ON");
             return;
         }
+        missionLocked = false;
         transition_to = p23::DV_Status::LV_ON;
         break;
 
@@ -290,7 +293,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     RCLCPP_INFO_STREAM(get_logger(), "Sending a " << p23::transition_list.at(requested_transition) << " request to Lifecycle Manager");
 
-    if (!p23_status_client_->wait_for_service(3s))
+    if (!p23_status_client_->wait_for_service(5s))
     {
         /*
             Just set pc_error bool to True and it will automatically send to the LV system.
@@ -303,7 +306,6 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     // Send request to Lifecycle Manager
     using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedFuture;
     auto response_received_callback = [this, requested_transition, transition_to](ServiceResponseFuture future) {
-        RCLCPP_INFO_STREAM(get_logger(), "Received result from Lifecycle Manager Service for " << p23::transition_list.at(requested_transition) << " request");
         auto result = future.get();
         bool success = result.get()->success;
 
@@ -318,24 +320,23 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
             }
             else if (transition_to == p23::LV_ON)
             {
-                RCLCPP_INFO(get_logger(), "Driverless Status successfully changed to: LV_ON");
+                RCLCPP_WARN(get_logger(), "Driverless Status successfully changed to: LV_ON");
                 nodesReady = false;
             }
             else
             {
-                RCLCPP_INFO_STREAM(get_logger(), "Driverless Status successfully changed to: " << p23::driverless_status_list.at(transition_to));
-                currentDvStatus = transition_to;
+                RCLCPP_WARN_STREAM(get_logger(), "Driverless Status successfully changed to: " << p23::driverless_status_list.at(transition_to));
             }
+            currentDvStatus = transition_to;
         }
         else
         {
-            RCLCPP_INFO_STREAM(get_logger(), "Could not change Driverless Status to: " << p23::driverless_status_list.at(transition_to));
+            RCLCPP_WARN_STREAM(get_logger(), "Could not change Driverless Status to: " << p23::driverless_status_list.at(transition_to));
             // Error-Handling point
         }
     };
 
     auto future_result = p23_status_client_->async_send_request(request, response_received_callback);
-    RCLCPP_INFO_STREAM(get_logger(), p23::driverless_status_list.at(transition_to) << " request sent to Lifecycle Manager, waiting for response...");
 }
 
 

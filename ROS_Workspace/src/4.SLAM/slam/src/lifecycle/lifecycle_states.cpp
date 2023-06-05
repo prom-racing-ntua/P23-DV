@@ -1,19 +1,27 @@
 #include "lifecycle_slam_handler.h"
-#include "lifecycle_slam.h"
+
 
 namespace ns_slam
 {
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State &state)
     {   
-        get_parameter("velocity_estimation_frequency", node_frequency_);
-        // get_parameter("perception_frequency")
+        node_frequency_ = get_parameter("velocity_estimation_frequency").as_int();
 
         if (!node_frequency_)
         {
             RCLCPP_ERROR(get_logger(), "Could not get Velocity Estimation Frequency: SLAM Configuration failed");
             return ns_slam::CallbackReturn::FAILURE;
         }
+
+        // Get Parameters
+        is_mapping_ = get_parameter("mapping_mode").as_bool();
+        perception_range_ = get_parameter("perception_range").as_double();
+        optimization_interval_ = get_parameter("optimization_interval").as_int();
+        odometry_weight_ = get_parameter("odometry_covariance_weight").as_double();
+        perception_weight_ = get_parameter("perception_covariance_weight").as_double();
+        cooldown_max_ = get_parameter("lap_counter_cooldown").as_int();
+        is_logging_ = get_parameter("logger").as_bool();
 
         slam_object_.setDeltaTime(1.0 / static_cast<double>(node_frequency_));
         slam_object_.init();
@@ -64,13 +72,13 @@ namespace ns_slam
             std::bind(&LifecycleSlamHandler::optimizationCallback, this), slam_callback_group_);
         optimization_clock_->cancel();
 
+        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Configured!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Activating Lifecycle SLAM node");
         /* Activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
             going to active mode. */
@@ -79,27 +87,30 @@ namespace ns_slam
         map_publisher_->on_activate();
         optimization_clock_->cancel();
         optimization_clock_->reset();
-        RCLCPP_INFO(get_logger(), "Lifecycle SLAM node Activated!");
+        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Activated!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
         /* De-activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
             going to inactive mode. */
         pose_publisher_->on_deactivate();
         map_publisher_->on_deactivate();
         optimization_clock_->cancel();
-        RCLCPP_INFO(get_logger(), "Lifecycle SLAM node deactivated!");
+        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Deactivated!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State &state)
     {
+        completed_laps_ = -1;
+        cooldown_ = 0;
+        slam_object_.reset();
+
         pose_publisher_.reset();
         map_publisher_.reset();
         if (pthread_spin_destroy(&global_lock_))
@@ -107,6 +118,16 @@ namespace ns_slam
             RCLCPP_ERROR(get_logger(), "Global lock destruction failed cannot go to unconfigured state");
             return ns_slam::CallbackReturn::FAILURE;
         }
+
+        if (is_logging_)
+        {
+            velocity_log_.close();
+            perception_log_.close();
+        }
+
+        if (is_mapping_) map_log_.close();
+
+        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Un-Configured!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
@@ -123,6 +144,14 @@ namespace ns_slam
 
         pose_publisher_.reset();
         map_publisher_.reset();
+
+        if (is_logging_)
+        {
+            velocity_log_.close();
+            perception_log_.close();
+        }
+
+        if (is_mapping_) map_log_.close();
 
         return ns_slam::CallbackReturn::SUCCESS;
     }
