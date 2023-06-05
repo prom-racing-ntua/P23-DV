@@ -69,7 +69,8 @@ class InferenceLifecycleNode(Node):
         # Cleanup Models
         self.publishing = False
         del self.yoloModel, self.smallModel, self.largeModel
-        self.publisher_.destroy()
+
+        self.destroy_publisher(self.publisher_)
         self.get_logger().info("Inference Cleanup Complete")
 
         return TransitionCallbackReturn.SUCCESS
@@ -77,7 +78,7 @@ class InferenceLifecycleNode(Node):
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         del self.yoloModel, self.smallModel, self.largeModel
-        self.publisher_.destroy()
+        self.destroy_publisher(self.publisher_)
         self.get_logger().info("Inference Shutdown Complete")
 
         return TransitionCallbackReturn.SUCCESS
