@@ -138,7 +138,7 @@ def main(args=None):
     largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
     
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5s_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:

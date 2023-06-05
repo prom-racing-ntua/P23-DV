@@ -17,8 +17,8 @@
 #include <rclcpp/qos.hpp>
 #include <rmw/qos_profiles.h>
 
-#include "custom_msgs/srv/driverless_status.hpp"
-#include "custom_msgs/msg/driverless_status.hpp"
+#include "custom_msgs/srv/driverless_transition.hpp"
+#include "custom_msgs/msg/driverless_transition.hpp"
 #include "custom_msgs/msg/lifecycle_node_status.hpp"
 #include "lifecycle_msgs/srv/get_state.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
@@ -78,7 +78,7 @@ namespace lifecycle_manager_namespace
 
         /* Service that handles the DV changes received from P23 Status. Publisher that send to P23 Status the error state of the
             managed nodes. */
-        rclcpp::Service<custom_msgs::srv::DriverlessStatus>::SharedPtr dvStatusService_;
+        rclcpp::Service<custom_msgs::srv::DriverlessTransition>::SharedPtr dvStatusService_;
         rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
 
         // Timer to check if the nodes that we are managing are still alive
@@ -133,8 +133,8 @@ namespace lifecycle_manager_namespace
 
     public:
         explicit LifecycleManagerNode();
-        void changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessStatus::Request> request,
-            std::shared_ptr<custom_msgs::srv::DriverlessStatus::Response> response);
+        void changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessTransition::Request> request,
+            std::shared_ptr<custom_msgs::srv::DriverlessTransition::Response> response);
     };
 }
 

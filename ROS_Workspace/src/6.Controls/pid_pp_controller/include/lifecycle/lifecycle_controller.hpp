@@ -1,4 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -16,11 +19,14 @@ using namespace std::chrono_literals;
 using namespace pid_pp;
 using std::placeholders::_1;
 
-class PID_PP_Node : public rclcpp::Node
+namespace pid_pp{
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+class LifecyclePID_PP_Node : public rclcpp_lifecycle::LifecycleNode
 {
 public:
-    PID_PP_Node();
-    ~PID_PP_Node();
+    LifecyclePID_PP_Node();
+    ~LifecyclePID_PP_Node();
 
 private:
     // SUBSCRIBERS
@@ -28,8 +34,8 @@ private:
     rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr sub_velocity;
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr sub_pose;
     // PUBLISHER
-    rclcpp::Publisher<custom_msgs::msg::TxControlCommand>::SharedPtr pub_actuators;
-    rclcpp::Publisher<custom_msgs::msg::Point2Struct>::SharedPtr pub_target;
+    rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::TxControlCommand>::SharedPtr pub_actuators;
+    rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::Point2Struct>::SharedPtr pub_target;
 
     // OBJECTS
     VelocityProfile *profile;
@@ -59,31 +65,17 @@ private:
     bool is_end;
 
     //Multithreading shit -- Ntroph :(
-    pthread_spinlock_t global_lock_;
-    rclcpp::CallbackGroup::SharedPtr callback_group_waypoints;
-    rclcpp::CallbackGroup::SharedPtr callback_group_pose;
+    rclcpp::CallbackGroup::SharedPtr mutexCallbackGroup;
 
     // BEGINNING SAFETY CHECKS
     bool has_run_waypoints; // needed to run pose_callback
     int count_wp;
+protected:
+    pid_pp::CallbackReturn on_configure(const rclcpp_lifecycle::State &state);
+    pid_pp::CallbackReturn on_activate(const rclcpp_lifecycle::State &state);
+    pid_pp::CallbackReturn on_deactivate(const rclcpp_lifecycle::State &state);
+    pid_pp::CallbackReturn on_cleanup(const rclcpp_lifecycle::State &state);
+    pid_pp::CallbackReturn on_shutdown(const rclcpp_lifecycle::State &state);
+    pid_pp::CallbackReturn on_error(const rclcpp_lifecycle::State &state);
 };
-
-/*
-CONSTRUCTOR:
-    ->load parameters
-    ->initialize controllers
-
-WAYPOINTS CALLBACK:
-    ->save midpoints
-    ->fit spline
-    ->create velocity profile
-    ... potentially ...
-    -> send off initial commands
-
-VELOCITY/POSE CALLBACK:
-    ->project onto spline
-    ->calculate crosstrack error
-    ->find in velocity profile the u_reference
-    ->calculate pid output and pp output
-    ->publish
-*/
+}

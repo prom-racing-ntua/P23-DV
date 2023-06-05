@@ -1,0 +1,9 @@
+uint8 ON_STARTUP = 0
+uint8 SHUTDOWN_NODES = 1
+uint8 ON_MISSION_LOCKED = 2
+uint8 ON_MISSION_UNLOCKED = 3
+uint8 ON_AS_READY = 4
+uint8 ON_AS_DRIVING = 5
+
+uint8 id
+string label

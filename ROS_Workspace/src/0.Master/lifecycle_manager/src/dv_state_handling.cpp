@@ -44,28 +44,28 @@ namespace lifecycle_manager_namespace{
         switch(mission) {
             case(p23::ACCELERATION):
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                // nodesToShutdown = {"path_planning", "mpc"};
-                nodesToShutdown = {"path_planning"};
+                nodesToShutdown = {"path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                nodesToShutdown = {"path_planner", "pure_pursuit"};
+                // nodesToShutdown = {"path_planning", "pure_pursuit"};
+                nodesToShutdown = {"path_planning"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::TRACKDRIVE):
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
-                nodesToShutdown = {"pure_pursuit", "path_planner"};
+                nodesToShutdown = {"pure_pursuit", "path_planning"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::EBS_TEST):
                 configurationFileSelected += std::string("/ebs_test_config.yaml");
-                nodesToShutdown = {"path_planner", "mpc"};
+                nodesToShutdown = {"path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::INSPECTION):
                 configurationFileSelected += std::string("/inspection_config.yaml");
-                nodesToShutdown = {"path_planner", "mpc", "pure_pursuit", "slam", "velocity_estimation", "acquisition_left", "acquisition_right", "inference"};
+                nodesToShutdown = {"path_planning", "mpc", "pure_pursuit", "slam", "velocity_estimation", "acquisition_left", "acquisition_right", "inference"};
                 controlsNode = {"inspection"};
                 break;
             case(p23::AUTOX):
@@ -151,10 +151,12 @@ namespace lifecycle_manager_namespace{
             then you cannot re-open it (only through some very questionable methods which might get
             implemented in the future).
         */
+       
         for (auto node: nodesToShutdown) {
+            
             changeNodeState(shutdownTransition, node);
-            lifecycleGetStateMap.erase(node);
-            lifecycleChangeStateMap.erase(node);
+            // lifecycleGetStateMap.erase(node);
+            // lifecycleChangeStateMap.erase(node);
         }
     }
 

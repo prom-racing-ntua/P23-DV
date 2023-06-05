@@ -51,6 +51,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DriverlessStatus.msg"
   "msg/Mission.msg"
   "msg/LifecycleNodeStatus.msg"
+  "msg/DriverlessTransition.msg"
 
   # Path Planning Messages
   "msg/ConeStruct.msg"
@@ -63,6 +64,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetFrequencies.srv"
   "srv/DriverlessStatus.srv"
   "srv/InsMode.srv"
+  "srv/DriverlessTransition.srv"
 
   ## Messages for P22 testing
   "msg/P22/WheelSpeed.msg"

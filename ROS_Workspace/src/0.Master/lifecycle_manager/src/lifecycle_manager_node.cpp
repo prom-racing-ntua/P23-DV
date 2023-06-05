@@ -34,6 +34,7 @@ namespace lifecycle_manager_namespace
         heartbeatTimerDuration = (1000/heartbeatFrequency);
 
         initializeLifecycleClients(nodeList);
+        startup();
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
 
@@ -41,7 +42,7 @@ namespace lifecycle_manager_namespace
     {
         using namespace std::placeholders;
 
-        dvStatusService_ = create_service<custom_msgs::srv::DriverlessStatus>(
+        dvStatusService_ = create_service<custom_msgs::srv::DriverlessTransition>(
             std::string(get_name()) + std::string("/change_driverless_status"),
             std::bind(&LifecycleManagerNode::changeDVState, this, _1, _2)
             );
@@ -136,10 +137,10 @@ namespace lifecycle_manager_namespace
         auto future_result = changeStateServiceHandler->async_send_request(request, response_received_callback);
     }
 
-    void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessStatus::Request> request,
-        std::shared_ptr<custom_msgs::srv::DriverlessStatus::Response> response)
+    void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessTransition::Request> request,
+        std::shared_ptr<custom_msgs::srv::DriverlessTransition::Response> response)
     {
-        p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->new_status.id);
+        p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->transition.id);
         p23::Mission missionSent = static_cast<p23::Mission>(request->mission.id);
 
         switch(newDVStatus) {
@@ -173,8 +174,8 @@ namespace lifecycle_manager_namespace
 
     void LifecycleManagerNode::loadParameters() {
         nodeList = declare_parameter<std::vector<std::string>>("managing_node_list",
-            { "acquisition_left", "acquisition_right", "acquisition_center", "inference",
-                "velocity_estimation", "slam", "saltas", "path_planning"
+            { "acquisition_left", "acquisition_right", "inference",
+                "velocity_estimation", "slam", "saltas", "path_planning", "mpc", "pure_pursuit"
             });
         heartbeatTimeoutPeriod = declare_parameter<int>("heartbeat_timeout_period", 2000);
         heartbeatFrequency = declare_parameter<int>("heartbeat_frequency", 5);

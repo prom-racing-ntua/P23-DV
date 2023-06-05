@@ -17,8 +17,7 @@
 #include "custom_msgs/msg/tx_vehicle_variables.hpp"
 #include "custom_msgs/msg/lifecycle_node_status.hpp"
 
-#include "custom_msgs/srv/vectornav_heartbeat.hpp"
-#include "custom_msgs/srv/driverless_status.hpp"
+#include "custom_msgs/srv/driverless_transition.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
 
 #include "p23_common.h"
@@ -62,7 +61,7 @@ private:
     rclcpp::Publisher<custom_msgs::msg::TxSystemState>::SharedPtr canbus_system_state_publisher_;
 
     //Clients
-    rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedPtr p23_status_client_;
+    rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedPtr p23_status_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr vectornav_heartbeat_client_;
 

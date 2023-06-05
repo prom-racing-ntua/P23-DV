@@ -15,7 +15,7 @@ namespace mpc{
         setSubscribers();
         mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&LifecycleMpcHandler::mpc_callback, this));
         mpc_clock_->cancel();
-        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("tx_control", 10);
+        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
 
         return mpc::CallbackReturn::SUCCESS;
     }
@@ -62,6 +62,8 @@ namespace mpc{
         RCLCPP_INFO(get_logger(), "Shutting down MPC Node");
 
         mpc_publisher_->on_deactivate();
+        mpc_publisher_.reset();
+
         mpc_clock_->cancel();
 
         /* Should actually free up memory and such */

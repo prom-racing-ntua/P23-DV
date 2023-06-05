@@ -89,7 +89,7 @@ void P23StatusNode::setPublishers() {
 
 void P23StatusNode::setServices() {
     // Set a service to change DV Status and to receive IMU Mode
-    p23_status_client_ = create_client<custom_msgs::srv::DriverlessStatus>("lifecycle_manager/change_driverless_status");
+    p23_status_client_ = create_client<custom_msgs::srv::DriverlessTransition>("lifecycle_manager/change_driverless_status");
     ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("/vn_300/get_ins_mode");
     vectornav_heartbeat_client_ = create_client<custom_msgs::srv::InsMode>("/vn_200/get_ins_mode");
 }
@@ -281,9 +281,9 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
 
     // Create a service request to communicate with the Lifecycle Manager to change the status to whatever is specified
-    auto request = std::make_shared<custom_msgs::srv::DriverlessStatus::Request>();
-    request->new_status.id = requested_transition;
-    request->new_status.label = p23::transition_list.at(requested_transition);
+    auto request = std::make_shared<custom_msgs::srv::DriverlessTransition::Request>();
+    request->transition.id = requested_transition;
+    request->transition.label = p23::transition_list.at(requested_transition);
     request->mission.id = currentMission;
     request->mission.label = p23::mission_list.at(currentMission);
 
@@ -301,7 +301,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     }
 
     // Send request to Lifecycle Manager
-    using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::DriverlessStatus>::SharedFuture;
+    using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedFuture;
     auto response_received_callback = [this, requested_transition, transition_to](ServiceResponseFuture future) {
         RCLCPP_INFO_STREAM(get_logger(), "Received result from Lifecycle Manager Service for " << p23::transition_list.at(requested_transition) << " request");
         auto result = future.get();

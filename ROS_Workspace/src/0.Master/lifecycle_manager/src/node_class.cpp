@@ -18,4 +18,3 @@ ManagedNode::ManagedNode(std::string passedName, std::string passedPackageName) 
 ManagedNode::~ManagedNode() {
 
 }
-

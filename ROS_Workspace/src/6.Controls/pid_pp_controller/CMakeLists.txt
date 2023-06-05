@@ -17,7 +17,6 @@ endif()
 
 set(CMAKE_BUILD_TYPE Release)
 
-
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -25,17 +24,11 @@ find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(Eigen3 REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 include_directories(
   include
-  custom_msgs
-)
-include_directories(
-    include
-    ${EIGEN3_INCLUDE_DIRS}
+  include/lifecycle
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 #TBD
@@ -44,9 +37,14 @@ src/pid_pp_module.cpp
 src/cubic_spline.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 
+add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_controller.cpp src/lifecycle/lifecycle_states.cpp
+src/pid_pp_module.cpp
+src/cubic_spline.cpp)
+ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp std_msgs custom_msgs rclcpp_lifecycle)
 
 install(TARGETS
   ${PROJECT_NAME}
+  lifecycle_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -54,7 +52,6 @@ install(DIRECTORY
   config launch
   DESTINATION share/${PROJECT_NAME}/
 )
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -28,7 +28,25 @@ def generate_launch_description():
         name='acquisition'
     )
 
-    ldList = [inferenceNode, saltasNode, pathplanningNode]
+    velocityEstimationNode = Node(
+        package='velocity_estimation',
+        executable='lifecycle_velocity_estimation',
+        name='velocity_estimation'
+    )
+    
+    slamNode = Node(
+        package='slam',
+        executable='lifecycle_slam',
+        name='slam'
+    )
+
+    mpcNode = Node(
+        package='mpc',
+        executable='lifecycle_mpc',
+        name='mpc'
+    )
+
+    ldList = [inferenceNode, saltasNode, pathplanningNode, velocityEstimationNode, slamNode, mpcNode]
 
     ld = LaunchDescription(ldList)
     return ld

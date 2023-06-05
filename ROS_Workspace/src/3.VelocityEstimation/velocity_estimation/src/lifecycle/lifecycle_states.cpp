@@ -64,6 +64,7 @@ namespace ns_vel_est
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_shutdown(const rclcpp_lifecycle::State &state) 
     {  
+        pub_.reset();
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

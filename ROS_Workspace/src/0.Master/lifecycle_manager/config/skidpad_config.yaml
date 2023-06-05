@@ -1,4 +1,4 @@
-acquisition_left:
+/acquisition_left:
   ros__parameters:
     serialNumber: "KE0220030137"
     exposureTime: 40000
@@ -9,7 +9,7 @@ acquisition_left:
     ROIy: 1024
     orientation: "left"
 
-acquisition_right:
+/acquisition_right:
   ros__parameters:
     serialNumber: "KE0220040196"
     exposureTime: 40000
@@ -19,22 +19,14 @@ acquisition_right:
     ROIy: 1024
     orientation: "right"
 
-acquisition_center:
-  ros__parameters:
-    serialNumber: "KE0220030138"
-    exposureTime: 1500
-    autoExposure: False
-    expectedGrayValue: 50
-    ROIx: 1280
-    ROIy: 1024
-    orientation: "center"
-
-slam:
+/slam:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
     mapping_mode: false
     track_map: "/tracks/acceleration.txt"
+    velocity_estimation_frequency: 40
+    perception_frequency: 10
 
     # Defines the starting position of the car
     starting_position: [ -8.2, 0.0, 0.0 ]
@@ -71,7 +63,7 @@ slam:
       perception_frequency: 5                # Hz
 
 
-velocity_estimation:
+/velocity_estimation:
   ros__parameters:
     frequency: 40               # [Hz]
 
