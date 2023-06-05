@@ -107,7 +107,6 @@ namespace pid_pp{
         /* Edw prepei na kanoyme kai clean up to model */
 
         RCLCPP_INFO(get_logger(), "Pure Pursuit Node shut down!");
-        
     }
 
     pid_pp::CallbackReturn

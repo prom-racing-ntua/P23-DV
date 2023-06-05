@@ -75,8 +75,10 @@ class SaltasNode(Node):
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().info(f'Cleaning Up Saltas Node')
         self.saltas_clock.cancel()
-        self.saltas_clock.destroy()
-        self.clock_publisher.destroy()
+
+        self.destroy_timer(self.saltas_clock)
+        self.destroy_publisher(self.clock_publisher)
+
         self.get_logger().info(f'Saltas Node unconfigured')
         return TransitionCallbackReturn.SUCCESS
     
@@ -84,8 +86,9 @@ class SaltasNode(Node):
         self.get_logger().info(f'Shutting Down Saltas Node')
 
         self.saltas_clock.cancel()
-        self.saltas_clock.destroy()
-        self.clock_publisher.destroy()
+        
+        self.destroy_timer(self.saltas_clock)
+        self.destroy_publisher(self.clock_publisher)
 
         self.get_logger().info(f'Saltas Node shut down')
         return TransitionCallbackReturn.SUCCESS
@@ -97,7 +100,7 @@ class SaltasNode(Node):
         but not 100% sure if that is true.
         '''
 
-        self.get_logger().info(f'Sending clock signal')
+        # self.get_logger().info(f'Sending clock signal')
         if self.send_index >= self.send_reset:
             self.send_index = 0
 
