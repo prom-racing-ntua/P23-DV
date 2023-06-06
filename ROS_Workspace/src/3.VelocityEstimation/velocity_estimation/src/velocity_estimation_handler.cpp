@@ -44,30 +44,28 @@ VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimatio
 void VelocityEstimationHandler::setSubscribers() {
     using std::placeholders::_1;
 
-    // Setting the quality of service for the subscribers to sensor data. This has a smaller buffer
-    // for the subscriber and best effort reliability. Go to rmw_qos_profile_sensor_data definition
-    // and to ros2 documentation for full details. The KeepLast(5) argument is not used since it gets
-    // overwritten afterwards, it is necessary for the QoSInitialization argument.
+    /* Setting the quality of service for the subscribers to sensor data. This has a smaller buffer
+     * for the subscriber and best effort reliability. Go to rmw_qos_profile_sensor_data definition
+     * and to ros2 documentation for full details. The KeepLast(5) argument is not used since it gets
+     * overwritten afterwards, it is necessary for the QoSInitialization argument.
+     */
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
 
     vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vn_300/raw/ins",
         sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1));
-    //
+
     // vn_attitude_sub_ = create_subscription<vectornav_msgs::msg::AttitudeGroup>("vn_300/raw/attitude",
-    // sensor_qos, std::bind(&VelocityEstimationHandler::attitudeCallback, this, _1));
-    //
+    //     sensor_qos, std::bind(&VelocityEstimationHandler::attitudeCallback, this, _1));
+
     vn_imu_sub_ = create_subscription<vectornav_msgs::msg::ImuGroup>("vn_200/raw/imu",
         sensor_qos, std::bind(&VelocityEstimationHandler::imuCallback, this, _1));
-    //
-    front_wheel_encoder_sub_ = create_subscription<custom_msgs::msg::WheelSpeed>("canbus/front_hall_sensors",
-        sensor_qos, std::bind(&VelocityEstimationHandler::frontWheelSpeedCallback, this, _1));
-    //
-    rear_wheel_encoder_sub_ = create_subscription<custom_msgs::msg::WheelSpeed>("canbus/rear_hall_sensors",
-        sensor_qos, std::bind(&VelocityEstimationHandler::rearWheelSpeedCallback, this, _1));
-    //
-    steering_sub_ = create_subscription<custom_msgs::msg::SteeringAngle>("canbus/steering_angle",
+
+    wheel_encoder_sub_ = create_subscription<custom_msgs::msg::RxWheelSpeed>("canbus/wheel_encoders",
+        sensor_qos, std::bind(&VelocityEstimationHandler::wheelSpeedCallback, this, _1));
+
+    steering_sub_ = create_subscription<custom_msgs::msg::RxSteeringAngle>("canbus/steering_angle",
         sensor_qos, std::bind(&VelocityEstimationHandler::steeringCallback, this, _1));
-    //
+
     master_sub_ = create_subscription<custom_msgs::msg::NodeSync>("saltas_clock", 10,
         std::bind(&VelocityEstimationHandler::masterCallback, this, _1));
 }
@@ -241,34 +239,32 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
     }
 }
 
-void VelocityEstimationHandler::frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
-    // We take the average of the two wheels
-    double right_rpm{ static_cast<double>(msg->right_wheel) };
-    double left_rpm{ static_cast<double>(msg->left_wheel) };
+void VelocityEstimationHandler::wheelSpeedCallback(const custom_msgs::msg::RxWheelSpeed::SharedPtr msg) {
+    // --- Front Wheels
+    double front_right_rpm{ static_cast<double>(msg->front_right) };
+    double front_left_rpm{ static_cast<double>(msg->front_left) };
 
-    double temp{ (right_rpm + left_rpm) / 2.0 };
-    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
-        measurement_vector_(ObservationVhall_front) = right_rpm;
-    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
-        measurement_vector_(ObservationVhall_front) = left_rpm;
+    double temp{ (front_right_rpm + front_left_rpm) / 2.0 };
+    if ((front_left_rpm == 0.0) and (front_right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_front) = front_left_rpm;
+    else if ((front_left_rpm != 0.0) and (front_left_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_front) = front_left_rpm;
     else if (std::fabs(temp - measurement_vector_(ObservationVhall_front)) >= 80.0) \
         measurement_vector_(ObservationVhall_front) = 0.997 * measurement_vector_(ObservationVhall_front) + 0.003 * temp;
     else \
         measurement_vector_(ObservationVhall_front) = temp;
 
     updated_sensors_[FrontWheelEncoders] = true;
-}
 
-void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg) {
-    // We take the average of the two wheels
-    double right_rpm{ static_cast<double>(msg->right_wheel) };
-    double left_rpm{ static_cast<double>(msg->left_wheel) };
+    // --- Rear Wheels
+    double rear_right_rpm{ static_cast<double>(msg->rear_right) };
+    double rear_left_rpm{ static_cast<double>(msg->rear_left) };
 
-    double temp{ (right_rpm + left_rpm) / 2.0 };
-    if ((left_rpm == 0.0) and (right_rpm != 0.0)) \
-        measurement_vector_(ObservationVhall_rear) = right_rpm;
-    else if ((left_rpm != 0.0) and (right_rpm == 0.0)) \
-        measurement_vector_(ObservationVhall_rear) = left_rpm;
+    double temp{ (rear_right_rpm + rear_left_rpm) / 2.0 };
+    if ((rear_left_rpm == 0.0) and (rear_right_rpm != 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = rear_right_rpm;
+    else if ((rear_left_rpm != 0.0) and (rear_right_rpm == 0.0)) \
+        measurement_vector_(ObservationVhall_rear) = rear_left_rpm;
     else if (std::fabs(temp - measurement_vector_(ObservationVhall_rear)) >= 80.0) \
         measurement_vector_(ObservationVhall_rear) = 0.997 * measurement_vector_(ObservationVhall_rear) + 0.003 * temp;
     else \
@@ -277,7 +273,7 @@ void VelocityEstimationHandler::rearWheelSpeedCallback(const custom_msgs::msg::W
     updated_sensors_[RearWheelEncoders] = true;
 }
 
-void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg) {
+void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {
     // 3.17 is the gear ratio of the steering rack
     // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
     input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad

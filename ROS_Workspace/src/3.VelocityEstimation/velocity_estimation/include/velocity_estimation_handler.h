@@ -10,8 +10,8 @@
 #include "vectornav_msgs/msg/imu_group.hpp"
 #include "vectornav_msgs/msg/ins_group.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
-#include "custom_msgs/msg/wheel_speed.hpp"
-#include "custom_msgs/msg/steering_angle.hpp"
+#include "custom_msgs/msg/rx_steering_angle.hpp"
+#include "custom_msgs/msg/rx_wheel_speed.hpp"
 #include "custom_msgs/msg/node_sync.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
@@ -26,12 +26,11 @@ private:
     VelocityEstimator<VelocityEstimationHandler> estimator_;
 
     // ROS Subscriber members
-    rclcpp::Subscription<vectornav_msgs::msg::InsGroup>::SharedPtr vn_velocity_sub_;     // vectornav vn-300
-    // rclcpp::Subscription<vectornav_msgs::msg::AttitudeGroup>::SharedPtr vn_attitude_sub_;     // vectornav vn-300
-    rclcpp::Subscription<vectornav_msgs::msg::ImuGroup>::SharedPtr vn_imu_sub_;        // vectornav vn-200
-    rclcpp::Subscription<custom_msgs::msg::WheelSpeed>::SharedPtr front_wheel_encoder_sub_;
-    rclcpp::Subscription<custom_msgs::msg::WheelSpeed>::SharedPtr rear_wheel_encoder_sub_;
-    rclcpp::Subscription<custom_msgs::msg::SteeringAngle>::SharedPtr steering_sub_;
+    rclcpp::Subscription<vectornav_msgs::msg::InsGroup>::SharedPtr vn_velocity_sub_;        // vn-300
+    // rclcpp::Subscription<vectornav_msgs::msg::AttitudeGroup>::SharedPtr vn_attitude_sub_;   // vn-300
+    rclcpp::Subscription<vectornav_msgs::msg::ImuGroup>::SharedPtr vn_imu_sub_;             // vn-200
+    rclcpp::Subscription<custom_msgs::msg::RxWheelSpeed>::SharedPtr wheel_encoder_sub_;     // can-usb
+    rclcpp::Subscription<custom_msgs::msg::RxSteeringAngle>::SharedPtr steering_sub_;       // can-usb
 
     // ROS Subscriber to the master node to sync velocity estimation and perception. The frequency of the node is determined by
     // this subscriber and is set in the master node config.
@@ -64,9 +63,8 @@ private:
     void velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg);
     // void attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg);
     void imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg);
-    void frontWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg);
-    void rearWheelSpeedCallback(const custom_msgs::msg::WheelSpeed::SharedPtr msg);
-    void steeringCallback(const custom_msgs::msg::SteeringAngle::SharedPtr msg);
+    void wheelSpeedCallback(const custom_msgs::msg::RxWheelSpeed::SharedPtr msg);
+    void steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg);
 
 public:
     explicit VelocityEstimationHandler();
