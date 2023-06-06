@@ -207,15 +207,15 @@ namespace ns_vel_est
         double front_right_rpm{ static_cast<double>(msg->front_right) };
         double front_left_rpm{ static_cast<double>(msg->front_left) };
 
-        double temp{ (front_right_rpm + front_left_rpm) / 2.0 };
+        double front_avg{ (front_right_rpm + front_left_rpm) / 2.0 };
         if ((front_left_rpm == 0.0) and (front_right_rpm != 0.0)) \
             measurement_vector_(ObservationVhall_front) = front_left_rpm;
         else if ((front_left_rpm != 0.0) and (front_left_rpm == 0.0)) \
             measurement_vector_(ObservationVhall_front) = front_left_rpm;
-        else if (std::fabs(temp - measurement_vector_(ObservationVhall_front)) >= 80.0) \
-            measurement_vector_(ObservationVhall_front) = 0.997 * measurement_vector_(ObservationVhall_front) + 0.003 * temp;
+        else if (std::fabs(front_avg - measurement_vector_(ObservationVhall_front)) >= 80.0) \
+            measurement_vector_(ObservationVhall_front) = 0.997 * measurement_vector_(ObservationVhall_front) + 0.003 * front_avg;
         else \
-            measurement_vector_(ObservationVhall_front) = temp;
+            measurement_vector_(ObservationVhall_front) = front_avg;
 
         updated_sensors_[FrontWheelEncoders] = true;
 
@@ -223,15 +223,15 @@ namespace ns_vel_est
         double rear_right_rpm{ static_cast<double>(msg->rear_right) };
         double rear_left_rpm{ static_cast<double>(msg->rear_left) };
 
-        double temp{ (rear_right_rpm + rear_left_rpm) / 2.0 };
+        double rear_avg{ (rear_right_rpm + rear_left_rpm) / 2.0 };
         if ((rear_left_rpm == 0.0) and (rear_right_rpm != 0.0)) \
             measurement_vector_(ObservationVhall_rear) = rear_right_rpm;
         else if ((rear_left_rpm != 0.0) and (rear_right_rpm == 0.0)) \
             measurement_vector_(ObservationVhall_rear) = rear_left_rpm;
-        else if (std::fabs(temp - measurement_vector_(ObservationVhall_rear)) >= 80.0) \
-            measurement_vector_(ObservationVhall_rear) = 0.997 * measurement_vector_(ObservationVhall_rear) + 0.003 * temp;
+        else if (std::fabs(rear_avg - measurement_vector_(ObservationVhall_rear)) >= 80.0) \
+            measurement_vector_(ObservationVhall_rear) = 0.997 * measurement_vector_(ObservationVhall_rear) + 0.003 * rear_avg;
         else \
-            measurement_vector_(ObservationVhall_rear) = temp;
+            measurement_vector_(ObservationVhall_rear) = rear_avg;
 
         updated_sensors_[RearWheelEncoders] = true;
     }
