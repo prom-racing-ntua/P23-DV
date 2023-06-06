@@ -26,6 +26,8 @@ namespace mpc {
         mpc_solver.v_limit_ = declare_parameter<float>("v_limit",1111.0);
         node_freq_ = declare_parameter<int>("node_freq",50);
         mpc_solver.dt = (1/node_freq_);
+        mpc_solver.s_space_max = declare_parameter<float>("s_space_max",0.5);
+        mpc_solver.s_space_min = declare_parameter<float>("s_space_min",0.1);
         std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << node_freq_ << std::endl;
         std::cout << "declared params" << std::endl;
     }

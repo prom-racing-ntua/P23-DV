@@ -15,24 +15,26 @@ MpcHandler::MpcHandler():Node("mpc"), count_(0){
     else {
         ReadKnownTrack();
     }
-
     pose_subscriber_ = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&MpcHandler::pose_callback, this, std::placeholders::_1));
     mpc_publisher_ = this->create_publisher<custom_msgs::msg::TxControlCommand>("tx_control", 10);
-    mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&MpcHandler::mpc_callback, this));
+    // mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&MpcHandler::mpc_callback, this));
 }
 
 void MpcHandler::loadParameters() {
+    global_int=-1;
     mpc_solver.known_track_= declare_parameter<bool>("known_track",true); //they are set to false values to test yaml files
     mpc_solver.simulation_= declare_parameter<bool>("simulation",true);
     mpc_solver.midpoints_txt_= declare_parameter<std::string>("midpoints_txt","src/6.Controls/mpc/data/thomaidio_midpoints.txt");
     mpc_solver.search_window_ = declare_parameter<int>("search_window",15);
     mpc_solver.s_interval_ = declare_parameter<float>("s_interval",15);
-    mpc_solver.distance_safe_ = declare_parameter<float>("distance_safe",1000.0);
-    mpc_solver.emergency_forward_ = declare_parameter<float>("emergency_forward",2.2);
-    mpc_solver.F_init = declare_parameter<float>("F_init",1111.0);
-    mpc_solver.v_limit_ = declare_parameter<float>("v_limit",1111.0);
+    mpc_solver.distance_safe_ = declare_parameter<float>("distance_safe",0.95);
+    mpc_solver.emergency_forward_ = declare_parameter<float>("emergency_forward",1.0);
+    mpc_solver.F_init = declare_parameter<float>("F_init",300.0);
+    mpc_solver.v_limit_ = declare_parameter<float>("v_limit",12.5);
     node_freq_ = declare_parameter<int>("node_freq",50);
     mpc_solver.dt = (1/node_freq_);
+    mpc_solver.s_space_max = declare_parameter<float>("s_space_max",0.5);
+    mpc_solver.s_space_min = declare_parameter<float>("s_space_min",0.1);
     std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << node_freq_ << std::endl;
     std::cout << "declared params" << std::endl;
 }
@@ -48,11 +50,48 @@ void MpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_m
     mpc_solver.vel_struct.yaw_rate = float(pose_msg->velocity_state.yaw_rate);
     std::cout << "I get pose " << mpc_solver.pose_struct.x << " " << mpc_solver.pose_struct.y << " " << mpc_solver.pose_struct.theta << std::endl;
     std::cout << "I get velocity " << mpc_solver.vel_struct.velocity_x << " " << mpc_solver.vel_struct.velocity_y << " " << mpc_solver.vel_struct.yaw_rate << std::endl;
+    std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
+    auto mpc_msg = custom_msgs::msg::TxControlCommand();  
+    rclcpp::Time starting_time = this->now();
+    if(path_flag==0) {
+        std::cout << "havent data yet" << std::endl;
+        mpc_msg.speed_target = (float)(0.0);
+        mpc_msg.speed_actual = (float)(0.0);
+        mpc_msg.motor_torque_target = (float)(0.0);
+        mpc_msg.steering_angle_target = (float)(0.0);
+        mpc_msg.brake_pressure_target = (bool)(0);
+    }
+    else {
+        if(global_int==-1) mpc_solver.Initialize_all_local();
+        mpc_solver.UpdateFromLastIteration();
+        if(mpc_solver.known_track_) {
+            mpc_solver.generateFirstPoint();
+            mpc_solver.writeParamsKnown(global_int);
+        }
+        else {
+            std::cout << "unknown track parameter estimation" << std::endl;
+            mpc_solver.generateFirstPointUnknown();
+            mpc_solver.writeParamsUnknown();
+        }
+        mpc_solver.callSolver(global_int);
+        mpc_solver.generateOutput();         
+        //define message to ROS2
+        mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
+        mpc_msg.speed_actual = mpc_solver.output_struct.speed_target;
+        mpc_msg.motor_torque_target = mpc_solver.output_struct.motor_torque_target;
+        mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
+        mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
+        global_int++;
+    }
+    RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" " ,brake pressure: %.6f" , mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target, mpc_msg.brake_pressure_target);
+    mpc_publisher_->publish(mpc_msg);
+    rclcpp::Duration total_time = this->now() - starting_time;
+    total_execution_time += total_time.nanoseconds() / 1000000.0;
+    std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
 }
 
 void MpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
     std::cout << "mpika path callback" << std::endl;
-    if(path_flag==0) path_flag=1;
     int pp_points = int(path_msg->count);
     Eigen::MatrixXd spline_input{path_msg->count, 2};
     if(pp_points==2) spline_input.resize(pp_points+1,2);
@@ -70,7 +109,14 @@ void MpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr p
     spline_input(rows_temp,1) = midpoints_new.y;
     rows_temp++;
     }
-    float sol_temp = std::sqrt(std::pow(spline_input(0,0)-spline_input(path_msg->count - 1,0),2) + std::pow(spline_input(0,1)-spline_input(path_msg->count - 1,1),2));
+    //wrong needs to be changed
+    std::vector<double> target_lengths_init;
+    target_lengths_init.push_back(0.0);
+    for (int i{ 1 }; i < path_msg->count; i++) {
+        target_lengths_init.push_back(target_lengths_init[i - 1] + \
+            std::sqrt(std::pow(spline_input(i, 0) - spline_input(i - 1, 0), 2) + std::pow(spline_input(i, 1) - spline_input(i - 1, 1), 2)));
+    }
+    double sol_temp = target_lengths_init[path_msg->count -1];
     std::cout << "sol is: " << sol_temp << std::endl;
     int points = int (sol_temp/mpc_solver.s_interval_);
     if(points <40) points = 40;
@@ -79,12 +125,15 @@ void MpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr p
     midpoints.conservativeResize(midpoints.rows()+1 , midpoints.cols());
     midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
     path_planning::ArcLengthSpline spline{midpoints, path_planning::BoundaryCondition::Anchored};
+    path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
     PointsData params_array_bef;
+    mpc_solver.spline_final = spline_init;
     mpc_solver.sol = spline.getApproximateLength();
     params_array_bef = spline.getSplineData(points);
     mpc_solver.params_array = params_array_bef.topRows(40);
-    global_int++;
+    std::cout << "first point of path callback is: " << mpc_solver.params_array(0,0) << " " << mpc_solver.params_array(0,1) << std::endl;
     std::cout << "finished path callback" << std::endl;
+    if(path_flag==0) path_flag=1;
 }
 
 void MpcHandler::ReadKnownTrack() {
@@ -100,49 +149,48 @@ void MpcHandler::ReadKnownTrack() {
     std::cout << "length of track is: "<< mpc_solver.sol << std::endl;
     mpc_solver.whole_track = spline_init->getSplineData(mpc_solver.spline_resolution);
     path_flag=1;
-    global_int++;
     std::cout << "read known track" << std::endl;
 }
 
-void MpcHandler::mpc_callback() {
-    std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
-    auto mpc_msg = custom_msgs::msg::TxControlCommand();  
-    rclcpp::Time starting_time = this->now();
-    if(path_flag==0) {
-        std::cout << "havent data yet" << std::endl;
-        mpc_msg.speed_target = (float)(0.0);
-        mpc_msg.speed_actual = (float)(0.0);
-        mpc_msg.motor_torque_target = (float)(0.0);
-        mpc_msg.steering_angle_target = (float)(0.0);
-        mpc_msg.brake_pressure_target = (bool)(0);
-    }
-    else {
-        if(global_int==0) mpc_solver.Initialize_all_local();
-        mpc_solver.UpdateFromLastIteration();
-        if(mpc_solver.known_track_) {
-            mpc_solver.generateFirstPoint();
-            mpc_solver.writeParamsKnown(global_int);
-        }
-        else {
-            mpc_solver.generateFirstPointUnknown();
-            mpc_solver.writeParamsUnknown();
-        }
-        mpc_solver.callSolver(global_int);
-        mpc_solver.generateOutput();         
-        //define message to ROS2
-        mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
-        mpc_msg.speed_actual = mpc_solver.output_struct.speed_target;
-        mpc_msg.motor_torque_target = mpc_solver.output_struct.motor_torque_target;
-        mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
-        mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
-        global_int++;
-    }
-    RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" " ,brake pressure: %.6f" , mpc_msg.motor_torque_target, mpc_msg.steering_angle_target, mpc_msg.brake_pressure_target);
-    mpc_publisher_->publish(mpc_msg);
-    rclcpp::Duration total_time = this->now() - starting_time;
-    total_execution_time += total_time.nanoseconds() / 1000000.0;
-    std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
-}
+// void MpcHandler::mpc_callback() {
+//     std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
+//     auto mpc_msg = custom_msgs::msg::TxControlCommand();  
+//     rclcpp::Time starting_time = this->now();
+//     if(path_flag==0) {
+//         std::cout << "havent data yet" << std::endl;
+//         mpc_msg.speed_target = (float)(0.0);
+//         mpc_msg.speed_actual = (float)(0.0);
+//         mpc_msg.motor_torque_target = (float)(0.0);
+//         mpc_msg.steering_angle_target = (float)(0.0);
+//         mpc_msg.brake_pressure_target = (bool)(0);
+//     }
+//     else {
+//         if(global_int==0) mpc_solver.Initialize_all_local();
+//         mpc_solver.UpdateFromLastIteration();
+//         if(mpc_solver.known_track_) {
+//             mpc_solver.generateFirstPoint();
+//             mpc_solver.writeParamsKnown(global_int);
+//         }
+//         else {
+//             mpc_solver.generateFirstPointUnknown();
+//             mpc_solver.writeParamsUnknown();
+//         }
+//         mpc_solver.callSolver(global_int);
+//         mpc_solver.generateOutput();         
+//         //define message to ROS2
+//         mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
+//         mpc_msg.speed_actual = mpc_solver.output_struct.speed_target;
+//         mpc_msg.motor_torque_target = mpc_solver.output_struct.motor_torque_target;
+//         mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
+//         mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
+//         global_int++;
+//     }
+//     RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" " ,brake pressure: %.6f" , mpc_msg.motor_torque_target, mpc_msg.steering_angle_target, mpc_msg.brake_pressure_target);
+//     mpc_publisher_->publish(mpc_msg);
+//     rclcpp::Duration total_time = this->now() - starting_time;
+//     total_execution_time += total_time.nanoseconds() / 1000000.0;
+//     std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
+// }
 
 
 MpcHandler::~MpcHandler(){

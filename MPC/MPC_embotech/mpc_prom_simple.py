@@ -3,6 +3,7 @@
 
 import sys
 import numpy as np
+from numpy import *
 import casadi
 import forcespro
 import forcespro.nlp
@@ -44,8 +45,7 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-mi_y_max=1.0
-u_upper=15.0
+u_upper=12.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -54,10 +54,10 @@ eff=0.85
 window=10
 
 #for dynamic model
-B=-8.266
-C=1.456
+# B=-7.0
+# C=1.456
 C_tire=0.66
-D= 1739.47
+# D= 3000.0
 cs=-16419.31
 dt_integration=0.025
 
@@ -68,8 +68,8 @@ INDEX_MAX=310.0
 DINDEX_MAX=310.0 #just for one lap (TBC)
 
 #ellipse params
-a=1.46
-b=1.62
+# a=1.46
+# b=1.62
 
 # Read the txt file data
 def Dataloader(txt):
@@ -93,17 +93,12 @@ def continuous_dynamics(x, u):
     temp1=casadi.fmax((x[3]-umin)/(umax-umin),0)
     l_a=casadi.fmin(temp1,1)
 
-    #slip angles and Fys
     # saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
     # sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
-    saf=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
-    sar=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
-    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
-    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
-    Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(x[3]**2)
-    # Ffy = -saf*cs
-    # Fry = -sar*cs
+    saf,sar = getSasWithState(x) 
+    Ffz,Frz = getFzWithState(x)
+    Ffy = getFy(Ffz,saf)
+    Fry = getFy(Frz,sar)
 
     #friction forces
     Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
@@ -125,58 +120,92 @@ def continuous_dynamics(x, u):
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
 err_array=[]
+def getFy(Fz,sa):
+    ex=1e-7
+    P=[1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04]
+    C=P[0]
+    D=P[1]*Fz*Fz+P[2]*Fz
+    BCD = P[3]*casadi.sin(P[4]*casadi.arctan(P[5]*Fz))
+    B=BCD/(C*D)
+    F_temp = C_tire*D*casadi.sin(C*casadi.arctan(B*sa))
+    return F_temp
+
+def getSas(z):
+    saf_temp=casadi.arctan((z[7]+l_f*z[8])/(z[6]+1e-3)) - z[10]
+    sar_temp=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
+    return saf_temp,sar_temp
+
+def getFz(z):
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    return Ffz_temp,Frz_temp
+
+def getFzWithState(x):
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
+    return Ffz_temp,Frz_temp
+
+def getSasWithState(x):
+    saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
+    sar_temp=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
+    return saf_temp,sar_temp
+
+def getEllipseParams(Fz):
+    Fz0=1112.0554070627252
+    dfz=(Fz-Fz0)/Fz0
+    C_tire=0.66
+    mx_max=C_tire*(2.21891927-1.36151651e-07*dfz)
+    my_max=C_tire*(2.46810824-0.21654031*dfz)
+    return mx_max,my_max
+
 def obj(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
     z = [dF,ddelta,dindex,xPos,yPos,phi, vx, vy, r, F, delta,index]
     current_target = point on path that is to be headed for
     """
-    saf=casadi.arctan((z[7]+l_f*z[8])/(z[6]+1e-3)) - z[10]
-    sar=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
+    saf,sar = getSas(z) 
+    Ffz,Frz = getFz(z)
+    a,b = getEllipseParams(Frz)
+    Fry = getFy(Frz,sar)
+    #extra terms for cost function
     dyn_sa  = casadi.arctan(z[7]/(z[6]+1e-3))
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(z[10]))
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
-    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
-    Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[6]**2)
-    print("Forces are: ",z[9]," ", Fry, " ",Frz)
 
     return (
-        1e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-           + 1e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
-            # + 1e-3*(e_c)**2 # costs on deviating on the
-                                        #path in y-direction
+        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+            + 0e1*(e_c)**2 # costs on deviating on the
+                                        # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
                                 #path in x-direction0.025
-            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
-            + 1e1*(z[6]-current_target[3])**2
-            + 1e-3*z[0]**2 # penalty on input F,dF
-            + 1e-3*z[9]**2
-            + 1e3*z[1]**2 #penalty on delta,ddelta
-            + 1e3*z[10]**2
+            + 1e-1*(z[5]-current_target[2])**2 #dphi gap
+            + 1e-1*(z[6]-current_target[3])**2
+            + 1e-5*z[0]**2 # penalty on input F,dF
+            + 1e-5*z[9]**2
+            + 5e2*z[1]**2 #penalty on delta,ddelta
+            + 5e2*z[10]**2
             + 1e-3*(sar**2)
             + 1e-3*(dsa**2)
-            + 1e-3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
-            + 1e-3*((1/(z[6]**2 +1e-3))) #vx and index
-            - 1e-3*(z[6])
-            - 1e-3*(z[11]/INDEX_MAX)
-            - 1e-1*(z[2]/INDEX_MAX))
+            + 5e3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
+            - 1e-4*(z[6])
+            - 1e-4*(z[11]/INDEX_MAX)
+            - 1e-4*(z[2]/INDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
     z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta, index]
     current_target = point on path that is to be headed for
     """
-    saf=casadi.arctan((z[7]+l_f*z[8])/(z[6]+1e-3)) - z[10]
-    sar=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
-    Ffy = C_tire*D*casadi.sin(C*casadi.arctan(B*saf))
-    Fry = C_tire*D*casadi.sin(C*casadi.arctan(B*sar))
-    Frz = (l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Ffz = (l_r/(l_r+l_f))*m*g + 0.25*pair*ClA*(z[6]**2)
-    constr1 = (z[3]-current_target[0])**2 + (z[4]-current_target[1])**2 #inside track constraint
-    constr2 = (z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
+    saf,sar = getSas(z) 
+    Ffz,Frz = getFz(z)
+    Fry = getFy(Frz,sar)
+    a,b = getEllipseParams(Frz)
+    constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    constr2 = (z[8]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
     constr3 = saf
     return (constr1,constr2,constr3) 
 
@@ -235,9 +264,9 @@ def generate_closest_s(reference_track, pos,emergency_bool):
     """
     path_points=reference_track[:2,:]
     if(emergency_bool):
-        idx = find_closest_point(path_points,pos) 
-    else:
         idx = find_closest_point(path_points,pos) + int((1/ds_wanted))
+    else:
+        idx = find_closest_point(path_points,pos) + 1
     # idx0 = find_closest_point(path_points,pos)
     print("final(=euclidean) closest point is: ",path_points[:,idx]," ",idx)
     # if(idx0<2*window):
@@ -287,10 +316,10 @@ def generate_pathplanner():
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
-    model.hu = np.array([+np.inf,1.0,np.inf])
-    model.hl = np.array([-np.inf,-np.inf,-np.inf])
-    #track - tyres - sa
-    # model.hu = np.array([2.0,1.0,0.15])p.
+    model.hu = np.array([+np.inf,+1.0,+0.3])
+    model.hl = np.array([-np.inf,-np.inf,-0.3])
+    #track - tyres - sar
+    # model.hu = np.array([2.0,1.0,0.15])
     # model.hl = np.array([-np.inf,-np.inf,-0.15])
 
     # Initial condition on vehicle states x
@@ -489,11 +518,21 @@ def cubic_spline_generation(x, y):
     # Compute curvature, heading_angle and u_ref
     local_angle = np.arctan2(dy, dx)
     curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
+    print(curvature,np.shape(curvature))
+    vel_prof_dummy = [1.0 for i in range (np.shape(curvature)[0])]
     interpolated_points = np.vstack([interpolated_points,local_angle,curvature])
     return cs, interpolated_points
 
-def cubic_spline_inference(cs,parameter):
+def cubic_spline_inference(cs,parameter,x):
+    x_temp=x.copy()
     parameter_array=[]
+    _,Frz=getFzWithState(x)
+    _,b=getEllipseParams(Frz)
+    u_max=[]
+    u_final=[]
+    u_first = x_temp[3]
+    ux_init=x_temp[3]
+    u_first_array = []
     for i in range(np.shape(parameter)[0]):
         interpolated_points = cs(parameter[i])
         # Compute derivatives
@@ -503,18 +542,98 @@ def cubic_spline_inference(cs,parameter):
         ddy = cs.derivative(2)(parameter)[i,1]
         # Compute curvature, heading_angle and u_ref
         local_angle = np.arctan2(dy, dx)
+        ##velocity profile started
         curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
-        u_ref=np.sqrt((mi_y_max*g/curvature))
-        print("uref is:",u_ref)
-        if(u_ref>u_upper): u_ref=u_upper
+        # u_first=np.sqrt((b*g/curvature))
+        u_first=np.sqrt((b*g*curvature))
+        if(u_first>u_upper):u_first=u_upper
+        u_max.append(u_first)
+        if(i==0): 
+            u_forward=x_temp[3] 
+        elif(i>0 and i<=np.shape(parameter)[0]-1):
+            x_temp[3]=u_output1
+            _,Frz = getFzWithState(x_temp)
+            a,b = getEllipseParams(Frz)
+            Fy_remain = m*(x_temp[3]**2)*curvature
+            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain=0
+            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            ds_temp=parameter[i]-parameter[i-1]
+            u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*ds_temp)
+        u_output1=np.min(np.array([u_forward,u_first]))
+        # if(u_output>u_upper): u_output=u_upper 
         parameter_array.append([interpolated_points[0]])
         parameter_array.append([interpolated_points[1]])
         parameter_array.append([local_angle])
-        # parameter_array.append([curvature])
-        parameter_array.append([u_ref])
-        # parameter_array.append([u_ref])
-    # print(np.shape(parameter_array))
-    return parameter_array
+        parameter_array.append([u_output1])
+        u_first_array.append(u_output1)
+    x_temp[3]=u_first_array[np.shape(parameter)[0]-1]
+    for j in range(np.shape(parameter)[0]):
+        interpolated_points = cs(parameter[i])
+        # Compute derivatives
+        dx = cs.derivative(1)(parameter)[np.shape(parameter)[0]-1-j,0]
+        ddx = cs.derivative(2)(parameter)[np.shape(parameter)[0]-1-j,0]
+        dy = cs.derivative(1)(parameter)[np.shape(parameter)[0]-1-j,1]
+        ddy = cs.derivative(2)(parameter)[np.shape(parameter)[0]-1-j,1]
+        # Compute curvature, heading_angle and u_ref
+        local_angle = np.arctan2(dy, dx)
+        ##velocity profile started
+        curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
+        if(j==0):
+            u_backward = u_first_array[np.shape(parameter)[0]-1]
+        elif(j>0 and i<=np.shape(parameter)[0]-1):
+            x_temp[3]=u_output2
+            _,Frz = getFzWithState(x_temp)
+            a,b = getEllipseParams(Frz)
+            Fy_remain = m*(x_temp[3]**2)*curvature
+            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
+            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]
+            if(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)<0):u_backward=x_temp[3]
+            else: u_backward=np.sqrt(np.abs(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)))
+        u_output2=np.min(np.array([u_backward,u_first_array[np.shape(parameter)[0]-1-j]]))   
+        u_final.append(u_output2) 
+    # u_final_final=np.flip(u_final)
+    u_final_final = u_max    
+    print("ux_init is: ",ux_init)
+    print("u_max is: ",u_max,np.shape(u_max))
+    print("u_first is: ",u_first_array,np.shape(u_first_array))
+    print("u_final is: ",u_final_final,np.shape(u_final_final)) #komple mexri dw
+    print("params array has shape",np.shape(parameter_array))
+    if(np.shape(parameter)[0]==2):
+        return parameter_array
+    else:
+        for k in range(4*np.shape(parameter)[0]):
+            if(k%4==3):
+                print("changed parameter at k=",k)
+                parameter_array[k] = [u_final_final[int((k-3)/4)]]
+        return parameter_array
+
+# def cubic_spline_inference(cs,parameter,x):
+#     x_temp=x
+#     parameter_array=[]
+#     for i in range(np.shape(parameter)[0]):
+#         interpolated_points = cs(parameter[i])
+#         # Compute derivatives
+#         dx = cs.derivative(1)(parameter)[i,0]
+#         ddx = cs.derivative(2)(parameter)[i,0]
+#         dy = cs.derivative(1)(parameter)[i,1]
+#         ddy = cs.derivative(2)(parameter)[i,1]
+#         # Compute curvature, heading_angle and u_ref
+#         local_angle = np.arctan2(dy, dx)
+#         curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
+#         _,Frz=getFzWithState(x_temp)
+#         _,b=getEllipseParams(Frz)
+#         u_ref=np.sqrt((b*g/curvature))
+#         print("uref is:",u_ref)
+#         if(u_ref>u_upper): u_ref=u_upper
+#         parameter_array.append([interpolated_points[0]])
+#         parameter_array.append([interpolated_points[1]])
+#         parameter_array.append([local_angle])
+#         # parameter_array.append([curvature])
+#         parameter_array.append([u_ref])
+#         # parameter_array.append([u_ref])
+#     # print(np.shape(parameter_array))
+#     return parameter_array
 
 def main():
     #import data from path planning
@@ -527,13 +646,13 @@ def main():
     print(np.shape(1))
     cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
     print("reference track: ",reference_track, np.shape(reference_track))
-    for_mpc = cubic_spline_inference(cs,[0.0,0.0])
+    # for_mpc = cubic_spline_inference(cs,[0.0,0.0])
     # generate code for estimator
     model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
     
     # Simulation
-    sim_length = 5000 # simulate sim_length*0.05
+    sim_length = 10000 # simulate sim_length*0.05
 
     # Variables for storing simulation data
     x = np.zeros((model.neq,sim_length+1))  # states
@@ -581,10 +700,11 @@ def main():
         if(k>0):
             s_start = problem["xinit"][8]
             if(s_start>309.90): s_start=0.0
-            splines_loc = cubic_spline_inference(cs,[s_start,s_start])
+            x_for_splines=problem["xinit"]
+            splines_loc = cubic_spline_inference(cs,[s_start,s_start],x_for_splines)
             print("splines_loc is:",splines_loc[0][0]," ", splines_loc[1][0], " ",s_start)
             s_closest, _ = generate_closest_s(reference_track, x[0:num_ins-1,k],0)
-            closest_loc = cubic_spline_inference(cs,[s_closest,s_closest])
+            closest_loc = cubic_spline_inference(cs,[s_closest,s_closest],x_for_splines)
             print("closest loc is:",closest_loc[0][0]," ", closest_loc[1][0], " ",s_closest)
             # print("where i am is:",where_i_am,np.shape(where_i_am))
             err_1= np.abs(np.sin(closest_loc[2][0])*(problem["xinit"][0]-closest_loc[0][0]) - np.cos(closest_loc[2][0])*(problem["xinit"][1]-closest_loc[1][0])) #katakorifi
@@ -613,8 +733,9 @@ def main():
                     s_solver=pred_x[8,i] 
                     parameters_array.append(s_new)
                     parameters_array_temp.append(s_solver)
-                    next_data_points = cubic_spline_inference(cs,np.array(parameters_array))
-                    problem["all_parameters"] = next_data_points
+                x_for_splines=problem["xinit"]
+                next_data_points = cubic_spline_inference(cs,np.array(parameters_array),x_for_splines)
+                problem["all_parameters"] = next_data_points
                 print("parameters array with s(not_used) is: ",parameters_array_temp,np.shape(parameters_array_temp))
                 print("parameters array with ds(used) is: ",parameters_array,np.shape(parameters_array))
             else:

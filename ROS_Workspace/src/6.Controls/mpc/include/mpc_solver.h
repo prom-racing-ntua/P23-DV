@@ -59,6 +59,21 @@ struct pose_data {
     double theta;
 };
 
+struct MuConstraints {
+    double mx_max;
+    double my_max;
+};
+
+struct NormalForces {
+    double Ffz;
+    double Frz;
+};
+
+struct SlipAngles{
+    double saf;
+    double sar;
+};
+
 struct output_data {
     int speed_target;
     int speed_actual;
@@ -76,6 +91,9 @@ class MpcSolver {
         double X[X_SIZE];
         double U[U_SIZE];
         double s_array_final[LOOKAHEAD];
+        NormalForces getFz(const double X[X_SIZE]);
+        MuConstraints getEllipseParams(const double &Fz);
+        SlipAngles getSlipAngles(const double X[X_SIZE]);
         double getFy(double Fz, double sa);
         void getF(double X[X_SIZE],double U[U_SIZE], double (&kappa)[X_SIZE]);
         void Integrator();
@@ -113,6 +131,8 @@ class MpcSolver {
         float s_interval_;
         float spline_resolution;
         float F_init;
+        float s_space_max;
+        float s_space_min;
         PointsData params_array;
         PointsData whole_track;
         FORCESNLPsolver_mem *mem;

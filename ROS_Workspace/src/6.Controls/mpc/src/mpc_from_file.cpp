@@ -5,8 +5,6 @@ using namespace path_planning;
 using namespace std::chrono_literals;
 
 namespace mpc_cpp {
-/* This example creates a subclass of Node and uses std::bind() to register a
-* member function as a callback from the timer. */
 
 class MpcFromFile : public rclcpp::Node {
   public:

@@ -140,7 +140,6 @@ void getF(double X[X_SIZE],double U[U_SIZE], double (&kappa)[X_SIZE])  {
     const double temp=(X[3]-umin)/(umax-umin);
     double double_1 = custom_max(temp,0);
     double l_a = custom_min(double_1,1);
-
     double saf=std::atan((X[4]+l_f*X[5])/(X[3]+1e-3)) - X[7];
     double sar=std::atan((X[4]-l_r*X[5])/(X[3]+1e-3));
     double Ffy = C_tire*D*std::sin(C*std::atan(B*saf));

@@ -10,35 +10,51 @@ namespace mpc {
         std::cout << "mpc solver destroyed" << std::endl;
     }
 
-    double MpcSolver::getFy(double Fz,double sa) {
-        const double C_tire=0.66;
-        const double P [] = {1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04};
-        const double ex=0.00001;
+double MpcSolver::getFy(double Fz,double sa) {
+    const double C_tire=0.66;
+    const double P [] = {1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04};
+    const double ex=0.00001;
 
-        const double C=P[0];
-        const double D=P[1]*std::pow(Fz,2)+P[2]*Fz;
-        const double BCD = P[3]*std::sin(P[4]*std::atan(P[5]*Fz));
-        const double B = (BCD)/(C*D +ex);
-        const double Fy_out = D*C_tire * std::sin(C * std::atan(B *sa));
-        return Fy_out;
-    }
+    const double C=P[0];
+    const double D=P[1]*std::pow(Fz,2)+P[2]*Fz;
+    const double BCD = P[3]*std::sin(P[4]*std::atan(P[5]*Fz));
+    const double B = (BCD)/(C*D +ex);
+    const double Fy_out = D*C_tire * std::sin(C * std::atan(B *sa));
+    return Fy_out;
+}
+
+NormalForces MpcSolver::getFz(const double X[X_SIZE]) {
+    const double Ffz = (l_f/(l_f+l_r))*m*g + 0.25*p_air*ClA*(std::pow(X[3],2));
+    const double Frz = (l_f/(l_f+l_r))*m*g + 0.25*p_air*ClA*(std::pow(X[3],2));
+    return {Ffz,Frz};
+}
+
+SlipAngles MpcSolver::getSlipAngles(const double X[X_SIZE]){
+    double saf=std::atan((X[4]+l_f*X[5])/(X[3]+1e-3)) - X[7];
+    double sar=std::atan((X[4]-l_r*X[5])/(X[3]+1e-3));
+    return {saf,sar};
+}
+
+MuConstraints MpcSolver::getEllipseParams(const double &Fz) {
+	//Using tire magic formula
+	const double Fz0=1112.0554070627252;
+	const double dfz=(Fz-Fz0)/Fz0;
+	const double C_tire=0.66;
+	const double mx_max=C_tire*(2.21891927-1.36151651e-07*dfz);
+	const double my_max=C_tire*(2.46810824-0.21654031*dfz);
+	return {mx_max,my_max};
+}
 
     void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]) {
         const double temp=(X[3]-umin)/(umax-umin);
         double double_1 = custom_max(temp,0);
         double l_a = custom_min(double_1,1);
-
-        double saf=std::atan((X[4]+l_f*X[5])/(X[3]+1e-3)) - X[7];
-        double sar=std::atan((X[4]-l_r*X[5])/(X[3]+1e-3));
-        double Ffy = C_tire*D*std::sin(C*std::atan(B*saf));
-        double Fry = C_tire*D*std::sin(C*std::atan(B*sar));
-        double Frz = (l_f/(l_f+l_r))*m*g + 0.25*p_air*ClA*(std::pow(X[3],2));
-        double Ffz = (l_r/(l_r+l_f))*m*g + 0.25*p_air*ClA*(std::pow(X[3],2));
-        double Fdrag = 0.5*CdA*p_air*std::pow(X[3],2) + 0.03*(Frz+Ffz);
+        SlipAngles sa = getSlipAngles(X);
+        NormalForces Fz = getFz(X);
+        double Fry = getFy(Fz.Ffz,sa.sar);
+        double Ffy = getFy(Fz.Ffz,sa.saf);
+        double Fdrag = 0.5*CdA*p_air*std::pow(X[3],2) + 0.03*(Fz.Frz+Fz.Ffz);
         double beta = std::atan(l_r/(l_f + l_r) * std::tan(X[7]));
-
-        Fry = getFy(Frz,sar);
-        Ffy = getFy(Ffz,saf);
 
         kappa[0] = (l_a)*(X[3]*std::cos(X[2]) - X[4]*std::sin(X[2])) + (1-l_a)*(X[3]*std::cos(X[2] + beta));  
         kappa[1] = (l_a)*(X[3]*std::sin(X[2]) + X[4]*std::cos(X[2])) + (1-l_a)*(X[3]*std::sin(X[2] + beta));
@@ -106,8 +122,9 @@ void MpcSolver::Initialize_all_local() {
         }
     }
     else {
+        std::cout << "initialized unknown" << std::endl;
+        const double xinit_temp_unknown[9] = {params_array(0,0),params_array(0,1),params_array(0,2),0.0,0.0,0.0,F_init,0.0,0.0};
         for (int i = 0; i < X_SIZE; ++i) {
-            const double xinit_temp_unknown[9] = {params_array(0,0),params_array(0,1),params_array(0,2),0.0,0.0,0.0,F_init,0.0,0.0};
             X[i] = xinit_temp_unknown[i];
         }
     }
@@ -156,9 +173,10 @@ void MpcSolver::generateFirstPoint() {
         std::cout << "mpika emergency!!!" << std::endl;
         s_init += emergency_forward_;
     }
-    if(s_init > sol) s_init = sol;
+    if(s_init > sol) s_init = 0.0;
     s_array_final[0] = s_init;
-    std::cout << "generated first point " << s_init << std::endl;
+    std::cout << "sinit is:" << s_init << std::endl;
+    std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << std::endl;
     }
 
 void MpcSolver::generateFirstPointUnknown() {
@@ -195,7 +213,8 @@ void MpcSolver::generateFirstPointUnknown() {
     }
     if(s_init > sol) s_init = sol;
     s_array_final[0] = s_init;
-    std::cout << "generated first point " << s_init << std::endl;
+    int ind_of_closest = (s_init/sol)*40;
+    std::cout << "generated first point " << s_init << " " << params_array(ind_of_closest,0) << " " << params_array(ind_of_closest,1) << std::endl;
     }
 
     PointsData MpcSolver::getSplineDataLocal(double parameters[LOOKAHEAD]) {
@@ -203,11 +222,14 @@ void MpcSolver::generateFirstPointUnknown() {
         // int rows_ = (int)sizeof(parameters);
         std::cout << "started spline data local" << std::endl;
         PointsData spline_data{LOOKAHEAD,4};
+        NormalForces Fz = getFz(X);
+        MuConstraints mu = getEllipseParams(Fz.Frz);
+        std::cout << "got Fz,mu " << Fz.Frz << " " << Fz.Ffz << " " <<  mu.mx_max << " "<<mu.my_max  << std::endl;
         for (long int i{ 0 }; i < LOOKAHEAD; i++) {
             double param = parameters[i];
             Point temp1 = spline_final->getPoint(param);
             double temp2 = spline_final->getTangent(param);
-            double temp3 = spline_final->getVelocity(param,a,v_limit_);
+            double temp3 = spline_final->getVelocity(param,mu.my_max,v_limit_);
             if(i==0) std::cout << "closest spline point is: " << temp1(0) << " " << temp1(1) << std::endl; 
             spline_data(i, 0) = temp1(0);
             spline_data(i, 1) = temp1(1);
@@ -221,7 +243,7 @@ void MpcSolver::generateFirstPointUnknown() {
     void MpcSolver::writeParamsKnown(int global_int) {
         std::cout << "started writing of known_params" << std::endl;
         for (int i = 1; i < LOOKAHEAD; ++i){
-            if(emergency || global_int==0 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
+            if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else s_array_final[i] = s_array_final[i-1] + (ds_vector[i-1]);
             if(s_array_final[i]>sol) {
                 std::cout << "finished lap" << std::endl;
@@ -235,8 +257,19 @@ void MpcSolver::generateFirstPointUnknown() {
     }
 
     void MpcSolver::writeParamsUnknown() {
-        std::cout << "started writing of unknown_params(to be extended..)" << std::endl;
-        std::cout << "first spline point has pose is: " << params_array(0,0) << " " << params_array(0,1) << " " << params_array(0,2) << std::endl;
+        std::cout << "started writing of unknown_params" << std::endl;
+        s_array_final[0] = (float)s_array_final[0];
+        for (int i = 1; i < LOOKAHEAD; ++i){
+            s_array_final[i] = s_array_final[i-1] + s_interval_;
+            if(s_array_final[i]>sol) {
+                std::cout << "finished spline" << std::endl;
+                s_array_final[i]=sol;
+            }
+        }
+        for(int i=0; i<LOOKAHEAD; ++i) s_array_final[i]=s_array_final[i]/sol;
+        std::cout << "finished generation of s_profile" << std::endl;
+        std::cout << "three s_final params are: " << s_array_final[0] << " " << s_array_final[1] << " " << s_array_final[5];
+        params_array = getSplineDataLocal(s_array_final);
         copyToParameters();
     }
 
@@ -350,15 +383,8 @@ void MpcSolver::generateFirstPointUnknown() {
         ds_vector.push_back(output.x39[2]);
         ds_vector.push_back(output.x40[2]);
         for (int i = 0; i < LOOKAHEAD; ++i){
-            // ds_vector[i] = ds_vector[i]*dt;
-            if(i<5){
-                if(ds_vector[i]>0.5) ds_vector[i]=0.5;
-                if(ds_vector[i]<0.1) ds_vector[i]=0.1;
-            }
-            else {
-                if(ds_vector[i]>0.5) ds_vector[i]=0.5;
-                if(ds_vector[i]<0.1) ds_vector[i]=0.1;
-            }
+            if(ds_vector[i]>s_space_max) ds_vector[i]=s_space_max;
+            if(ds_vector[i]<s_space_min) ds_vector[i]=s_space_min;
         }
     }
 

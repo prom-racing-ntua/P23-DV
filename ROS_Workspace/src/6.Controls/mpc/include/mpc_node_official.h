@@ -20,10 +20,8 @@ class MpcHandler : public rclcpp::Node {
     MpcHandler();
     ~MpcHandler();
   private:
-    void velocity_callback(const custom_msgs::msg::VelEstimation::SharedPtr vel_msg);
     void pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg);
     void path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg);
-    void mpc_callback();
     void loadParameters();
     void ReadKnownTrack();
     int node_freq_;

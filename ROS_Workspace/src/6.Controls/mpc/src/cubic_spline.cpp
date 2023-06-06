@@ -216,7 +216,7 @@ PointsData CubicSpline::getSplineData(const long int resolution) {
         double param{ static_cast<double>(i) / static_cast<double>(resolution - 1) };
         Point temp1 = getPoint(param);
         double temp2 = getTangent(param);
-        double temp3 = getCurvature(param);
+        double temp3 = getVelocity(param,1.5,5);
         spline_data(i, 0) = temp1(0);
         spline_data(i, 1) = temp1(1);
         spline_data(i, 2) = temp2;
