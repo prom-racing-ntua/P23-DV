@@ -338,7 +338,7 @@ def generate_pathplanner():
     codeoptions.cleanup = False
     codeoptions.timing = 1
     codeoptions.mip.inttol = 0.1
-    # codeoptions.parallel = 4
+    codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
@@ -650,6 +650,7 @@ def main():
     # generate code for estimator
     model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
+    print("after solver generation")
     
     # Simulation
     sim_length = 10000 # simulate sim_length*0.05
