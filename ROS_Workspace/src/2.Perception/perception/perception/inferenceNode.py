@@ -54,7 +54,7 @@ class InferenceNode(Node):
             inferenceTiming = time.time()
             results = inferenceYOLO(self.yoloModel, image, 640)
             # self.get_logger().info(f"YOLO Time: {(time.time() - inferenceTiming)*1000.0}")
-            if results.empty:
+            if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
@@ -67,16 +67,16 @@ class InferenceNode(Node):
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
                 perception2slam_msg.global_index = globalIndex
-                perception2slam_msg.class_list = list(classesList)
+                perception2slam_msg.class_list = [int(a) for a in classesList]
                 perception2slam_msg.theta_list = list(thetaList)
                 perception2slam_msg.range_list = list(rangeList)
-                self.publisher_.publish(perception2slam_msg)   
+                self.publisher_.publish(perception2slam_msg)
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
                 # self.get_logger().info(f"Inference Time: {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
-    
+
 def main(args=None):
     rclpy.init(args=args)
     

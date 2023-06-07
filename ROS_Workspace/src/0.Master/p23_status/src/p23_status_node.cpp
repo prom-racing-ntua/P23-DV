@@ -158,6 +158,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
     // Maybe not for the stopping in Finished or Emergency...
     // We are constantly receiving the status...so this is to avoid spam
     if (statusReceived == currentAsStatus) { return; }
+    currentAsStatus = statusReceived;
 
     switch (statusReceived)
     {
@@ -196,7 +197,6 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         // changeDVStatus(p23::SHUTDOWN_NODES);
         break;
     }
-    currentAsStatus = statusReceived;
 }
 
 
@@ -317,6 +317,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
             {
                 nodesReady = true;
                 RCLCPP_WARN(get_logger(), "Nodes successfully transitioned to DV_READY, waiting for INS mode 2");
+                return;
             }
             else if (transition_to == p23::LV_ON)
             {

@@ -28,7 +28,6 @@
 #include "vectornav_msgs/msg/ins_group.hpp"
 #include "vectornav_msgs/msg/time_group.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
-#include "custom_msgs/srv/vectornav_heartbeat.hpp"
 
 // VectorNav libvncxx
 #include "vn/compositedata.h"

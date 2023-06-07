@@ -41,11 +41,11 @@ include_directories(
 )
 
 add_executable(${PROJECT_NAME} src/slam_handler.cpp src/unary_factor.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs ament_index_cpp tf2_geometry_msgs)
+ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs ament_index_cpp)
 target_link_libraries(${PROJECT_NAME} gtsam)
 
 add_executable(read_files src/slam_from_file.cpp src/unary_factor.cpp)
-ament_target_dependencies(read_files rclcpp custom_msgs ament_index_cpp tf2_geometry_msgs)
+ament_target_dependencies(read_files rclcpp custom_msgs ament_index_cpp)
 target_link_libraries(read_files gtsam)
 
 add_executable(test_run src/test_visual.cpp)

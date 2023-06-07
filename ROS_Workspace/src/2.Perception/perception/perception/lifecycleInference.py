@@ -49,38 +49,38 @@ class InferenceLifecycleNode(Node):
             10
         )
 
-        self.get_logger().info("Inference Configuration Complete")
+        self.get_logger().warn("Lifecycle Inference Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Start Publishing
         self.publishing = True
-        self.get_logger().info("Inference Activation Complete")
+
+        self.get_logger().warn("Lifecycle Inference Activated!")
         return super().on_activate(state)
     
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         # Stop Publishing
         self.publishing = False
-        self.get_logger().info("Inference Deactivation Complete")
 
+        self.get_logger().warn("Lifecycle Inference Deactivated!")
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         self.publishing = False
         del self.yoloModel, self.smallModel, self.largeModel
-
         self.destroy_publisher(self.publisher_)
-        self.get_logger().info("Inference Cleanup Complete")
 
+        self.get_logger().warn("Lifecycle Inference Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         del self.yoloModel, self.smallModel, self.largeModel
         self.destroy_publisher(self.publisher_)
-        self.get_logger().info("Inference Shutdown Complete")
 
+        self.get_logger().warn("Inference Shutdown Complete")
         return TransitionCallbackReturn.SUCCESS
 
     def listener_callback(self, msg):
@@ -99,7 +99,7 @@ class InferenceLifecycleNode(Node):
             # Perform Perception Pipeline
             inferenceTiming = time.time()
             results = inferenceYOLO(model=self.yoloModel, img=image, tpu=True, debug=False)
-            if results.empty:
+            if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
@@ -110,14 +110,14 @@ class InferenceLifecycleNode(Node):
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
                 perception2slam_msg.global_index = globalIndex
-                perception2slam_msg.class_list = list(classesList)
+                perception2slam_msg.class_list = [int(a) for a in classesList]
                 perception2slam_msg.theta_list = list(thetaList)
                 perception2slam_msg.range_list = list(rangeList)
-                self.publisher_.publish(perception2slam_msg)   
+                self.publisher_.publish(perception2slam_msg)
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
-                self.get_logger().info(f"Inference Time (including keypoints) {inferenceTiming}")
+                # self.get_logger().info(f"Inference Time (including keypoints) {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):

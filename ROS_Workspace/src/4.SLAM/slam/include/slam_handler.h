@@ -13,9 +13,6 @@
 #include "custom_msgs/msg/local_map_msg.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 #include "slam.h"
 
 

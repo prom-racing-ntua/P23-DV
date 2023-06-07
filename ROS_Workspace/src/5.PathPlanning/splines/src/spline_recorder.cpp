@@ -8,7 +8,7 @@ namespace path_planning
 SplineRecorder::SplineRecorder() : Node("spline_recorder") {
     count_ = 0;
     std::string share_dir{ ament_index_cpp::get_package_share_directory("splines") };
-    RCLCPP_INFO(get_logger(), share_dir);
+    RCLCPP_INFO_STREAM(get_logger(), share_dir);
     spline_file_.open(share_dir + "/../../../../spline_log.txt");
 
     sub_ = create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&SplineRecorder::splineCallback, this, std::placeholders::_1));

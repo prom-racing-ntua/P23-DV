@@ -53,7 +53,6 @@ class AcquisitionLifecycleNode(Node):
         )
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f"Configuring Acquisition Node")
         self.publishing = False
 
         serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
@@ -87,35 +86,37 @@ class AcquisitionLifecycleNode(Node):
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
+        self.get_logger().warn(f"Lifecycle Acquisition Node Configured!")
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Activate Camera Stream
         self.publishing = True
-        self.get_logger().info(f"Activating Acquisition Node")
         self.camera.activateAcquisition()
-
+        
+        self.get_logger().warn(f"Lifecycle Acquisition Node Activated!")
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f"Deactivating Acquisition Node")
         # Deactivate Camera Stream
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
+        self.get_logger().warn(f"Lifecycle Acquisition Node Deactivated!")
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f"Cleaning up Acquisition Node")
         self.publishing = False
         self.camera.cleanupCamera()
 
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
+        
+        self.get_logger().warn(f"Lifecycle Acquisition Node Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f"Shutting Down Acquisition Node")
+        self.get_logger().warn(f"Shutting Down Acquisition Node")
         self.camera.cleanupCamera()
 
         del self.camera, self.bridge

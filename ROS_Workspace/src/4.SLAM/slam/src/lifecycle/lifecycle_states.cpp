@@ -61,7 +61,7 @@ namespace ns_slam
             "velocity_estimation", 10, std::bind(&LifecycleSlamHandler::odometryCallback, this, std::placeholders::_1), options
         );
         perception_subscriber_ = create_subscription<custom_msgs::msg::Perception2Slam>(
-            "perception2slam_topic", 10, std::bind(&LifecycleSlamHandler::perceptionCallback, this, std::placeholders::_1), options
+            "perception2slam", 10, std::bind(&LifecycleSlamHandler::perceptionCallback, this, std::placeholders::_1), options
         );
 
         map_publisher_ = create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);

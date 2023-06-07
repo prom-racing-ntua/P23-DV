@@ -63,7 +63,7 @@
 
 /velocity_estimation:
   ros__parameters:
-    frequency: 400               # [Hz]
+    frequency: 40               # [Hz]
     initial_state_vector: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     initial_state_covariance: [1.0e-3,    0.0,    0.0,    0.0,    0.0,    0.0,

@@ -156,13 +156,13 @@ void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::Sh
             // Setting observation noise depending on type of cone
             if (landmark.color == ConeColor::LargeOrange)
             {
-                observation_noise << 0.0001, 0.002,
-                    0.002, 0.109 * landmark.range - 0.44;
+                observation_noise << 0.01, 0.0,
+                    0.0, 3 * perception_weight_* landmark.range / 10;
             }
             else
             {
-                observation_noise << 0.0001, 0.002,
-                    0.002, 0.109 * landmark.range - 0.44;
+                observation_noise << 0.01, 0.0,
+                    0.0, perception_weight_* landmark.range / 10;
             }
 
             // RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");

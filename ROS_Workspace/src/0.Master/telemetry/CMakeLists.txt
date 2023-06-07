@@ -22,10 +22,12 @@ find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(splines REQUIRED)
 
 add_executable(${PROJECT_NAME} src/telemetry_node.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp visualization_msgs geometry_msgs custom_msgs nav_msgs splines)
+ament_target_dependencies(${PROJECT_NAME} rclcpp visualization_msgs geometry_msgs custom_msgs nav_msgs splines tf2 tf2_geometry_msgs)
 
 install(TARGETS
   ${PROJECT_NAME}

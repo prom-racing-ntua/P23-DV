@@ -93,7 +93,7 @@ namespace lifecycle_manager_namespace
             else
             {
                 std::string nodeStatus{ result->current_state.label };
-                RCLCPP_INFO_STREAM(get_logger(), "Status of node "<< nodeName << " is "<< nodeStatus);
+                // RCLCPP_INFO_STREAM(get_logger(), "Status of node "<< nodeName << " is "<< nodeStatus);
                 nodeError = false;
             }
             nodeStateMap[nodeName] = nodeError;

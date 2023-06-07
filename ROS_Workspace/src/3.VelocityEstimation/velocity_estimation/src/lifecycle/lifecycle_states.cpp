@@ -10,7 +10,7 @@ namespace ns_vel_est
 
         if (!node_frequency_)
         {
-            RCLCPP_ERROR(get_logger(), "Node frequency not specified: Configuration of Velocity Estimation Failed");
+            RCLCPP_ERROR_STREAM(get_logger(), "Node frequency not specified: Configuration of Velocity Estimation Failed: " << node_frequency_);
             return ns_vel_est::CallbackReturn::FAILURE;
         }
 
