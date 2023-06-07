@@ -100,7 +100,7 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
                 observation_noise << 0.001, 0,
                     0, perception_weight_* landmark.range / 10;
             }
-
+            landmark.observation_noise = observation_noise;
             // RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
             landmark_list.push_back(landmark);
         }

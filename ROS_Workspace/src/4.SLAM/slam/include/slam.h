@@ -301,7 +301,7 @@ bool GraphSLAM<T>::addOdometryMeasurement(OdometryMeasurement& odometry) {
 // Adds landmark measurements in SLAM mode
 template <class T>
 void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	RCLCPP_INFO_STREAM(node_handler_->get_logger(),"Perception callback at index: " << global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -483,6 +483,7 @@ void GraphSLAM<T>::loadMap(std::string& map_file_path) {
 		landmark_id_map_[landmark_counter_++] = cone;
 	}
 	cone_count_ = landmark_id_map_.size();
+	map_file.close();
 }
 
 template <class T>

@@ -25,7 +25,8 @@
 
     # This sets the mode of operation. Set true for slam and false for localization
     mapping_mode: false
-    track_map: "/tracks/acceleration.txt"
+    # TODO: Maybe new map for EBS Test
+    track_map: "/tracks/Acceleration.txt"
 
     # Defines the starting position of the car
     starting_position: [ -8.2, 0.0, 0.0 ]

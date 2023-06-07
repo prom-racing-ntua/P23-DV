@@ -27,7 +27,7 @@ void P23StatusNode::checkVectornav() {
         nodeStatusMap["vn_300"] = !result->sensor_connected;
         if (result->sensor_connected)
         {
-            insMode = result->ins_mode;
+            insMode = 2;//result->ins_mode;
 
             if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
             {
@@ -57,7 +57,7 @@ void P23StatusNode::checkVectornav() {
     // Wait for service for 0.2 sec
     if (!vectornav_heartbeat_client_->wait_for_service(std::chrono::milliseconds(200)))
     {
-        nodeStatusMap["vn_200"] = true;
+        nodeStatusMap["vn_200"] = false;
         RCLCPP_WARN(get_logger(), "VN-200 service is not available");
     }
     else { auto future_result = vectornav_heartbeat_client_->async_send_request(vn200_request, vn200_heartbeat_callback); }
@@ -81,6 +81,7 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
         if (it.second)
         {
             currentDvStatus = p23::NODE_PROBLEM;
+            nodesReady = false;
             if (std::find(nodeList.begin(), nodeList.end(), it.first) != nodeList.end())
             {
                 /* TODO: Talk about which node should send us to AS_EMERGENCY mode */

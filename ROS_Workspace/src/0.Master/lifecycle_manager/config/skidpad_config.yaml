@@ -25,7 +25,7 @@
 
     # This sets the mode of operation. Set true for slam and false for localization
     mapping_mode: true
-    track_map: "/tracks/skidpad.txt"
+    track_map: "/tracks/Skidpad.txt"
 
     # Defines the starting position of the car
     starting_position: [ -8.2, 0.0, 0.0 ]

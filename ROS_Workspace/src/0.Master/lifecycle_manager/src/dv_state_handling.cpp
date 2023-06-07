@@ -44,14 +44,14 @@ namespace lifecycle_manager_namespace{
         switch(mission) {
             case(p23::ACCELERATION):
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                nodesToShutdown = {"path_planning", "mpc"};
-                controlsNode = {"pure_pursuit"};
+                // nodesToShutdown = {"path_planning", "mpc"};
+                // controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
                 // nodesToShutdown = {"path_planning", "pure_pursuit"};
-                nodesToShutdown = {"path_planning"};
-                controlsNode = {"mpc"};
+                // nodesToShutdown = {"path_planning"};
+                // controlsNode = {"mpc"};
                 break;
             case(p23::TRACKDRIVE):
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
@@ -70,8 +70,8 @@ namespace lifecycle_manager_namespace{
                 break;
             case(p23::AUTOX):
                 configurationFileSelected += std::string("/autox_config.yaml");
-                nodesToShutdown = {"mpc"};
-                controlsNode = {"pure_pursuit"};
+                // nodesToShutdown = {"mpc"};
+                // controlsNode = {"pure_pursuit"};
                 break;
             case(p23::MANUAL):
                 RCLCPP_INFO(get_logger(), "Mission is in manual mode, PC will shutdown");
@@ -91,10 +91,8 @@ namespace lifecycle_manager_namespace{
                 I think that this is the best way to setup things.
             */
 
-            for (auto node: nodeList) {
-                loadConfigurationFileToNode(node, configurationFileSelected);
-                changeNodeState(Transition::TRANSITION_CONFIGURE, node);
-            }
+            for (auto node: nodeList) { loadConfigurationFileToNode(node, configurationFileSelected); }
+            for (auto node: nodeList) { changeNodeState(Transition::TRANSITION_CONFIGURE, node); }
 
         currentMission = mission;
     }

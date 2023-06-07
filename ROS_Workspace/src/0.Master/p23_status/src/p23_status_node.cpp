@@ -98,22 +98,25 @@ void P23StatusNode::setServices() {
 
 // Callback function when receiving new mission message
 void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg) {
+    if (missionLocked and static_cast<p23::Mission>(msg->mission_selected) != p23::MISSION_UNLOCKED)
+    {
+        RCLCPP_ERROR_STREAM(get_logger(), "Mission already locked, currently in DV_READY and " << p23::mission_list.at(currentMission) << ". Try to MISSION_UNLOCK");
+        return;
+    }
+    else if (currentAsStatus != p23::AS_OFF)
+    {
+        RCLCPP_ERROR_STREAM(get_logger(), "Cannot select new mission when in " << p23::autonomous_status_list.at(currentAsStatus) << \
+            ". Current mission is " << p23::mission_list.at(currentMission));
+        return;
+    }
     currentMission = static_cast<p23::Mission>(msg->mission_selected);
 
     // TODO: Check again lap counts
-    switch (currentMission)
+    switch (static_cast<p23::Mission>(msg->mission_selected))
     {
     case(p23::MISSION_UNLOCKED):
         // Go back to LV-ON if we are in Mission Selected
-        if ((currentDvStatus == p23::MISSION_SELECTED or currentDvStatus == p23::DV_READY) and (currentAsStatus == p23::AS_OFF))
-        {
-            changeDVStatus(p23::ON_MISSION_UNLOCKED);
-        }
-        else
-        {
-            // Display error
-            RCLCPP_ERROR_STREAM(get_logger(), "Cannot unlock mission now!\nAS State: " << currentAsStatus << "\nDV State: " << currentDvStatus);
-        }
+        changeDVStatus(p23::ON_MISSION_UNLOCKED);
         maxLaps = 255;
         return;
     case(p23::ACCELERATION):
@@ -219,31 +222,13 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     case p23::DV_Transitions::ON_MISSION_LOCKED:
         // This transition can only happen if the mission isn't locked yet
-        // TODO: Can this be called if we are in MISSION_SELECTED?
-        if (currentAsStatus != p23::AS_OFF)
-        {
-            RCLCPP_ERROR_STREAM(get_logger(), "Cannot lock new mission when in " << p23::autonomous_status_list.at(currentAsStatus) << \
-                ". Current mission is " << p23::mission_list.at(currentMission));
-            return;
-        }
-        else if (currentDvStatus == p23::DV_READY or missionLocked)
-        {
-            RCLCPP_ERROR_STREAM(get_logger(), "Mission already locked, currently in DV_READY and " << p23::mission_list.at(currentMission) << ". Try to MISSION_UNLOCK");
-            return;
-        }
         missionLocked = true;
         transition_to = p23::DV_Status::DV_READY;
         break;
 
     case p23::DV_Transitions::ON_MISSION_UNLOCKED:
         // This transition is only available if we are in MISSION_LOCKED or DV_READY and still in AS_OFF
-        if (currentAsStatus != p23::AS_OFF)
-        {
-            RCLCPP_ERROR_STREAM(get_logger(), "Cannot unlock mission when in " << p23::autonomous_status_list.at(currentAsStatus) << \
-                ". Current mission is " << p23::mission_list.at(currentMission));
-            return;
-        }
-        else if (currentDvStatus == p23::LV_ON or !missionLocked)
+        if (!missionLocked)
         {
             RCLCPP_ERROR(get_logger(), "Mission is already unlocked, currently in LV_ON");
             return;

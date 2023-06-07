@@ -159,6 +159,7 @@ namespace lifecycle_manager_namespace
             case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
                 RCLCPP_INFO(get_logger(), "Unlocking mission, waiting for new mission to arrive, cleanup nodes");
                 cleanupNodes();
+                currentMission = p23::MISSION_UNLOCKED;
                 break;
             case(p23::DV_Transitions::ON_AS_READY):
                 RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
