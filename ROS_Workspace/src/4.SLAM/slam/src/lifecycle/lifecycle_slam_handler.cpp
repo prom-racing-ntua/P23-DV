@@ -13,6 +13,10 @@ LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam"), slam_objec
     completed_laps_ = -1;
     cooldown_ = 0;
 
+    accel_cone_count_ = 0;
+    num_observations_ = 0;
+    accel_map_.clear();
+
     RCLCPP_WARN(get_logger(), "Created LifecycleSlamHandler");
 }
 
@@ -108,6 +112,11 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
 
     if (!landmark_list.empty())
     {
+        if (!map_ready_) {
+            addAccelObservations(landmark_list);
+            return;
+        }
+
         pthread_spin_lock(&global_lock_);
         if (is_mapping_) slam_object_.addLandmarkMeasurementSLAM(static_cast<unsigned long>(msg->global_index), landmark_list);
         else slam_object_.addLandmarkMeasurementsLocalization(static_cast<unsigned long>(msg->global_index), landmark_list);
@@ -189,9 +198,85 @@ void LifecycleSlamHandler::optimizationCallback() {
     // RCLCPP_INFO_STREAM(get_logger(), "\n-- Optimization Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
+void LifecycleSlamHandler::addAccelObservations(const std::vector<PerceptionMeasurement>& observations) {
+    num_observations_++;
+    for (auto& cone : observations) {
+        gtsam::Vector2 observed_position;
+		observed_position << cone.range * std::cos(cone.theta), cone.range * std::sin(cone.theta);
+
+        // Data Association with already observed cones
+        int best_match = -1;
+	    double least_distance_square{ std::pow(1.5, 2) };
+
+	    if (cone.color == ConeColor::LargeOrange)
+	    {
+	    	least_distance_square = std::pow(1.4 * 1.5, 2);
+	    }
+
+	    // Iterate through all of the cones in the current map
+	    for (auto& it : accel_map_)
+	    {
+	    	LandmarkInfo& mapped_cone{ it.second };
+	    	// Only check cones of the same color
+	    	if (mapped_cone.color == cone.color)
+	    	{
+	    		// Calculate the distance between the observed cone and the mapped cone
+	    		double current_distance_square = (observed_position - mapped_cone.estimated_pose).transpose() * (observed_position - mapped_cone.estimated_pose);
+	    		// If their distance is less than the previous best, assign the current cone as the best match
+	    		if (current_distance_square < least_distance_square)
+	    		{
+	    			least_distance_square = current_distance_square;
+	    			best_match = it.first;
+	    		}
+	    	}
+	    }
+
+        if (best_match == -1)
+        {
+			// Create the landmark entry
+			LandmarkInfo new_landmark;
+			new_landmark.color = cone.color;
+			new_landmark.estimated_pose = observed_position;
+			new_landmark.range_vector.push_back(cone.range);
+			new_landmark.theta_vector.push_back(cone.theta);
+			accel_map_[accel_cone_count_++] = new_landmark;
+		}
+        else
+        {
+            LandmarkInfo& matched_cone{ accel_map_.at(best_match) };
+            matched_cone.range_vector.push_back(cone.range);
+			matched_cone.theta_vector.push_back(cone.theta);
+
+            std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size();
+            std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size();
+        }
+    }
+
+    if (num_observations_ >= 100)
+    {
+        double track_width{100.0};
+        for (auto& yellow_cone : accel_map_)
+        {
+            if (yellow_cone.second.color == ConeColor::Blue) {continue;}
+            for (auto& blue_cone : accel_map_) 
+            {
+                if (blue_cone.second.color == ConeColor::Yellow) {continue;}
+                double  dist{std::sqrt( std::pow(yellow_cone.second.estimated_pose(0)-blue_cone.second.estimated_pose(0),2) \
+                    + std::pow(yellow_cone.second.estimated_pose(1)-blue_cone.second.estimated_pose(1),2) )};
+                if (dist < track_width) { track_width = dist; }
+            }
+        }
+        slam_object_.setAccelWidth(track_width);
+        map_ready_ = true;
+    }
+}
+
+
 void LifecycleSlamHandler::loadParameters() {
     declare_parameter<bool>("mapping_mode", true);
     declare_parameter<std::string>("track_map", "");
+    declare_parameter<bool>("dynamic_accel_map", false);
+
     declare_parameter<int>("velocity_estimation_frequency", 0);
     declare_parameter<int>("perception_frequency", 10);
 

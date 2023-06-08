@@ -33,6 +33,12 @@ private:
     bool perception_eof_;
     bool odometry_eof_;
 
+    // Dynamic accel map variables
+    bool map_ready_;
+    int accel_cone_count_;
+    int num_observations_;
+	std::unordered_map<int, LandmarkInfo> accel_map_;
+
     PerceptionMsgStructure perception_;
     OdometryMsgStructure odometry_;
 
@@ -68,6 +74,9 @@ private:
     bool readNextPerception();
 
     void run_slam();
+
+    void addAccelObservations(const std::vector<PerceptionMeasurement>& observations);
+
 };
 } // namespace ns_slam
 

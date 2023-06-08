@@ -35,12 +35,18 @@ namespace ns_slam
         }
 
         // If in localization mode load the track map
+        map_ready_ = true;
         if (!is_mapping_)
         {
             std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
             slam_object_.loadMap(track_file);
+            // Check if we are using dynamic map creation for acceleration
+            if (get_parameter("track_map").as_string() == std::string("/test_tracks/Acceleration.txt"))
+            {
+                map_ready_ = !get_parameter("dynamic_accel_map").as_bool();
+            }
         }
-        else 
+        else
             map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
 
         //Initialize global lock

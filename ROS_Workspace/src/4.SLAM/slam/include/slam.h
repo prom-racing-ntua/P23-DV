@@ -159,6 +159,8 @@ public:
 	// Loads the track map when in localization mode
 	void loadMap(std::string& map_file_path);
 
+	void setAccelWidth(double width);
+
 	// Optimizes the factor graph
 	void optimizeFactorGraph(gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_variable_values);
 
@@ -484,6 +486,14 @@ void GraphSLAM<T>::loadMap(std::string& map_file_path) {
 	}
 	cone_count_ = landmark_id_map_.size();
 	map_file.close();
+}
+
+template <class T>
+void GraphSLAM<T>::setAccelWidth(double width) {
+	for (auto& cone : landmark_id_map_)
+	{
+		cone.second.estimated_pose(1) = cone.second.estimated_pose(1) * width / 4.0;
+	}
 }
 
 template <class T>

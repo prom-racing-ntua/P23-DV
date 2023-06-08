@@ -30,6 +30,12 @@ namespace ns_slam
         GraphSLAM<LifecycleSlamHandler> slam_object_;
 
         bool is_mapping_;
+        // Dynamic accel map variables
+        bool map_ready_;
+        int accel_cone_count_;
+        int num_observations_;
+	    std::unordered_map<int, LandmarkInfo> accel_map_;
+
         std::ofstream map_log_;
 
         double perception_range_;
@@ -82,6 +88,8 @@ namespace ns_slam
         void perceptionCallback(const custom_msgs::msg::Perception2Slam::SharedPtr msg);
 
         void optimizationCallback();
+
+        void addAccelObservations(const std::vector<PerceptionMeasurement>& observations);
 
     public:
         // The file paths are passed as arguments to the constructor and can be modified in the main function

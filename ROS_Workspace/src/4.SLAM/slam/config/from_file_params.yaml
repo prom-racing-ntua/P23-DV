@@ -2,8 +2,9 @@ slam_from_file_node:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
-    mapping_mode: true
-    track_map: "/test_tracks/testing_track.txt"
+    mapping_mode: false
+    track_map: "/test_tracks/Acceleration.txt"
+    dynamic_accel_map: true
 
     # This must be the same as the sampling rate of the log files if used
     sampling_rate: 40
@@ -31,5 +32,5 @@ slam_from_file_node:
 
     # The files should be placed in the DataFiles directory and the variables
     # below must have the relative path in the form "/DataFiles/my_log_file.txt"
-    perception_log: "/DataFiles/Testing4_Thwmaidio/perceptionLog_9.txt" #before it was log_9
-    odometry_log: "/DataFiles/Testing4_Thwmaidio/velocityLog_9_corrected.txt"
+    perception_log: "/DataFiles/Testing4_Thwmaidio/perceptionLog_12.txt" #before it was log_9
+    odometry_log: "/DataFiles/Testing4_Thwmaidio/velocityLog_12_corrected.txt"

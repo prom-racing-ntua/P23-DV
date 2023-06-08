@@ -11,6 +11,10 @@ SlamFromFile::SlamFromFile() : Node("slam_from_file_node"), slam_object_(this) {
 	perception_eof_ = false;
 	odometry_eof_ = false;
 
+	accel_cone_count_ = 0;
+    num_observations_ = 0;
+    accel_map_.clear();
+
 	loadParameters();
 
 	readNextOdometry();
@@ -22,8 +26,17 @@ SlamFromFile::SlamFromFile() : Node("slam_from_file_node"), slam_object_(this) {
 	RCLCPP_WARN_STREAM(get_logger(), "Created SLAM object" << '\n');
 
 	// If in localization mode load the track map
-	std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
-	if (!is_mapping_) slam_object_.loadMap(track_file);
+    map_ready_ = true;
+    if (!is_mapping_)
+    {
+        std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
+        slam_object_.loadMap(track_file);
+        // Check if we are using dynamic map creation for acceleration
+        if (get_parameter("track_map").as_string() == std::string("/test_tracks/Acceleration.txt"))
+        {
+            map_ready_ = !get_parameter("dynamic_accel_map").as_bool();
+        }
+    }
 
 	// Set ROS objects
 	map_publisher_ = create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);
@@ -54,8 +67,6 @@ void SlamFromFile::run_slam() {
 		// odometry_measurement.velocity_y = 0.0;
 		odometry_measurement.yaw_rate = odometry_.yaw_rate;
 		odometry_measurement.measurement_noise = odometry_weight_ * odometry_.covariance_matrix;
-
-
 
 		slam_object_.addOdometryMeasurement(odometry_measurement);
 
@@ -118,6 +129,11 @@ void SlamFromFile::run_slam() {
 
 	if (!all_observed_landmarks.empty())
 	{
+		if (!map_ready_) {
+            addAccelObservations(all_observed_landmarks);
+            return;
+        }
+		
 		if (is_mapping_) slam_object_.addLandmarkMeasurementSLAM(global_index_, all_observed_landmarks);
 		else slam_object_.addLandmarkMeasurementsLocalization(global_index_, all_observed_landmarks);
 		all_observed_landmarks.clear();
@@ -301,6 +317,7 @@ bool SlamFromFile::readNextPerception() {
 void SlamFromFile::loadParameters() {
 	is_mapping_ = declare_parameter<bool>("mapping_mode", false);
 	declare_parameter<std::string>("track_map", "");
+    declare_parameter<bool>("dynamic_accel_map", false);
 
 	sampling_rate_ = declare_parameter<int>("sampling_rate", 40);
 	perception_range_ = declare_parameter<double>("perception_range", 10.0);
@@ -335,6 +352,82 @@ void SlamFromFile::loadParameters() {
 
 	odometry_file_.open(share_dir_ + odometry_file_path, std::fstream::in);
 	perception_file_.open(share_dir_ + perception_file_path, std::fstream::in);
+}
+
+
+void SlamFromFile::addAccelObservations(const std::vector<PerceptionMeasurement>& observations) {
+    num_observations_++;
+	RCLCPP_INFO_STREAM(get_logger(), "Number of Observations " << num_observations_);
+    for (auto& cone : observations) {
+        gtsam::Vector2 observed_position;
+		observed_position << cone.range * std::cos(cone.theta), cone.range * std::sin(cone.theta);
+
+        // Data Association with already observed cones
+        int best_match = -1;
+	    double least_distance_square{ std::pow(1.5, 2) };
+
+	    if (cone.color == ConeColor::LargeOrange)
+	    {
+	    	least_distance_square = std::pow(1.4 * 1.5, 2);
+	    }
+
+	    // Iterate through all of the cones in the current map
+	    for (auto& it : accel_map_)
+	    {
+	    	LandmarkInfo& mapped_cone{ it.second };
+	    	// Only check cones of the same color
+	    	if (mapped_cone.color == cone.color)
+	    	{
+	    		// Calculate the distance between the observed cone and the mapped cone
+	    		double current_distance_square = (observed_position - mapped_cone.estimated_pose).transpose() * (observed_position - mapped_cone.estimated_pose);
+	    		// If their distance is less than the previous best, assign the current cone as the best match
+	    		if (current_distance_square < least_distance_square)
+	    		{
+	    			least_distance_square = current_distance_square;
+	    			best_match = it.first;
+	    		}
+	    	}
+	    }
+
+        if (best_match == -1)
+        {
+			// Create the landmark entry
+			LandmarkInfo new_landmark;
+			new_landmark.color = cone.color;
+			new_landmark.estimated_pose = observed_position;
+			new_landmark.range_vector.push_back(cone.range);
+			new_landmark.theta_vector.push_back(cone.theta);
+			accel_map_[accel_cone_count_++] = new_landmark;
+		}
+        else
+        {
+            LandmarkInfo& matched_cone{ accel_map_.at(best_match) };
+            matched_cone.range_vector.push_back(cone.range);
+			matched_cone.theta_vector.push_back(cone.theta);
+
+            std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size();
+            std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size();
+        }
+    }
+
+    if (num_observations_ >= 40)
+    {
+        double track_width{100.0};
+        for (auto& yellow_cone : accel_map_)
+        {
+            if (yellow_cone.second.color != ConeColor::Yellow) {continue;}
+            for (auto& blue_cone : accel_map_) 
+            {
+                if (blue_cone.second.color != ConeColor::Blue) {continue;}
+                double  dist{std::sqrt( std::pow(yellow_cone.second.estimated_pose(0)-blue_cone.second.estimated_pose(0),2) \
+                    + std::pow(yellow_cone.second.estimated_pose(1)-blue_cone.second.estimated_pose(1),2) )};
+                if (dist < track_width) { track_width = dist; }
+            }
+        }
+		RCLCPP_WARN_STREAM(get_logger(), "Setting accel width to " << track_width);
+        slam_object_.setAccelWidth(track_width);
+        map_ready_ = true;
+    }
 }
 } // namespace ns_slam
 
