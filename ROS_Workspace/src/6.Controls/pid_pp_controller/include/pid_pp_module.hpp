@@ -18,6 +18,7 @@ namespace pid_pp
         double y_priv;
 
     public:
+        bool error;
         Point();
         Point(double a, double b);
         double x() const;
@@ -132,7 +133,7 @@ namespace pid_pp
     {
     public:
         VelocityProfile() : model(nullptr), spline_samples(nullptr) {}
-        VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed, int samples_per_meter, const Model &model, double initial_speed, bool is_end);
+        VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed, int samples_per_meter, const Model &model, double initial_speed, bool is_end, bool is_first_lap);
         std::pair<double, double> operator()(const Point &position, double theta) ; // returns target velocity and cross-track error
         Point get_target_point(double ld, const Point &position, double min_radius, double theta) const;
         ~VelocityProfile();
@@ -146,6 +147,7 @@ namespace pid_pp
         double total_length;                                           // spline_length
         int get_projection(const Point &position, double theta) const; // returns index of projection
         int max_idx;
+        bool unknown;
         void solve_profile(int resolution, double initial_speed, bool is_end);
     };
 

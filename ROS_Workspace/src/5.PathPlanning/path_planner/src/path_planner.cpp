@@ -63,7 +63,6 @@ std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone>& full_m
 }
 
 void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
-    std::cout << "mpika callback" << std::endl;
     rclcpp::Time starting_time = this->now();
     int cone_count = msg->cone_count;
     std::vector<Cone> full_map, local_map;
@@ -129,7 +128,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     else
     {
         float l = this->get_length(waypoints);
-        if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<last_length)
+        if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<0.75*last_length)
         {
             std::cout<<waymaker.get_batch_number()<<" Kept last: Last = "<<last_length<<" Current = "<<l + std::sqrt(CGAL::squared_distance(current_position, last_position))<<std::endl;
             rclcpp::Duration total_time = this->now() - starting_time;

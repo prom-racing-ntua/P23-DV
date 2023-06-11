@@ -65,7 +65,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     /*
     std::cout << "____________ (" << position.x() << "," << position.y() << ")" << std::endl
               << '[';
-
+    
     for (Cone cone : local_map)
     {
         if (cone.color == 0)

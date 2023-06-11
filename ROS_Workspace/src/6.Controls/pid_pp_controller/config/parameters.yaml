@@ -26,7 +26,7 @@ pid_pp_controller:
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
-    max_speed: 15.0
+    max_speed: 150.00
     dt: 0.025
     safe_speed_to_break: 1.0
 
@@ -37,5 +37,4 @@ pid_pp_controller:
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 1
-
+    total_laps: 2

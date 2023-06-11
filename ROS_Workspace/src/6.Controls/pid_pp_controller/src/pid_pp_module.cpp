@@ -3,10 +3,10 @@ using namespace pid_pp;
 
 // Class Point
 Point::Point(double a, double b)
-    : x_priv(a), y_priv(b) {}
+    : x_priv(a), y_priv(b), error(0) {}
 
 Point::Point()
-    : x_priv(0), y_priv(0) {}
+    : x_priv(0), y_priv(0), error(0) {}
 
 double Point::x() const
 {
@@ -173,33 +173,28 @@ double Model::my_max(double Fz) const
     return my_max;
 }
 
-double Model::Fz_calc(std::string type, bool aero, bool moved_cog, double vx, double wdist) const
+double Model::Fz_calc(std::string type, bool aero, bool moved_cog, double vx, double ax) const
 {
     double weight = m * g;
     double aero_f = 0.5 * cd_A * vx * vx;
     double w_d = wd;
-    if (moved_cog)
-        w_d = wdist;
+    ax = moved_cog?ax/9.81:0;
+
+    double dwx = h_cog * weight * ax / wb; //weight transfer
+
+    aero_f = aero?aero_f:0;
+
     if (type == "full")
     {
-        if (aero)
-            return weight + aero_f;
-        if (!aero)
-            return weight;
+        return weight + aero_f;
     }
     else if (type == "front")
     {
-        if (aero)
-            return weight * w_d + 0.5 * aero_f;
-        if (!aero)
-            return weight * w_d;
+        return weight*(1-wd) - dwx;
     }
     else if (type == "rear")
     {
-        if (aero)
-            return weight * (1 - w_d) + 0.5 * aero_f;
-        if (!aero)
-            return weight * (1 - w_d);
+        return weight*wd + dwx;
     }
     else
     {
@@ -209,7 +204,8 @@ double Model::Fz_calc(std::string type, bool aero, bool moved_cog, double vx, do
 
 double Model::Torque(double F) const
 {
-    return (F * R_wheel) / (gr * eff);
+    double t = (F * R_wheel) / (gr * eff);
+    return std::min(max_positive_torque, std::max(max_negative_torque, t));
 }
 
 // class SplinePoints
@@ -249,8 +245,8 @@ void SplinePoint::set_target_speed(double v)
 }
 
 // class VelocityProfile TBD
-VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end)
-    : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0)
+VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap)
+    : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0), unknown(is_first_lap)
 {
     this->total_length = spline.getApproximateLength();
     // std::cout<<"TOTAL LENGTH = "<<total_length<<std::endl;
@@ -273,6 +269,7 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
     }
     std::cout<<std::endl<<"------"<<std::endl;
     */
+    
 }
 
 VelocityProfile::~VelocityProfile()
@@ -288,6 +285,7 @@ std::pair<double, double> VelocityProfile::operator()(const Point &position, dou
     last_visited_index = i;
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
+    //std::cout<<target<<std::endl;
     return std::make_pair(target, cross_track);
 }
 
@@ -295,7 +293,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
 {
     double min_error = DBL_MAX, min_error_index = -1, error_x, error_y, error;
     //std::cout << "max index = " << max_idx << std::endl;
-    for (int i = last_visited_index; i < max_idx; i++)
+    for (int i = std::max(last_visited_index, 0); i < max_idx; i++)
     {
         /*
         error_x = std::sin(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::cos(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
@@ -311,11 +309,12 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         {
             min_error = error;
             min_error_index = i;
+            break;
         }
     }
     if (min_error_index == -1)
-        std::exit(48);
-    return min_error_index;
+        return 0;
+    return std::min(int(min_error_index)+2, max_idx-1);
 }
 
 Point VelocityProfile::get_target_point(double ld, const Point &position, double min_radius, double theta) const
@@ -335,8 +334,11 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
             closest_p = trans;
         }
     }
-    if (closest_d - DBL_MAX > 1)
+    if (closest_d < DBL_MAX)
         return closest_p;
+    Point a(0, 0);
+    a.error=1;
+    return a;
     /* ELSE TBD */
 }
 
@@ -360,9 +362,10 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
             spline_samples[i].set_target_speed(max_speed);
         
     }
+    
     //std::cout<<initial_speed<<" "<<spline_samples[0].target_speed()<<std::endl;
     spline_samples[0].set_target_speed(initial_speed);
-    spline_samples[resolution - 1].set_target_speed(0); // Safety Check
+    if(unknown)spline_samples[resolution - 1].set_target_speed(0); // Safety Check
     /* SECOND PASS */
     /*
         The ellipse constraints will be calculated using single axis, so as to calculate the total a_x of the vehicle.
@@ -403,12 +406,13 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         local_accel = std::min(fx_rem / m, max_accel_eng);
 
         ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
-        std::cout<<ds<<", ";
+        
         u_accel = std::sqrt(local_speed * local_speed + 2 * local_accel * ds);
         
         spline_samples[i + 1].set_target_speed(std::min(u_accel, spline_samples[i + 1].target_speed()));
     }
 
+    
     /* THIRD PASS */
     /*
         The ellipse constraints will be calculated using single axis, so as to calculate the total -a_x of the vehicle.

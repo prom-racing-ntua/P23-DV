@@ -28,6 +28,12 @@ namespace path_planner
             int selection_radius_small, selection_radius_big, selection_angle;
             void loadParameters();
             double total_execution_time;
+            custom_msgs::msg::WaypointsMsg last_path;
+            float last_length;
+            Point last_position;
+            float average_angle;
+            float get_length(std::vector<Point> path)const;
+            float get_angle_avg(std::vector<Point> path)const;
         public:
             explicit LifecyclePathPlanner();
             ~LifecyclePathPlanner();
