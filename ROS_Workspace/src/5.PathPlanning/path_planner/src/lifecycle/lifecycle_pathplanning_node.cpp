@@ -126,6 +126,34 @@ namespace path_planner
     LifecyclePathPlanner::~LifecyclePathPlanner() {
         std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
     }
+
+
+
+float LifecyclePathPlanner::get_length(std::vector<Point> path)const
+{
+    float l = 0;
+    for(int i=1; i<path.size(); i++)
+    {
+        l += std::sqrt(CGAL::squared_distance(path[i],path[i-1]));
+    }
+    return l;
+}
+
+float LifecyclePathPlanner::get_angle_avg(std::vector<Point> path)const
+{
+    //if(path.size()-2==0)return 0;
+    float l = 0;
+    float mx=0;
+    for(int i=1; i<path.size()-1; i++)
+    {
+        l += std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]));
+        mx = std::max(mx, float(std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]))));
+        //std::cout<<std::abs(180-angle_point_2(path[i-1], path[i], path[i+1]))<<", ";
+    }
+    //std::cout<<"Average angle = "<<l/(path.size()-2)<<std::endl;
+    return mx;
+}
+
 }
 
 int main (int argc, char* argv[]) {
