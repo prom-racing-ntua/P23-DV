@@ -37,4 +37,4 @@ pid_pp_controller:
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 2
+    total_laps: 1
