@@ -201,7 +201,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     // std::pair<double, double> projection = (*this->profile)(position, theta);
     std::pair<double, double> projection = this->profile->operator()(position, theta);
     // std::cout<<"5.. ";
-    //std::cout<<"target : "<<projection.first<<". speed : "<<this->v_x<<std::endl;
+    std::cout<<"target : "<<projection.first<<". speed : "<<this->v_x<<std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
     for_publish.speed_actual = this->v_x * 3.6;
     for_publish.speed_target = projection.first * 3.6;

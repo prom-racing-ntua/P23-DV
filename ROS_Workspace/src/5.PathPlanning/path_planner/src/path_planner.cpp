@@ -130,7 +130,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
         float l = this->get_length(waypoints);
         if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<0.75*last_length)
         {
-            std::cout<<waymaker.get_batch_number()<<" Kept last: Last = "<<last_length<<" Current = "<<l + std::sqrt(CGAL::squared_distance(current_position, last_position))<<std::endl;
+            std::cout<<waymaker.get_batch_number()<<" Kept last: Last = "<<last_length<<" Dist = "<<std::sqrt(CGAL::squared_distance(current_position, last_position))<<" Current = "<<l<<std::endl;
             rclcpp::Duration total_time = this->now() - starting_time;
             total_execution_time += total_time.nanoseconds() / 1000000.0;
             std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;

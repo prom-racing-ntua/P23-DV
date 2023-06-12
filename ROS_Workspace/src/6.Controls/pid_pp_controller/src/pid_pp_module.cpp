@@ -261,14 +261,14 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
     }
     
     solve_profile(resolution, initial_speed, is_end);
-    /*
+    
     std::cout<<std::endl<<"------"<<std::endl;
     for (int i = 0; i < resolution; i++)
     {
         std::cout<<spline_samples[i].target_speed()<<", ";
     }
     std::cout<<std::endl<<"------"<<std::endl;
-    */
+    
     
 }
 

@@ -8,8 +8,4 @@ ROS_Workspace/testingLogs
 ROS_Workspace/LidarLog
 ROS_Workspace/PerceptionRuns
 ROS_Workspace/spline_log.txt
-ROS_Workspace/src/6.Controls/simple_sim
-ROS_Workspace/log.txt
-ROS_Workspace/map.txt
-ROS_Workspace/accel_mids.txt
-ROS_Workspace/Acceleration.txt
+ROS_Workspace/src/6.Controls/simple_sim/data/log.txt
