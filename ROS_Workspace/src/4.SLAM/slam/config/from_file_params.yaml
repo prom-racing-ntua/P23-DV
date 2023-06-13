@@ -2,9 +2,9 @@ slam_from_file_node:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
-    mapping_mode: false
+    mapping_mode: true
     track_map: "/test_tracks/Acceleration.txt"
-    dynamic_accel_map: true
+    dynamic_accel_map: false
 
     # This must be the same as the sampling rate of the log files if used
     sampling_rate: 40

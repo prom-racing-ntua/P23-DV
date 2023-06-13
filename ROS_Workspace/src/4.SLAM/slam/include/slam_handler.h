@@ -44,6 +44,9 @@ private:
     int cooldown_;
     int cooldown_max_;
 
+    // Current perception cone count
+    int perception_count_;
+
     // Last velocity msg received
     custom_msgs::msg::VelEstimation last_vel_msg_;
 

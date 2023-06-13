@@ -129,6 +129,7 @@ void SlamFromFile::run_slam() {
 
 	if (!all_observed_landmarks.empty())
 	{
+		int perception_count{ all_observed_landmarks.size() };
 		if (!map_ready_) {
             addAccelObservations(all_observed_landmarks);
             return;
@@ -155,6 +156,7 @@ void SlamFromFile::run_slam() {
 		custom_msgs::msg::LocalMapMsg map_msg{};
 		custom_msgs::msg::ConeStruct cone_msg{};
 
+		map_msg.cones_count_actual = perception_count;
 		map_msg.pose.position.x = current_pose[0];
 		map_msg.pose.position.y = current_pose[1];
 		map_msg.pose.theta = current_pose[2];
@@ -166,11 +168,11 @@ void SlamFromFile::run_slam() {
 
 		if (track.empty())
 		{
-			map_msg.cone_count = 0;
+			map_msg.cones_count_all = 0;
 		}
 		else
 		{
-			map_msg.cone_count = track.size();
+			map_msg.cones_count_all = track.size();
 			for (auto cone : track)
 			{
 				cone_msg.color = cone[0];

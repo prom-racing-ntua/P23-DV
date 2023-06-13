@@ -172,6 +172,8 @@ void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::Sh
 
     if (!landmark_list.empty())
     {
+        perception_count_ = landmark_list.size();
+
         pthread_spin_lock(&global_lock_);
         if (is_mapping_) slam_object_.addLandmarkMeasurementSLAM(static_cast<unsigned long>(msg->global_index), landmark_list);
         else slam_object_.addLandmarkMeasurementsLocalization(static_cast<unsigned long>(msg->global_index), landmark_list);
@@ -219,22 +221,12 @@ void SlamHandler::optimizationCallback() {
     pthread_spin_unlock(&global_lock_);
 
     // Keep map log and publish map
+    custom_msgs::msg::LocalMapMsg map_msg{};
+    custom_msgs::msg::ConeStruct cone_msg{};
+    
     if (is_mapping_)
     {
         map_log_ << optimization_pose_symbol.index() << '\n';
-
-        custom_msgs::msg::LocalMapMsg map_msg{};
-        custom_msgs::msg::ConeStruct cone_msg{};
-        map_msg.cone_count = track.size();
-        map_msg.pose.position.x = current_pose[0];
-        map_msg.pose.position.y = current_pose[1];
-        map_msg.pose.theta = current_pose[2];
-        map_msg.pose.velocity_state = last_vel_msg_;
-
-        if (completed_laps_ < 0) { map_msg.lap_count = 0; }
-        else { map_msg.lap_count = completed_laps_; }
-        map_msg.cones_count_all = slam_object_.getConeCount();
-
         for (auto cone : track)
         {
             map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
@@ -244,8 +236,20 @@ void SlamHandler::optimizationCallback() {
             cone_msg.coords.y = cone[2];
             map_msg.local_map.push_back(cone_msg);
         }
-        map_publisher_->publish(map_msg);
     }
+
+    map_msg.cone_count = perception_count_;
+    perception_count_ = 0;
+    map_msg.pose.position.x = current_pose[0];
+    map_msg.pose.position.y = current_pose[1];
+    map_msg.pose.theta = current_pose[2];
+    map_msg.pose.velocity_state = last_vel_msg_;
+
+    if (completed_laps_ < 0) { map_msg.lap_count = 0; }
+    else { map_msg.lap_count = completed_laps_; }
+    map_msg.cones_count_all = slam_object_.getConeCount();
+
+    map_publisher_->publish(map_msg);
 
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
