@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdexcept>
-#include "slam_from_file.h"
+#include "test_slam_from_file.h"
 
 
 namespace ns_slam
@@ -407,15 +407,12 @@ void SlamFromFile::addAccelObservations(const std::vector<PerceptionMeasurement>
             matched_cone.range_vector.push_back(cone.range);
 			matched_cone.theta_vector.push_back(cone.theta);
 
-            double avg_range{ std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size() };
-            double avg_theta{ std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size() };
-
-			matched_cone.estimated_pose[0] = avg_range * std::cos(avg_theta);
-			matched_cone.estimated_pose[1] = avg_range * std::sin(avg_theta);
+            std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size();
+            std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size();
         }
     }
 
-    if (num_observations_ >= 30)
+    if (num_observations_ >= 40)
     {
         double track_width{100.0};
         for (auto& yellow_cone : accel_map_)

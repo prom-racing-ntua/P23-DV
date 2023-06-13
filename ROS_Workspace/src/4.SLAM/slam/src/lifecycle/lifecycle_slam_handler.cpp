@@ -251,8 +251,11 @@ void LifecycleSlamHandler::addAccelObservations(const std::vector<PerceptionMeas
             matched_cone.range_vector.push_back(cone.range);
 			matched_cone.theta_vector.push_back(cone.theta);
 
-            std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size();
-            std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size();
+            double avg_range{ std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size() };
+            double avg_theta{ std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size() };
+
+			matched_cone.estimated_pose[0] = avg_range * std::cos(avg_theta);
+			matched_cone.estimated_pose[1] = avg_range * std::sin(avg_theta);
         }
     }
 
