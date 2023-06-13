@@ -641,7 +641,7 @@ def main():
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    data_points=Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
+    data_points = Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
     midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
     print(np.shape(1))
     cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])

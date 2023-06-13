@@ -60,13 +60,13 @@ Model {
       }
     }
   }
-  Created		  "6/5/2023 5:30:02 PM"
+  Created		  "6/8/2023 7:33:27 PM"
   Creator		  "embotech AG"
   UpdateHistory		  "UpdateHistoryNever"
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "embotech AG"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "6/5/2023 5:30:02 PM"
+  LastModifiedDate	  "6/8/2023 7:33:27 PM"
   RTWModifiedTimeStamp	  315310195
   ModelVersionFormat	  "1.%<AutoIncrement:2>"
   ConfigurationManager	  "None"
@@ -767,7 +767,7 @@ Model {
       BlockType		      S-Function
       Name		      "FORCESNLPsolver"
       SID		      "1"
-      Ports		      [4, 40]
+      Ports		      [5, 40]
       Position		      [170, 99, 650, 680]
       ZOrder		      1
       FunctionName	      "FORCESNLPsolver_simulinkBlock"
@@ -805,6 +805,7 @@ Model {
 " - x0 - matrix of size [480x1]\n  "
 " - all_parameters - matrix of size [160x1]\n  "
 " - reinitialize - scalar\n  "
+" - num_of_threads - scalar\n  "
 
 	"\nOUTPUTS:\n"
 	" - x01 - column vector of length 12\n  "
@@ -854,6 +855,7 @@ Model {
 "port_label('input', 2, 'x0') \n  "
 "port_label('input', 3, 'all_parameters') \n  "
 "port_label('input', 4, 'reinitialize') \n  "
+"port_label('input', 5, 'num_of_threads') \n  "
 "port_label('output', 1, 'x01') \n  "
 "port_label('output', 2, 'x02') \n  "
 "port_label('output', 3, 'x03') \n  "

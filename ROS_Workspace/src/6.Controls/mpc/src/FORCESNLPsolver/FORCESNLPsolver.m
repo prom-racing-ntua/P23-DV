@@ -6,6 +6,7 @@
 %       PARAMS.x0 - matrix of size [480x1]
 %       PARAMS.all_parameters - matrix of size [160x1]
 %       PARAMS.reinitialize - scalar
+%       PARAMS.num_of_threads - scalar
 %
 %   OUTPUT returns the values of the last iteration of the solver where
 %       OUTPUT.x01 - column vector of length 12

@@ -82,6 +82,31 @@ void copyMValueToC_FORCESNLPsolver_int(double * src, FORCESNLPsolver_int * dest)
 
 /* copy functions */
 
+void copyCArrayToM_solver_int32_unsigned(solver_int32_unsigned *src, double *dest, solver_int32_default dim) 
+{
+    solver_int32_default i;
+    for( i = 0; i < dim; i++ ) 
+    {
+        *dest++ = (double)*src++;
+    }
+}
+
+void copyMArrayToC_solver_int32_unsigned(double *src, solver_int32_unsigned *dest, solver_int32_default dim) 
+{
+    solver_int32_default i;
+    for( i = 0; i < dim; i++ ) 
+    {
+        *dest++ = (solver_int32_unsigned) (*src++) ;
+    }
+}
+
+void copyMValueToC_solver_int32_unsigned(double * src, solver_int32_unsigned * dest)
+{
+	*dest = (solver_int32_unsigned) *src;
+}
+
+/* copy functions */
+
 void copyCArrayToM_solver_int32_default(solver_int32_default *src, double *dest, solver_int32_default dim) 
 {
     solver_int32_default i;
@@ -247,6 +272,14 @@ void mexFunction( solver_int32_default nlhs, mxArray *plhs[], solver_int32_defau
 	if ( (par != NULL) && (mxGetN(par) != 0) && (mxGetM(par) != 0) )
 	{
 		copyMValueToC_FORCESNLPsolver_int(mxGetPr(par), &params.reinitialize);
+
+	}
+
+
+	par = mxGetField(PARAMS, 0, "num_of_threads");
+	if ( (par != NULL) && (mxGetN(par) != 0) && (mxGetM(par) != 0) )
+	{
+		copyMValueToC_solver_int32_unsigned(mxGetPr(par), &params.num_of_threads);
 
 	}
 

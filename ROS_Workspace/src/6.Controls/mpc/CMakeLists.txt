@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(mpc)
 
 # Default to C99
+
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
@@ -18,12 +19,16 @@ endif()
 set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
+# Add the following lines to enable OpenMP
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(OpenMP REQUIRED)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -59,10 +64,9 @@ src/FORCESNLPsolver/FORCESNLPsolver_model.h
 src/FORCESNLPsolver/FORCESNLPsolver_interface.c
 src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
 src/FORCESNLPsolver/include/FORCESNLPsolver.h
-# src/mpc_node_official.h
 )
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
-target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a) #changed from a
 
 add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_mpc_node.cpp src/lifecycle/lifecycle_states.cpp
 src/mpc_solver.cpp

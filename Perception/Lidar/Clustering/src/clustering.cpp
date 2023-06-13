@@ -15,7 +15,7 @@ int main () {
     CsvToPcd(pcd_csv);
 
      pcl::PCDReader reader;
-     reader.read ("../DataError/pcd/cloud_cluster_init.pcd", *cloud_init);
+     reader.read ("../DataError2/pcd/cloud_cluster_init.pcd", *cloud_init);
      std::cout << "PointCloud before filtering has: " << cloud_init->size () << " data points." << std::endl; 
 
     // crop box filtering
@@ -24,7 +24,7 @@ int main () {
      end1 = clock();
      pcl::PCDWriter writer;
      std::cout << "PointCloud after crop box filtering has: " << cloud_box_out->size ()  << " data points." << std::endl; //*
-     writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_box.pcd", *cloud_box_out, false); //*
+     writer.write<pcl::PointXYZ> ("../DataError2/pcd/cloud_cluster_box.pcd", *cloud_box_out, false); //*
 
      //segmentation
      start2=clock();
@@ -32,7 +32,7 @@ int main () {
      end2=clock();
      std::cout << "coeffs of planar are: " << a << " " << b  << " " << c << " " << d << std::endl;
      std::cout << "PointCloud after segmentation has: " << cloud_segm_out->size ()  << " data points." << std::endl;
-     writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_segm.pcd", *cloud_segm_out, false); //*
+     writer.write<pcl::PointXYZ> ("../DataError2/pcd/cloud_cluster_segm.pcd", *cloud_segm_out, false); //*
 
      //clustering
      start3 = clock();
@@ -121,6 +121,6 @@ int main () {
     std::cout << "Number of clusters: " << cluster_count << std::endl;
     // std::stringstream ss;
     // ss << std::setw(4) << std::setfill('0') << j;
-    writer.write<pcl::PointXYZ> ("../DataError/pcd/cloud_cluster_final.pcd", *cloud_cluster, false); //*
+    writer.write<pcl::PointXYZ> ("../DataError2/pcd/cloud_cluster_final.pcd", *cloud_cluster, false); //*
     return (0);
 }
