@@ -1,8 +1,10 @@
+import os
 import cv2
 import torch
 import time
 import numpy as np
 import math
+from ament_index_python import get_package_prefix
 
 from .cnn import *
 
@@ -10,13 +12,14 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     # Local load has way slower performance for some reason...
 
     # TODO: See if loading locally makes any difference in the tpu inference performance
-    yolov5_local_path = "/home/prom/YOLO_models/yolov5"
+    yolov5_local_path = os.path.join(get_package_prefix("perception"), "..", "..", "..", "yolov5")
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
 
     if "v5" in modelpath:
-        yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=False)
+        # yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=True)
+        yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=True)
     elif "v7" in modelpath:
-        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
+        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=True)
 
     yolo_model.agnostic = True
     yolo_model.conf = conf
@@ -24,20 +27,23 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     return yolo_model
 
 def inferenceYOLO(model, img, tpu=True, debug=False):
-    inferenceTime = time.time()
-    if tpu:    
+    baseTime = time.time()
+    paddingTime = 0
+    if tpu:
         # YOLO in TPU works only for square input i.e. (640,640) so we pad zeros below the actual image
-        padded_img = np.zeros((640,640,3))
+        padded_img = np.zeros((640,640,3),dtype=np.uint8)
         # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
         padded_img[:512] = cv2.resize(img, (640,512))
-        results = model(padded_img).xyxy[0].cpu().numpy()
+        
+        paddingTime = (time.time() - baseTime)*1000
+        print(padded_img.dtype)
+        results = model(padded_img)
+        # results.save(f"test{time.time()}.jpg")
     else:
-        results = model(img).xyxy[0].cpu().numpy()
-    inferenceTime = time.time() - inferenceTime
-    if debug:
-        print(f"Inference Time: {inferenceTime*1000}")
+        results = model(img)
     # now results are a numpy array containing xmin, ymin, xmax, ymax, confidence, class in each row
-    return results
+    inferenceTime = (time.time() - baseTime)*1000
+    return results.pred[0].numpy(), [paddingTime, inferenceTime]
 
 def initKeypoint(small_modelpath, large_modelpath):
     small_model = VGGLikeV3()

@@ -33,7 +33,7 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
 
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.70, iou=0.35)
+        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.65, iou=0.35)
         self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
 
         # Setup Message Transcoder
@@ -98,15 +98,21 @@ class InferenceLifecycleNode(Node):
         else:
             # Perform Perception Pipeline
             inferenceTiming = time.time()
-            results = inferenceYOLO(model=self.yoloModel, img=image, tpu=True, debug=False)
+            results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True)
+            # self.get_logger().info(f"Padding Time and Inference Time {inferenceTime[0], inferenceTime[1]}")
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
                 keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallModel, self.largeModel)
                 finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
-                rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
-
+                try:
+                    # This sometimes throughs an error,don't know why
+                    rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
+                except ValueError:
+                    self.get_logger().error(f"No cones found from {cameraOrientation} camera")
+                    return
+                
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
                 perception2slam_msg.global_index = globalIndex
@@ -126,7 +132,7 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
     # EdgeTPU YOLO
-    yolov5_edgetpu_model_path = f"{models}/yolov5n6_edgetpu.tflite"
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"
     # Medium Yolo v5
@@ -139,7 +145,7 @@ def main(args=None):
     largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
     
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5s_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:

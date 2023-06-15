@@ -94,7 +94,7 @@ def generate_launch_description():
 
     purePursuitNode = Node(
         package="pid_pp_controller",
-        executable='lifecycle_pure_pursuit',
+        executable='lifecycle_pid_pp_controller',
         name='pure_pursuit',
         emulate_tty=True
     )
