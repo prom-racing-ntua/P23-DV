@@ -170,14 +170,14 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
                             'reinitialize', int32(reinitialize),...
                             'num_of_threads', uint32(num_of_threads));
 
-            [output_c, exitflag_c, info_c] = FORCESNLPsolverBuildable.forcesInitOutputsC();
+            [output_c, exitflag_c, info_c] = FORCESNLPsolverBuildable.forcesInitOutputsC(); %#ok<ASGLU>
             
             headerName = [solvername '.h'];
             coder.cinclude(headerName);
             coder.cinclude([solvername '_memory.h']);
             coder.cinclude([solvername '_adtool2forces.h']);
             % define memory pointer
-            memptr = coder.opaque([solvername '_mem *'], 'HeaderFile', headerName);
+            memptr = coder.opaque([solvername '_mem *'], 'HeaderFile', headerName); %#ok<NASGU>
             memptr = coder.ceval([solvername '_internal_mem'], uint32(0));
             % define solver input information (params, file and casadi)
             coder.cstructname(params, [solvername '_params'], 'extern', 'HeaderFile', headerName);

@@ -1,5 +1,4 @@
-export PYTHONPATH=../embotech_env:$PYTHONPATH
-python3 MPC/MPC_embotech/mpc_solver_generator.py
-cp -r FORCESNLPsolver ROS_Workspace/src/6.Controls/mpc/src
-rm -r FORCESNLPsolver
-rm  *.forces
+cd MPC/MPC_embotech
+chmod +x mpc_solver_generator_official.sh
+./mpc_solver_generator_official.sh
+cd ../..

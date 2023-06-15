@@ -56,15 +56,15 @@ static void mdlInitializeSizes(SimStruct *S)
     DECL_AND_INIT_DIMSINFO(outputDimsInfo);
     ssSetNumSFcnParams(S, 0);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) 
-	{
-		return; /* Parameter mismatch will be reported by Simulink */
+    {
+        return; /* Parameter mismatch will be reported by Simulink */
     }
 
-	/* initialize size of continuous and discrete states to zero */
+    /* initialize size of continuous and discrete states to zero */
     ssSetNumContStates(S, 0);
-    ssSetNumDiscStates(S, 0);
+    ssSetNumDiscStates(S, 1);
 
-	/* initialize input ports - there are 5 in total */
+    /* initialize input ports - there are 5 in total */
     if (!ssSetNumInputPorts(S, 5)) return;
     	
 	/* Input Port 0 */
@@ -104,19 +104,19 @@ static void mdlInitializeSizes(SimStruct *S)
  
 
 
-	/* initialize output ports - there are 1 in total */
+    /* initialize output ports - there are 1 in total */
     if (!ssSetNumOutputPorts(S, 1)) return;    
-		
+    	
 	/* Output Port 0 */
     ssSetOutputPortMatrixDimensions(S,  0, 480, 1);
     ssSetOutputPortDataType(S, 0, SS_DOUBLE);
     ssSetOutputPortComplexSignal(S, 0, COMPLEX_NO); /* no complex signals suppported */
 
 
-	/* set sampling time */
+    /* set sampling time */
     ssSetNumSampleTimes(S, 1);
 
-	/* set internal memory of block */
+    /* set internal memory of block */
     ssSetNumRWork(S, 0);
     ssSetNumIWork(S, 0);
     ssSetNumPWork(S, 0);
@@ -124,11 +124,11 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetNumNonsampledZCs(S, 0);
 
     /* Take care when specifying exception free code - see sfuntmpl_doc.c */
-	/* SS_OPTION_USE_TLC_WITH_ACCELERATOR removed */ 
-	/* SS_OPTION_USE_TLC_WITH_ACCELERATOR removed */ 
+    /* SS_OPTION_USE_TLC_WITH_ACCELERATOR removed */ 
+    /* SS_OPTION_USE_TLC_WITH_ACCELERATOR removed */ 
     /* ssSetOptions(S, (SS_OPTION_EXCEPTION_FREE_CODE |
-		             SS_OPTION_WORKS_WITH_CODE_REUSE)); */
-	ssSetOptions(S, SS_OPTION_EXCEPTION_FREE_CODE );
+                     SS_OPTION_WORKS_WITH_CODE_REUSE)); */
+    ssSetOptions(S, SS_OPTION_EXCEPTION_FREE_CODE);
 }
 
 #if defined(MATLAB_MEX_FILE)
@@ -190,13 +190,13 @@ static void mdlSetDefaultPortDataTypes(SimStruct *S)
 */
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
-	solver_int32_default i, j, k;
-	
-	/* file pointer for printing */
-	FILE *fp = NULL;
+    solver_int32_default i, j, k;
+    
+    /* file pointer for printing */
+    FILE *fp = NULL;
 
-	/* Simulink data */
-	const real_T *xinit = (const real_T*) ssGetInputPortSignal(S,0);
+    /* Simulink data */
+    const real_T *xinit = (const real_T*) ssGetInputPortSignal(S,0);
 	const real_T *x0 = (const real_T*) ssGetInputPortSignal(S,1);
 	const real_T *all_parameters = (const real_T*) ssGetInputPortSignal(S,2);
 	const real_T *reinitialize = (const real_T*) ssGetInputPortSignal(S,3);
@@ -205,15 +205,16 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     real_T *outputs = (real_T*) ssGetOutputPortSignal(S,0);
 	
 
-	/* Solver data */
-	static FORCESNLPsolver_params params;
-	static FORCESNLPsolver_output output;
-	static FORCESNLPsolver_info info;
+    /* Solver data
+     * Note: mem struct may store a state in case of warm-starting */
+    static FORCESNLPsolver_params params;
+    static FORCESNLPsolver_output output;
+    static FORCESNLPsolver_info info;
     static FORCESNLPsolver_mem * mem;
-	solver_int32_default solver_exitflag;
+    solver_int32_default solver_exitflag;
 
-	/* Copy inputs */
-	for(i = 0; i < 9; i++)
+    /* Copy inputs */
+    for(i = 0; i < 9; i++)
 	{
 		params.xinit[i] = (double) xinit[i];
 	}
@@ -235,35 +236,35 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 	
 
     #if SET_PRINTLEVEL_FORCESNLPsolver > 0
-		/* Prepare file for printfs */
+        /* Prepare file for printfs */
         fp = fopen("stdout_temp","w+");
-		if( fp == NULL ) 
-		{
-			mexErrMsgTxt("freopen of stdout did not work.");
-		}
-		rewind(fp);
-	#endif
+        if( fp == NULL ) 
+        {
+            mexErrMsgTxt("freopen of stdout did not work.");
+        }
+        rewind(fp);
+    #endif
 
     if (mem == NULL)
     {
         mem = FORCESNLPsolver_internal_mem(0);
     }
 
-	/* Call solver */
-	solver_exitflag = FORCESNLPsolver_solve(&params, &output, &info, mem, fp , pt2function_FORCESNLPsolver);
+    /* Call solver */
+    solver_exitflag = FORCESNLPsolver_solve(&params, &output, &info, mem, fp , pt2function_FORCESNLPsolver);
 
-	#if SET_PRINTLEVEL_FORCESNLPsolver > 0
-		/* Read contents of printfs printed to file */
-		rewind(fp);
-		while( (i = fgetc(fp)) != EOF ) 
-		{
-			ssPrintf("%c",i);
-		}
-		fclose(fp);
-	#endif
+    #if SET_PRINTLEVEL_FORCESNLPsolver > 0
+        /* Read contents of printfs printed to file */
+        rewind(fp);
+        while( (i = fgetc(fp)) != EOF ) 
+        {
+            ssPrintf("%c",i);
+        }
+        fclose(fp);
+    #endif
 
-	/* Copy outputs */
-	for(i = 0; i < 12; i++)
+    /* Copy outputs */
+    for(i = 0; i < 12; i++)
 	{
 		outputs[i] = (real_T) output.x01[i];
 	}

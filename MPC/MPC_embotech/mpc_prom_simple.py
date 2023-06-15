@@ -2,6 +2,10 @@
 # (c) Embotech AG, Zurich, Switzerland, 2013-2022.
 
 import sys
+import os
+print(sys.version)
+file_path = os.path.realpath(__file__)
+print("file path is: ",file_path)
 import numpy as np
 from numpy import *
 import casadi
@@ -341,7 +345,7 @@ def generate_pathplanner():
     codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
-    codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
+    # codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1   # maximum number of quadratic problems to be solved
     codeoptions.sqp_nlp.reg_hessian = 1e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
