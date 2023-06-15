@@ -134,6 +134,7 @@ void MpcSolver::Initialize_all_local() {
 
 void MpcSolver::UpdateFromLastIteration() {
     for (int j = 0; j < X_SIZE; ++j) params.xinit[j] = X[j];
+    std::cout << "simulation at update is: "<< simulation_ << std::endl;
     if(!simulation_) {
         X[0] = pose_struct.x;
         X[1] = pose_struct.y;

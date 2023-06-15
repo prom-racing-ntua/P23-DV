@@ -6,6 +6,7 @@ using namespace std::chrono_literals;
 namespace mpc {
     LifecycleMpcHandler::LifecycleMpcHandler():LifecycleNode("mpc"), count_(0){
         loadParameters();
+        std::cout << "simulation param is: " << mpc_solver.simulation_ << std::endl;
         RCLCPP_INFO(get_logger(), "MPC Node Initialized");
     }
 
@@ -17,18 +18,18 @@ namespace mpc {
         global_int=-1;
         mpc_solver.known_track_= declare_parameter<bool>("known_track",true); //they are set to false values to test yaml files
         mpc_solver.simulation_= declare_parameter<bool>("simulation",true);
-        mpc_solver.midpoints_txt_= declare_parameter<std::string>("midpoints_txt","src/6.Controls/mpc/data/thomaidio_midpoints.txt");
-        mpc_solver.search_window_ = declare_parameter<int>("search_window",15);
-        mpc_solver.s_interval_ = declare_parameter<float>("s_interval",15);
+        mpc_solver.midpoints_txt_= declare_parameter<std::string>("midpoints_txt","src/6.Controls/mpc/data/trackdrive_midpoints.txt");
+        mpc_solver.search_window_ = declare_parameter<int>("search_window",10);
+        mpc_solver.s_interval_ = declare_parameter<float>("s_interval",0.1);
         mpc_solver.distance_safe_ = declare_parameter<float>("distance_safe",0.95);
         mpc_solver.emergency_forward_ = declare_parameter<float>("emergency_forward",1.0);
         mpc_solver.F_init = declare_parameter<float>("F_init",300.0);
         mpc_solver.v_limit_ = declare_parameter<float>("v_limit",12.5);
-        node_freq_ = declare_parameter<int>("node_freq",50);
+        node_freq_ = declare_parameter<int>("node_freq",40);
         mpc_solver.dt = (1/node_freq_);
         mpc_solver.s_space_max = declare_parameter<float>("s_space_max",0.5);
         mpc_solver.s_space_min = declare_parameter<float>("s_space_min",0.1);
-        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << node_freq_ << std::endl;
+        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << mpc_solver.search_window_ << " " << mpc_solver.midpoints_txt_ << std::endl;
         std::cout << "declared params" << std::endl;
     }
         
