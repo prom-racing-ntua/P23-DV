@@ -71,6 +71,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/P22/SteeringAngle.msg"
   "msg/P22/BrakePressure.msg"
 
+  # Actions
+  "action/DriverlessTransition.action"
+
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS
 )

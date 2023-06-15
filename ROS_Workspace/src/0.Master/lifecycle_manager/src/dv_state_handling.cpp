@@ -50,8 +50,8 @@ namespace lifecycle_manager_namespace{
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
                 // nodesToShutdown = {"path_planning", "pure_pursuit"};
-                // nodesToShutdown = {"path_planning"};
-                // controlsNode = {"mpc"};
+                nodesToShutdown = {"path_planning"};
+                controlsNode = {"mpc"};
                 break;
             case(p23::TRACKDRIVE):
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
@@ -90,9 +90,11 @@ namespace lifecycle_manager_namespace{
                 load parameter file. This works only if all the parameters are set on the initialization of the node.
                 I think that this is the best way to setup things.
             */
-
+            goalCounter -= nodesToShutdown.size();
             for (auto node: nodeList) { loadConfigurationFileToNode(node, configurationFileSelected); }
             for (auto node: nodeList) { changeNodeState(Transition::TRANSITION_CONFIGURE, node); }
+
+            std::this_thread::sleep_for(std::chrono::seconds(2));
 
         currentMission = mission;
     }

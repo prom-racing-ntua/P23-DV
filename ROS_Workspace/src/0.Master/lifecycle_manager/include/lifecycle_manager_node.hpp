@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
@@ -11,11 +12,15 @@
 #include <algorithm>
 #include <string>
 #include <cstring>
+#include <thread>
+
 #include <unistd.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
 #include <rmw/qos_profiles.h>
+#include "rclcpp_action/rclcpp_action.hpp"
+
 
 #include "custom_msgs/srv/driverless_transition.hpp"
 #include "custom_msgs/msg/driverless_transition.hpp"
@@ -26,6 +31,8 @@
 #include "rclcpp/parameter_client.hpp"
 #include "rclcpp/utilities.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
+
+#include "custom_msgs/action/driverless_transition.hpp"
 
 #include "yaml-cpp/yaml.h"
 #include "p23_common.h"
@@ -51,6 +58,10 @@ void removeElement(std::vector<T>& vector, T element)
 
 namespace lifecycle_manager_namespace
 {
+    using DVTransition = custom_msgs::action::DriverlessTransition;
+    using GoalHandle = rclcpp_action::ServerGoalHandle<DVTransition>;
+    using lifecycle_msgs::msg::Transition;
+
     class LifecycleManagerNode : public rclcpp::Node {
     private:
         p23::Mission currentMission;
@@ -79,8 +90,18 @@ namespace lifecycle_manager_namespace
         /* Service that handles the DV changes received from P23 Status. Publisher that send to P23 Status the error state of the
             managed nodes. */
         rclcpp::Service<custom_msgs::srv::DriverlessTransition>::SharedPtr dvStatusService_;
+        
         rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
 
+
+        /* All Action based things for the Lifecycle Manager */
+        rclcpp_action::Server<DVTransition>::SharedPtr dv_status_service;
+        uint8_t goalCounter, failedTransitionCounter;
+
+        rclcpp_action::GoalResponse handleGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const DVTransition::Goal> goal);
+        rclcpp_action::CancelResponse handleCancelation(const std::shared_ptr<GoalHandle> goal_handle);
+        void handleAccept(const std::shared_ptr<GoalHandle> goal_handle);
+        
         // Timer to check if the nodes that we are managing are still alive
         rclcpp::TimerBase::SharedPtr heartbeatTimer;
         int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;

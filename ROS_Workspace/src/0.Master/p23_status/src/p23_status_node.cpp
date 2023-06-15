@@ -85,8 +85,10 @@ void P23StatusNode::setSubscribers() {
 void P23StatusNode::setPublishers() {
     // Set publisher towards CANBUS writer topic
     canbus_system_state_publisher_ = create_publisher<custom_msgs::msg::TxSystemState>("/system_state", 10);
-}
 
+    dv_transition_client_ = rclcpp_action::create_client<custom_msgs::action::DriverlessTransition>(this,
+      "lifecycle_manager/change_driverless_status");
+}
 
 void P23StatusNode::setServices() {
     // Set a service to change DV Status and to receive IMU Mode
@@ -94,7 +96,6 @@ void P23StatusNode::setServices() {
     ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("/vn_300/get_ins_mode");
     vectornav_heartbeat_client_ = create_client<custom_msgs::srv::InsMode>("/vn_200/get_ins_mode");
 }
-
 
 // Callback function when receiving new mission message
 void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg) {
@@ -175,7 +176,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_READY. Activating nodes");
         changeDVStatus(p23::ON_AS_READY);
         break;
-
+        
     case(p23::AS_Status::AS_DRIVING):
         // This happens when we receive the go signal. Activate controls if we are not in DV_DRIVING.
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_DRIVING. Activating controls");
@@ -201,7 +202,6 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         break;
     }
 }
-
 
 void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     using namespace std::chrono_literals;
@@ -261,68 +261,31 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
         // This transition is called when in MISSION_FINISHED or in AS_EMERGENCY, the car is stopped and the nodes are to be shutdown
         // TODO: Checks here
         break;
-
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid transition requested: " << requested_transition);
         return;
     }
 
-
-    // Create a service request to communicate with the Lifecycle Manager to change the status to whatever is specified
-    auto request = std::make_shared<custom_msgs::srv::DriverlessTransition::Request>();
-    request->transition.id = requested_transition;
-    request->transition.label = p23::transition_list.at(requested_transition);
-    request->mission.id = currentMission;
-    request->mission.label = p23::mission_list.at(currentMission);
-
-
-    RCLCPP_INFO_STREAM(get_logger(), "Sending a " << p23::transition_list.at(requested_transition) << " request to Lifecycle Manager");
-
-    if (!p23_status_client_->wait_for_service(5s))
-    {
-        /*
-            Just set pc_error bool to True and it will automatically send to the LV system.
-        */
-        RCLCPP_INFO(get_logger(), "Lifecycle Manager Service not responding");
-        pcError = true;
+    if (!dv_transition_client_->wait_for_action_server(std::chrono::milliseconds(2000))) {
+        RCLCPP_ERROR(get_logger(), "Action server not available after waiting");
         return;
     }
 
-    // Send request to Lifecycle Manager
-    using ServiceResponseFuture = rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedFuture;
-    auto response_received_callback = [this, requested_transition, transition_to](ServiceResponseFuture future) {
-        auto result = future.get();
-        bool success = result.get()->success;
+    auto send_goal_options = rclcpp_action::Client<Transition>::SendGoalOptions();
 
-        // If transitioning to LV_ON -> nodesReady = false
-        // If transitioning to DV_READY -> nodesReady = true
-        if (success)
-        {
-            if (transition_to == p23::DV_READY and !nodesReady)
-            {
-                nodesReady = true;
-                RCLCPP_WARN(get_logger(), "Nodes successfully transitioned to DV_READY, waiting for INS mode 2");
-                return;
-            }
-            else if (transition_to == p23::LV_ON)
-            {
-                RCLCPP_WARN(get_logger(), "Driverless Status successfully changed to: LV_ON");
-                nodesReady = false;
-            }
-            else
-            {
-                RCLCPP_WARN_STREAM(get_logger(), "Driverless Status successfully changed to: " << p23::driverless_status_list.at(transition_to));
-            }
-            currentDvStatus = transition_to;
-        }
-        else
-        {
-            RCLCPP_WARN_STREAM(get_logger(), "Could not change Driverless Status to: " << p23::driverless_status_list.at(transition_to));
-            // Error-Handling point
-        }
-    };
+    send_goal_options.goal_response_callback = std::bind(&P23StatusNode::TransitionResponse, this, std::placeholders::_1);
+    send_goal_options.feedback_callback = std::bind(&P23StatusNode::TransitionFeedback, this, std::placeholders::_1, std::placeholders::_2);
+    send_goal_options.result_callback = std::bind(&P23StatusNode::TransitionResult, this, std::placeholders::_1);
+    
+    auto goal = Transition::Goal();
+    goal.transition.id = requested_transition;
+    goal.transition.label = p23::transition_list.at(requested_transition);
+    goal.mission.id = currentMission;
+    goal.mission.label = p23::mission_list.at(currentMission);
+    RCLCPP_INFO_STREAM(get_logger(), "Sending a " << p23::transition_list.at(requested_transition) << " request to Lifecycle Manager");
 
-    auto future_result = p23_status_client_->async_send_request(request, response_received_callback);
+    // Send goal to Lifecycle Manager
+    dv_transition_client_->async_send_goal(goal, send_goal_options);
 }
 
 

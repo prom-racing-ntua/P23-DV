@@ -8,6 +8,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
+#include "rclcpp_action/rclcpp_action.hpp"
+
 
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"
@@ -20,11 +22,17 @@
 #include "custom_msgs/srv/driverless_transition.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
 
+#include "custom_msgs/action/driverless_transition.hpp"
+
 #include "p23_common.h"
 
 
 namespace p23_status_namespace
 {
+
+using Transition = custom_msgs::action::DriverlessTransition;
+using GoalHandle = rclcpp_action::ClientGoalHandle<Transition>;
+
 class P23StatusNode : public rclcpp::Node {
 private:
     // Thewrw oti conesActual einai oi kwnoi tou sygkekrimenou lap
@@ -64,6 +72,12 @@ private:
     rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedPtr p23_status_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr vectornav_heartbeat_client_;
+
+    //Actions
+    rclcpp_action::Client<custom_msgs::action::DriverlessTransition>::SharedPtr dv_transition_client_;
+    void TransitionResponse(GoalHandle::SharedPtr goal_handle);
+    void TransitionFeedback(GoalHandle::SharedPtr goalHandle, const std::shared_ptr<const Transition::Feedback> feedback);
+    void TransitionResult(const GoalHandle::WrappedResult &result);
 
     // Timers of node
     rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;
