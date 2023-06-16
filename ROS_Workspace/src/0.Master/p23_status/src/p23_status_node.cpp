@@ -288,7 +288,6 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     dv_transition_client_->async_send_goal(goal, send_goal_options);
 }
 
-
 void P23StatusNode::loadParameters() {
     nodeList = declare_parameter<std::vector<std::string>>("managing_node_list",
         { "acquisition_left", "acquisition_right", "acquisition_center", "inference",

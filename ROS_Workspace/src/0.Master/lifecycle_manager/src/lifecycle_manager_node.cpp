@@ -35,19 +35,12 @@ namespace lifecycle_manager_namespace
         goalTimer->cancel();
 
         initializeLifecycleClients(nodeList);
-        // startup();
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
 
     void LifecycleManagerNode::initializeServices()
     {
         using namespace std::placeholders;
-
-        // dvStatusService_ = create_service<custom_msgs::srv::DriverlessTransition>(
-        //     std::string(get_name()) + std::string("/change_driverless_status"),
-        //     std::bind(&LifecycleManagerNode::changeDVState, this, _1, _2)
-        //     );
-        
         dv_status_service = rclcpp_action::create_server<DVTransition>(
             this,
             std::string(get_name()) + std::string("/change_driverless_status"),
@@ -128,62 +121,28 @@ namespace lifecycle_manager_namespace
             return;
         }
 
-        using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedFuture;
-        auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
-            auto result = future.get();
-            bool nodeStatusChangeSuccess = result.get()->success;
-            // RCLCPP_INFO(get_logger(), "Node %s returned callback with success status: %i", nodeName.c_str(), nodeStatusChangeSuccess);
+        auto future_result = changeStateServiceHandler->async_send_request(request);
 
-            if (nodeStatusChangeSuccess) {
-                goalCounter--;
-                RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
-            }
-            else {
-                RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
-                /* This will throw up a NODE_PROBLEM error */
-                nodeStateMap[nodeName] = true;
-                failedTransitionCounter++;
-            }
-        };
-        // RCLCPP_INFO(get_logger(), "Changing state of node %s to %u", nodeName.c_str(), transition);
-        auto future_result = changeStateServiceHandler->async_send_request(request, response_received_callback);
+        /* Instead of using a callback (which doesn't always work out check for the future status every once in a while)*/
+        auto future_status = wait_for_result(future_result, std::chrono::seconds(5));
+
+        if (future_status != std::future_status::ready) {
+            RCLCPP_ERROR(get_logger(), "Server time out while changing state for node %s", nodeName.c_str());
+            return;
+        }
+
+        // We have an answer, let's print our success.
+        if (future_result.get()->success) {
+            RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
+            goalCounter--;
+        } else {
+            RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
+            nodeStateMap[nodeName] = true;
+            failedTransitionCounter++;
+        }
+
+        return;
     }
-
-    // void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessTransition::Request> request,
-    //     std::shared_ptr<custom_msgs::srv::DriverlessTransition::Response> response)
-    // {
-    //     p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->transition.id);
-    //     p23::Mission missionSent = static_cast<p23::Mission>(request->mission.id);
-
-    //     switch(newDVStatus) {
-    //         case(p23::DV_Transitions::ON_STARTUP):
-    //             RCLCPP_INFO(get_logger(), "Received Startup signal, start a heartbeat check for each node managed");
-    //             startup();
-    //             break;
-    //         case(p23::DV_Transitions::SHUTDOWN_NODES):
-    //             RCLCPP_INFO(get_logger(), "Either Mission Finished or AS Emergency, shutting down currently running nodes");
-    //             shutdownSelectedNodes(nodeList, Transition::TRANSITION_ACTIVE_SHUTDOWN);
-    //             break;
-    //         case(p23::DV_Transitions::ON_MISSION_LOCKED):
-    //             RCLCPP_INFO(get_logger(), "Received mission, configure the nodes");
-    //             configureNodes(missionSent);
-    //             break;
-    //         case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
-    //             RCLCPP_INFO(get_logger(), "Unlocking mission, waiting for new mission to arrive, cleanup nodes");
-    //             cleanupNodes();
-    //             currentMission = p23::MISSION_UNLOCKED;
-    //             break;
-    //         case(p23::DV_Transitions::ON_AS_READY):
-    //             RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
-    //             activateSystem();
-    //             break;
-    //         case(p23::DV_Transitions::ON_AS_DRIVING):
-    //             RCLCPP_INFO(get_logger(), "Received AS Driving, activate control node");
-    //             activateControls();
-    //             break;
-    //     }
-    //     response->success = true;
-    // }
 
     void LifecycleManagerNode::loadParameters() {
         nodeList = declare_parameter<std::vector<std::string>>("managing_node_list",

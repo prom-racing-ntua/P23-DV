@@ -34,6 +34,7 @@ namespace lifecycle_manager_namespace{
                 1. Select the correct configuartion file based on the mission selected - DONE
                 2. Send a changeNodeState transition call to every node remaining - DONE
         */      
+        
         std::string configurationFileSelected = configFolder;
 
         switch(mission) {
@@ -88,7 +89,6 @@ namespace lifecycle_manager_namespace{
         goalCounter -= nodesToShutdown.size();
         for (auto node: nodeList) { loadConfigurationFileToNode(node, configurationFileSelected); }
         for (auto node: nodeList) { changeNodeState(Transition::TRANSITION_CONFIGURE, node); }
-        std::this_thread::sleep_for(std::chrono::seconds(2));
     }
 
     void LifecycleManagerNode::activateSystem()
@@ -106,7 +106,6 @@ namespace lifecycle_manager_namespace{
         for (auto node: nodeList) {
             if (node == controlsNode or node == "saltas") continue;
             changeNodeState(Transition::TRANSITION_ACTIVATE, node);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         if (std::count(nodeList.begin(), nodeList.end(), "saltas")) { changeNodeState(Transition::TRANSITION_ACTIVATE, "saltas"); }
 
@@ -132,7 +131,6 @@ namespace lifecycle_manager_namespace{
     
         for (auto node: nodeList) {
             changeNodeState(Transition::TRANSITION_CLEANUP, node);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         get_parameter("managing_node_list", nodeList);
         initializeLifecycleClients(nodeList);

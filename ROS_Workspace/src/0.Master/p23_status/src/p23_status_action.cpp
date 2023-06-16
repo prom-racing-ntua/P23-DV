@@ -19,12 +19,14 @@ namespace p23_status_namespace
 
         remainingTransitions = feedback->remaining_transitions;
         failedTransitions = feedback->failed_transitions;
-        RCLCPP_INFO(get_logger(), "Got feedback from Manager. Remaining Transitions: %u", remainingTransitions);
+        RCLCPP_INFO(get_logger(), "Got feedback from Manager. Remaining Transitions: %u. Failed Transitions: %u", remainingTransitions, failedTransitions);
 
         if (failedTransitions != 0) {
             RCLCPP_ERROR(get_logger(), "A Lifecycle Transitions has failed, Cancel DV Transition and do not update status");
             dv_transition_client_->async_cancel_goal(goalHandle);
         }
+
+        return;
     }
 
     // Receives the final response when the transition goal is reached
@@ -32,7 +34,7 @@ namespace p23_status_namespace
     {
         switch (result.code) {
             case rclcpp_action::ResultCode::SUCCEEDED:
-                // RCLCPP_INFO(get_logger(), "DV Transition was successful");
+                RCLCPP_INFO(get_logger(), "DV Transition was successful");
                 break;
             case rclcpp_action::ResultCode::ABORTED:
                 RCLCPP_ERROR(get_logger(), "Goal was aborted");
@@ -44,6 +46,7 @@ namespace p23_status_namespace
                 RCLCPP_ERROR(get_logger(), "Unknown result code");
                 return;
         }
+        
         bool success = result.result->success;
 
         /* Add the transition to the result so we know which dv state to go to*/

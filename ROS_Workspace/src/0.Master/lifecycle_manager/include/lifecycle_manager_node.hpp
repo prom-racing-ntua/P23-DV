@@ -1,6 +1,7 @@
 #ifndef LIFECYCLE_MANAGER_NODE_HPP
 #define LIFECYCLE_MANAGER_NODE_HPP
 
+/* C/C++ Imports */
 #include <memory>
 #include <chrono>
 #include <atomic>
@@ -13,31 +14,49 @@
 #include <string>
 #include <cstring>
 #include <thread>
-
 #include <unistd.h>
 
+/* ROS2 Libraries */
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
 #include <rmw/qos_profiles.h>
 #include "rclcpp_action/rclcpp_action.hpp"
-
-
-#include "custom_msgs/srv/driverless_transition.hpp"
-#include "custom_msgs/msg/driverless_transition.hpp"
-#include "custom_msgs/msg/lifecycle_node_status.hpp"
-#include "lifecycle_msgs/srv/get_state.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
-#include "lifecycle_msgs/srv/change_state.hpp"
 #include "rclcpp/parameter_client.hpp"
 #include "rclcpp/utilities.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
+/* Messages */
+#include "custom_msgs/msg/driverless_transition.hpp"
+#include "custom_msgs/msg/lifecycle_node_status.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
+
+/* Services */
+#include "lifecycle_msgs/srv/change_state.hpp"
+#include "lifecycle_msgs/srv/get_state.hpp"
+#include "custom_msgs/srv/driverless_transition.hpp"
+/* Actions */
 #include "custom_msgs/action/driverless_transition.hpp"
 
-#include "yaml-cpp/yaml.h"
+/* Custom Libraries */
 #include "p23_common.h"
 #include "node_class.hpp"
 
+
+/* Taken ready from a ROS2 example, used to safely wait for a response from a service */
+template<typename FutureT, typename WaitTimeT>
+std::future_status wait_for_result(FutureT & future, WaitTimeT time_to_wait)
+{
+    auto end = std::chrono::steady_clock::now() + time_to_wait;
+    std::chrono::milliseconds wait_period(100);
+    std::future_status status = std::future_status::timeout;
+    do {
+        auto now = std::chrono::steady_clock::now();
+        auto time_left = end - now;
+        if (time_left <= std::chrono::seconds(0)) {break;}
+        status = future.wait_for((time_left < wait_period) ? time_left : wait_period);
+    } while (rclcpp::ok() && status != std::future_status::ready);
+    return status;
+}
 
 template<typename T>
 void printVector(std::vector<T>& vector)
