@@ -1,7 +1,7 @@
 /acquisition_left:
   ros__parameters:
-    serialNumber: "KE0220030137"
-    exposureTime: 40000
+    # serialNumber: "KE0220030137"
+    exposureTime: 25000
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50

@@ -27,14 +27,17 @@ void P23StatusNode::checkVectornav() {
         nodeStatusMap["vn_300"] = !result->sensor_connected;
         if (result->sensor_connected)
         {
+            if (insMode != 2) //result->ins_mode)
+            {
             insMode = 2;//result->ins_mode;
+            RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
+            }
 
             if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
             {
                 RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
                 currentDvStatus = p23::DV_READY;
             }
-            else { RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode); }
         }
         else { insMode = 0; }
     };

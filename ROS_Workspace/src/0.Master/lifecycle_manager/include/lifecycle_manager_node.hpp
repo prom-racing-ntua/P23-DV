@@ -64,22 +64,16 @@ namespace lifecycle_manager_namespace
 
     class LifecycleManagerNode : public rclcpp::Node {
     private:
-        p23::Mission currentMission;
-        p23::AS_Status currentASStatus;
-        p23::DV_Status currentDVStatus;
-
         // Configuration and Launch folders
         std::string packageShareDirectory, configFolder, launchFolder;
 
+        // Lists of managed nodes
         std::vector<std::string> nodeList;
         std::vector<std::string> nodesToShutdown;
         std::string controlsNode;
 
-        /*
-            The first 2 dictionaries are used for the get_state and change_state services that the lifecycle nodes provide
-            automatically upon creation.
-        */
-       
+        // The first 2 dictionaries are used for the get_state and change_state services that the lifecycle nodes provide
+        // automatically upon creation.
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedPtr> lifecycleGetStateMap;
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedPtr> lifecycleChangeStateMap;
         std::unordered_map<std::string, bool> nodeStateMap;
@@ -93,18 +87,25 @@ namespace lifecycle_manager_namespace
         
         rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
 
-
         /* All Action based things for the Lifecycle Manager */
         rclcpp_action::Server<DVTransition>::SharedPtr dv_status_service;
+        std::shared_ptr<GoalHandle> ongoing_goal_handle;
         uint8_t goalCounter, failedTransitionCounter;
 
+        // When receiving new action goal
         rclcpp_action::GoalResponse handleGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const DVTransition::Goal> goal);
-        rclcpp_action::CancelResponse handleCancelation(const std::shared_ptr<GoalHandle> goal_handle);
+        // When current goal is canceled
+        rclcpp_action::CancelResponse handleCancellation(const std::shared_ptr<GoalHandle> goal_handle);
+        // Executed after new goal is accepted
         void handleAccept(const std::shared_ptr<GoalHandle> goal_handle);
         
         // Timer to check if the nodes that we are managing are still alive
         rclcpp::TimerBase::SharedPtr heartbeatTimer;
         int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;
+
+        // Timer to check goal progression so to not block in the while loop
+        rclcpp::CallbackGroup::SharedPtr timer_cb_group;
+        rclcpp::TimerBase::SharedPtr goalTimer;
 
         /* Node Initialization Functions*/
         void initializeServices();
@@ -125,6 +126,9 @@ namespace lifecycle_manager_namespace
         void changeNodeState(std::uint8_t transition, std::string nodeName);
         void loadConfigurationFileToNode(std::string nodeName, std::string configFile);  
         
+        // Used as a seperate callback for the action service
+        void publishActionFeedback();
+
         /*
             5 Main Functions for controlling the whole state machine of P23
 

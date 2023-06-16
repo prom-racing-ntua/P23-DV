@@ -275,7 +275,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     send_goal_options.goal_response_callback = std::bind(&P23StatusNode::TransitionResponse, this, std::placeholders::_1);
     send_goal_options.feedback_callback = std::bind(&P23StatusNode::TransitionFeedback, this, std::placeholders::_1, std::placeholders::_2);
-    send_goal_options.result_callback = std::bind(&P23StatusNode::TransitionResult, this, std::placeholders::_1);
+    send_goal_options.result_callback = std::bind(&P23StatusNode::TransitionResult, this, std::placeholders::_1, transition_to);
     
     auto goal = Transition::Goal();
     goal.transition.id = requested_transition;

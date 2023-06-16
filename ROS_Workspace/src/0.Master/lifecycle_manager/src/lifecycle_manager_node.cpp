@@ -14,8 +14,6 @@ namespace lifecycle_manager_namespace
     {
         RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
         
-        currentMission = p23::Mission::MISSION_UNLOCKED;
-
         loadParameters();
         initializeServices();
         /*
@@ -31,6 +29,10 @@ namespace lifecycle_manager_namespace
         get_parameter("heartbeat_frequency", heartbeatFrequency);
 
         heartbeatTimerDuration = (1000/heartbeatFrequency);
+
+        timer_cb_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        goalTimer = create_wall_timer(std::chrono::seconds(1), std::bind(&LifecycleManagerNode::publishActionFeedback, this), timer_cb_group);
+        goalTimer->cancel();
 
         initializeLifecycleClients(nodeList);
         // startup();
@@ -50,7 +52,7 @@ namespace lifecycle_manager_namespace
             this,
             std::string(get_name()) + std::string("/change_driverless_status"),
             std::bind(&LifecycleManagerNode::handleGoal, this, _1, _2),
-            std::bind(&LifecycleManagerNode::handleCancelation, this, _1),
+            std::bind(&LifecycleManagerNode::handleCancellation, this, _1),
             std::bind(&LifecycleManagerNode::handleAccept, this, _1));
     }
 
@@ -130,20 +132,20 @@ namespace lifecycle_manager_namespace
         auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
             auto result = future.get();
             bool nodeStatusChangeSuccess = result.get()->success;
-            RCLCPP_INFO(get_logger(), "Node %s returned callback with success status: %i", nodeName.c_str(), nodeStatusChangeSuccess);
+            // RCLCPP_INFO(get_logger(), "Node %s returned callback with success status: %i", nodeName.c_str(), nodeStatusChangeSuccess);
 
             if (nodeStatusChangeSuccess) {
-                --goalCounter;
+                goalCounter--;
                 RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
             }
             else {
                 RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
                 /* This will throw up a NODE_PROBLEM error */
                 nodeStateMap[nodeName] = true;
-                ++failedTransitionCounter;
+                failedTransitionCounter++;
             }
         };
-        RCLCPP_INFO(get_logger(), "Changing state of node %s to %u", nodeName.c_str(), transition);
+        // RCLCPP_INFO(get_logger(), "Changing state of node %s to %u", nodeName.c_str(), transition);
         auto future_result = changeStateServiceHandler->async_send_request(request, response_received_callback);
     }
 

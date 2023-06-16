@@ -54,7 +54,7 @@ def generate_launch_description():
         name='acquisition_right',
         emulate_tty=True
     )
-    ldList.append(acquisitionRightNode)
+    # ldList.append(acquisitionRightNode)
 
     # Inference Node
     inferenceNode = Node(
@@ -90,7 +90,7 @@ def generate_launch_description():
         name='mpc',
         emulate_tty=True
     )
-    ldList.append(mpcNode)
+    # ldList.append(mpcNode)
 
     purePursuitNode = Node(
         package="pid_pp_controller",
@@ -98,7 +98,7 @@ def generate_launch_description():
         name='pure_pursuit',
         emulate_tty=True
     )
-    ldList.append(purePursuitNode)
+    # ldList.append(purePursuitNode)
     
     ld = LaunchDescription(ldList)
     return ld

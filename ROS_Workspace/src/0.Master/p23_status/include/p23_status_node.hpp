@@ -74,10 +74,10 @@ private:
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr vectornav_heartbeat_client_;
 
     //Actions
-    rclcpp_action::Client<custom_msgs::action::DriverlessTransition>::SharedPtr dv_transition_client_;
+    rclcpp_action::Client<Transition>::SharedPtr dv_transition_client_;
     void TransitionResponse(GoalHandle::SharedPtr goal_handle);
-    void TransitionFeedback(GoalHandle::SharedPtr goalHandle, const std::shared_ptr<const Transition::Feedback> feedback);
-    void TransitionResult(const GoalHandle::WrappedResult &result);
+    void TransitionFeedback(GoalHandle::SharedPtr, const std::shared_ptr<const Transition::Feedback> feedback);
+    void TransitionResult(const GoalHandle::WrappedResult &result, const p23::DV_Status& transtion_to);
 
     // Timers of node
     rclcpp::TimerBase::SharedPtr sensorCheckupTimer_;

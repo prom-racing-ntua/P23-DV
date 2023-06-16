@@ -1,6 +1,6 @@
 lifecycle_manager:
   ros__parameters:
-    managing_node_list: ["inference", "saltas", "velocity_estimation", "slam", "path_planning", "mpc"]
+    managing_node_list: ["acquisition_left", "inference", "saltas", "velocity_estimation", "slam", "path_planning"]
     # managing_node_list: ["inference", "saltas", "velocity_estimation", "mpc", "path_planning", "slam"]
     heartbeat_timeout_period: 1000  #heartbeat period in milliseconds
     heartbeat_frequency:  5 # in Hz

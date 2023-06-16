@@ -2,7 +2,7 @@
 
 namespace p23_status_namespace
 {
-    
+    // Receives the goal from the action server and sees if the goal was accepted or not
     void P23StatusNode::TransitionResponse(GoalHandle::SharedPtr goal_handle)
     {
         if (!goal_handle) {
@@ -12,26 +12,27 @@ namespace p23_status_namespace
         }
     }
 
+    // Continuously receives the action feedback and checks if any node failed
     void P23StatusNode::TransitionFeedback(GoalHandle::SharedPtr goalHandle, const std::shared_ptr<const Transition::Feedback> feedback)
     {
         uint remainingTransitions, failedTransitions;
 
         remainingTransitions = feedback->remaining_transitions;
         failedTransitions = feedback->failed_transitions;
+        RCLCPP_INFO(get_logger(), "Got feedback from Manager. Remaining Transitions: %u", remainingTransitions);
 
         if (failedTransitions != 0) {
             RCLCPP_ERROR(get_logger(), "A Lifecycle Transitions has failed, Cancel DV Transition and do not update status");
             dv_transition_client_->async_cancel_goal(goalHandle);
         }
-
-        RCLCPP_INFO(get_logger(), "Got feedback from Manager. Remaining Transitions: %u", remainingTransitions);
     }
 
-    void P23StatusNode::TransitionResult(const GoalHandle::WrappedResult &result)
+    // Receives the final response when the transition goal is reached
+    void P23StatusNode::TransitionResult(const GoalHandle::WrappedResult &result, const p23::DV_Status& transition_to)
     {
         switch (result.code) {
             case rclcpp_action::ResultCode::SUCCEEDED:
-                RCLCPP_INFO(get_logger(), "DV Transition was successful");
+                // RCLCPP_INFO(get_logger(), "DV Transition was successful");
                 break;
             case rclcpp_action::ResultCode::ABORTED:
                 RCLCPP_ERROR(get_logger(), "Goal was aborted");
@@ -45,8 +46,6 @@ namespace p23_status_namespace
         }
         bool success = result.result->success;
 
-        /* Placeholder */
-        p23::DV_Status transition_to = p23::DV_Status::LV_ON;
         /* Add the transition to the result so we know which dv state to go to*/
         if (success)
         {
