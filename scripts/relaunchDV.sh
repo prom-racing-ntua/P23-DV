@@ -2,4 +2,6 @@
 
 # Relaunch DV and skip an LV cycle
 resetROS
-initializeP23
+launchBase
+sleep 5
+launchNodes

@@ -9,6 +9,8 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::S
     conesActual = msg->cones_count_actual;
     currentLap = msg->lap_count;
 
+    /* Should send a standstill bit as well here... */
+
     if (currentLap >= maxLaps)
     {
         currentDvStatus = p23::MISSION_FINISHED;
@@ -29,8 +31,8 @@ void P23StatusNode::checkVectornav() {
         {
             if (insMode != 2) //result->ins_mode)
             {
-            insMode = 2;//result->ins_mode;
-            RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
+                insMode = 2;//result->ins_mode;
+                RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
 
             if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
@@ -83,14 +85,18 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
         /* If a node has a problem then check if this node is a critical one */
         if (it.second)
         {
+            // RCLCPP_ERROR(get_logger(), "Node %s has no heartbeat.", it.first.c_str());
+            // statusBeforeError = currentDvStatus;
             currentDvStatus = p23::NODE_PROBLEM;
             nodesReady = false;
             if (std::find(nodeList.begin(), nodeList.end(), it.first) != nodeList.end())
             {
-                /* TODO: Talk about which node should send us to AS_EMERGENCY mode */
+                /* TODO: Talk about which node should send us to AS_EMERGENCY mode. To go to AS_EMERGENCY, 
+                    just set the pcError flag high and the EV system will do the rest. */
+                    
             }
         }
-    }
+    }    
 }
 
 void P23StatusNode::sendSystemState() {

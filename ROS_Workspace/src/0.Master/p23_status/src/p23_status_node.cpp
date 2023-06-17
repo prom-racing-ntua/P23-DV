@@ -260,6 +260,15 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     case p23::DV_Transitions::SHUTDOWN_NODES:
         // This transition is called when in MISSION_FINISHED or in AS_EMERGENCY, the car is stopped and the nodes are to be shutdown
         // TODO: Checks here
+        if (currentAsStatus == p23::AS_Status::AS_EMERGENCY) {
+            RCLCPP_INFO(get_logger(), "Currently in AS_EMERGENCY, activate service brakes and when in standstill shutdown nodes.");
+            transition_to = p23::DV_Status::NODE_PROBLEM;
+        }
+        else if (currentAsStatus == p23::AS_Status::AS_FINISHED) {
+            RCLCPP_INFO(get_logger(), "AS_Finished, when in standstill, shutdown nodes");
+            /* Should we spin around standstill flag and wait for it to become true? */
+            transition_to = p23::DV_Status::MISSION_FINISHED;
+        }
         break;
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid transition requested: " << requested_transition);

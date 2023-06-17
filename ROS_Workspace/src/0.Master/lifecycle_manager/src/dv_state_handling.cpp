@@ -144,10 +144,8 @@ namespace lifecycle_manager_namespace{
             implemented in the future).
         */
        
-        for (auto node: nodesToShutdown) {
-            
+        for (auto node: nodesToShutdown) {            
             changeNodeState(shutdownTransition, node);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
             // lifecycleGetStateMap.erase(node);
             // lifecycleChangeStateMap.erase(node);
         }

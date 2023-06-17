@@ -116,7 +116,7 @@ namespace lifecycle_manager_namespace
                 get_logger(),
                 "Service %s is not available.",
                 changeStateServiceHandler->get_service_name());
-            nodeStateMap[nodeName] = true;
+            // nodeStateMap[nodeName] = true;
             failedTransitionCounter++;
             return;
         }
@@ -137,7 +137,7 @@ namespace lifecycle_manager_namespace
             goalCounter--;
         } else {
             RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
-            nodeStateMap[nodeName] = true;
+            // nodeStateMap[nodeName] = true;
             failedTransitionCounter++;
         }
 
