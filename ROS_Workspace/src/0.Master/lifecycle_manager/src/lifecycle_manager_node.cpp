@@ -27,13 +27,19 @@ namespace lifecycle_manager_namespace
         get_parameter("managing_node_list", nodeList);
         get_parameter("heartbeat_timeout_period", heartbeatTimeoutPeriod);
         get_parameter("heartbeat_frequency", heartbeatFrequency);
-
+        get_parameter("resurrect_failed_nodes", resurrectionEnabled);
         heartbeatTimerDuration = (1000/heartbeatFrequency);
 
+        /* Action Feedback Publishing Timer */
         timer_cb_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         goalTimer = create_wall_timer(std::chrono::seconds(1), std::bind(&LifecycleManagerNode::publishActionFeedback, this), timer_cb_group);
         goalTimer->cancel();
 
+        /* Node Resurrection stuff */
+
+        if (resurrectionEnabled) {
+            /* */
+        }
         initializeLifecycleClients(nodeList);
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
@@ -57,12 +63,19 @@ namespace lifecycle_manager_namespace
 
             lifecycleGetStateMap[s] = create_client<lifecycle_msgs::srv::GetState>(getStateServiceName);
             lifecycleChangeStateMap[s] = create_client<lifecycle_msgs::srv::ChangeState>(changeStateServiceName);
+            parameterClientMap[s] = std::make_shared<rclcpp::AsyncParametersClient>(this, s);
             /* Make the assumption that every node that you manage is alive and well :) */
             nodeStateMap[s] = false;
         }
 
         node_state_publisher_ = create_publisher<custom_msgs::msg::LifecycleNodeStatus>(
             std::string(get_name()) + std::string("/lifecycle_node_status"), 10);
+    }
+
+    void LifecycleManagerNode::initializeResurrectionClients()
+    {
+        nodeResurrectionClient = create_client<custom_msgs::srv::ResurrectNode>("resurrection_manager/resurrection_service");
+        nodeResurrectionOrderClient = create_client<custom_msgs::srv::ResurrectOrder>("resurrection_manager/resurrection_node_control");
     }
 
     void LifecycleManagerNode::getNodeState(std::string nodeName)
@@ -76,6 +89,9 @@ namespace lifecycle_manager_namespace
         if (!getStateServiceHandler->wait_for_service(std::chrono::milliseconds(heartbeatTimeoutPeriod))) {
             RCLCPP_ERROR_STREAM(get_logger(), "Service " << getStateServiceHandler->get_service_name() << " is not available");
             nodeStateMap[nodeName] = true;
+            if (resurrectionEnabled) {
+                sendResurrectionRequest(nodeName);
+            }
             return;
         }
 
@@ -151,5 +167,6 @@ namespace lifecycle_manager_namespace
             });
         heartbeatTimeoutPeriod = declare_parameter<int>("heartbeat_timeout_period", 2000);
         heartbeatFrequency = declare_parameter<int>("heartbeat_frequency", 5);
+        resurrectionEnabled = declare_parameter<bool>("resurrect_failed_nodes", false);
     }
 }

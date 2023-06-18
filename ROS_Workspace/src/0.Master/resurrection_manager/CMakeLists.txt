@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(lifecycle_manager)
+project(resurrection_manager)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -9,27 +9,22 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
-find_package(rclcpp_action REQUIRED)
-find_package(lifecycle_msgs REQUIRED)
-find_package(ament_index_cpp REQUIRED)
-find_package(rclcpp_components REQUIRED)
-find_package(p23_status REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/lifecycle_manager_node.cpp src/dv_state_handling.cpp src/configuration_handling.cpp src/lifecycle_manager_action.cpp)
-ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs lifecycle_msgs rclcpp_lifecycle ament_index_cpp rclcpp_components rclcpp_lifecycle p23_status rclcpp_action)
+include_directories(
+  include
+)
+
+add_executable(${PROJECT_NAME} src/main.cpp src/resurrection_manager_node.cpp src/resurrection_process.cpp)
+ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs)
 
 install(TARGETS
   ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME}
 )
 
-include_directories(
-  include
-)
 
 install(DIRECTORY
-  config launch
+  config
   DESTINATION share/${PROJECT_NAME}/
 )
 

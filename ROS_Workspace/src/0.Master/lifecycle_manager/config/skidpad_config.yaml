@@ -56,13 +56,13 @@
 
     logger: true
 
-/saltas:
+saltas:
   ros__parameters:
       velocity_estimation_frequency: 40          # Hz
       perception_frequency: 5                # Hz
 
 
-/velocity_estimation:
+velocity_estimation:
   ros__parameters:
     frequency: 40               # [Hz]
 
@@ -106,3 +106,19 @@
     wheel_radius: 0.1995        # [m]
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]
+
+mpc:
+  ros__parameters:
+    known_track: true
+    simulation: true
+    midpoints_txt: "src/6.Controls/mpc/data/trackdrive_midpoints.txt"
+    node_freq: 40
+    search_window: 10
+    s_interval: 0.1
+    distance_safe: 0.95
+    emergency_forward: 1.0
+    lookahead: 40
+    F_init: 300.0
+    v_limit: 12.5
+    s_space_max: 0.5
+    s_space_min: 0.1

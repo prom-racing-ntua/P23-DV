@@ -65,6 +65,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/DriverlessStatus.srv"
   "srv/InsMode.srv"
   "srv/DriverlessTransition.srv"
+  "srv/ResurrectNode.srv"
+  "srv/ResurrectOrder.srv"
 
   ## Messages for P22 testing
   "msg/P22/WheelSpeed.msg"
