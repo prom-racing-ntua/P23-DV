@@ -1,6 +1,6 @@
 /acquisition_left:
   ros__parameters:
-    # serialNumber: "KE0220030137"
+    serialNumber: "KE0220030137"
     exposureTime: 25000
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
@@ -25,17 +25,17 @@
 
     # This sets the mode of operation. Set true for slam and false for localization
     mapping_mode: true
-    track_map: "/tracks/Acceleration.txt"
+    track_map: ""
 
     # Defines the starting position of the car
-    starting_position: [ -8.2, 0.0, 0.0 ]
-    starting_position_covariance: [ 0.5, 0.1, 0.01 ]
+    starting_position: [ -7.5, 0.0, 0.0 ]
+    starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
-    perception_range: 12.0
+    perception_range: 13.0
 
     # After how many time steps the optimization algorithm would be executed
-    optimization_interval: 20
+    optimization_interval: 4
 
     # The max distance at which two cones would be associated
     association_threshold: 1.9
@@ -44,9 +44,6 @@
     # iSAM parameters
     relinearize_threshold: 0.1
     relinearize_skip: 1
-
-    odometry_covariance_weight: 10.0
-    perception_covariance_weight: 0.01
 
     # Big orange cones for starting/finish line
     left_orange: [0.0, -2.5]
@@ -58,12 +55,12 @@
 
 /saltas:
   ros__parameters:
-      velocity_estimation_frequency: 40          # Hz
-      perception_frequency: 5                # Hz
+      velocity_estimation_frequency: 40   # Hz
+      perception_frequency: 10            # Hz
 
 /velocity_estimation:
   ros__parameters:
-    frequency: 40               # [Hz]
+    frequency: 40                         # [Hz]
     initial_state_vector: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     initial_state_covariance: [1.0e-3,    0.0,    0.0,    0.0,    0.0,    0.0,

@@ -10,7 +10,7 @@ namespace ns_slam
 {
 LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam"), slam_object_(this) {
     loadParameters();
-    completed_laps_ = -1;
+    completed_laps_ = 0;
     cooldown_ = 0;
     perception_count_ = 0;
 
@@ -33,7 +33,7 @@ void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimatio
     odometry.velocity_y = static_cast<double>(msg->velocity_y);
     odometry.yaw_rate = static_cast<double>(msg->yaw_rate);
     auto variance_array = static_cast<std::array<double, 9>>(msg->variance_matrix);
-    odometry.measurement_noise = odometry_weight_ * Eigen::Map<gtsam::Matrix3>(variance_array.data());
+    odometry.measurement_noise = Eigen::Map<gtsam::Matrix3>(variance_array.data());
 
     pthread_spin_lock(&global_lock_);
     bool is_completed_lap{ slam_object_.addOdometryMeasurement(odometry) };
@@ -90,20 +90,20 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
         landmark.range = static_cast<double>(range[i]);
 
         // Only accept cones that are within the specified range
-        if (landmark.range <= perception_range_)
+        if (landmark.range <= 6.0 or (abs(landmark.theta <= 0.7) and landmark.range <= perception_range_))
         {
             landmark.color = static_cast<ConeColor>(color[i]);
             landmark.theta = static_cast<double>(theta[i]);
             // Setting observation noise depending on type of cone
             if (landmark.color == ConeColor::LargeOrange)
             {
-                observation_noise << 0.01, 0,
-                    0, 3 * perception_weight_* landmark.range / 10;
+                observation_noise << 0.001, 0,
+					0, 3 * (0.011*std::pow(landmark.range+1,2) - 0.082*(landmark.range+1) + 0.187);
             }
             else
             {
-                observation_noise << 0.001, 0,
-                    0, perception_weight_* landmark.range / 10;
+                observation_noise << 0.0001, 0,
+					0, 0.011*std::pow(landmark.range+1,2) - 0.082*(landmark.range+1) + 0.187;
             }
             landmark.observation_noise = observation_noise;
             // RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
@@ -303,8 +303,8 @@ void LifecycleSlamHandler::loadParameters() {
     declare_parameter<std::vector<double>>("starting_position", { -7.5, 0.0, 0.0 });
     declare_parameter<std::vector<double>>("starting_position_covariance", { 0.5, 0.1, 0.1 });
 
-    declare_parameter<std::vector<double>>("left_orange", { 6.0, -3.0 });
-    declare_parameter<std::vector<double>>("right_orange", { 6.0, 3.0 });
+    declare_parameter<std::vector<double>>("left_orange", { 6.0, -1.5 });
+    declare_parameter<std::vector<double>>("right_orange", { 6.0, 1.5 });
     declare_parameter<int>("lap_counter_cooldown", 10);
 
     share_dir_ = ament_index_cpp::get_package_share_directory("slam");

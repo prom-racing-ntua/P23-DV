@@ -17,7 +17,7 @@ namespace lifecycle_manager_namespace
         loadParameters();
         initializeServices();
         /*
-            Setup folders for controlling the configuartion and the launch files of the nodes through
+            Setup folders for controlling the configuration and the launch files of the nodes through
             the lifecycle manager.
         */
         packageShareDirectory = ament_index_cpp::get_package_share_directory("lifecycle_manager");

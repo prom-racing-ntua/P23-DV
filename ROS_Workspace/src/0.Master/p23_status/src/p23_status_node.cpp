@@ -127,10 +127,10 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
         maxLaps = 5;
         break;
     case(p23::AUTOX):
-        maxLaps = 1;
+        maxLaps = 2;
         break;
     case(p23::TRACKDRIVE):
-        maxLaps = 10;
+        maxLaps = 11;
         break;
     case(p23::EBS_TEST):
         maxLaps = 255;

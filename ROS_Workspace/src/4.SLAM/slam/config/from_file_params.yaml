@@ -2,8 +2,8 @@ slam_from_file_node:
   ros__parameters:
     # This sets the mode of operation. Set true for slam and false for 
     # localization
-    mapping_mode: true
-    track_map: "/test_tracks/Acceleration.txt"
+    mapping_mode: false
+    track_map: "/Tracks/Acceleration.txt"
     dynamic_accel_map: false
 
     # This must be the same as the sampling rate of the log files if used
@@ -14,7 +14,7 @@ slam_from_file_node:
     starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
-    perception_range: 12.0
+    perception_range: 13.0
 
     # After how many time steps the optimization algorithm would be executed
     optimization_interval: 4
@@ -27,6 +27,10 @@ slam_from_file_node:
     relinearize_threshold: 0.1
     relinearize_skip: 1
 
+    left_orange: [0.0, -2.5]
+    right_orange: [0.0, 2.5]
+
+    # Not used right now
     odometry_covariance_weight: 10.0
     perception_covariance_weight: 0.01
 

@@ -212,6 +212,30 @@ void GraphSLAM<T>::init() {
 
 	// Initializes the factor graph
 	initializeFactorGraph();
+	
+	// Add the starting line large orange cones in the map
+	if (node_handler_->get_parameter("mapping_mode").as_bool())
+	{
+		LandmarkInfo cone{};
+		cone.is_verified = true;
+		cone.color = ConeColor::LargeOrange;
+		double cone_x{ 0.3 };
+		double cone_y{ 1.5 };
+
+		for (int i{0}; i < 4; i++)
+		{
+			gtsam::Symbol cone_symbol{ 'L', landmark_counter_ };
+			cone.symbol = cone_symbol;
+			cone.estimated_pose[0] = cone_x;
+			cone.estimated_pose[1] = cone_y;
+			if (i%2==0) { cone_x*=-1.0; }
+			else { cone_y*=-1.0; }
+
+			landmark_id_map_[landmark_counter_++] = cone;
+			new_variable_values_.insert(cone.symbol, gtsam::Point2(cone.estimated_pose[0], cone.estimated_pose[1]));
+		}
+	}
+	
 	RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Created SLAM object" << '\n');
 }
 
@@ -326,6 +350,11 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 
 		int best_match_id{ findNearestNeighbor(cone, observed_position) };
 
+		// We don't want to add new large orange cones, just use them for localization. 
+		// They are added in the creation of the map.
+		if (cone.color == ConeColor::LargeOrange and best_match_id == -1) { continue; }
+
+		// TODO: Redo doc below...
 		/* Case where the landmark has not been observed before.
 		 * Here we don't put the observed landmark in the graph in case it is a false positive of
 		 * the perception pipeline (i.e. a ghost cone). We just add it to the landmark_id_map_ variable
@@ -423,7 +452,6 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 		// }
 	}
 }
-
 
 // Adds landmark measurements in LOCALIZATION mode
 template <class T>
