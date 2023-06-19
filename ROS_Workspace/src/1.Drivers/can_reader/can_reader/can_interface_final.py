@@ -20,6 +20,7 @@ class CanInterface(Node):
         # Mission Selection Variables
         self._received_mission = None
         self._locked_mission = None
+        self._shuting_down = False
 
         # Create the comm port to the Can/USB board
         self._serial_port = serial.Serial(port=self._port, baudrate=self._baud_rate, timeout=self._timeout)
