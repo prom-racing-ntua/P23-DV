@@ -2,6 +2,10 @@
 # (c) Embotech AG, Zurich, Switzerland, 2013-2022.
 
 import sys
+import os
+print(sys.version)
+file_path = os.path.realpath(__file__)
+print("file path is: ",file_path)
 import numpy as np
 from numpy import *
 import casadi
@@ -42,12 +46,10 @@ lol = 1.59
 WD_front = 0.467
 l_f = lol*(1-WD_front)
 l_r = lol*WD_front
-center=l_f+15
-dist_thres=1.5
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=10.0
+u_upper=6.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -65,15 +67,14 @@ cs=-16419.31
 dt_integration=0.025
 
 #compute l_a
-umin=4.0
-umax=7.0
-INDEX_MAX_ALL=267.66
-INDEX_MAX1=16.1
-INDEX_MAX2=56.91582536136161
-INDEX_MAX3=INDEX_MAX2
-INDEX_MAX4=23.9
-DINDEX_MAX=INDEX_MAX_ALL #just for one lap (TBC)
-BRAKE_START=0
+umin=3.0
+umax=6.0
+INDEX_MAX=309.1
+DINDEX_MAX=309.1 #just for one lap (TBC)
+
+#ellipse params
+# a=1.46
+# b=1.62
 
 # Read the txt file data
 def Dataloader(txt):
@@ -86,6 +87,7 @@ def Dataloader(txt):
         data.append(row)
     data = np.transpose(np.array(data))
     return data
+
 
 def continuous_dynamics(x, u):
     """Defines dynamics of the car, i.e. equality constraints.
@@ -122,6 +124,14 @@ def continuous_dynamics(x, u):
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
 err_array=[]
+def getEllipseRatioWithState(x):
+    saf,sar = getSasWithState(x) 
+    Ffz,Frz = getFzWithState(x)
+    a,b = getEllipseParams(Frz)
+    Fry = getFy(Frz,sar)
+    per_= (x[6]/(a*Frz))**2 + (Fry/(b*Frz))**2
+    return per_
+
 def getFy(Fz,sa):
     ex=1e-7
     P=[1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04]
@@ -132,14 +142,6 @@ def getFy(Fz,sa):
     F_temp = C_tire*D*casadi.sin(C*casadi.arctan(B*sa))
     return F_temp
 
-def getEllipseRatioWithState(x):
-    saf,sar = getSasWithState(x) 
-    Ffz,Frz = getFzWithState(x)
-    a,b = getEllipseParams(Frz)
-    Fry = getFy(Frz,sar)
-    per_= (x[6]/(a*Frz))**2 + (Fry/(b*Frz))**2
-    return per_
-    
 def getSas(z):
     saf_temp=casadi.arctan((z[7]+l_f*z[8])/(z[6]+1e-3)) - z[10]
     sar_temp=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
@@ -198,12 +200,12 @@ def obj(z,current_target):
             + 1e2*z[1]**2 #penalty on delta,ddelta
             + 1e2*z[10]**2
             + 1e-3*(sar**2)
-            # + 1e-3*(dsa**2)
+            # + 1e-3*(dsa**2)MPC/MPC_embotech/mpc_prom_simple.py
             + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
             - 1e-3*(z[6])
-            - 1e-3*(z[11]/INDEX_MAX_ALL)
-            - 1e-3*(z[2]/INDEX_MAX_ALL))
+            - 1e-3*(z[11]/INDEX_MAX)
+            - 1e-3*(z[2]/INDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -268,7 +270,7 @@ def extract_next_path_points(data_points, pos, N):
     path_points = np.tile(path_points,(1,int(num_ellipses)))
     return data_points[:,idx+1:idx+N+1]
 
-def generate_closest_s(reference_track, pos,emergency_bool,INDEX_MAX):
+def generate_closest_s(reference_track, pos,emergency_bool):
     """Extract the next N points on the path for the next N stages starting from 
     the current car position pos
     """
@@ -276,9 +278,8 @@ def generate_closest_s(reference_track, pos,emergency_bool,INDEX_MAX):
     if(emergency_bool):
         idx = find_closest_point(path_points,pos) + int((1/ds_wanted))
     else:
-        idx = find_closest_point(path_points,pos) + 1
+        idx = find_closest_point(path_points,pos) 
     # idx0 = find_closest_point(path_points,pos)
-    if(idx>=np.shape(reference_track)[1]):idx=int(np.shape(reference_track)[1]-1)
     print("final(=euclidean) closest point is: ",path_points[:,idx]," ",idx)
     # if(idx0<2*window):
     #     idx_ver = find_closest_point_vertical(reference_track[:,0:2*window],pos)
@@ -286,7 +287,6 @@ def generate_closest_s(reference_track, pos,emergency_bool,INDEX_MAX):
     # else:
     #     idx_ver = find_closest_point_vertical(reference_track[:,idx0-window:idx0+window],pos)
     #     idx = idx0 + (idx_ver-window)
-    print("closest s gives: ",np.shape(path_points),idx,INDEX_MAX)
     return (idx/(np.shape(reference_track)[1]))*INDEX_MAX, idx
 
 def generate_pathplanner():
@@ -298,7 +298,7 @@ def generate_pathplanner():
     
     # Problem dimensions
     model = forcespro.nlp.SymbolicModel()
-    model.N = 30  # horizon length
+    model.N = 20  # horizon length
     model.nvar = 12  # number of variables
     model.neq = 9  # number of equality constraints
     model.npar = 4 # number of runtime parameters
@@ -324,7 +324,7 @@ def generate_pathplanner():
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
     model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX_ALL, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX_ALL*10])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*10])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
@@ -350,7 +350,7 @@ def generate_pathplanner():
     codeoptions.cleanup = False
     codeoptions.timing = 1
     codeoptions.mip.mipgap = 0.5
-    codeoptions.mip.explore = 'bestFirst'
+    codeoptions.mip.explore = 'depthFirst'
     codeoptions.mip.branchon = 'mostAmbiguous'
     codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
@@ -402,7 +402,6 @@ def updatePlots(x,u,pred_x,pred_u,model,k):
 
     # Update plot with current simulation data
     ax_list[0].plot(x[0,0:k+2],x[1,0:k+2], '-b')             # plot new trajectory
-    print("for new traj plotting i use",x[0,0:k+2],np.shape(x[0,0:k+2]))
     ax_list[0].plot(pred_x[0,1:], pred_x[1,1:], 'g-')   # plot new prediction of trajectory
    
     
@@ -524,8 +523,7 @@ def cubic_spline_generation(x, y):
     num_points = int(s[-1]/ds_wanted)
     s = arc_length_parameterization(x, y)
     t = np.linspace(0,s_max,num_points)
-    print("max distance is: ",s[-1])
-    cs = CubicSpline(s, np.column_stack((x, y)), axis=0)   # bc_type='natural'
+    cs = CubicSpline(s, np.column_stack((x, y)), axis=0,bc_type='natural')
     interpolated_points = cs(t).T
     dy = cs.derivative(1)(t)[:,1]
     dx = cs.derivative(1)(t)[:,0]
@@ -539,7 +537,7 @@ def cubic_spline_generation(x, y):
     interpolated_points = np.vstack([interpolated_points,local_angle,curvature])
     return cs, interpolated_points
 
-def cubic_spline_inference(cs,parameter,x,counter_all):
+def cubic_spline_inference(cs,parameter,x,finish_flag):
     x_temp=x.copy()
     parameter_array=[]
     _,Frz=getFzWithState(x)
@@ -611,18 +609,17 @@ def cubic_spline_inference(cs,parameter,x,counter_all):
             else: u_backward=np.sqrt(np.abs(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)))
         u_output2=np.min(np.array([u_backward,u_first_array[np.shape(parameter)[0]-1-j]]))   
         u_final.append(u_output2) 
-    # u_final_final=np.flip(u_final)
-    u_final=np.flip(u_final)
-    u_final_final=[]
-    print("BRAKE_START inside func = ",BRAKE_START)
-    for i in range(np.shape(parameter)[0]):
-        print("counter_all and parameter is: ",counter_all," ",parameter[i])
-        if(counter_all<5): u_final_final.append(u_final[i])
-        if(counter_all==5 and ux_init>=6.0):
-            print("started changing profile")
+    u_final_final = []
+    u_final = np.flip(u_final)
+    for i in range(np.shape(parameter)[0]): 
+        print("spline parameter and ux is: ",parameter[i]," ",ux_init)
+        if(finish_flag==0): u_final_final.append(u_final[i]) #pernaw to max
+        if(finish_flag==1 and ux_init>=3.0):
+            print("started slowing down")
             u_final_final.append(3.0)
-        if(counter_all==5 and ux_init<6.0 and ux_init>=3.0):u_final_final.append(3.0)
-        if(counter_all==5 and ux_init<3.0):u_final_final.append(0.0)  
+        if(finish_flag==1 and ux_init<3.0):
+            print("started hitting brake")
+            u_final_final.append(0.0)   
     print("ux_init is: ",ux_init)
     print("u_max is: ",u_max,np.shape(u_max))
     print("u_first is: ",u_first_array,np.shape(u_first_array))
@@ -638,32 +635,32 @@ def cubic_spline_inference(cs,parameter,x,counter_all):
         print("parameter array after writing down: ",parameter_array,np.shape(parameter_array))
         return parameter_array
 
+
 def main():
     #import data from path planning
     emergency_count=0
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    midpoints_all = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_all.txt")
-    midpoints1 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_straight1.txt")
-    midpoints2 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_right.txt")
-    midpoints3 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_left.txt")
-    midpoints4 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_straight2.txt")
-    cs1,reference_track1 = cubic_spline_generation(midpoints1[0,:],midpoints1[1,:])
-    cs2,reference_track2 = cubic_spline_generation(midpoints2[0,:],midpoints2[1,:])
-    cs3,reference_track3 = cubic_spline_generation(midpoints3[0,:],midpoints3[1,:])
-    cs4,reference_track4 = cubic_spline_generation(midpoints4[0,:5],midpoints4[1,:5])
-    print("shape mid4 is: ",midpoints4,np.shape(midpoints4))
-    print("reference track4 is: ",reference_track4,np.shape(reference_track4))
-    cs_all,reference_track_all = cubic_spline_generation(midpoints_all[0,:],midpoints_all[1,:])
-    print("all skidpad is",reference_track_all,np.shape(reference_track_all))   
+    data_points = Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
+    midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
+    print(np.shape(1))
+    cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
+    print("reference track: ",reference_track, np.shape(reference_track))
+    # for_mpc = cubic_spline_inference(cs,[0.0,0.0])
+    # generate code for estimator
     model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
+    print("after solver generation")
+    
     # Simulation
     sim_length = 10000 # simulate sim_length*0.05
+    counter_all=0
+
     # Variables for storing simulation data
-    x = np.zeros((model.neq,sim_length+1)) # states
-    u = np.zeros((num_ins,sim_length)) # inputs
+    x = np.zeros((model.neq,sim_length+1))  # states
+    u = np.zeros((num_ins,sim_length))  # inputs
+
     # Set initial guess to start solver from
     x0i = np.zeros((model.nvar,1))
     x0 = np.transpose(np.tile(x0i, (1, model.N)))
@@ -672,32 +669,30 @@ def main():
     #  x    y     theta    vx   vy  r F delta
     vx0 = 0.1
     Frx0 = 300
-    xinit = np.transpose(np.array([reference_track_all[0][0], reference_track_all[1][0],reference_track_all[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
+    xinit = np.transpose(np.array([reference_track[0][0], reference_track[1][0],reference_track[2][0], vx0, 0.0, 0.0, Frx0, 0.,0.]))
     print("xinit is: ",xinit)
     x[:,0] = xinit
-    problem = {"x0": x0,"xinit": xinit}
+
+    problem = {"x0": x0,
+            "xinit": xinit}
     # Create 2D points on ellipse which the car is supposed to follow
-    start_pred = np.reshape(problem["x0"],(model.nvar,model.N))
-    createPlot(x,u,start_pred,sim_length,model,reference_track_all[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
+    start_pred = np.reshape(problem["x0"],(model.nvar,model.N)) # first prdicition corresponds to initial guess
+
+    # generate plot with initial values
+    createPlot(x,u,start_pred,sim_length,model,reference_track[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
     wheel_torques_txt=[]
     steering_txt=[]
     time_array=[]
     err_1=0.0
     err_2=0.0
-    reference_track=reference_track_all
-    cs=cs_all
-    flag_now=0
-    flag_bef=0
-    change_flag=1
-    counter_all=0
-    INDEX_MAX=INDEX_MAX1 
     ellipse_counter=0
+    finish_flag=0
     # Simulation
     for k in range(sim_length):
-        problem["xinit"] = x[:,k]
         print("Im at iteration: ",k+1)
         print("shape x0: ",np.shape(x0))
         # Set initial condition
+        problem["xinit"] = x[:,k]
         parameters_array = []
         parameters_array_temp = []
         print("x_init is:",problem["xinit"],problem["xinit"][8])
@@ -705,81 +700,50 @@ def main():
         if(k==0):
             s_start=0.0
             next_data_points = reference_track[:,1:model.N+1]
-            print("next_data_points are: ",next_data_points)
             problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
         if(k>0):
             s_start = problem["xinit"][8]
-            print("s_start is: ",s_start)
-            x_for_splines=problem["xinit"]
             if(s_start>INDEX_MAX): s_start=INDEX_MAX
-            # critical_dist = problem["xinit"][0]-center
-            critical_dist = np.sqrt((problem["xinit"][0]-center)**2+problem["xinit"][1]**2)
-            print("distance from center is: ",critical_dist)
+            critical_dist = np.sqrt((problem["xinit"][0])**2+problem["xinit"][1]**2)
+            dist_thres=0.5
             #skidpad_logic_started
             if(np.abs(critical_dist) < dist_thres and change_flag==0):
                 counter_all+=1
                 change_flag=1
             if(np.abs(critical_dist)>dist_thres):
                 change_flag=0
-            if(counter_all==0):
-                print("Im at first straight")
-                reference_track = reference_track1
-                cs=cs1
-                INDEX_MAX=INDEX_MAX1
-            if(counter_all==1 or counter_all==2):
-                print("Im at right curve at time: ",counter_all)
-                print(reference_track2)
-                reference_track = reference_track2
-                cs=cs2
-                INDEX_MAX=INDEX_MAX2
-            if(counter_all==3 or counter_all==4):
-                print("Im at left curve at time: ",counter_all-2)
-                reference_track = reference_track3
-                cs=cs3
-                INDEX_MAX=INDEX_MAX3
-            if(counter_all==5):
-                print("Im at last straight")
-                reference_track = reference_track4
-                cs=cs4
-                INDEX_MAX=INDEX_MAX4
-            #skidpad_logic_ended
-            print("counter_all is: ",counter_all)
-            print("reference track and index are: ",reference_track[:2,:], " ",INDEX_MAX, " ", np.shape(reference_track[:2,:]))
-            splines_loc = cubic_spline_inference(cs,[s_start,s_start],x_for_splines,counter_all)
+            print("counter, change flag, distance are: ", counter_all, " ", change_flag, " ", critical_dist)
+            x_for_splines=problem["xinit"]
+            splines_loc = cubic_spline_inference(cs,[s_start,s_start],x_for_splines,finish_flag)
             print("splines_loc is:",splines_loc[0][0]," ", splines_loc[1][0], " ",s_start)
-            s_closest, _ = generate_closest_s(reference_track, x[0:num_ins-1,k],0,INDEX_MAX)
-            closest_loc = cubic_spline_inference(cs,[s_closest,s_closest],x_for_splines,counter_all)
+            s_closest, _ = generate_closest_s(reference_track, x[0:num_ins-1,k],0)
+            closest_loc = cubic_spline_inference(cs,[s_closest,s_closest],x_for_splines,finish_flag)
             print("closest loc is:",closest_loc[0][0]," ", closest_loc[1][0], " ",s_closest)
+            # print("where i am is:",where_i_am,np.shape(where_i_am))
             err_1= np.abs(np.sin(closest_loc[2][0])*(problem["xinit"][0]-closest_loc[0][0]) - np.cos(closest_loc[2][0])*(problem["xinit"][1]-closest_loc[1][0])) #katakorifi
             err_2 = np.sqrt((problem["xinit"][0] - closest_loc[0][0])**2 + (problem["xinit"][1] - closest_loc[1][0])**2)
             err_array.append(err_1)
             print("errors from closest are are:", err_1," ",err_2," ",np.max(err_array)," ",np.mean(err_array))
-            if(counter_all==5 and problem["xinit"][0]>center):
-                print("started braking")
-                BRAKE_START=1
-                print("BRAKE START = ",BRAKE_START)
-            if(err_1 < 0.9):
+            if(err_1 < 1.0):
                 print("no emergency!")
                 emergency_bool=0
                 parameters_array = [s_closest]
                 parameters_array_temp = [s_closest]
                 s_new=s_closest
-                if(s_closest>INDEX_MAX): s_closest = INDEX_MAX 
+                print("finish flag is: ",finish_flag)
+                if(counter_all==2): 
+                    finish_flag=1
+                    s_closest = INDEX_MAX + 7.5 #reset index for next lap
                 for i in range (model.N-1):
-                    ds_step=pred_u[2,i]*dt_integration
-                    if(ds_step<0.1): ds_step=0.1
-                    if(ds_step>0.5): ds_step=0.5
-                    # ds_step=0.25 #constant with vel.profile 
+                    ds_step=0.125 #constant with vel.profile 
                     s_new+=ds_step
-                    s_solver=pred_x[8,i]
-                    if(s_new>INDEX_MAX*0.25 and counter_all==5):s_new = INDEX_MAX*0.25
-                    if(s_new>INDEX_MAX): 
-                        if(counter_all==0):s_new = INDEX_MAX
-                        if(counter_all>0 and counter_all<=4):s_new = 0.0
-                    parameters_array.append(s_new)
+                    if(s_new>INDEX_MAX+7.5):s_new=INDEX_MAX+7.5
+                    s_solver=pred_x[8,i] 
+                    if(finish_flag==0):parameters_array.append(s_new)
+                    else:parameters_array.append(INDEX_MAX+7.5)
                     parameters_array_temp.append(s_solver)
                 x_for_splines=problem["xinit"]
-                next_data_points = cubic_spline_inference(cs,np.array(parameters_array),x_for_splines,counter_all)
+                next_data_points = cubic_spline_inference(cs,np.array(parameters_array),x_for_splines,finish_flag)
                 problem["all_parameters"] = next_data_points
                 print("parameters array with s(not_used) is: ",parameters_array_temp,np.shape(parameters_array_temp))
                 print("parameters array with ds(used) is: ",parameters_array,np.shape(parameters_array))
@@ -787,18 +751,17 @@ def main():
                 print("mpika emergency!!!")
                 emergency_count+=1
                 emergency_bool=1
-                s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool,INDEX_MAX)
-                ds_emerg=0.1
+                s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool)
+                ds_emerg=0.125
                 if(s_start > INDEX_MAX): s_start = INDEX_MAX
                 parameters_array_emergency=[s_start]
                 for i in range (model.N-1):
                     s_start+=ds_emerg
                     if(s_start>INDEX_MAX): s_start = INDEX_MAX
-                    if(s_start>INDEX_MAX*0.25 and counter_all==5):s_start = INDEX_MAX*0.25
                     parameters_array_emergency.append(s_start)
                 x_for_splines=problem["xinit"]
-                next_data_points_em = cubic_spline_inference(cs,np.array(parameters_array_emergency),x_for_splines,counter_all)
-                problem["all_parameters"] = next_data_points_em
+                next_data_points = reference_track[:,idx_start:idx_start+model.N]
+                problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
             print("ds array is: ",pred_u[2,:])
             print("s_array is: ",pred_x[8,:])
             print("min,max and mean ds values, ",np.min(pred_u[2,:model.N])," ",np.max(pred_u[2,:model.N])," ",np.mean(pred_u[2,:model.N]))
@@ -809,6 +772,8 @@ def main():
         print("Second param for MPC is : ",problem["all_parameters"][4],problem["all_parameters"][5])
         # print("dr between me and params is: ", np.sqrt((problem["xinit"][0]-problem["all_parameters"][0][0])**2 + (problem["xinit"][1]-problem["all_parameters"][1][0])**2))
         output, exitflag, info = solver.solve(problem)
+        print("info from kostas is: ",info)
+
         # Make sure the solver has exited properly.
         # print(exitflag)
         assert exitflag == 1, "bad exitflag"
@@ -821,16 +786,10 @@ def main():
             temp[:, i] = output['x{0:02d}'.format(i+1)]
         pred_u = temp[0:num_ins, :]
         pred_x = temp[num_ins:model.nvar, :]
+        # Apply optimized input u of first st
         # u[:,k] = pred_u[:,0]
-        u[:,k] = pred_u[:,1]
-        # if(counter_all==5):u[:,k][2]=-Frx0 
+        u[:,k] = pred_u[:,2]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
-        print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
-        print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
-        print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))
-        print("i have used emergency manouvre: ",emergency_count," times")
-        wheel_torques_txt.append(x[:,k][6]*0.2)
-        steering_txt.append(x[:,k][7])
         ellipse_plot = getEllipseRatioWithState(x[:,k+1])
         ellipse_array.append(ellipse_plot)
         print("ellipse_plot is: ",ellipse_plot)
@@ -838,7 +797,12 @@ def main():
             ellipse_counter+=1
             print("vgika apo ellipsi")
         print("exw vgei apo ellipsi: ",ellipse_counter," times")
-        print("ellipse data are: ",np.mean(ellipse_array),np.var(ellipse_array))
+        print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
+        print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
+        print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))
+        print("i have used emergency manouvre: ",emergency_count," times")
+        wheel_torques_txt.append(x[:,k][6]*0.2)
+        steering_txt.append(x[:,k][7])
         # plot results of current simulation step
         if(k%100==0):
             file = open("P23-DV/MPC/MPC_embotech/Data/steering.txt", "w+")
@@ -859,6 +823,7 @@ def main():
             else:
                 plt.draw()
         print()
+
     print("steering_txt is:", steering_txt)
     print()
     print("wheel_torques_txt is: ",wheel_torques_txt)

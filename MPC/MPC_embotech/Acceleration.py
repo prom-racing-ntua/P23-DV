@@ -1,8 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math 
-
-d0= 1.1
+import math
+ 
+lol = 1.59 
+WD_front = 0.467
+l_f = lol*(1-WD_front)
+l_r = lol*WD_front
+d0=l_f
 ds_wanted = 0.1
 final = 2*75+(d0+0.3)
 res1= int(final/ds_wanted)

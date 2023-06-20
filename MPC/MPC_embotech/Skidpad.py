@@ -11,8 +11,10 @@ def PointsInCircumOne(r,n=100,right=1):
         for x in range (0,n):
             output_array.append([math.sin((2*np.pi/n*x))*r+center,math.cos( (2*np.pi/n*x))*r-radius])
     return output_array
+lol = 1.59 
+WD_front = 0.467
+d0 = lol*(1-WD_front)
 ds_wanted = 0.1
-d0 = 1.1
 center = d0+15
 radius = 9.125
 final = 25-d0+center
