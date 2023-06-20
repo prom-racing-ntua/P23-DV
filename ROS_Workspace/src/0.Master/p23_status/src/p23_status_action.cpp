@@ -68,6 +68,44 @@ namespace p23_status_namespace
                 RCLCPP_WARN_STREAM(get_logger(), "Driverless Status successfully changed to: " << p23::driverless_status_list.at(transition_to));
             }
             currentDvStatus = transition_to;
+
+            // Get max laps
+            if (currentAsStatus == p23::AS_READY)
+            {
+                if (currentMission == p23::INSPECTION or currentMission == p23::EBS_TEST) {maxLaps = 255;}
+                else
+                {
+                    auto enabled_nodes{ get_node_names() };
+                    bool is_mpc_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/mpc") != enabled_nodes.end() };
+                    bool is_pid_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/pid_pp_controller") != enabled_nodes.end() };
+
+                    if (is_mpc_active and is_pid_active)
+                    {
+                        RCLCPP_ERROR(get_logger(), "Both MPC and PID are active in AS Ready");
+                    }
+                    else if (is_mpc_active)
+                    {
+                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/mpc") };
+                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
+                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
+                        else \
+                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
+                    }
+                    else if (is_pid_active)
+                    {
+                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/pid_pp_controller") };
+                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
+                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
+                        else \
+                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
+                    }
+                    else
+                    {
+                        RCLCPP_ERROR(get_logger(), "No controller nodes are active");
+                    }
+                    RCLCPP_WARN_STREAM(get_logger(), "Max laps set to: " << maxLaps);
+                }
+            }
         }
         else
         {

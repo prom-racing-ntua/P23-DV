@@ -139,7 +139,7 @@ void SlamHandler::perceptionCallback(const custom_msgs::msg::Perception2Slam::Sh
     auto range{ static_cast<std::vector<float>>(msg->range_list) };
     auto theta{ static_cast<std::vector<float>>(msg->theta_list) };
 
-    int observation_size{ color.size() };
+    int observation_size{ static_cast<int>(color.size()) };
     std::vector<PerceptionMeasurement> landmark_list{};
 
     for (int i{ 0 }; i < observation_size; i++)
@@ -238,7 +238,7 @@ void SlamHandler::optimizationCallback() {
         }
     }
 
-    map_msg.cone_count = perception_count_;
+    map_msg.cones_count_actual = perception_count_;
     perception_count_ = 0;
     map_msg.pose.position.x = current_pose[0];
     map_msg.pose.position.y = current_pose[1];

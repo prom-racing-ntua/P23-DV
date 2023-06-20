@@ -4,7 +4,7 @@
 namespace ns_slam
 {
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State)
     {   
         node_frequency_ = get_parameter("velocity_estimation_frequency").as_int();
 
@@ -83,7 +83,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State)
     {
         /* Activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
@@ -98,7 +98,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State)
     {
         /* De-activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
@@ -111,7 +111,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State)
     {
         completed_laps_ = -1;
         cooldown_ = 0;
@@ -138,7 +138,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State)
     {
         RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
         /* De-activate Publishers and optimization Timer 
@@ -163,7 +163,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_error(const rclcpp_lifecycle::State &state)
+        LifecycleSlamHandler::on_error(const rclcpp_lifecycle::State)
     {
         return ns_slam::CallbackReturn::SUCCESS;
     }

@@ -80,7 +80,7 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
     auto range{ static_cast<std::vector<float>>(msg->range_list) };
     auto theta{ static_cast<std::vector<float>>(msg->theta_list) };
 
-    int observation_size{ color.size() };
+    int observation_size{ static_cast<int>(color.size()) };
     std::vector<PerceptionMeasurement> landmark_list{};
 
     for (int i{ 0 }; i < observation_size; i++)
@@ -184,7 +184,7 @@ void LifecycleSlamHandler::optimizationCallback() {
         }
     }
 
-    map_msg.cone_count = perception_count_;
+    map_msg.cones_count_actual = perception_count_;
     perception_count_ = 0;
     map_msg.pose.position.x = current_pose[0];
     map_msg.pose.position.y = current_pose[1];
@@ -310,43 +310,6 @@ void LifecycleSlamHandler::loadParameters() {
     share_dir_ = ament_index_cpp::get_package_share_directory("slam");
 
     declare_parameter<bool>("logger", true);
-}
-
-int LifecycleSlamHandler::getNodeFrequency() {
-    using namespace std::chrono_literals;
-
-    // Instead of a timer we get the node frequency from the master node with the following client request
-    auto request{ std::make_shared<custom_msgs::srv::GetFrequencies::Request>() };
-    int call_counter{ 0 };
-    while (!cli_->wait_for_service(1s) and call_counter < 15)
-    {
-        if (!rclcpp::ok())
-        {
-            return 0;
-        }
-        RCLCPP_INFO(get_logger(), "Could not get node frequency. Master service not available, waiting...");
-        // call_counter++;
-    }
-    if (call_counter == 15)
-    {
-        RCLCPP_ERROR(get_logger(), "Client call timeout, the service is not available. Check master node.");
-        return 0;
-    }
-    // Send empty request
-    auto result{ cli_->async_send_request(request) };
-    // Await for response (TODO: Set a timeout for response time)
-    if (rclcpp::spin_until_future_complete(get_node_base_interface(), result, 5s) == rclcpp::FutureReturnCode::SUCCESS)
-    {
-        // If get successful response return the node frequency
-        RCLCPP_INFO_STREAM(get_logger(), "Node frequency has been set to " << result.get()->velocity_estimation_frequency);
-        return result.get()->velocity_estimation_frequency;
-    }
-    else
-    {
-        // Otherwise raise an error (TODO: should actually do something else, or handle the error)
-        RCLCPP_ERROR(get_logger(), "Failed to get node frequency");
-        return 0;
-    }
 }
 } // namespace ns_slam
 

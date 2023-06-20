@@ -4,12 +4,13 @@
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
 #include "rclcpp_action/rclcpp_action.hpp"
-
+#include "rclcpp/parameter_client.hpp"
 
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"

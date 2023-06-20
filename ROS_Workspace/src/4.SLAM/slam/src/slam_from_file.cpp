@@ -128,7 +128,7 @@ void SlamFromFile::run_slam() {
 
 	if (!all_observed_landmarks.empty())
 	{
-		int perception_count{ all_observed_landmarks.size() };
+		int perception_count{ static_cast<int>(all_observed_landmarks.size()) };
 		if (!map_ready_) {
             addAccelObservations(all_observed_landmarks);
             return;

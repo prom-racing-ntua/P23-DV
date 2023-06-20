@@ -84,7 +84,7 @@ private:
 
 	// Used to compute the time interval between odometry measurements
 	unsigned long previous_global_index_;
-	int landmark_counter_;
+	uint64_t landmark_counter_;
 
 	// iSAM Variables
 
@@ -325,7 +325,7 @@ bool GraphSLAM<T>::addOdometryMeasurement(OdometryMeasurement& odometry) {
 // Adds landmark measurements in SLAM mode
 template <class T>
 void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(),"Perception callback at index: " << global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(),"Perception callback at index: " << global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -456,7 +456,7 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 // Adds landmark measurements in LOCALIZATION mode
 template <class T>
 void GraphSLAM<T>::addLandmarkMeasurementsLocalization(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -628,6 +628,7 @@ std::vector<gtsam::Vector3> GraphSLAM<T>::getEstimatedMap() {
 			estimated_map.push_back(mapped_cone);
 		}
 	}
+	cone_count_ = estimated_map.size();
 	return estimated_map;
 }
 }  // namespace ns_slam
