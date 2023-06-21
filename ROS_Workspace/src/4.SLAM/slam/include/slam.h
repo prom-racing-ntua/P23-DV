@@ -236,7 +236,7 @@ void GraphSLAM<T>::init() {
 		}
 	}
 	
-	RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Created SLAM object" << '\n');
+	RCLCPP_INFO(node_handler_->get_logger(), "Created SLAM object");
 }
 
 template <class T>

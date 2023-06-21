@@ -78,7 +78,7 @@ namespace ns_slam
             std::bind(&LifecycleSlamHandler::optimizationCallback, this), slam_callback_group_);
         optimization_clock_->cancel();
 
-        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Configured!");
+        RCLCPP_WARN(get_logger(), "\n-- SLAM Configured!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
@@ -93,7 +93,7 @@ namespace ns_slam
         map_publisher_->on_activate();
         optimization_clock_->cancel();
         optimization_clock_->reset();
-        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Activated!");
+        RCLCPP_WARN(get_logger(), "\n-- SLAM Activated!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
@@ -106,7 +106,7 @@ namespace ns_slam
         pose_publisher_->on_deactivate();
         map_publisher_->on_deactivate();
         optimization_clock_->cancel();
-        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Deactivated!");
+        RCLCPP_WARN(get_logger(), "\n-- SLAM Deactivated!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
@@ -133,7 +133,7 @@ namespace ns_slam
 
         if (is_mapping_) map_log_.close();
 
-        RCLCPP_WARN(get_logger(), "Lifecycle SLAM node Un-Configured!");
+        RCLCPP_WARN(get_logger(), "\n-- SLAM Un-Configured!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 

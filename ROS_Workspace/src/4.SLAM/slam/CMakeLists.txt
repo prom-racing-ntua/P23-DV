@@ -52,15 +52,15 @@ add_executable(test_run src/test_visual.cpp)
 ament_target_dependencies(test_run rclcpp visualization_msgs ament_index_cpp tf2_geometry_msgs)
 
 # Lifecycle Node
-add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_slam_handler.cpp src/lifecycle/lifecycle_states.cpp src/unary_factor.cpp)
-ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs)
-target_link_libraries(lifecycle_${PROJECT_NAME} gtsam ${catkin_LIBRARIES})
+add_executable(l_slm src/lifecycle/lifecycle_slam_handler.cpp src/lifecycle/lifecycle_states.cpp src/unary_factor.cpp)
+ament_target_dependencies(l_slm rclcpp rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs)
+target_link_libraries(l_slm gtsam ${catkin_LIBRARIES})
 
 install(TARGETS
   ${PROJECT_NAME}
   read_files
   test_run
-  lifecycle_${PROJECT_NAME}
+  l_slm
   DESTINATION lib/${PROJECT_NAME}
 )
 

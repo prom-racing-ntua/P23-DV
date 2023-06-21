@@ -29,10 +29,10 @@ class SaltasNode(Node):
             ('perception_frequency', 10)
             ]
         )
+        self.get_logger().warn(f'\n-- Saltas Node Created')
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         '''Load all ros parameters from config files'''
-        self.get_logger().info(f'Configuring Saltas Clock')
         self.publishing = False
 
         self.velocity_estimation_frequency = self.get_parameter('velocity_estimation_frequency').get_parameter_value().integer_value
@@ -51,9 +51,9 @@ class SaltasNode(Node):
 
         # Service for nodes to get their frequencies from the master
         self.frequency_service = self.create_service(GetFrequencies, 'get_frequencies', self.frequency_srv_callback)
-        self.get_logger().info(f'Master Clock is Configured:')
         self.get_logger().info(f'Velocity Estimation Frequency {self.velocity_estimation_frequency} Hz')
         self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
+        self.get_logger().warn(f'\n-- Saltas Configured!')
     
         return TransitionCallbackReturn.SUCCESS
     
@@ -63,34 +63,32 @@ class SaltasNode(Node):
         self.saltas_clock.cancel()
         self.saltas_clock.reset()
 
-        self.get_logger().info(f'Master Clock is Active!')
+        self.get_logger().warn(f'\n-- Saltas Activated!')
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f'Master Clock Deactivated!')
+        self.get_logger().warn(f'\n-- Saltas Deactivated!')
 
         self.saltas_clock.cancel()
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f'Cleaning Up Saltas Node')
+        self.get_logger().warn(f'\n-- Saltas Un-Configured')
         self.saltas_clock.cancel()
 
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
 
-        self.get_logger().info(f'Saltas Node unconfigured')
+        self.get_logger().warn(f'\n-- Saltas Un-Configured')
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info(f'Shutting Down Saltas Node')
-
         self.saltas_clock.cancel()
         
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
 
-        self.get_logger().info(f'Saltas Node shut down')
+        self.get_logger().warn(f'\n-- Saltas Shut Down')
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:

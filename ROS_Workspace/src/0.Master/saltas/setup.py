@@ -25,7 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'run_salta = saltas.saltas_node:main',
-            'lifecycle_saltas = saltas.lifecycle_saltas:main'
+            'l_sal = saltas.lifecycle_saltas:main'
         ],
     },
 )

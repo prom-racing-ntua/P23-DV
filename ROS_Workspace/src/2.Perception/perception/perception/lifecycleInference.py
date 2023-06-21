@@ -24,6 +24,7 @@ class InferenceLifecycleNode(Node):
         self.largeKeypointsModelPath = largeKeypointsModel
         # Create a log file
         self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
+        self.get_logger().warn("\n-- Inference Node Created")
         
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         """
@@ -49,21 +50,21 @@ class InferenceLifecycleNode(Node):
             10
         )
 
-        self.get_logger().warn("Lifecycle Inference Configured!")
+        self.get_logger().warn("\n-- Inference Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
         # Start Publishing
         self.publishing = True
 
-        self.get_logger().warn("Lifecycle Inference Activated!")
+        self.get_logger().warn("\n-- Inference Activated!")
         return super().on_activate(state)
     
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         # Stop Publishing
         self.publishing = False
 
-        self.get_logger().warn("Lifecycle Inference Deactivated!")
+        self.get_logger().warn("\n-- Inference Deactivated!")
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
@@ -72,7 +73,7 @@ class InferenceLifecycleNode(Node):
         del self.yoloModel, self.smallModel, self.largeModel
         self.destroy_publisher(self.publisher_)
 
-        self.get_logger().warn("Lifecycle Inference Un-Configured!")
+        self.get_logger().warn("\n-- Inference Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:

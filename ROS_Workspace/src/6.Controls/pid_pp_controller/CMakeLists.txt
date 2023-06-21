@@ -37,14 +37,14 @@ src/pid_pp_module.cpp
 src/cubic_spline.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 
-add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_controller.cpp src/lifecycle/lifecycle_states.cpp
+add_executable(l_pid src/lifecycle/lifecycle_controller.cpp src/lifecycle/lifecycle_states.cpp
 src/pid_pp_module.cpp
 src/cubic_spline.cpp)
-ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp std_msgs custom_msgs rclcpp_lifecycle)
+ament_target_dependencies(l_pid rclcpp std_msgs custom_msgs rclcpp_lifecycle)
 
 install(TARGETS
   ${PROJECT_NAME}
-  lifecycle_${PROJECT_NAME}
+  l_pid
   DESTINATION lib/${PROJECT_NAME}
 )
 

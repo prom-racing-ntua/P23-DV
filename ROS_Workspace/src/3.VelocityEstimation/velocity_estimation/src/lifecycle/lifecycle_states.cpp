@@ -27,7 +27,7 @@ namespace ns_vel_est
         setSubscribers();
 
         pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
-        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Configured!");
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Configured!");
 
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
@@ -38,7 +38,7 @@ namespace ns_vel_est
         measurement_vector_.setZero();
         updated_sensors_.fill(false);
         pub_->on_activate();
-        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Activated!");
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Activated!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 
@@ -46,7 +46,7 @@ namespace ns_vel_est
         LifecycleVelocityEstimationHandler::on_deactivate(const rclcpp_lifecycle::State &state) 
     {   
         pub_->on_deactivate();
-        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Deactivated!");
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Deactivated!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 
@@ -55,7 +55,7 @@ namespace ns_vel_est
     {
         estimator_.reset();
         pub_.reset();
-        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimation Un-Configured!");
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Un-Configured!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

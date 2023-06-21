@@ -26,16 +26,16 @@ ament_target_dependencies(${PROJECT_NAME} rclcpp vectornav_msgs custom_msgs)
 # Lifecycle Velocity Estimation Node
 set(LIFECYCLE_FOLDER "src/lifecycle")
 
-add_executable(lifecycle_${PROJECT_NAME}
+add_executable(l_vel
   ${LIFECYCLE_FOLDER}/lifecycle_velocity_estimation_handler.cpp 
   ${LIFECYCLE_FOLDER}/lifecycle_states.cpp
 )
-ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
+ament_target_dependencies(l_vel rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
 
 
 # install excutables to lib directory
 install(TARGETS
-  ${PROJECT_NAME} lifecycle_velocity_estimation
+  ${PROJECT_NAME} l_vel
   DESTINATION lib/${PROJECT_NAME}
 )
 

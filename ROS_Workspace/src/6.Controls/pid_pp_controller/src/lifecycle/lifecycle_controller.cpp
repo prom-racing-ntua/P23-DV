@@ -4,7 +4,7 @@
 LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0)
 {
     parameter_load();
-    RCLCPP_INFO(get_logger(), "Pure Pursuit Node Created");
+    RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
 }
 
 LifecyclePID_PP_Node::~LifecyclePID_PP_Node()

@@ -68,7 +68,7 @@ src/FORCESNLPsolver/include/FORCESNLPsolver.h
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a) #changed from a
 
-add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_mpc_node.cpp src/lifecycle/lifecycle_states.cpp
+add_executable(l_mpc src/lifecycle/lifecycle_mpc_node.cpp src/lifecycle/lifecycle_states.cpp
 src/mpc_solver.cpp
 src/cubic_spline.cpp
 src/FORCESNLPsolver/FORCESNLPsolver_model.c
@@ -78,8 +78,8 @@ src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
 src/FORCESNLPsolver/include/FORCESNLPsolver.h
 )
 
-ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle custom_msgs)
-target_link_libraries(lifecycle_${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
+ament_target_dependencies(l_mpc rclcpp rclcpp_lifecycle custom_msgs)
+target_link_libraries(l_mpc ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
 
 # add_executable(
 # mpc_name src/mpc_node_official.cpp 
@@ -98,7 +98,7 @@ target_link_libraries(lifecycle_${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/FORCESNL
 
 install(TARGETS
   ${PROJECT_NAME}
-  lifecycle_${PROJECT_NAME}
+  l_mpc
   # mpc_name
   # mpc_from_file_exe
   DESTINATION lib/${PROJECT_NAME})

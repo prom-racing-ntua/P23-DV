@@ -370,7 +370,7 @@ void sim_node::timer_callback()
 			}
 		}
 
-		msg2.cone_count = uint8_t(seen_cones.size());
+		// msg2.cone_count = uint8_t(seen_cones.size());
 		std::vector<custom_msgs::msg::ConeStruct> cs;
 		cs.reserve(int(seen_cones.size()));
 

@@ -54,35 +54,34 @@ namespace pid_pp{
 
         pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
         pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
+        
+        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Configured!");
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_activate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Activating Pure Pursuit Node");
-
         pub_actuators->on_activate();
         pub_target->on_activate();
 
-        RCLCPP_INFO(get_logger(), "Pure Pursuit Node Activated!");
+        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Activated!");
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_deactivate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Deactivating Pure Pursuit Node");
-
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
 
-        RCLCPP_INFO(get_logger(), "Pure Pursuit Node deactivated!");
+        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit De-Activated!");
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_cleanup(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Cleaning Pure Pursuit Node");
-
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
 
@@ -91,14 +90,13 @@ namespace pid_pp{
 
         /* Edw prepei na kanoyme kai clean up to model */
 
-        RCLCPP_INFO(get_logger(), "Pure Pursuit Node unconfigured!");
+        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Un-Configured!");
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_shutdown(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Shutting down Pure Pursuit Node");
-
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
 
@@ -106,12 +104,13 @@ namespace pid_pp{
         pub_target.reset();
         /* Edw prepei na kanoyme kai clean up to model */
 
-        RCLCPP_INFO(get_logger(), "Pure Pursuit Node shut down!");
+        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Shut Down!");
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_error(const rclcpp_lifecycle::State &state)
     {
-        
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 }

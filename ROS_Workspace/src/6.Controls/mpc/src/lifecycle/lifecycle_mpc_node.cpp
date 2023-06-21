@@ -7,7 +7,7 @@ namespace mpc {
     LifecycleMpcHandler::LifecycleMpcHandler():LifecycleNode("mpc"), count_(0){
         loadParameters();
         std::cout << "simulation param is: " << mpc_solver.simulation_ << std::endl;
-        RCLCPP_INFO(get_logger(), "MPC Node Initialized");
+        RCLCPP_WARN(get_logger(), "\n-- MPC Node Created");
     }
 
     void LifecycleMpcHandler::setSubscribers() {

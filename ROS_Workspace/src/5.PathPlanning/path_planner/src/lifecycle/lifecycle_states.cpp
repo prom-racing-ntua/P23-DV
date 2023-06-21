@@ -26,7 +26,7 @@ namespace path_planner
         using std::placeholders::_1;
         sub_mapper = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecyclePathPlanner::mapping_callback, this, _1));
         pub_waypoints = this->create_publisher<custom_msgs::msg::WaypointsMsg>("waypoints", 10);
-        RCLCPP_INFO(get_logger(), "Path Planner configured");
+        RCLCPP_WARN(get_logger(), "\n-- Path Planner Configured!");
 
         return path_planner::CallbackReturn::SUCCESS;
     }
@@ -34,7 +34,7 @@ namespace path_planner
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_activate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Path Planner activated");
+        RCLCPP_WARN(get_logger(), "\n-- Path Planner Activated!");
         pub_waypoints->on_activate();
         return path_planner::CallbackReturn::SUCCESS;
     }
@@ -42,7 +42,7 @@ namespace path_planner
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_deactivate(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Path Planner de-activated");
+        RCLCPP_WARN(get_logger(), "\n-- Path Planner De-Activated!");
         pub_waypoints->on_deactivate();
         return path_planner::CallbackReturn::SUCCESS;
     }
@@ -50,7 +50,7 @@ namespace path_planner
     path_planner::CallbackReturn 
         LifecyclePathPlanner::on_cleanup(const rclcpp_lifecycle::State &state)
     {
-        RCLCPP_INFO(get_logger(), "Path Planner unconfigured");
+        RCLCPP_WARN(get_logger(), "\n-- Path Planner Un-Configured!");
         return path_planner::CallbackReturn::SUCCESS;
     }
 

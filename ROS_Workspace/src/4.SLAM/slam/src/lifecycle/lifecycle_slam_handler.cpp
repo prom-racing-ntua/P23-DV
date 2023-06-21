@@ -18,7 +18,7 @@ LifecycleSlamHandler::LifecycleSlamHandler() : LifecycleNode("slam"), slam_objec
     num_observations_ = 0;
     accel_map_.clear();
 
-    RCLCPP_WARN(get_logger(), "Created LifecycleSlamHandler");
+    RCLCPP_WARN(get_logger(), "\n-- SLAM Node Created");
 }
 
 LifecycleSlamHandler::~LifecycleSlamHandler() {}

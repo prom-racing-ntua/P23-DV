@@ -34,7 +34,7 @@ class AcquisitionLifecycleNode(Node):
         device_manager = gx.DeviceManager()
         dev_num, dev_info_list = device_manager.update_device_list()
         if dev_num == 0:
-            print("No Devices Found")
+            self.get_logger().error("No Devices Found")
             sys.exit(2)
         devSN = dev_info_list[0].get("sn")
         
@@ -51,6 +51,7 @@ class AcquisitionLifecycleNode(Node):
             ('ROIy', 1024),
             ]
         )
+        self.get_logger().warn(f"\n-- Aquisition Node Created")
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         self.publishing = False
@@ -86,7 +87,7 @@ class AcquisitionLifecycleNode(Node):
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
-        self.get_logger().warn(f"Lifecycle Acquisition Node Configured!")
+        self.get_logger().warn(f"\n-- Acquisition Node Configured!")
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
@@ -94,7 +95,7 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = True
         self.camera.activateAcquisition()
         
-        self.get_logger().warn(f"Lifecycle Acquisition Node Activated!")
+        self.get_logger().warn(f"\n-- Acquisition Node Activated!")
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
@@ -102,7 +103,7 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
-        self.get_logger().warn(f"Lifecycle Acquisition Node Deactivated!")
+        self.get_logger().warn(f"\n-- Acquisition Node Deactivated!")
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
@@ -112,7 +113,7 @@ class AcquisitionLifecycleNode(Node):
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
         
-        self.get_logger().warn(f"Lifecycle Acquisition Node Un-Configured!")
+        self.get_logger().warn(f"\n-- Acquisition Node Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:

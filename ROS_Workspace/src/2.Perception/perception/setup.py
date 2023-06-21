@@ -30,8 +30,8 @@ setup(
             'acquisition_logger = perception.acquisitionLoggerNode:main',
             'inference = perception.inferenceNode:main',
             'saltas_acquisition = perception.acquisitionNodeSaltas:main',
-            'lifecycle_acquisition = perception.lifecycleAcquisition:main',
-            'lifecycle_inference = perception.lifecycleInference:main'
+            'l_acq = perception.lifecycleAcquisition:main',
+            'l_inf = perception.lifecycleInference:main'
         ],
     },
 )

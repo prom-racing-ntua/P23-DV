@@ -95,12 +95,12 @@ namespace ns_slam
         LifecycleSlamHandler();
         ~LifecycleSlamHandler();
     protected:
-        ns_slam::CallbackReturn on_configure(const rclcpp_lifecycle::State);
-        ns_slam::CallbackReturn on_activate(const rclcpp_lifecycle::State);
-        ns_slam::CallbackReturn on_deactivate(const rclcpp_lifecycle::State);
-        ns_slam::CallbackReturn on_cleanup(const rclcpp_lifecycle::State);
-        ns_slam::CallbackReturn on_shutdown(const rclcpp_lifecycle::State);
-        ns_slam::CallbackReturn on_error(const rclcpp_lifecycle::State);
+        ns_slam::CallbackReturn on_configure(const rclcpp_lifecycle::State& state);
+        ns_slam::CallbackReturn on_activate(const rclcpp_lifecycle::State& state);
+        ns_slam::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state);
+        ns_slam::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state);
+        ns_slam::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state);
+        ns_slam::CallbackReturn on_error(const rclcpp_lifecycle::State& state);
     };
 } // namespace ns_slam
 

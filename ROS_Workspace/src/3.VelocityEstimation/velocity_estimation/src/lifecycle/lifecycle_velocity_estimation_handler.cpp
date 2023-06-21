@@ -8,8 +8,7 @@ namespace ns_vel_est
 {
     LifecycleVelocityEstimationHandler::LifecycleVelocityEstimationHandler(): LifecycleNode("velocity_estimation"), estimator_{ this } {
         loadParameters();
-        RCLCPP_WARN(get_logger(), "Launched Lifecycle Velocity Estimation node");
-        RCLCPP_WARN(get_logger(), "Lifecycle Velocity Estimator is Online (but not configured)");
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Node Created");
     }
 
     // Set node subscribers
