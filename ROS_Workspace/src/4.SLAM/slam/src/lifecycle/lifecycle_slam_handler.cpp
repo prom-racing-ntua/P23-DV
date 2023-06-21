@@ -284,7 +284,7 @@ void LifecycleSlamHandler::loadParameters() {
     declare_parameter<std::string>("track_map", "");
     declare_parameter<bool>("dynamic_accel_map", false);
 
-    declare_parameter<int>("velocity_estimation_frequency", 0);
+    declare_parameter<int>("velocity_estimation_frequency", 40);
     declare_parameter<int>("perception_frequency", 10);
 
     declare_parameter<double>("perception_range", 14.0);

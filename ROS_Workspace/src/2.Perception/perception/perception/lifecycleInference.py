@@ -77,6 +77,9 @@ class InferenceLifecycleNode(Node):
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
+
+        if (state.state_id == 1):
+            return TransitionCallbackReturn.SUCCESS
         del self.yoloModel, self.smallModel, self.largeModel
         self.destroy_publisher(self.publisher_)
 

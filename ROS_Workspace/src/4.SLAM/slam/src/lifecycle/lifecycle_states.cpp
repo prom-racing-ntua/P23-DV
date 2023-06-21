@@ -122,6 +122,7 @@ namespace ns_slam
         map_publisher_.reset();
         velocity_subscriber_.reset();
         perception_subscriber_.reset();
+        
         if (pthread_spin_destroy(&global_lock_))
         {
             RCLCPP_ERROR(get_logger(), "Global lock destruction failed cannot go to unconfigured state");
@@ -143,8 +144,8 @@ namespace ns_slam
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State & state)
     {
-
         using NodeState = lifecycle_msgs::msg::State;
+
         RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
 
         uint8_t currentState = state.id();

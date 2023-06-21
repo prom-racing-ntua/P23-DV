@@ -46,11 +46,11 @@ namespace mpc {
       double total_execution_time;
       int global_int = -1;
     protected:
-      mpc::CallbackReturn on_configure();
-      mpc::CallbackReturn on_activate();
-      mpc::CallbackReturn on_deactivate();
-      mpc::CallbackReturn on_cleanup();
-      mpc::CallbackReturn on_shutdown();
-      mpc::CallbackReturn on_error();
+      mpc::CallbackReturn on_configure(const rclcpp_lifecycle::State &state);
+      mpc::CallbackReturn on_activate(const rclcpp_lifecycle::State &state);
+      mpc::CallbackReturn on_deactivate(const rclcpp_lifecycle::State &state);
+      mpc::CallbackReturn on_cleanup(const rclcpp_lifecycle::State &state);
+      mpc::CallbackReturn on_shutdown(const rclcpp_lifecycle::State &state);
+      mpc::CallbackReturn on_error(const rclcpp_lifecycle::State &state);
   };
 }//namespace mpc
