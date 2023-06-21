@@ -14,6 +14,6 @@ path_planning:
     filtering_threshold: 90
 
     #local map selection
-    selection_radius_small: 10
-    selection_radius_big: 20
-    selection_angle: 60
+    selection_radius_small: 7
+    selection_radius_big: 15
+    selection_angle: 45
