@@ -5,7 +5,7 @@ pid_pp_controller:
     gravitational_acceleration: 9.81
     wheelbase: 1.59
     weight_distribution: 0.467
-    h_cog: 0.275
+    h_cog: 0.27
     air_density: 1.225
     Cd*A: 2.0
     Cl*A: 7.0
@@ -14,7 +14,7 @@ pid_pp_controller:
     efficiency: 0.85
     Fz_0: 1112.0554070627252
     max_positive_torque: 186.2
-    max_negative_torque: -186.2            #!!!
+    max_negative_torque: -186.2          #!!!
     minimum_weight_distribution_rear: 1.0  #!!!
     c_tire: 0.66
 
@@ -22,18 +22,18 @@ pid_pp_controller:
     ld_min: 1.0                   
     ld_max: 5.0
     v_min: 0.0
-    v_max: 7.0
+    v_max: 10.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
-    max_speed: 150.00
+    max_speed: 150.0
     dt: 0.025
-    safe_speed_to_break: 1.0
+    safe_speed_to_break: 3.0
 
     #PID
     kp: 1000
     ki: 1000
-    kd: 0
+    kd: 100
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10

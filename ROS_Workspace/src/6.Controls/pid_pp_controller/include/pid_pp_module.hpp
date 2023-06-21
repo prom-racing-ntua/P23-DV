@@ -6,6 +6,7 @@
 #include <climits>
 #include <cfloat>
 #include <iostream>
+#include <fstream>
 
 #include "arc_length_spline.h"
 
@@ -50,7 +51,7 @@ namespace pid_pp
 
     public:
         PID(); // Default Constructor
-        void init(int kp, int ki, int kd, int dt, int damp, int integ_damp = INT_MAX, int prop_damp = INT_MAX, int der_damp = INT_MAX);
+        void init(int kp, int ki, int kd, double dt, int damp, int integ_damp = INT_MAX, int prop_damp = INT_MAX, int der_damp = INT_MAX);
         double operator()(double error);            // main operation. Get controller output as object_name(error)
         double operator()(double error, double dt); // same but also provides different dt than one from constructor
         void flush_error();                      // sets error integral to 0
@@ -137,6 +138,7 @@ namespace pid_pp
         std::pair<double, double> operator()(const Point &position, double theta) ; // returns target velocity and cross-track error
         Point get_target_point(double ld, const Point &position, double min_radius, double theta) const;
         ~VelocityProfile();
+        Point get_last_projection()const;
 
     private:
         const Model *model;                                            // reference to the common Model object

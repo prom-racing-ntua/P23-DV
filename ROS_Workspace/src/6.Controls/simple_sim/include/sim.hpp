@@ -49,10 +49,11 @@ class State
 {
 public:
     double v_x, v_y, a_x, a_y, r, x, y, theta;
-    double sa_f, sa_r, s, t, ffy, fry;
+    double sa_f, sa_r, s, t, ffy, fry, ffz, frz, frx, d;
     int lap;
-    State() : v_x(0), v_y(0), a_x(0), a_y(0), r(0), x(0), y(0), theta(0), sa_f(0), sa_r(0), s(0), t(0), fry(0), ffy(0), lap(0) {}
+    State() : v_x(0), v_y(0), a_x(0), a_y(0), r(0), x(-5), y(0), theta(0), sa_f(0), sa_r(0), s(0), t(0), fry(0), ffy(0), lap(0), ffz(0), frz(0) {}
     void init(Constants a, bool b){constants=a;simplified=b;}
+    void check_ellipses(std::ostream &out)const;
     void next(double dt, double Frx, double delta);
 
 private:

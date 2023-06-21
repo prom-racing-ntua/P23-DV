@@ -71,8 +71,8 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     {
         full_map.push_back(Cone(Point(cone.coords.x, cone.coords.y), cone.color));
     }
-    full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
-    full_map.push_back(Cone(Point(0, -1.5), 0));
+    //full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
+    //full_map.push_back(Cone(Point(0, -1.5), 0));
     Point current_position(msg->pose.position.x, msg->pose.position.y);
     float theta = msg->pose.theta; //adjustment for reversed y-axis
     Point current_direction(current_position.x() + std::cos(theta), current_position.y() + std::sin(theta));
@@ -86,7 +86,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
         return;
     }
     average_angle = std::max(average_angle, this->get_angle_avg(waypoints));
-    if(batch_output.second>100)
+    if(batch_output.second>=50 and 0)
     {
         std::cout<<">>> MALAKIA <<<"<<std::endl;
         for(Cone cone:local_map)
@@ -98,9 +98,15 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
         {
             if(cone.color==1)std::cout<<"("<<cone.coords.x()<<","<<cone.coords.y()<<"),";
         }
+        std::cout<<std::endl;
+        for(Point point:batch_output.first)
+        {
+            std::cout<<"("<<point.x()<<","<<point.y()<<"),";
+        }
         std::cout<<std::endl<<"Position: ("<<current_position.x()<<","<<current_position.y()<<")"<<std::endl;
         std::cout<<"Direction: ("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
         std::cout<<"-------------"<<std::endl;
+        //exit(1);
     }
     //std::cout << waymaker.get_batch_number()<<" score: " << batch_output.second << " no of midpoints: "<<waypoints.size()<<std::endl;
     //std::cout<<"("<<current_position.x()<<","<<current_position.y()<<"),("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
@@ -128,7 +134,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     else
     {
         float l = this->get_length(waypoints);
-        if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<0.75*last_length)
+        if(l + std::sqrt(CGAL::squared_distance(current_position, last_position))<0.90*last_length)
         {
             std::cout<<waymaker.get_batch_number()<<" Kept last: Last = "<<last_length<<" Dist = "<<std::sqrt(CGAL::squared_distance(current_position, last_position))<<" Current = "<<l<<std::endl;
             rclcpp::Duration total_time = this->now() - starting_time;

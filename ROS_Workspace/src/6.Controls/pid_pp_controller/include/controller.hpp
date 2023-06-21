@@ -57,6 +57,8 @@ private:
     int laps_to_do;
 
     bool is_end;
+    std::ofstream log;
+
 
     //Multithreading shit -- Ntroph :(
     pthread_spinlock_t global_lock_;
