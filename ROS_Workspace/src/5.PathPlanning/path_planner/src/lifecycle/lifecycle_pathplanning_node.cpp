@@ -9,6 +9,7 @@ namespace path_planner
     LifecyclePathPlanner::LifecyclePathPlanner(): LifecycleNode("path_planner"), waymaker(), total_execution_time(0) {
         RCLCPP_INFO(get_logger(), "Path Planner just launched");
         loadParameters();
+        RCLCPP_INFO(get_logger(), "Loaded parameters");
     }
 
     void LifecyclePathPlanner::loadParameters() {
@@ -52,7 +53,7 @@ namespace path_planner
 
     void LifecyclePathPlanner::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
         rclcpp::Time starting_time = this->now();
-    int cone_count = msg->cone_count;
+    int cone_count = msg->cones_count_all;
     std::vector<Cone> full_map, local_map;
     full_map.reserve(cone_count);
     for (custom_msgs::msg::ConeStruct cone : msg->local_map)

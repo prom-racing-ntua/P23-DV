@@ -26,6 +26,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(TBB REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 
 # GTSAM
 find_package(GTSAMCMakeTools REQUIRED)
@@ -53,7 +54,7 @@ ament_target_dependencies(test_run rclcpp visualization_msgs ament_index_cpp tf2
 
 # Lifecycle Node
 add_executable(lifecycle_${PROJECT_NAME} src/lifecycle/lifecycle_slam_handler.cpp src/lifecycle/lifecycle_states.cpp src/unary_factor.cpp)
-ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs)
+ament_target_dependencies(lifecycle_${PROJECT_NAME} rclcpp rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs lifecycle_msgs)
 target_link_libraries(lifecycle_${PROJECT_NAME} gtsam ${catkin_LIBRARIES})
 
 install(TARGETS
@@ -65,7 +66,7 @@ install(TARGETS
 )
 
 install(DIRECTORY
-  test_tracks DataFiles launch config
+  Tracks DataFiles launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 

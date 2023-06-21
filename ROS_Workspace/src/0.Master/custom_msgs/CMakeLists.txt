@@ -65,11 +65,16 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/DriverlessStatus.srv"
   "srv/InsMode.srv"
   "srv/DriverlessTransition.srv"
+  "srv/ResurrectNode.srv"
+  "srv/ResurrectOrder.srv"
 
   ## Messages for P22 testing
   "msg/P22/WheelSpeed.msg"
   "msg/P22/SteeringAngle.msg"
   "msg/P22/BrakePressure.msg"
+
+  # Actions
+  "action/DriverlessTransition.action"
 
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
   ADD_LINTER_TESTS

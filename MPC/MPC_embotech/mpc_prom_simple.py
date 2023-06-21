@@ -2,6 +2,10 @@
 # (c) Embotech AG, Zurich, Switzerland, 2013-2022.
 
 import sys
+import os
+print(sys.version)
+file_path = os.path.realpath(__file__)
+print("file path is: ",file_path)
 import numpy as np
 from numpy import *
 import casadi
@@ -30,7 +34,7 @@ def arc_length_parameterization(x, y):
     s = np.cumsum(ds)
     global s_max
     s_max = s[-1]
-    print(s_max)
+    print("s_max is: ",s_max)
     # s /= s[-1]
     s = np.insert(s,0,0)
     print(s)
@@ -45,13 +49,14 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=12.0
+u_upper=17.5
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 ds_wanted=0.1
 eff=0.85
 window=10
+ellipse_array=[]
 
 #for dynamic model
 # B=-7.0
@@ -64,8 +69,8 @@ dt_integration=0.025
 #compute l_a
 umin=4.0
 umax=7.0
-INDEX_MAX=310.0
-DINDEX_MAX=310.0 #just for one lap (TBC)
+INDEX_MAX=309.1
+DINDEX_MAX=309.1 #just for one lap (TBC)
 
 #ellipse params
 # a=1.46
@@ -116,10 +121,17 @@ def continuous_dynamics(x, u):
     Fdot= u[0]
     deltadot = u[1]
     dindexdot = u[2]
-    
     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
 err_array=[]
+def getEllipseRatioWithState(x):
+    saf,sar = getSasWithState(x) 
+    Ffz,Frz = getFzWithState(x)
+    a,b = getEllipseParams(Frz)
+    Fry = getFy(Frz,sar)
+    per_= (x[6]/(a*Frz))**2 + (Fry/(b*Frz))**2
+    return per_
+
 def getFy(Fz,sa):
     ex=1e-7
     P=[1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04]
@@ -173,27 +185,27 @@ def obj(z,current_target):
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-
+    print("current target is: ",current_target[3])
     return (
         3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
-            + 0e1*(e_c)**2 # costs on deviating on the
-                                        # path in y-direction
+            # + 0e1*(e_c)**2 # costs on deviating on the
+            #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
-                                #path in x-direction0.025
-            + 1e-1*(z[5]-current_target[2])**2 #dphi gap
-            + 1e-1*(z[6]-current_target[3])**2
-            + 1e-5*z[0]**2 # penalty on input F,dF
-            + 1e-5*z[9]**2
+            #                     #path in x-direction
+            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            + 5e2*(z[6]-current_target[3])**2
+            + 1e2*(z[0]/1000)**2 # penalty on input F,dF
+            + 1e2*(z[9]/1000)**2
             + 5e2*z[1]**2 #penalty on delta,ddelta
             + 5e2*z[10]**2
             + 1e-3*(sar**2)
-            + 1e-3*(dsa**2)
-            + 5e3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            # + 1e-3*(dsa**2)
+            + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
-            - 1e-4*(z[6])
-            - 1e-4*(z[11]/INDEX_MAX)
-            - 1e-4*(z[2]/INDEX_MAX))
+            - 1e-3*(z[6])
+            - 1e-3*(z[11]/INDEX_MAX)
+            - 1e-3*(z[2]/INDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
@@ -266,7 +278,7 @@ def generate_closest_s(reference_track, pos,emergency_bool):
     if(emergency_bool):
         idx = find_closest_point(path_points,pos) + int((1/ds_wanted))
     else:
-        idx = find_closest_point(path_points,pos) + 1
+        idx = find_closest_point(path_points,pos) 
     # idx0 = find_closest_point(path_points,pos)
     print("final(=euclidean) closest point is: ",path_points[:,idx]," ",idx)
     # if(idx0<2*window):
@@ -286,7 +298,7 @@ def generate_pathplanner():
     
     # Problem dimensions
     model = forcespro.nlp.SymbolicModel()
-    model.N = 40  # horizon length
+    model.N = 30  # horizon length
     model.nvar = 12  # number of variables
     model.neq = 9  # number of equality constraints
     model.npar = 4 # number of runtime parameters
@@ -316,8 +328,8 @@ def generate_pathplanner():
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
-    model.hu = np.array([+np.inf,+1.0,+0.3])
-    model.hl = np.array([-np.inf,-np.inf,-0.3])
+    model.hu = np.array([+np.inf,+1.0,+np.inf])
+    model.hl = np.array([-np.inf,-np.inf,-np.inf])
     #track - tyres - sar
     # model.hu = np.array([2.0,1.0,0.15])
     # model.hl = np.array([-np.inf,-np.inf,-0.15])
@@ -330,18 +342,20 @@ def generate_pathplanner():
     # -----------------
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 10000    # Maximum number of iterations
+    codeoptions.maxit = 500    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 
     #                             2 optimize for speed, 3 optimize for size & speed
     codeoptions.cleanup = False
     codeoptions.timing = 1
-    codeoptions.mip.inttol = 0.1
+    codeoptions.mip.mipgap = 0.5
+    codeoptions.mip.explore = 'depthFirst'
+    codeoptions.mip.branchon = 'mostAmbiguous'
     codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
-    codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
+    # codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
     codeoptions.sqp_nlp.maxqps = 1   # maximum number of quadratic problems to be solved
     codeoptions.sqp_nlp.reg_hessian = 1e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
@@ -544,21 +558,22 @@ def cubic_spline_inference(cs,parameter,x):
         local_angle = np.arctan2(dy, dx)
         ##velocity profile started
         curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
-        # u_first=np.sqrt((b*g/curvature))
-        u_first=np.sqrt((b*g*curvature))
+        u_first=np.sqrt((b*g/curvature))
         if(u_first>u_upper):u_first=u_upper
         u_max.append(u_first)
         if(i==0): 
-            u_forward=x_temp[3] 
+            # u_forward=x_temp[3] 
+            u_forward = u_first
         elif(i>0 and i<=np.shape(parameter)[0]-1):
             x_temp[3]=u_output1
-            _,Frz = getFzWithState(x_temp)
+            Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
             Fy_remain = m*(x_temp[3]**2)*curvature
-            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain=0
+            if((Frz)**2-(Fy_remain/b)**2<0): Fx_remain=0
             else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
             ds_temp=parameter[i]-parameter[i-1]
-            u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*ds_temp)
+            # ds_temp=0.1
+            u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*np.abs(ds_temp))
         u_output1=np.min(np.array([u_forward,u_first]))
         # if(u_output>u_upper): u_output=u_upper 
         parameter_array.append([interpolated_points[0]])
@@ -582,21 +597,24 @@ def cubic_spline_inference(cs,parameter,x):
             u_backward = u_first_array[np.shape(parameter)[0]-1]
         elif(j>0 and i<=np.shape(parameter)[0]-1):
             x_temp[3]=u_output2
-            _,Frz = getFzWithState(x_temp)
+            saf,sar = getSasWithState(x_temp) 
+            Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
             Fy_remain = m*(x_temp[3]**2)*curvature
             if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
             else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
             ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]
+            # ds_temp=0.1
             if(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)<0):u_backward=x_temp[3]
             else: u_backward=np.sqrt(np.abs(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)))
         u_output2=np.min(np.array([u_backward,u_first_array[np.shape(parameter)[0]-1-j]]))   
         u_final.append(u_output2) 
     # u_final_final=np.flip(u_final)
-    u_final_final = u_max    
+    u_final_final = np.flip(u_final)    
     print("ux_init is: ",ux_init)
     print("u_max is: ",u_max,np.shape(u_max))
     print("u_first is: ",u_first_array,np.shape(u_first_array))
+    print("u_second is: ",np.flip(u_final),np.shape(u_final))
     print("u_final is: ",u_final_final,np.shape(u_final_final)) #komple mexri dw
     print("params array has shape",np.shape(parameter_array))
     if(np.shape(parameter)[0]==2):
@@ -604,8 +622,8 @@ def cubic_spline_inference(cs,parameter,x):
     else:
         for k in range(4*np.shape(parameter)[0]):
             if(k%4==3):
-                print("changed parameter at k=",k)
                 parameter_array[k] = [u_final_final[int((k-3)/4)]]
+        print("parameter array after writing down: ",parameter_array,np.shape(parameter_array))
         return parameter_array
 
 # def cubic_spline_inference(cs,parameter,x):
@@ -641,7 +659,7 @@ def main():
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    data_points=Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
+    data_points = Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
     midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
     print(np.shape(1))
     cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
@@ -683,7 +701,7 @@ def main():
     time_array=[]
     err_1=0.0
     err_2=0.0
-
+    ellipse_counter=0
     # Simulation
     for k in range(sim_length):
         print("Im at iteration: ",k+1)
@@ -700,7 +718,7 @@ def main():
             problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
         if(k>0):
             s_start = problem["xinit"][8]
-            if(s_start>309.90): s_start=0.0
+            if(s_start>INDEX_MAX): s_start=0.0
             x_for_splines=problem["xinit"]
             splines_loc = cubic_spline_inference(cs,[s_start,s_start],x_for_splines)
             print("splines_loc is:",splines_loc[0][0]," ", splines_loc[1][0], " ",s_start)
@@ -712,13 +730,13 @@ def main():
             err_2 = np.sqrt((problem["xinit"][0] - closest_loc[0][0])**2 + (problem["xinit"][1] - closest_loc[1][0])**2)
             err_array.append(err_1)
             print("errors from closest are are:", err_1," ",err_2," ",np.max(err_array)," ",np.mean(err_array))
-            if(err_1 < 0.9):
+            if(err_1 < 1.0):
                 print("no emergency!")
                 emergency_bool=0
                 parameters_array = [s_closest]
                 parameters_array_temp = [s_closest]
                 s_new=s_closest
-                if(s_closest>309.990): s_closest = 0.0 #reset index for next lap
+                if(s_closest>INDEX_MAX): s_closest = 0.0 #reset index for next lap
                 for i in range (model.N-1):
                     ds_step=pred_u[2,i]*dt_integration
                     if(ds_step<0.1):
@@ -744,6 +762,14 @@ def main():
                 emergency_count+=1
                 emergency_bool=1
                 s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool)
+                ds_emerg=0.1
+                if(s_start > INDEX_MAX): s_start = INDEX_MAX
+                parameters_array_emergency=[s_start]
+                for i in range (model.N-1):
+                    s_start+=ds_emerg
+                    if(s_start>INDEX_MAX): s_start = INDEX_MAX
+                    parameters_array_emergency.append(s_start)
+                x_for_splines=problem["xinit"]
                 next_data_points = reference_track[:,idx_start:idx_start+model.N]
                 problem["all_parameters"] = np.reshape(np.transpose(next_data_points),(model.npar*model.N,1))
             print("ds array is: ",pred_u[2,:])
@@ -756,6 +782,7 @@ def main():
         print("Second param for MPC is : ",problem["all_parameters"][4],problem["all_parameters"][5])
         # print("dr between me and params is: ", np.sqrt((problem["xinit"][0]-problem["all_parameters"][0][0])**2 + (problem["xinit"][1]-problem["all_parameters"][1][0])**2))
         output, exitflag, info = solver.solve(problem)
+        print("info from kostas is: ",info)
 
         # Make sure the solver has exited properly.
         # print(exitflag)
@@ -770,10 +797,17 @@ def main():
             temp[:, i] = output['x{0:02d}'.format(i+1)]
         pred_u = temp[0:num_ins, :]
         pred_x = temp[num_ins:model.nvar, :]
-        # Apply optimized input u of first stJa suspended from all team activities pending league review after he allegedly flashed a gun on Instagram Liveage to system and save simulation data
+        # Apply optimized input u of first st
         # u[:,k] = pred_u[:,0]
-        u[:,k] = pred_u[:,1]
+        u[:,k] = pred_u[:,2]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
+        ellipse_plot = getEllipseRatioWithState(x[:,k+1])
+        ellipse_array.append(ellipse_plot)
+        print("ellipse_plot is: ",ellipse_plot)
+        if(ellipse_plot>1.0): 
+            ellipse_counter+=1
+            print("vgika apo ellipsi")
+        print("exw vgei apo ellipsi: ",ellipse_counter," times")
         print("u_bef is: ",u[:,k]," ",np.shape(u), " ",np.shape(u[:,k]))
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
         print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))

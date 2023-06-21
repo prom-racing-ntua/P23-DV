@@ -22,11 +22,12 @@
 % - x0 - matrix of size [480x1]
 % - all_parameters - matrix of size [160x1]
 % - reinitialize - scalar
+% - num_of_threads - scalar
 % Outputs:
 % - outputs - column vector of length 480
-function [outputs] = FORCESNLPsolver(xinit, x0, all_parameters, reinitialize)
+function [outputs] = FORCESNLPsolver(xinit, x0, all_parameters, reinitialize, num_of_threads)
     
-    [output, ~, ~] = FORCESNLPsolverBuildable.forcesCall(xinit, x0, all_parameters, reinitialize);
+    [output, ~, ~] = FORCESNLPsolverBuildable.forcesCall(xinit, x0, all_parameters, reinitialize, num_of_threads);
     outputs = coder.nullcopy(zeros(480,1));
     outputs(1:12) = output.x01;
     outputs(13:24) = output.x02;

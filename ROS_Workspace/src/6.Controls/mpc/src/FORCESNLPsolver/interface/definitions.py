@@ -13,7 +13,8 @@ params = \
 [("xinit"               , "dense" , ""               , ctypes.c_double, numpy.float64, (  9,   1),    9),
  ("x0"                  , "dense" , ""               , ctypes.c_double, numpy.float64, (480,   1),  480),
  ("all_parameters"      , "dense" , ""               , ctypes.c_double, numpy.float64, (160,   1),  160),
- ("reinitialize"        , "dense" , "FORCESNLPsolver_int", ctypes.c_int   , numpy.int32  , (  1,   1),    1)]
+ ("reinitialize"        , "dense" , "FORCESNLPsolver_int", ctypes.c_int   , numpy.int32  , (  1,   1),    1),
+ ("num_of_threads"      , "dense" , "solver_int32_unsigned", ctypes.c_uint  , numpy.uint32 , (  1,   1),    1)]
 
 # Output                | Type    | Ctypes type    | Numpy type   | Shape     | Len
 outputs = \

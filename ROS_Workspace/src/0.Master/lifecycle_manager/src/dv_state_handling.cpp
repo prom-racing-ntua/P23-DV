@@ -33,11 +33,7 @@ namespace lifecycle_manager_namespace{
             Configure Nodes (changeNodeState(Transition::TRANSITION_CONFIGURE))
                 1. Select the correct configuartion file based on the mission selected - DONE
                 2. Send a changeNodeState transition call to every node remaining - DONE
-        */
-
-        /* Skip configuration if mission is repeated */
-        if (mission == currentMission)
-            return;
+        */      
         
         std::string configurationFileSelected = configFolder;
 
@@ -50,8 +46,8 @@ namespace lifecycle_manager_namespace{
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
                 // nodesToShutdown = {"path_planning", "pure_pursuit"};
-                // nodesToShutdown = {"path_planning"};
-                // controlsNode = {"mpc"};
+                nodesToShutdown = {"path_planning"};
+                controlsNode = {"mpc"};
                 break;
             case(p23::TRACKDRIVE):
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
@@ -81,20 +77,18 @@ namespace lifecycle_manager_namespace{
                 return;
             }
 
-            for (auto nodeToRemove: nodesToShutdown) {
-                removeElement(nodeList, nodeToRemove);
-            }
+        for (auto nodeToRemove: nodesToShutdown) {
+            removeElement(nodeList, nodeToRemove);
+        }
 
-            /*
-                Select the correct mission file based on mission, send a configuration signal and 
-                load parameter file. This works only if all the parameters are set on the initialization of the node.
-                I think that this is the best way to setup things.
-            */
-
-            for (auto node: nodeList) { loadConfigurationFileToNode(node, configurationFileSelected); }
-            for (auto node: nodeList) { changeNodeState(Transition::TRANSITION_CONFIGURE, node); }
-
-        currentMission = mission;
+        /*
+            Select the correct mission file based on mission, send a configuration signal and 
+            load parameter file. This works only if all the parameters are set on the initialization of the node.
+            I think that this is the best way to setup things.
+        */
+        goalCounter -= nodesToShutdown.size();
+        for (auto node: nodeList) { loadConfigurationFileToNode(node, configurationFileSelected); }
+        for (auto node: nodeList) { changeNodeState(Transition::TRANSITION_CONFIGURE, node); }
     }
 
     void LifecycleManagerNode::activateSystem()
@@ -110,10 +104,10 @@ namespace lifecycle_manager_namespace{
 
         // Activate the rest (except controls)
         for (auto node: nodeList) {
-            if (node == controlsNode)
-                continue;
+            if (node == controlsNode or node == "saltas") continue;
             changeNodeState(Transition::TRANSITION_ACTIVATE, node);
         }
+        if (std::count(nodeList.begin(), nodeList.end(), "saltas")) { changeNodeState(Transition::TRANSITION_ACTIVATE, "saltas"); }
 
         RCLCPP_INFO(get_logger(), "DV_Ready change complete, every node except controls is ACTIVE");
     }
@@ -150,8 +144,7 @@ namespace lifecycle_manager_namespace{
             implemented in the future).
         */
        
-        for (auto node: nodesToShutdown) {
-            
+        for (auto node: nodesToShutdown) {            
             changeNodeState(shutdownTransition, node);
             // lifecycleGetStateMap.erase(node);
             // lifecycleChangeStateMap.erase(node);

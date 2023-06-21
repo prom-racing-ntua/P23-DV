@@ -7,7 +7,6 @@
 
 #include "lifecycle_manager_node.hpp"
 
-using lifecycle_msgs::msg::Transition;
 
 namespace lifecycle_manager_namespace
 {
@@ -15,12 +14,10 @@ namespace lifecycle_manager_namespace
     {
         RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
         
-        currentMission = p23::Mission::MISSION_UNLOCKED;
-
         loadParameters();
         initializeServices();
         /*
-            Setup folders for controlling the configuartion and the launch files of the nodes through
+            Setup folders for controlling the configuration and the launch files of the nodes through
             the lifecycle manager.
         */
         packageShareDirectory = ament_index_cpp::get_package_share_directory("lifecycle_manager");
@@ -30,22 +27,32 @@ namespace lifecycle_manager_namespace
         get_parameter("managing_node_list", nodeList);
         get_parameter("heartbeat_timeout_period", heartbeatTimeoutPeriod);
         get_parameter("heartbeat_frequency", heartbeatFrequency);
-
+        get_parameter("resurrect_failed_nodes", resurrectionEnabled);
         heartbeatTimerDuration = (1000/heartbeatFrequency);
 
+        /* Action Feedback Publishing Timer */
+        timer_cb_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        goalTimer = create_wall_timer(std::chrono::seconds(1), std::bind(&LifecycleManagerNode::publishActionFeedback, this), timer_cb_group);
+        goalTimer->cancel();
+
+        /* Node Resurrection stuff */
+
+        if (resurrectionEnabled) {
+            /* */
+        }
         initializeLifecycleClients(nodeList);
-        startup();
         RCLCPP_INFO(get_logger(), "Lifecycle Manager Initialized");
     }
 
     void LifecycleManagerNode::initializeServices()
     {
         using namespace std::placeholders;
-
-        dvStatusService_ = create_service<custom_msgs::srv::DriverlessTransition>(
+        dv_status_service = rclcpp_action::create_server<DVTransition>(
+            this,
             std::string(get_name()) + std::string("/change_driverless_status"),
-            std::bind(&LifecycleManagerNode::changeDVState, this, _1, _2)
-            );
+            std::bind(&LifecycleManagerNode::handleGoal, this, _1, _2),
+            std::bind(&LifecycleManagerNode::handleCancellation, this, _1),
+            std::bind(&LifecycleManagerNode::handleAccept, this, _1));
     }
 
     void LifecycleManagerNode::initializeLifecycleClients(std::vector<std::string> nodeList)
@@ -56,12 +63,19 @@ namespace lifecycle_manager_namespace
 
             lifecycleGetStateMap[s] = create_client<lifecycle_msgs::srv::GetState>(getStateServiceName);
             lifecycleChangeStateMap[s] = create_client<lifecycle_msgs::srv::ChangeState>(changeStateServiceName);
+            parameterClientMap[s] = std::make_shared<rclcpp::AsyncParametersClient>(this, s);
             /* Make the assumption that every node that you manage is alive and well :) */
             nodeStateMap[s] = false;
         }
 
         node_state_publisher_ = create_publisher<custom_msgs::msg::LifecycleNodeStatus>(
             std::string(get_name()) + std::string("/lifecycle_node_status"), 10);
+    }
+
+    void LifecycleManagerNode::initializeResurrectionClients()
+    {
+        nodeResurrectionClient = create_client<custom_msgs::srv::ResurrectNode>("resurrection_manager/resurrection_service");
+        nodeResurrectionOrderClient = create_client<custom_msgs::srv::ResurrectOrder>("resurrection_manager/resurrection_node_control");
     }
 
     void LifecycleManagerNode::getNodeState(std::string nodeName)
@@ -75,6 +89,9 @@ namespace lifecycle_manager_namespace
         if (!getStateServiceHandler->wait_for_service(std::chrono::milliseconds(heartbeatTimeoutPeriod))) {
             RCLCPP_ERROR_STREAM(get_logger(), "Service " << getStateServiceHandler->get_service_name() << " is not available");
             nodeStateMap[nodeName] = true;
+            if (resurrectionEnabled) {
+                sendResurrectionRequest(nodeName);
+            }
             return;
         }
 
@@ -82,7 +99,6 @@ namespace lifecycle_manager_namespace
         auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
             auto result = future.get();
             bool nodeError = true;
-
             if (result->current_state.id == State::PRIMARY_STATE_UNKNOWN)
             {
                 RCLCPP_ERROR_STREAM(get_logger(), "Cannot get the state of Node " << nodeName << ". Going to NODE_PROBLEM State");
@@ -116,61 +132,32 @@ namespace lifecycle_manager_namespace
                 get_logger(),
                 "Service %s is not available.",
                 changeStateServiceHandler->get_service_name());
-            nodeStateMap[nodeName] = true;
+            // nodeStateMap[nodeName] = true;
+            failedTransitionCounter++;
+            return;
         }
 
-        using ServiceResponseFuture = rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedFuture;
-        auto response_received_callback = [this, nodeName](ServiceResponseFuture future) {
-            auto result = future.get();
-            bool nodeStatusChangeSuccess = result.get()->success;
+        auto future_result = changeStateServiceHandler->async_send_request(request);
 
-            if (nodeStatusChangeSuccess) {
-                RCLCPP_INFO(get_logger(), "Changed Status of node %s", nodeName.c_str());
-            }
-            else {
-                RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
-                /* This will throw up a NODE_PROBLEM error */
-                nodeStateMap[nodeName] = true;
-            }
-        };
+        /* Instead of using a callback (which doesn't always work out check for the future status every once in a while)*/
+        auto future_status = wait_for_result(future_result, std::chrono::seconds(5));
 
-        auto future_result = changeStateServiceHandler->async_send_request(request, response_received_callback);
-    }
-
-    void LifecycleManagerNode::changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessTransition::Request> request,
-        std::shared_ptr<custom_msgs::srv::DriverlessTransition::Response> response)
-    {
-        p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(request->transition.id);
-        p23::Mission missionSent = static_cast<p23::Mission>(request->mission.id);
-
-        switch(newDVStatus) {
-            case(p23::DV_Transitions::ON_STARTUP):
-                RCLCPP_INFO(get_logger(), "Received Startup signal, start a heartbeat check for each node managed");
-                startup();
-                break;
-            case(p23::DV_Transitions::SHUTDOWN_NODES):
-                RCLCPP_INFO(get_logger(), "Either Mission Finished or AS Emergency, shutting down currently running nodes");
-                shutdownSelectedNodes(nodeList, Transition::TRANSITION_ACTIVE_SHUTDOWN);
-                break;
-            case(p23::DV_Transitions::ON_MISSION_LOCKED):
-                RCLCPP_INFO(get_logger(), "Received mission, configure the nodes");
-                configureNodes(missionSent);
-                break;
-            case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
-                RCLCPP_INFO(get_logger(), "Unlocking mission, waiting for new mission to arrive, cleanup nodes");
-                cleanupNodes();
-                currentMission = p23::MISSION_UNLOCKED;
-                break;
-            case(p23::DV_Transitions::ON_AS_READY):
-                RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
-                activateSystem();
-                break;
-            case(p23::DV_Transitions::ON_AS_DRIVING):
-                RCLCPP_INFO(get_logger(), "Received AS Driving, activate control node");
-                activateControls();
-                break;
+        if (future_status != std::future_status::ready) {
+            RCLCPP_ERROR(get_logger(), "Server time out while changing state for node %s", nodeName.c_str());
+            return;
         }
-        response->success = true;
+
+        // We have an answer, let's print our success.
+        if (future_result.get()->success) {
+            RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
+            goalCounter--;
+        } else {
+            RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
+            // nodeStateMap[nodeName] = true;
+            failedTransitionCounter++;
+        }
+
+        return;
     }
 
     void LifecycleManagerNode::loadParameters() {
@@ -180,5 +167,6 @@ namespace lifecycle_manager_namespace
             });
         heartbeatTimeoutPeriod = declare_parameter<int>("heartbeat_timeout_period", 2000);
         heartbeatFrequency = declare_parameter<int>("heartbeat_frequency", 5);
+        resurrectionEnabled = declare_parameter<bool>("resurrect_failed_nodes", false);
     }
 }

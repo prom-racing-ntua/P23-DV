@@ -206,17 +206,21 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
     msg_type = TxControlCommand
 
     def to_CanMsg(self) -> bytearray:
-        DEFAULT_SERVICE_BRAKE_PRESSURE = 5
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
 
-        # temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
-        out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
-        #out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
+        if self.node_handle._shuting_down:
+            self._ros_msg.steering_angle_target = 0
+            self._ros_msg.motor_torque_target = 0
+            self._ros_msg.brake_pressure_target = 0
+            self._ros_msg.speed_actual = 0
+            self._ros_msg.speed_target = 0
+
+        temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
+        out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
+        # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
         out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
-        
-        # Brake pressure target is bool so we output a standard brake pressure to the service brake
-        out_msg[5] = DEFAULT_SERVICE_BRAKE_PRESSURE if self._ros_msg.brake_pressure_target else int(DEFAULT_SERVICE_BRAKE_PRESSURE/2)
+        out_msg[5] = self._ros_msg.brake_pressure_target
 
         # Speed Actual and speed target
         out_msg[6] = self._ros_msg.speed_actual
@@ -241,7 +245,7 @@ class KinematicVariablesMsg(CanInterfaceMessage):
 
 class SystemHealthMsg(CanInterfaceMessage):
     can_id = 0x03
-    byte_size = 7
+    byte_size = 8
     msg_type = TxSystemState
 
     def to_CanMsg(self) -> bytearray:
@@ -261,7 +265,10 @@ class SystemHealthMsg(CanInterfaceMessage):
         elif dv_state == DriverlessStatus.MISSION_FINISHED:
             state = 0x08
         elif dv_state == DriverlessStatus.NODE_PROBLEM:
-            state = 0x0F
+            if self.node_handle._shuting_down:
+                state = 0x08
+            else:
+                state = 0x0F
         else:
             self.node_handle.get_logger().error(f"Unknown DV State received: {dv_state}")
             state = 0x0F
@@ -291,6 +298,15 @@ class SystemHealthMsg(CanInterfaceMessage):
         node_status_bits[6] = self._ros_msg.pi_pp_controls_error
         out_msg[6] = bitsToByte(node_status_bits)
 
+        # Get the CPU temperature reading and set the corresponding byte
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp", "r") as file:
+                pc_temp = file.read()
+                out_msg[7] = int(pc_temp)/1000
+        except Exception:
+            self.node_handle.get_logger().error(f"{Exception}")
+            out_msg[7] = 0
+
         return out_msg
 
 
@@ -316,9 +332,11 @@ class AsStatusMsg(CanInterfaceMessage):
         elif received_status == 0x08:
             ros_msg.id = AutonomousStatus.AS_FINISHED
             ros_msg.label = "AS_FINISHED"
+            self.node_handle._shuting_down = True
         elif received_status == 0x10:
             ros_msg.id = AutonomousStatus.AS_EMERGENCY
             ros_msg.label = "AS_EMERGENCY"
+            self.node_handle._shuting_down = True
         else:
             self.node_handle.get_logger().error(f"Invalid AS Status received: {received_status}")
             ros_msg.id = 0
@@ -431,7 +449,7 @@ class SteeringAngleMsg(CanInterfaceMessage):
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg[0:5], byteorder='little', signed=True) * (360/(2*4096)) / 3.17 / 66     #[mm rack]
-        msg.steering_angle = temp   #rackDisplacement2rad(temp)
+        msg.steering_angle = rackDisplacement2rad(temp)
         return msg
 
 

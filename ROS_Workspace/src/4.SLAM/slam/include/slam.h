@@ -84,7 +84,7 @@ private:
 
 	// Used to compute the time interval between odometry measurements
 	unsigned long previous_global_index_;
-	int landmark_counter_;
+	uint64_t landmark_counter_;
 
 	// iSAM Variables
 
@@ -132,8 +132,6 @@ private:
 	bool ccw(gtsam::Vector2 A, gtsam::Vector2 B, gtsam::Vector2 C) {
 		return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0]);
 	}
-
-	gtsam::KeySet checkObservationRatio();
 
 public:
 	// Constructor
@@ -214,6 +212,30 @@ void GraphSLAM<T>::init() {
 
 	// Initializes the factor graph
 	initializeFactorGraph();
+	
+	// Add the starting line large orange cones in the map
+	if (node_handler_->get_parameter("mapping_mode").as_bool())
+	{
+		LandmarkInfo cone{};
+		cone.is_verified = true;
+		cone.color = ConeColor::LargeOrange;
+		double cone_x{ 0.3 };
+		double cone_y{ 1.5 };
+
+		for (int i{0}; i < 4; i++)
+		{
+			gtsam::Symbol cone_symbol{ 'L', landmark_counter_ };
+			cone.symbol = cone_symbol;
+			cone.estimated_pose[0] = cone_x;
+			cone.estimated_pose[1] = cone_y;
+			if (i%2==0) { cone_x*=-1.0; }
+			else { cone_y*=-1.0; }
+
+			landmark_id_map_[landmark_counter_++] = cone;
+			new_variable_values_.insert(cone.symbol, gtsam::Point2(cone.estimated_pose[0], cone.estimated_pose[1]));
+		}
+	}
+	
 	RCLCPP_WARN_STREAM(node_handler_->get_logger(), "Created SLAM object" << '\n');
 }
 
@@ -303,7 +325,7 @@ bool GraphSLAM<T>::addOdometryMeasurement(OdometryMeasurement& odometry) {
 // Adds landmark measurements in SLAM mode
 template <class T>
 void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(),"Perception callback at index: " << global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(),"Perception callback at index: " << global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -328,6 +350,11 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 
 		int best_match_id{ findNearestNeighbor(cone, observed_position) };
 
+		// We don't want to add new large orange cones, just use them for localization. 
+		// They are added in the creation of the map.
+		if (cone.color == ConeColor::LargeOrange and best_match_id == -1) { continue; }
+
+		// TODO: Redo doc below...
 		/* Case where the landmark has not been observed before.
 		 * Here we don't put the observed landmark in the graph in case it is a false positive of
 		 * the perception pipeline (i.e. a ghost cone). We just add it to the landmark_id_map_ variable
@@ -426,11 +453,10 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 	}
 }
 
-
 // Adds landmark measurements in LOCALIZATION mode
 template <class T>
 void GraphSLAM<T>::addLandmarkMeasurementsLocalization(const unsigned long global_index, std::vector<PerceptionMeasurement>& landmarks) {
-	RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
+	// RCLCPP_INFO_STREAM(node_handler_->get_logger(), global_index);
 	gtsam::Symbol observation_pose_symbol{ 'X', global_index };
 	gtsam::Pose2 observation_pose;
 
@@ -539,29 +565,14 @@ void GraphSLAM<T>::optimizeFactorGraph(gtsam::NonlinearFactorGraph& new_factors,
 // Used to be part of optimization, split for ROS purposes
 template <class T>
 void GraphSLAM<T>::imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam::Vector3& pre_optimization_pose) {
-	// std::function<bool(gtsam::Key)> isPose{ gtsam::Symbol::ChrTest('X') };
-	// std::function<bool(gtsam::Key)> isLandmark{ gtsam::Symbol::ChrTest('L') };
+	/* While the optimization is running slam node is receiving new measurements from both perception and velocity
+	 * estimation. These measurements are added on a new factor graph and the values added are based on the last known car position,
+	 * which was not optimized. After the optimization step these new values should be transposed to the optimized last known
+	 * position.Right now imposeOptimization just changes the current car pose to the corresponding optimized one, leaving other 
+	 * measurements as is. Through testing this hasn't caused problems but might be a slight improvement.
+	 */
 
 	gtsam::Pose2 optimized_pose{ estimated_global_state_.at<gtsam::Pose2>(optimization_symbol) };
-
-	// Just an idea...
-	// double delta_x{ optimized_pose.x() - pre_optimization_pose(0) };
-	// double delta_y{ optimized_pose.y() - pre_optimization_pose(1) };
-	// double delta_theta{ optimized_pose.theta() - pre_optimization_pose(2) };
-	// gtsam::Matrix3 transformation_matrix{ gtsam::Pose2(delta_x, delta_y, delta_theta).matrix() };
-
-	// // Rotate and translate every value variable that was added during optimization
-	// for (auto it : new_variable_values_)
-	// {
-	// 	if (isPose(it.key))
-	// 	{
-	// 		new_variable_values_.update(it.key, transformation_matrix * it.value.cast<gtsam::Pose2>().matrix());
-	// 	}
-	// 	else if (isLandmark(it.key))
-	// 	{
-	// 		new_variable_values_.update(it.key, transformation_matrix.block(0, 0, 2, 3) * it.value.cast<gtsam::Point2>());
-	// 	}
-	// }
 
 	// Update the current estimated robot pose
 	double new_x{
@@ -576,12 +587,15 @@ void GraphSLAM<T>::imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam:
 	estimated_car_pose_ = gtsam::Pose2(new_x, new_y, new_theta);
 
 	// For every landmark that has been optimized update its estimated position
-	for (auto& it : landmark_id_map_)
+	if (node_handler_->get_parameter("mapping_mode").as_bool()) 
 	{
-		LandmarkInfo& cone{ it.second };
-		if (estimated_global_state_.exists<gtsam::Point2>(cone.symbol))
+		for (auto& it : landmark_id_map_)
 		{
-			cone.estimated_pose = estimated_global_state_.at<gtsam::Point2>(cone.symbol);
+			LandmarkInfo& cone{ it.second };
+			if (estimated_global_state_.exists<gtsam::Point2>(cone.symbol))
+			{
+				cone.estimated_pose = estimated_global_state_.at<gtsam::Point2>(cone.symbol);
+			}
 		}
 	}
 }
@@ -614,6 +628,7 @@ std::vector<gtsam::Vector3> GraphSLAM<T>::getEstimatedMap() {
 			estimated_map.push_back(mapped_cone);
 		}
 	}
+	cone_count_ = estimated_map.size();
 	return estimated_map;
 }
 }  // namespace ns_slam

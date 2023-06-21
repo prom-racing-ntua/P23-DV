@@ -5,6 +5,6 @@ cmake ..
 make
 ./lidar_cluster_cpp
 cd ..
-pcl_viewer DataError/pcd/cloud_cluster_final.pcd
+pcl_viewer DataError2/pcd/cloud_cluster_init.pcd
 # python3 projection.py 
 # pcl_viewer DataTest/pcd/cloud_cluster_final.pcd

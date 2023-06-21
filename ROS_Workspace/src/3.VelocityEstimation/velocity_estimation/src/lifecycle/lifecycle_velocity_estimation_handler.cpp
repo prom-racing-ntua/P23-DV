@@ -95,9 +95,6 @@ namespace ns_vel_est
         auto responseReceivedCallback = [this](ServiceResponseFuture future) {
             auto result = future.get();
             node_frequency_ = result.get()->velocity_estimation_frequency;
-            /* Unblock Semaphore */
-            RCLCPP_INFO(get_logger(), "Before sem_post");
-            sem_post(&clientSemaphore);
         };
 
         auto future_result = cli_->async_send_request(request, responseReceivedCallback);
@@ -244,7 +241,7 @@ namespace ns_vel_est
 
     // Loads the node parameters from the .yaml file
     void LifecycleVelocityEstimationHandler::loadParameters() {
-        declare_parameter<int>("frequency", 0);
+        declare_parameter<int>("frequency", 40);
 
         declare_parameter<std::vector<double>>("initial_state_vector",
             { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });

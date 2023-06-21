@@ -1,4 +1,6 @@
 #include "lifecycle_controller.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
+
 
 namespace pid_pp{
     pid_pp::CallbackReturn
@@ -54,6 +56,10 @@ namespace pid_pp{
 
         pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
         pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
+
+        RCLCPP_INFO(get_logger(), "Pure Pursuite Node Configured!");
+
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
@@ -65,6 +71,8 @@ namespace pid_pp{
         pub_target->on_activate();
 
         RCLCPP_INFO(get_logger(), "Pure Pursuit Node Activated!");
+
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
@@ -76,6 +84,8 @@ namespace pid_pp{
         pub_target->on_deactivate();
 
         RCLCPP_INFO(get_logger(), "Pure Pursuit Node deactivated!");
+
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
@@ -92,12 +102,23 @@ namespace pid_pp{
         /* Edw prepei na kanoyme kai clean up to model */
 
         RCLCPP_INFO(get_logger(), "Pure Pursuit Node unconfigured!");
+
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_shutdown(const rclcpp_lifecycle::State &state)
     {
         RCLCPP_INFO(get_logger(), "Shutting down Pure Pursuit Node");
+
+        using NodeState = lifecycle_msgs::msg::State;
+
+        uint8_t currentState = state.id();
+        
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            RCLCPP_WARN(get_logger(), "Pure Pursuit Node Shutdown!");
+            return pid_pp::CallbackReturn::SUCCESS;
+        }
 
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
@@ -107,11 +128,13 @@ namespace pid_pp{
         /* Edw prepei na kanoyme kai clean up to model */
 
         RCLCPP_INFO(get_logger(), "Pure Pursuit Node shut down!");
+
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_error(const rclcpp_lifecycle::State &state)
     {
-        
+        return pid_pp::CallbackReturn::SUCCESS;   
     }
 }

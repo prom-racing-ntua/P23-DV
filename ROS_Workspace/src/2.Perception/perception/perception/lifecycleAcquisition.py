@@ -117,6 +117,10 @@ class AcquisitionLifecycleNode(Node):
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().warn(f"Shutting Down Acquisition Node")
+
+        if (state.state_id == 1):
+            return TransitionCallbackReturn.SUCCESS
+        
         self.camera.cleanupCamera()
 
         del self.camera, self.bridge

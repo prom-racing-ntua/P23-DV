@@ -1,8 +1,10 @@
 #ifndef LIFECYCLE_MANAGER_NODE_HPP
 #define LIFECYCLE_MANAGER_NODE_HPP
 
+/* C/C++ Imports */
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
@@ -11,26 +13,52 @@
 #include <algorithm>
 #include <string>
 #include <cstring>
+#include <thread>
 #include <unistd.h>
 
+/* ROS2 Libraries */
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
 #include <rmw/qos_profiles.h>
-
-#include "custom_msgs/srv/driverless_transition.hpp"
-#include "custom_msgs/msg/driverless_transition.hpp"
-#include "custom_msgs/msg/lifecycle_node_status.hpp"
-#include "lifecycle_msgs/srv/get_state.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
-#include "lifecycle_msgs/srv/change_state.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp/parameter_client.hpp"
 #include "rclcpp/utilities.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "yaml-cpp/yaml.h"
-#include "p23_common.h"
-#include "node_class.hpp"
+/* Messages */
+#include "custom_msgs/msg/driverless_transition.hpp"
+#include "custom_msgs/msg/lifecycle_node_status.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
+/* Services */
+#include "lifecycle_msgs/srv/change_state.hpp"
+#include "lifecycle_msgs/srv/get_state.hpp"
+#include "custom_msgs/srv/driverless_transition.hpp"
+#include "custom_msgs/srv/resurrect_node.hpp"
+#include "custom_msgs/srv/resurrect_order.hpp"
+
+/* Actions */
+#include "custom_msgs/action/driverless_transition.hpp"
+
+/* Custom Libraries */
+#include "p23_common.h"
+
+
+/* Taken ready from a ROS2 example, used to safely wait for a response from a service */
+template<typename FutureT, typename WaitTimeT>
+std::future_status wait_for_result(FutureT & future, WaitTimeT time_to_wait)
+{
+    auto end = std::chrono::steady_clock::now() + time_to_wait;
+    std::chrono::milliseconds wait_period(100);
+    std::future_status status = std::future_status::timeout;
+    do {
+        auto now = std::chrono::steady_clock::now();
+        auto time_left = end - now;
+        if (time_left <= std::chrono::seconds(0)) {break;}
+        status = future.wait_for((time_left < wait_period) ? time_left : wait_period);
+    } while (rclcpp::ok() && status != std::future_status::ready);
+    return status;
+}
 
 template<typename T>
 void printVector(std::vector<T>& vector)
@@ -51,44 +79,49 @@ void removeElement(std::vector<T>& vector, T element)
 
 namespace lifecycle_manager_namespace
 {
+    using DVTransition = custom_msgs::action::DriverlessTransition;
+    using GoalHandle = rclcpp_action::ServerGoalHandle<DVTransition>;
+    using lifecycle_msgs::msg::Transition;
+
     class LifecycleManagerNode : public rclcpp::Node {
     private:
-        p23::Mission currentMission;
-        p23::AS_Status currentASStatus;
-        p23::DV_Status currentDVStatus;
-
         // Configuration and Launch folders
         std::string packageShareDirectory, configFolder, launchFolder;
 
+        // Lists of managed nodes
         std::vector<std::string> nodeList;
         std::vector<std::string> nodesToShutdown;
         std::string controlsNode;
 
-        /*
-            The first 2 dictionaries are used for the get_state and change_state services that the lifecycle nodes provide
-            automatically upon creation.
-        */
-       
+        // The first 2 dictionaries are used for the get_state and change_state services that the lifecycle nodes provide
+        // automatically upon creation.
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::GetState>::SharedPtr> lifecycleGetStateMap;
         std::unordered_map<std::string,rclcpp::Client<lifecycle_msgs::srv::ChangeState>::SharedPtr> lifecycleChangeStateMap;
         std::unordered_map<std::string, bool> nodeStateMap;
-
-        /* This is used only when a resurrection has happened. */
-        std::unordered_map<std::string, pid_t> nodePIDMap;
-
-        /* Service that handles the DV changes received from P23 Status. Publisher that send to P23 Status the error state of the
-            managed nodes. */
-        rclcpp::Service<custom_msgs::srv::DriverlessTransition>::SharedPtr dvStatusService_;
-        rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
-
-        // Timer to check if the nodes that we are managing are still alive
-        rclcpp::TimerBase::SharedPtr heartbeatTimer;
-        int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;
 
         /* Node Initialization Functions*/
         void initializeServices();
         void initializeLifecycleClients(std::vector<std::string> nodeList);
         void loadParameters();
+
+        /* Publisher and timer that send to P23 Status the error state of the managed nodes. */
+        rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
+        rclcpp::TimerBase::SharedPtr heartbeatTimer;
+        int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;
+        /* All Action based things for the Lifecycle Manager */
+        rclcpp_action::Server<DVTransition>::SharedPtr dv_status_service;
+        std::shared_ptr<GoalHandle> ongoing_goal_handle;
+        uint8_t goalCounter, failedTransitionCounter;
+        // When receiving new action goal
+        rclcpp_action::GoalResponse handleGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const DVTransition::Goal> goal);
+        // When current goal is canceled
+        rclcpp_action::CancelResponse handleCancellation(const std::shared_ptr<GoalHandle> goal_handle);
+        // Executed after new goal is accepted
+        void handleAccept(const std::shared_ptr<GoalHandle> goal_handle);
+        void publishActionFeedback();
+        // Timer to check goal progression so to not block in the while loop
+        rclcpp::CallbackGroup::SharedPtr timer_cb_group;
+        rclcpp::TimerBase::SharedPtr goalTimer;
 
         /*
             Functions for controlling the lifecycle nodes, individually. Each lifecycle node creates two major services:
@@ -102,8 +135,14 @@ namespace lifecycle_manager_namespace
         */
         void getNodeState(std::string nodeName);
         void changeNodeState(std::uint8_t transition, std::string nodeName);
-        void loadConfigurationFileToNode(std::string nodeName, std::string configFile);  
         
+
+        /* Configuration handling */
+        std::unordered_map<std::string, std::shared_ptr<rclcpp::AsyncParametersClient>> parameterClientMap;
+        std::vector<std::string> listNodeParameters(std::string nodeName);
+        bool loadConfigurationFileToNode(std::string nodeName, std::string configurationYamlFilePath);
+
+        // void loadConfigurationFileToNode(std::string nodeName, std::string configFile);  
         /*
             5 Main Functions for controlling the whole state machine of P23
 
@@ -126,15 +165,17 @@ namespace lifecycle_manager_namespace
         /* Called when you need to shutdown specific Nodes: Either the managed node list when in error or mission finished or 
             the nodesToBeShutdown when going to AS_Ready*/
         void shutdownSelectedNodes(std::vector<std::string> nodesToShutdown, uint8_t shutdownTransition);
-    
-        /* Experimental Code - Should not be used by anyone (yet). Egw den metraw... */
-        pid_t launchNode(std::string nodeName, std::string packageName, std::string runCommand);
-        void resurrectNode(std::string nodeName);
+
+        /* Node Resurrection feature. Calls from another node */
+        bool resurrectionEnabled;
+        int heartbeatFailuresBeforeResurrection;
+        rclcpp::Client<custom_msgs::srv::ResurrectNode>::SharedPtr nodeResurrectionClient;
+        rclcpp::Client<custom_msgs::srv::ResurrectOrder>::SharedPtr nodeResurrectionOrderClient;
+        void initializeResurrectionClients();
+        void sendResurrectionRequest(std::string nodeName);
 
     public:
         explicit LifecycleManagerNode();
-        void changeDVState(const std::shared_ptr<custom_msgs::srv::DriverlessTransition::Request> request,
-            std::shared_ptr<custom_msgs::srv::DriverlessTransition::Response> response);
     };
 }
 

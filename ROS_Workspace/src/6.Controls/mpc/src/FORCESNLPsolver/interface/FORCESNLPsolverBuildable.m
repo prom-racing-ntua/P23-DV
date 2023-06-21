@@ -40,7 +40,7 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
             solverInfo.solvername = 'FORCESNLPsolver';
             solverInfo.solverpath = solverpath;
             solverInfo.pythonClientFormat = true;
-            solverInfo.useParallel = 0;
+            solverInfo.useParallel = 1;
             solverInfo.isNLP = true;
             ForcesUpdateBuildInfo(buildInfo, cfg, solverInfo);
             postUpdateBuildInfoScript = [solverInfo.solvername, 'PostUpdateBuildInfo'];
@@ -157,26 +157,27 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
         end
 
         function [output,exitflag,info] = forcesCallWithParams(params)
-            [output,exitflag,info] = FORCESNLPsolverBuildable.forcesCall(params.xinit, params.x0, params.all_parameters, params.reinitialize);
+            [output,exitflag,info] = FORCESNLPsolverBuildable.forcesCall(params.xinit, params.x0, params.all_parameters, params.reinitialize, params.num_of_threads);
         end
 
-        function [output,exitflag,info] = forcesCall(xinit, x0, all_parameters, reinitialize)
+        function [output,exitflag,info] = forcesCall(xinit, x0, all_parameters, reinitialize, num_of_threads)
             solvername = 'FORCESNLPsolver';
 
             
             params = struct('xinit', double(xinit),...
                             'x0', double(x0),...
                             'all_parameters', double(all_parameters),...
-                            'reinitialize', int32(reinitialize));
+                            'reinitialize', int32(reinitialize),...
+                            'num_of_threads', uint32(num_of_threads));
 
-            [output_c, exitflag_c, info_c] = FORCESNLPsolverBuildable.forcesInitOutputsC();
+            [output_c, exitflag_c, info_c] = FORCESNLPsolverBuildable.forcesInitOutputsC(); %#ok<ASGLU>
             
             headerName = [solvername '.h'];
             coder.cinclude(headerName);
             coder.cinclude([solvername '_memory.h']);
             coder.cinclude([solvername '_adtool2forces.h']);
             % define memory pointer
-            memptr = coder.opaque([solvername '_mem *'], 'HeaderFile', headerName);
+            memptr = coder.opaque([solvername '_mem *'], 'HeaderFile', headerName); %#ok<NASGU>
             memptr = coder.ceval([solvername '_internal_mem'], uint32(0));
             % define solver input information (params, file and casadi)
             coder.cstructname(params, [solvername '_params'], 'extern', 'HeaderFile', headerName);

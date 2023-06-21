@@ -15,6 +15,7 @@
 
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
 #include "slam.h"
 
@@ -25,41 +26,45 @@ namespace ns_slam
 
     class LifecycleSlamHandler : public rclcpp_lifecycle::LifecycleNode {
     private:
-        int node_frequency_;
         unsigned long global_index_;
         GraphSLAM<LifecycleSlamHandler> slam_object_;
+        // Global lock for SLAM node
+        pthread_spinlock_t global_lock_;
 
+        // Node parameters
+        int node_frequency_;
         bool is_mapping_;
+        bool is_logging_;
+
+        double perception_range_;
+        int optimization_interval_;
+
+        // Not used right now
+        double odometry_weight_;
+        double perception_weight_;
+
         // Dynamic accel map variables
         bool map_ready_;
         int accel_cone_count_;
         int num_observations_;
 	    std::unordered_map<int, LandmarkInfo> accel_map_;
 
-        std::ofstream map_log_;
-
-        double perception_range_;
-        int optimization_interval_;
-
-        double odometry_weight_;
-        double perception_weight_;
-
+        // Log file variables
         std::string share_dir_;
-
-        bool is_logging_;
         std::ofstream velocity_log_;
         std::ofstream perception_log_;
+        std::ofstream map_log_;
 
         // Lap counter variables
         int completed_laps_;
         int cooldown_;
         int cooldown_max_;
 
+        // Current perception cone count
+        size_t perception_count_;
+
         // Last velocity msg received
         custom_msgs::msg::VelEstimation last_vel_msg_;
-
-        // Global lock for SLAM node
-        pthread_spinlock_t global_lock_;
 
         // Callback group for threading
         rclcpp::CallbackGroup::SharedPtr slam_callback_group_;
@@ -76,12 +81,8 @@ namespace ns_slam
         rclcpp::TimerBase::SharedPtr optimization_clock_;
         rclcpp::TimerBase::SharedPtr telemetry_clock_;
 
-        // Velocity Estimation getter in order to set time interval in slam_object_
-        rclcpp::Client<custom_msgs::srv::GetFrequencies>::SharedPtr cli_;
-
         // Load ROS parameters from config files
         void loadParameters();
-        int getNodeFrequency();
 
         void odometryCallback(const custom_msgs::msg::VelEstimation::SharedPtr msg);
 
@@ -92,9 +93,7 @@ namespace ns_slam
         void addAccelObservations(const std::vector<PerceptionMeasurement>& observations);
 
     public:
-        // The file paths are passed as arguments to the constructor and can be modified in the main function
         LifecycleSlamHandler();
-
         ~LifecycleSlamHandler();
     protected:
         ns_slam::CallbackReturn on_configure(const rclcpp_lifecycle::State & state);

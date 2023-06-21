@@ -46,7 +46,7 @@ def generate_launch_description():
         name='mpc'
     )
 
-    ldList = [inferenceNode, saltasNode, pathplanningNode, velocityEstimationNode, slamNode, mpcNode]
+    ldList = [inferenceNode, saltasNode, slamNode, velocityEstimationNode, mpcNode, pathplanningNode]
 
     ld = LaunchDescription(ldList)
     return ld

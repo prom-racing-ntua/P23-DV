@@ -60,13 +60,13 @@ Model {
       }
     }
   }
-  Created		  "6/5/2023 5:30:02 PM"
+  Created		  "6/15/2023 6:55:02 PM"
   Creator		  "embotech AG"
   UpdateHistory		  "UpdateHistoryNever"
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "embotech AG"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "6/5/2023 5:30:02 PM"
+  LastModifiedDate	  "6/15/2023 6:55:02 PM"
   RTWModifiedTimeStamp	  315310195
   ModelVersionFormat	  "1.%<AutoIncrement:2>"
   ConfigurationManager	  "None"
@@ -767,7 +767,7 @@ Model {
       BlockType		      S-Function
       Name		      "FORCESNLPsolver"
       SID		      "1"
-      Ports		      [4, 1]
+      Ports		      [5, 1]
       Position		      [170, 99, 650, 180]
       ZOrder		      1
       FunctionName	      "FORCESNLPsolver_simulinkBlockcompact"
@@ -805,6 +805,7 @@ Model {
 " - x0 - matrix of size [480x1]\n  "
 " - all_parameters - matrix of size [160x1]\n  "
 " - reinitialize - scalar\n  "
+" - num_of_threads - scalar\n  "
 
 	"\nOUTPUTS:\n"
 	" - outputs - column vector of length 480\n  "
@@ -815,6 +816,7 @@ Model {
 "port_label('input', 2, 'x0') \n  "
 "port_label('input', 3, 'all_parameters') \n  "
 "port_label('input', 4, 'reinitialize') \n  "
+"port_label('input', 5, 'num_of_threads') \n  "
 "port_label('output', 1, 'outputs') \n  "
 "if( exist('FORCES_PRO_Logo.jpg','file') ), image(imread('FORCES_PRO_Logo.jpg'),'center','on'); elseif( exist(['interface',filesep,'FORCES_PRO_Logo.jpg'],'file') ), image(imread(['interface',filesep,'FORCES_PRO_Logo.jpg']),'center','on'); elseif( exist(['FORCESNLPsolver',filesep,'interface',filesep,'FORCES_PRO_Logo.jpg'],'file') ), image(imread(['FORCESNLPsolver',filesep,'interface',filesep,'FORCES_PRO_Logo.jpg']),'center','on'); end \n "
 

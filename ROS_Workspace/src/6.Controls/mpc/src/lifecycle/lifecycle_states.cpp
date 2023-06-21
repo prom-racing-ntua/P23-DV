@@ -1,8 +1,8 @@
 #include "lifecycle_mpc_node.hpp"
-
+#include "lifecycle_msgs/msg/state.hpp"
 
 namespace mpc{
-    mpc::CallbackReturn
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
         LifecycleMpcHandler::on_configure(const rclcpp_lifecycle::State &state)
     {
         mpc_solver.mem = FORCESNLPsolver_internal_mem(0);
@@ -13,10 +13,9 @@ namespace mpc{
             ReadKnownTrack();
         }
         setSubscribers();
-        mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&LifecycleMpcHandler::mpc_callback, this));
-        mpc_clock_->cancel();
+        // mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&LifecycleMpcHandler::mpc_callback, this));
+        // mpc_clock_->cancel();
         mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
-
         return mpc::CallbackReturn::SUCCESS;
     }
 
@@ -28,8 +27,8 @@ namespace mpc{
         mpc_publisher_->on_activate();
 
         /* Activate MPC clock */
-        mpc_clock_->cancel();
-        mpc_clock_->reset();
+        // mpc_clock_->cancel();
+        // mpc_clock_->reset();
 
         RCLCPP_INFO(get_logger(), "MPC Node Activated!");
         return mpc::CallbackReturn::SUCCESS;
@@ -41,7 +40,7 @@ namespace mpc{
         RCLCPP_INFO(get_logger(), "Deactivating MPC Node");
 
         mpc_publisher_->on_deactivate();
-        mpc_clock_->cancel();
+        // mpc_clock_->cancel();
     
         RCLCPP_INFO(get_logger(), "MPC Node deactivated");
         return mpc::CallbackReturn::SUCCESS;
@@ -61,10 +60,19 @@ namespace mpc{
     {
         RCLCPP_INFO(get_logger(), "Shutting down MPC Node");
 
+        using NodeState = lifecycle_msgs::msg::State;
+
+        uint8_t currentState = state.id();
+        
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            RCLCPP_WARN(get_logger(), "Lifecycle MPC Shutdown!");
+            return mpc::CallbackReturn::SUCCESS;
+        }
+
         mpc_publisher_->on_deactivate();
         mpc_publisher_.reset();
 
-        mpc_clock_->cancel();
+        // mpc_clock_->cancel();
 
         /* Should actually free up memory and such */
 

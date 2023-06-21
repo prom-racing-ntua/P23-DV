@@ -44,14 +44,4 @@ inline Eigen::MatrixXd readTrack(const std::string& filename) {
     return result;
 }
 
-
-// int main() {
-//     std::string path{"/home/dimitris/Prom_Driverless/draft_code/path_planning/test_tracks/trackdrive_midpoints.txt"};
-//     Eigen::MatrixXd midpoints{ readTrack(path) };
-
-//     std::cout << midpoints << '\n';
-
-//     return 0;
-// }
-
 #endif

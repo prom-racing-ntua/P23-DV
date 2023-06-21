@@ -1,0 +1,7 @@
+DriverlessTransition    transition
+Mission                 mission
+---
+bool                    success
+---
+uint8                   remaining_transitions
+uint8                   failed_transitions

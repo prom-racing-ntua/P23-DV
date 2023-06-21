@@ -66,13 +66,12 @@ void SlamFromFile::run_slam() {
 		odometry_measurement.velocity_y = odometry_.velocity_y;
 		// odometry_measurement.velocity_y = 0.0;
 		odometry_measurement.yaw_rate = odometry_.yaw_rate;
-		odometry_measurement.measurement_noise = odometry_weight_ * odometry_.covariance_matrix;
+		odometry_measurement.measurement_noise = odometry_.covariance_matrix;
 
 		slam_object_.addOdometryMeasurement(odometry_measurement);
 
 		odometry_eof_ = readNextOdometry();
 	}
-
 
 	// Publish pose message
 	custom_msgs::msg::PoseMsg pose_msg{};
@@ -107,18 +106,18 @@ void SlamFromFile::run_slam() {
 			// Setting observation noise depending on type of cone
 			if (landmark.color == ConeColor::LargeOrange)
 			{
-				obs_noise << 0.01, 0,
-					0, 3 * perception_weight_ * landmark.range / 10;
+				obs_noise << 0.001, 0,
+					0, 3 * (0.011*std::pow(landmark.range+1,2) - 0.082*(landmark.range+1) + 0.187);
 			}
 			else
 			{
-				obs_noise << 0.001, 0,
-					0, perception_weight_* landmark.range / 10;
+				obs_noise << 0.0001, 0,
+					0, 0.011*std::pow(landmark.range+1,2) - 0.082*(landmark.range+1) + 0.187;
 			}
 			landmark.observation_noise = obs_noise;
 
 			// Only accept cones that are within the specified range
-			if (landmark.range <= 6.0 or (landmark.theta <= 0.4 and landmark.range <= perception_range_))
+			if (landmark.range <= 6.0 or (abs(landmark.theta <= 0.7) and landmark.range <= perception_range_))
 			{
 				// RCLCPP_INFO_STREAM(get_logger(), "Adding cone at range " << landmark.range << " m and angle " << landmark.theta << " rad.\n");
 				all_observed_landmarks.push_back(landmark);
@@ -129,6 +128,7 @@ void SlamFromFile::run_slam() {
 
 	if (!all_observed_landmarks.empty())
 	{
+		int perception_count{ static_cast<int>(all_observed_landmarks.size()) };
 		if (!map_ready_) {
             addAccelObservations(all_observed_landmarks);
             return;
@@ -155,6 +155,7 @@ void SlamFromFile::run_slam() {
 		custom_msgs::msg::LocalMapMsg map_msg{};
 		custom_msgs::msg::ConeStruct cone_msg{};
 
+		map_msg.cones_count_actual = perception_count;
 		map_msg.pose.position.x = current_pose[0];
 		map_msg.pose.position.y = current_pose[1];
 		map_msg.pose.theta = current_pose[2];
@@ -166,11 +167,11 @@ void SlamFromFile::run_slam() {
 
 		if (track.empty())
 		{
-			map_msg.cone_count = 0;
+			map_msg.cones_count_all = 0;
 		}
 		else
 		{
-			map_msg.cone_count = track.size();
+			map_msg.cones_count_all = track.size();
 			for (auto cone : track)
 			{
 				cone_msg.color = cone[0];
@@ -336,8 +337,8 @@ void SlamFromFile::loadParameters() {
 	declare_parameter<std::vector<double>>("starting_position", { 0.0, 0.0, 0.0 });
 	declare_parameter<std::vector<double>>("starting_position_covariance", { 0.1, 0.1, 0.1 });
 
-	declare_parameter<std::vector<double>>("left_orange", { 6.0, -3.0 });
-	declare_parameter<std::vector<double>>("right_orange", { 6.0, 3.0 });
+	declare_parameter<std::vector<double>>("left_orange", { 0.0, -1.5 });
+	declare_parameter<std::vector<double>>("right_orange", { 0.0, 1.5 });
 
 	// Set and open files
 	share_dir_ = ament_index_cpp::get_package_share_directory("slam");
@@ -405,12 +406,15 @@ void SlamFromFile::addAccelObservations(const std::vector<PerceptionMeasurement>
             matched_cone.range_vector.push_back(cone.range);
 			matched_cone.theta_vector.push_back(cone.theta);
 
-            std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size();
-            std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size();
+            double avg_range{ std::accumulate(matched_cone.range_vector.begin(), matched_cone.range_vector.end(), 0.0) / matched_cone.range_vector.size() };
+            double avg_theta{ std::accumulate(matched_cone.theta_vector.begin(), matched_cone.theta_vector.end(), 0.0) / matched_cone.theta_vector.size() };
+
+			matched_cone.estimated_pose[0] = avg_range * std::cos(avg_theta);
+			matched_cone.estimated_pose[1] = avg_range * std::sin(avg_theta);
         }
     }
 
-    if (num_observations_ >= 40)
+    if (num_observations_ >= 30)
     {
         double track_width{100.0};
         for (auto& yellow_cone : accel_map_)

@@ -13,24 +13,12 @@ def generate_launch_description():
         Node(
             package='perception',
             executable='lifecycle_inference',
-            name='lifecycle_inference',
+            name='inference',
         ),
         Node(
             package='perception',
             executable='lifecycle_acquisition',
-            name='lifecycle_acquisition_left',
+            name='acquisition',
             parameters=[config],
-        ),
-        Node(
-            package='perception',
-            executable='lifecycle_acquisition',
-            name='lifecycle_acquisition_right',
-            parameters=[config],
-        ),
-        Node(
-            package='perception',
-            executable='lifecycle_acquisition',
-            name='lifecycle_acquisition_center',
-            parameters=[config],
-        ),
+        )
     ])

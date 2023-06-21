@@ -85,6 +85,9 @@ class SaltasNode(Node):
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().info(f'Shutting Down Saltas Node')
 
+        if (state.state_id == 1):
+            return TransitionCallbackReturn.SUCCESS
+        
         self.saltas_clock.cancel()
         
         self.destroy_timer(self.saltas_clock)

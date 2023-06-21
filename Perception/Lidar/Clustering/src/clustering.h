@@ -255,7 +255,7 @@ void CsvToPcd(std::vector<PointT> input_){
         cloud_temp->points[i] = input_[i];
     }
     //write to point cloud
-    pcl::io::savePCDFileBinary("../DataError/pcd/cloud_cluster_init.pcd", *cloud_temp);
+    pcl::io::savePCDFileBinary("../DataError2/pcd/cloud_cluster_init.pcd", *cloud_temp);
     std::cout << "Saved " << cloud_temp->size() << " data points to file: " << "cloud_cluster_init.pcd" << std::endl;
 }
 }//end namespace

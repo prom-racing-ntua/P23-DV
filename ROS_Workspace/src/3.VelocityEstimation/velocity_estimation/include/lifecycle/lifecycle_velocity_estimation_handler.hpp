@@ -70,9 +70,6 @@ namespace ns_vel_est
         void wheelSpeedCallback(const custom_msgs::msg::RxWheelSpeed::SharedPtr msg);
         void steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg);
 
-        /* Synchronization method for creating a "blocking" async client :)  - CURRENTLY NOT USED*/
-        sem_t clientSemaphore; 
-
     public:
         explicit LifecycleVelocityEstimationHandler();
         //~LifecycleVelocityEstimationHandler();
