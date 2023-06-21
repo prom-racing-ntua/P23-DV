@@ -41,7 +41,7 @@ namespace path_planner
             path_planner::CallbackReturn on_configure(const rclcpp_lifecycle::State & state);
             path_planner::CallbackReturn on_activate(const rclcpp_lifecycle::State & state);
             path_planner::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state);
-            path_planner::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state);
+            path_planner::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) ;
             path_planner::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state);
             path_planner::CallbackReturn on_error(const rclcpp_lifecycle::State & state);
     };

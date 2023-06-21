@@ -62,7 +62,7 @@ namespace lifecycle_manager_namespace
                 std::thread{std::bind(&LifecycleManagerNode::activateControls, this)}.detach();
                 break;
             default:
-                RCLCPP_ERROR(get_logger(), "Unkown Transition Requested");
+                RCLCPP_ERROR(get_logger(), "Unknown Transition Requested");
                 return;
         }
         goalTimer->reset();

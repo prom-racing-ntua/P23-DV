@@ -41,7 +41,7 @@ namespace resurrection_manager_namespace
 
     void ResurrectionManagerNode::handleResurrection(const std::shared_ptr<custom_msgs::srv::ResurrectNode::Request> request,
         std::shared_ptr<custom_msgs::srv::ResurrectNode::Response> response)
-    {   
+    {
         std::string nodeToResurrect = request->node_to_resurrect;
 
         pid_t resurrectionPID = resurrectNode(nodeToResurrect);

@@ -75,34 +75,32 @@ namespace p23_status_namespace
                 if (currentMission == p23::INSPECTION or currentMission == p23::EBS_TEST) {maxLaps = 255;}
                 else
                 {
-                    auto enabled_nodes{ get_node_names() };
-                    bool is_mpc_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/mpc") != enabled_nodes.end() };
-                    bool is_pid_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/pid_pp_controller") != enabled_nodes.end() };
+                    std::shared_ptr<rclcpp::AsyncParametersClient> param_cli;
 
-                    if (is_mpc_active and is_pid_active)
-                    {
-                        RCLCPP_ERROR(get_logger(), "Both MPC and PID are active in AS Ready");
+                    if((currentMission == p23::SKIDPAD) or (currentMission == p23::TRACKDRIVE)) {
+                        RCLCPP_INFO(get_logger(), "Control node is MPC");
+                        param_cli = std::make_shared<rclcpp::AsyncParametersClient>(this, "mpc");
                     }
-                    else if (is_mpc_active)
-                    {
-                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/mpc") };
-                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
-                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
-                        else \
-                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
+
+                    else if ((currentMission==p23::ACCELERATION) or (currentMission==p23::AUTOX)) {
+                        param_cli = std::make_shared<rclcpp::AsyncParametersClient>(this, "pure_pursuit");
                     }
-                    else if (is_pid_active)
-                    {
-                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/pid_pp_controller") };
-                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
-                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
-                        else \
-                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
+
+                    if (!param_cli->wait_for_service(std::chrono::seconds(1))) {
+                        RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
                     }
-                    else
-                    {
-                        RCLCPP_ERROR(get_logger(), "No controller nodes are active");
+
+                    auto get_max_laps_result = param_cli->get_parameters({"max_laps"});
+
+                    auto future_status = wait_for_result(get_max_laps_result, std::chrono::seconds(1));
+
+                    if (future_status != std::future_status::ready) {
+                        RCLCPP_ERROR(get_logger(), "Max Laps parameter server timed out");
                     }
+
+                    auto result = get_max_laps_result.get();
+                    maxLaps = result[0].as_int();
+
                     RCLCPP_WARN_STREAM(get_logger(), "Max laps set to: " << maxLaps);
                 }
             }

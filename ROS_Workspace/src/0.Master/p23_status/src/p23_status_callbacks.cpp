@@ -8,15 +8,22 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::S
     conesCountAll = msg->cones_count_all;
     conesActual = msg->cones_count_actual;
     currentLap = msg->lap_count;
-
-    /* Should send a standstill bit as well here... */
-
-    if (currentLap >= maxLaps)
-    {
-        currentDvStatus = p23::MISSION_FINISHED;
-        /* Tha doume... */
-    }
 }
+
+// void P23StatusNode::receiveMissionFinished(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+//     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+// {
+//     RCLCPP_INFO(get_logger(), "Received mission finished trigger from control node");
+
+//     /* Cancel Vectornav/Lifecycle Node status as to not go to PC Error by mistake */
+//     sensorCheckupTimer_.reset();
+//     lifecycle_node_status_subscription_.reset();
+
+//     currentDvStatus = p23::DV_Status::MISSION_FINISHED;
+//     /* With currentDvStatus set as Mission Finished, the VCU will automatically send an AS_FINISHED message that will later then change our
+//         AS Status and shutdown the nodes. */
+//     response->success = true;
+// }
 
 void P23StatusNode::checkVectornav() {
     using namespace std::chrono_literals;
@@ -34,7 +41,6 @@ void P23StatusNode::checkVectornav() {
                 insMode = 2;//result->ins_mode;
                 RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
-
             if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
             {
                 RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
@@ -86,17 +92,11 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
         if (it.second)
         {
             // RCLCPP_ERROR(get_logger(), "Node %s has no heartbeat.", it.first.c_str());
-            // statusBeforeError = currentDvStatus;
-            currentDvStatus = p23::NODE_PROBLEM;
-            nodesReady = false;
-            if (std::find(nodeList.begin(), nodeList.end(), it.first) != nodeList.end())
-            {
-                /* TODO: Talk about which node should send us to AS_EMERGENCY mode. To go to AS_EMERGENCY, 
-                    just set the pcError flag high and the EV system will do the rest. */
-                    
-            }
+            /* handleNodeProblem();*/
+            // currentDvStatus = p23::NODE_PROBLEM;
+            // nodesReady = false;
         }
-    }    
+    }
 }
 
 void P23StatusNode::sendSystemState() {

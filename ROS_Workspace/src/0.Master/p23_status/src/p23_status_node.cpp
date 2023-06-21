@@ -110,42 +110,17 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
             ". Current mission is " << p23::mission_list.at(currentMission));
         return;
     }
+    
     currentMission = static_cast<p23::Mission>(msg->mission_selected);
 
-    // TODO: Check again lap counts
-    switch (static_cast<p23::Mission>(msg->mission_selected))
-    {
-    case(p23::MISSION_UNLOCKED):
-        // Go back to LV-ON if we are in Mission Selected
+    if (currentMission == p23::MISSION_UNLOCKED) {
         changeDVStatus(p23::ON_MISSION_UNLOCKED);
         maxLaps = 255;
         return;
-    case(p23::ACCELERATION):
-        maxLaps = 1;
-        break;
-    case(p23::SKIDPAD):
-        maxLaps = 5;
-        break;
-    case(p23::AUTOX):
-        maxLaps = 2;
-        break;
-    case(p23::TRACKDRIVE):
-        maxLaps = 11;
-        break;
-    case(p23::EBS_TEST):
-        maxLaps = 255;
-        break;
-    case(p23::INSPECTION):
-        maxLaps = 255;
-        break;
-    case(p23::MANUAL):
-        // The PC will shutdown so no one cares what happens here...
+    }
+
+    else if (currentMission == p23::MANUAL) {
         std::system("shutdown -h 1");
-        return;
-    default:
-        RCLCPP_ERROR_STREAM(get_logger(), "Invalid mission received " << currentMission);
-        currentMission = p23::MISSION_UNLOCKED;
-        maxLaps = 255;
         return;
     }
 

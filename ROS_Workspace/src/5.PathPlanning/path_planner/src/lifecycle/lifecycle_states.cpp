@@ -7,7 +7,7 @@
 namespace path_planner
 {
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_configure(const rclcpp_lifecycle::State &state)
+        LifecyclePathPlanner::on_configure(const rclcpp_lifecycle::State & state)
     {
         waymaker.init
         (
@@ -32,7 +32,7 @@ namespace path_planner
     }
 
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_activate(const rclcpp_lifecycle::State &state)
+        LifecyclePathPlanner::on_activate(const rclcpp_lifecycle::State & state)
     {
         RCLCPP_INFO(get_logger(), "Path Planner activated");
         pub_waypoints->on_activate();
@@ -40,7 +40,7 @@ namespace path_planner
     }
 
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_deactivate(const rclcpp_lifecycle::State &state)
+        LifecyclePathPlanner::on_deactivate(const rclcpp_lifecycle::State & state)
     {
         RCLCPP_INFO(get_logger(), "Path Planner de-activated");
         pub_waypoints->on_deactivate();
@@ -48,20 +48,29 @@ namespace path_planner
     }
 
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_cleanup(const rclcpp_lifecycle::State &state)
+        LifecyclePathPlanner::on_cleanup(const rclcpp_lifecycle::State & state)
     {
         RCLCPP_INFO(get_logger(), "Path Planner unconfigured");
+        pub_waypoints.reset();
+        sub_mapper.reset();
         return path_planner::CallbackReturn::SUCCESS;
     }
 
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_shutdown(const rclcpp_lifecycle::State &state)
-    {
+        LifecyclePathPlanner::on_shutdown(const rclcpp_lifecycle::State & state)
+    {   
+        /* If current state is UNCONFIGURED, then just return */
+        if (state.id() == 1) {
+            return path_planner::CallbackReturn::SUCCESS;
+        }
+
+        pub_waypoints.reset();
+        sub_mapper.reset();
         return path_planner::CallbackReturn::SUCCESS;
     }
 
     path_planner::CallbackReturn 
-        LifecyclePathPlanner::on_error(const rclcpp_lifecycle::State &state)
+        LifecyclePathPlanner::on_error(const rclcpp_lifecycle::State & state)
     {
         return path_planner::CallbackReturn::SUCCESS;
     }

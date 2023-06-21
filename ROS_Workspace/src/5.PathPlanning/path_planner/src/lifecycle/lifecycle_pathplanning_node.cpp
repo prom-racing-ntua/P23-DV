@@ -9,6 +9,7 @@ namespace path_planner
     LifecyclePathPlanner::LifecyclePathPlanner(): LifecycleNode("path_planner"), waymaker(), total_execution_time(0) {
         RCLCPP_INFO(get_logger(), "Path Planner just launched");
         loadParameters();
+        RCLCPP_INFO(get_logger(), "Loaded parameters");
     }
 
     void LifecyclePathPlanner::loadParameters() {

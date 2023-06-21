@@ -4,7 +4,6 @@
 #include <string>
 #include <unordered_map>
 
-
 namespace p23
 {
 // List of available Missions

@@ -4,8 +4,9 @@
 namespace ns_slam
 {
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State & state)
     {   
+        RCLCPP_INFO(get_logger(), "Current State %u", state.id());
         node_frequency_ = get_parameter("velocity_estimation_frequency").as_int();
 
         if (!node_frequency_)
@@ -83,7 +84,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_activate(const rclcpp_lifecycle::State & state)
     {
         /* Activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
@@ -98,7 +99,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_deactivate(const rclcpp_lifecycle::State & state)
     {
         /* De-activate Publishers and optimization Timer 
             These calls cannot fail so there is nothing to stop us from 
@@ -111,7 +112,7 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_cleanup(const rclcpp_lifecycle::State & state)
     {
         completed_laps_ = -1;
         cooldown_ = 0;
@@ -119,6 +120,8 @@ namespace ns_slam
 
         pose_publisher_.reset();
         map_publisher_.reset();
+        velocity_subscriber_.reset();
+        perception_subscriber_.reset();
         if (pthread_spin_destroy(&global_lock_))
         {
             RCLCPP_ERROR(get_logger(), "Global lock destruction failed cannot go to unconfigured state");
@@ -138,18 +141,30 @@ namespace ns_slam
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_shutdown(const rclcpp_lifecycle::State & state)
     {
+
+        using NodeState = lifecycle_msgs::msg::State;
         RCLCPP_INFO(get_logger(), "Deactivating Lifecycle SLAM node");
-        /* De-activate Publishers and optimization Timer 
-            These calls cannot fail so there is nothing to stop us from 
-            going to inactive mode. */
+
+        uint8_t currentState = state.id();
+
+        /* If we send a shutdown signal from the unconfigured state, then just straight up
+            send a success signal.*/
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            return ns_slam::CallbackReturn::SUCCESS;
+        }
+
+        /* Deactivate publishers and cancel clocks. Then delete them. Reset on timers mean that they
+            restart. Reset on publishers/subscribers mean that they get deleted. */
         pose_publisher_->on_deactivate();
         map_publisher_->on_deactivate();
         optimization_clock_->cancel();
 
         pose_publisher_.reset();
         map_publisher_.reset();
+        velocity_subscriber_.reset();
+        perception_subscriber_.reset();
 
         if (is_logging_)
         {
@@ -159,11 +174,12 @@ namespace ns_slam
 
         if (is_mapping_) map_log_.close();
 
+
         return ns_slam::CallbackReturn::SUCCESS;
     }
 
     ns_slam::CallbackReturn
-        LifecycleSlamHandler::on_error(const rclcpp_lifecycle::State)
+        LifecycleSlamHandler::on_error(const rclcpp_lifecycle::State & state)
     {
         return ns_slam::CallbackReturn::SUCCESS;
     }
