@@ -22,7 +22,7 @@ setup(
         'console_scripts': [
             'run = inspection.dummy_inspection:main',
             'pc_error = inspection.pc_error:main',
-            'lifecycle = inspection.lifecycle_inspection:main'
+            'inspection = inspection.lifecycle_inspection:main'
         ],
     },
 )

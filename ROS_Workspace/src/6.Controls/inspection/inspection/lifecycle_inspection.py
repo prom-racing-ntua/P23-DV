@@ -13,12 +13,13 @@ COMMAND_FREQUENCY = 40          # [Hz]
 TORQUE_COMMAND = 1.2            # [N*m]
 MAX_STEERING = radians(31.2)    # [rad]
 STEERING_PERIOD = 6             # [sec]
-MISSION_DURATION = 30           # [sec]
+MISSION_DURATION = 24           # [sec]
 
 
 class InspectionMission(Node):
     def __init__(self) -> None:
         super().__init__('inspection')
+        self.mission_finished = False
         self._steering_angle = 0.0
         self._actual_torque = 0.0
         self.get_logger().info(f"Inspection Node Initialized")
@@ -75,6 +76,11 @@ class InspectionMission(Node):
         return TransitionCallbackReturn.SUCCESS
 
     def send_commands(self) -> None:
+        if self.mission_finished:
+            msg = TxControlCommand()
+            self._command_publisher.publish(msg)  
+            return     
+
         time = self.get_time() - self._start_time
         msg = TxControlCommand()
 
@@ -84,11 +90,11 @@ class InspectionMission(Node):
         msg.motor_torque_target = TORQUE_COMMAND
         msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)
    
-        self._command_publisher.publish(msg)        
+        self._command_publisher.publish(msg)       
         
         if time > MISSION_DURATION:
-            # Mission Finished, should call p23_status or something
-            # Send a SLAM message that has the mission_finished flag set
+            # Mission Finished, should call p23_status service (not implemented yet)
+            self.mission_finished = True
             self.get_logger().warn("Mission Finished", once=True)
         return
 
