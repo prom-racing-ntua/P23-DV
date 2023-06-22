@@ -49,7 +49,7 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=17.5
+u_upper = 17.5
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -185,7 +185,6 @@ def obj(z,current_target):
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-    print("current target is: ",current_target[3])
     return (
         3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
@@ -655,18 +654,18 @@ def cubic_spline_inference(cs,parameter,x):
 
 def main():
     #import data from path planning
+    model, solver = generate_pathplanner()
     emergency_count=0
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    data_points = Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
-    midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
+    data_points = Dataloader("Data/als_data.txt")
+    midpoints = Dataloader("Data/trackdrive_midpoints.txt")
     print(np.shape(1))
     cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
     print("reference track: ",reference_track, np.shape(reference_track))
     # for_mpc = cubic_spline_inference(cs,[0.0,0.0])
     # generate code for estimator
-    model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
     print("after solver generation")
     
@@ -739,15 +738,10 @@ def main():
                 if(s_closest>INDEX_MAX): s_closest = 0.0 #reset index for next lap
                 for i in range (model.N-1):
                     ds_step=pred_u[2,i]*dt_integration
-                    if(ds_step<0.1):
-                        ds_step=0.1
-                    if((ds_step>0.5) and (i<4)): 
-                        ds_step=0.5
-                        print("mpika ds1 at index: ",i)
-                    if((ds_step>0.5) and (i>=5)): 
-                        ds_step=0.5
-                        print("mpika ds2 at index: ",i)
-                    # ds_step=0.25 #constant with vel.profile 
+                    if(ds_step<0.1):ds_step=0.1
+                    if(ds_step>0.5): ds_step=0.5
+                    # ds_step=0.25 #constant with vel.profile
+                    # ds_step=0.1 
                     s_new+=ds_step
                     s_solver=pred_x[8,i] 
                     parameters_array.append(s_new)
@@ -816,10 +810,10 @@ def main():
         steering_txt.append(x[:,k][7])
         # plot results of current simulation step
         if(k%100==0):
-            file = open("P23-DV/MPC/MPC_embotech/Data/steering.txt", "w+")
+            file = open("Data/steering.txt", "w+")
             file.write(str(steering_txt))
             file.close()
-            file2 = open("P23-DV/MPC/MPC_embotech/Data/torques.txt", "w+")
+            file2 = open("Data/torques.txt", "w+")
             file2.write(str(wheel_torques_txt))
             file2.close()
         if(k%20==0):
@@ -847,5 +841,13 @@ def main():
     print()
     print("time data are: ",np.max(time_array), " ",np.mean(time_array))
 
+def main_solver(): model, solver = generate_pathplanner()
+
 if __name__ == "__main__":
-    main()
+    cmd_arg = sys.argv[1]
+    if(cmd_arg=="one_simulation"): 
+        print("solver generator script called + simulation")
+        main()
+    if(cmd_arg=="no_simulation"): 
+        print("solver generator script called + no simulation")
+        main_solver()

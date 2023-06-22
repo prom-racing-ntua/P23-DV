@@ -1,4 +1,4 @@
-pyenv local 3.10.0
+pyenv local 3.9.0
 if [ $# -eq 0 ]
   then
     scriptToRun=mpc_solver_generator.py
@@ -7,17 +7,16 @@ if [ $# -eq 0 ]
 fi
 
 export PYTHONPATH=../../../embotech_env:$PYTHONPATH
-python3 $scriptToRun
+python3 $scriptToRun $2
 returnCode=$?
-
+rm -r .python-version
+rm  *.forces
+echo
 if [ "$returnCode" -eq 0 ]
     then
         cp -r FORCESNLPsolver ../../ROS_Workspace/src/6.Controls/mpc/src
-        rm -r .python-version
-        rm -r FORCESNLPsolver
-        rm  *.forces
     else
         echo "Solver generation failed"
 fi
-
+rm -r FORCESNLPsolver
 exit $returnCode

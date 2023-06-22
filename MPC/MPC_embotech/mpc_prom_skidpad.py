@@ -43,11 +43,11 @@ WD_front = 0.467
 l_f = lol*(1-WD_front)
 l_r = lol*WD_front
 center=l_f+15
-dist_thres=1.5
+dist_thres=2*l_f
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=10.0
+u_upper=11.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -183,7 +183,6 @@ def obj(z,current_target):
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-    print("current target is: ",current_target[3])
     return (
         3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
@@ -640,15 +639,16 @@ def cubic_spline_inference(cs,parameter,x,counter_all):
 
 def main():
     #import data from path planning
+    model, solver = generate_pathplanner()
     emergency_count=0
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    midpoints_all = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_all.txt")
-    midpoints1 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_straight1.txt")
-    midpoints2 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_right.txt")
-    midpoints3 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_left.txt")
-    midpoints4 = Dataloader("P23-DV/MPC/MPC_embotech/Data/skidpad_straight2.txt")
+    midpoints_all = Dataloader("Data/skidpad_all.txt")
+    midpoints1 = Dataloader("Data/skidpad_straight1.txt")
+    midpoints2 = Dataloader("Data/skidpad_right.txt")
+    midpoints3 = Dataloader("Data/skidpad_left.txt")
+    midpoints4 = Dataloader("Data/skidpad_straight2.txt")
     cs1,reference_track1 = cubic_spline_generation(midpoints1[0,:],midpoints1[1,:])
     cs2,reference_track2 = cubic_spline_generation(midpoints2[0,:],midpoints2[1,:])
     cs3,reference_track3 = cubic_spline_generation(midpoints3[0,:],midpoints3[1,:])
@@ -657,7 +657,6 @@ def main():
     print("reference track4 is: ",reference_track4,np.shape(reference_track4))
     cs_all,reference_track_all = cubic_spline_generation(midpoints_all[0,:],midpoints_all[1,:])
     print("all skidpad is",reference_track_all,np.shape(reference_track_all))   
-    model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
     # Simulation
     sim_length = 10000 # simulate sim_length*0.05
@@ -841,10 +840,10 @@ def main():
         print("ellipse data are: ",np.mean(ellipse_array),np.var(ellipse_array))
         # plot results of current simulation step
         if(k%100==0):
-            file = open("P23-DV/MPC/MPC_embotech/Data/steering.txt", "w+")
+            file = open("Data/steering.txt", "w+")
             file.write(str(steering_txt))
             file.close()
-            file2 = open("P23-DV/MPC/MPC_embotech/Data/torques.txt", "w+")
+            file2 = open("Data/torques.txt", "w+")
             file2.write(str(wheel_torques_txt))
             file2.close()
         if(k%20==0):
@@ -871,5 +870,13 @@ def main():
     print()
     print("time data are: ",np.max(time_array), " ",np.mean(time_array))
 
+def main_solver(): model, solver = generate_pathplanner()
+
 if __name__ == "__main__":
-    main()
+    cmd_arg = sys.argv[1]
+    if(cmd_arg=="one_simulation"): 
+        print("solver generator script called + simulation")
+        main()
+    if(cmd_arg=="no_simulation"): 
+        print("solver generator script called + no simulation")
+        main_solver()
