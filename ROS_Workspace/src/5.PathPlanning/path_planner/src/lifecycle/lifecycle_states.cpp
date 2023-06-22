@@ -3,6 +3,7 @@
 #include <rclcpp/qos.hpp>
 
 #include "lifecycle_pathplanning_node.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
 namespace path_planner
 {
@@ -60,12 +61,19 @@ namespace path_planner
         LifecyclePathPlanner::on_shutdown(const rclcpp_lifecycle::State & state)
     {   
         /* If current state is UNCONFIGURED, then just return */
-        if (state.id() == 1) {
+        using NodeState = lifecycle_msgs::msg::State;
+
+        uint8_t currentState = state.id();
+        
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            RCLCPP_WARN(get_logger(), "\n-- Path Planning Shutdown!");
             return path_planner::CallbackReturn::SUCCESS;
         }
 
         pub_waypoints.reset();
         sub_mapper.reset();
+
+        RCLCPP_WARN(get_logger(), "\n-- Path Planning Shutdown!");
         return path_planner::CallbackReturn::SUCCESS;
     }
 

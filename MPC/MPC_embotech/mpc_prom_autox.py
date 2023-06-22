@@ -185,7 +185,6 @@ def obj(z,current_target):
     dsa =(dyn_sa-beta)
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
-    print("current target is: ",current_target[3])
     return (
         3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
@@ -638,18 +637,18 @@ def cubic_spline_inference(cs,parameter,x,finish_flag):
 
 def main():
     #import data from path planning
+    model, solver = generate_pathplanner()
     emergency_count=0
     fig,ax = plt.subplots()
     fig.set_size_inches(13,9)
     #from C++ path planning
-    data_points = Dataloader("P23-DV/MPC/MPC_embotech/Data/als_data.txt")
-    midpoints = Dataloader("P23-DV/MPC/MPC_embotech/Data/trackdrive_midpoints.txt")
+    data_points = Dataloader("Data/als_data.txt")
+    midpoints = Dataloader("Data/trackdrive_midpoints.txt")
     print(np.shape(1))
     cs,reference_track = cubic_spline_generation(midpoints[0,:],midpoints[1,:])
     print("reference track: ",reference_track, np.shape(reference_track))
     # for_mpc = cubic_spline_inference(cs,[0.0,0.0])
     # generate code for estimator
-    model, solver = generate_pathplanner()
     num_ins = model.nvar-model.neq
     print("after solver generation")
     
@@ -805,10 +804,10 @@ def main():
         steering_txt.append(x[:,k][7])
         # plot results of current simulation step
         if(k%100==0):
-            file = open("P23-DV/MPC/MPC_embotech/Data/steering.txt", "w+")
+            file = open("Data/steering.txt", "w+")
             file.write(str(steering_txt))
             file.close()
-            file2 = open("P23-DV/MPC/MPC_embotech/Data/torques.txt", "w+")
+            file2 = open("Data/torques.txt", "w+")
             file2.write(str(wheel_torques_txt))
             file2.close()
         if(k%20==0):
@@ -835,6 +834,14 @@ def main():
     print("error data are: ", np.max(err_array)," ",np.mean(err_array))
     print()
     print("time data are: ",np.max(time_array), " ",np.mean(time_array))
+    
+def main_solver(): model, solver = generate_pathplanner()
 
 if __name__ == "__main__":
-    main()
+    cmd_arg = sys.argv[1]
+    if(cmd_arg=="one_simulation"): 
+        print("solver generator script called + simulation")
+        main()
+    if(cmd_arg=="no_simulation"): 
+        print("solver generator script called + no simulation")
+        main_solver()

@@ -87,7 +87,7 @@ class AcquisitionLifecycleNode(Node):
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
-        self.get_logger().warn(f"\n-- Acquisition Node Configured!")
+        self.get_logger().warn(f"\n-- Acquisition Configured!")
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
@@ -95,7 +95,7 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = True
         self.camera.activateAcquisition()
         
-        self.get_logger().warn(f"\n-- Acquisition Node Activated!")
+        self.get_logger().warn(f"\n-- Acquisition Activated!")
         return super().on_activate(state)
 
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
@@ -103,7 +103,7 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
-        self.get_logger().warn(f"\n-- Acquisition Node Deactivated!")
+        self.get_logger().warn(f"\n-- Acquisition Deactivated!")
         return super().on_deactivate(state)
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
@@ -113,15 +113,19 @@ class AcquisitionLifecycleNode(Node):
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
         
-        self.get_logger().warn(f"\n-- Acquisition Node Un-Configured!")
+        self.get_logger().warn(f"\n-- Acquisition Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().warn(f"Shutting Down Acquisition Node")
+        if (state.state_id == 1):
+            return TransitionCallbackReturn.SUCCESS
+        
         self.camera.cleanupCamera()
 
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
+
+        self.get_logger().warn(f"\n-- Acquisition Shutdown!")
         return TransitionCallbackReturn.SUCCESS
 
     def trigger_callback(self, msg):

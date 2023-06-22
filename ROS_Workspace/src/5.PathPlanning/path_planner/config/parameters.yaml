@@ -2,18 +2,18 @@ path_planning:
   ros__parameters:
     #triangulation
     maximum_angle: 90
-    maximum_edge_angle: 45
-    maximum_distance: 5
+    maximum_edge_angle: 60
+    maximum_distance: 7
     target_depth: 12
 
     #penalties
     same_edge_penalty: 100
     length_penalty: 0.1
     angle_penalty: 0.1
-    total_length_reward: 0.1
+    total_length_reward: 0.5
     filtering_threshold: 90
 
     #local map selection
-    selection_radius_small: 5
+    selection_radius_small: 7
     selection_radius_big: 15
-    selection_angle: 90
+    selection_angle: 45

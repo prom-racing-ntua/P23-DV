@@ -108,6 +108,9 @@ PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(
     pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
     pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
     std::cout << "Object created" << std::endl;
+
+    log.open("src/6.Controls/simple_sim/data/target_log.txt");
+
 }
 
 PID_PP_Node::~PID_PP_Node()
@@ -151,7 +154,7 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
     bool is_end = msg->lap_count == laps_to_do;
     double ms = is_end ? 0 : max_speed;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count==0); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count<1); // last available speed is used. Alternatively should be in waypoints msg
 
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
@@ -202,6 +205,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     std::pair<double, double> projection = this->profile->operator()(position, theta);
     // std::cout<<"5.. ";
     std::cout<<"target : "<<projection.first<<". speed : "<<this->v_x<<std::endl;
+    log<<projection.first<<" "<<this->v_x<<std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
     for_publish.speed_actual = this->v_x * 3.6;
     for_publish.speed_target = projection.first * 3.6;
@@ -212,24 +216,25 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     double fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
     double fx; // old fx, new fx
     fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
-    // COG TBD
     double fz = model.Fz_calc("full", 1, 0, v_x);
-    // std::cout<<"Fz = "<<fz<<". Fx = "<<fx_next<<std::endl;
     double rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
-    // std::cout<<"7.. ";
+
+    double frz = model.Fz_calc("rear",1,1,v_x, a_x);
+    /*TBC*/
     if (rem < 0)
     {
         // exei ginei malakia
-        if (model.m * a_x > fx_next)
+        if (std::abs(model.m * a_x) > std::abs(fx_next))
         {
             // spiniaroume right now. HANDLING TBD
+            force = 0; //Let go
         }
         else
         {
             // tha spiniaroume otan efarmostei
-            force = 0.5 * v_x * v_x - v_y * r * model.m + safety_factor * (model.mx_max(fz) * fz);
-            fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
-            fx = std::max(model.m * a_x, fx_next);
+            force = 0.5 * v_x * v_x - v_y * r * model.m + safety_factor * std::min((model.mx_max(fz) * fz) * (force>0?1:-1), force>0?model.max_positive_force:model.max_negative_force);
+            fx_next = (force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m) * (force>0?1:-1);
+            fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
             rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
         }
     }
@@ -268,7 +273,10 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
         heading_angle = 0;
     // std::cout<<"12.. ";
     for_publish.steering_angle_target = heading_angle;
-    for_publish.brake_pressure_target = is_end && v_x < safe_speed_to_break;
+    bool switch_br = force<0 && v_x<safe_speed_to_break;
+
+    for_publish.brake_pressure_target = switch_br;
+    if(switch_br)for_publish.motor_torque_target = 0;
     // std::cout<<"13.. ";
 
     double lr = model.wb * model.wd;
@@ -278,7 +286,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     tg.x = act_target.x();
     tg.y = act_target.y();
     pub_target->publish(tg);
-
+    
     pub_actuators->publish(for_publish);
     std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << (is_end && v_x < safe_speed_to_break) ? 1 : 0;
     std::cout << " , ld = " << std::fixed << std::setprecision(4) << ld << std::endl;

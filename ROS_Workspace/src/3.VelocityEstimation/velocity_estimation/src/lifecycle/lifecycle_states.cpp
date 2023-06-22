@@ -1,4 +1,5 @@
 #include "lifecycle/lifecycle_velocity_estimation_handler.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
 
 namespace ns_vel_est
@@ -23,7 +24,6 @@ namespace ns_vel_est
         vn_300_rotation_matrix_ = getRotationMatrix(get_parameter("vectornav-vn-300.roll").as_double(),
             get_parameter("vectornav-vn-300.pitch").as_double());
 
-        // Initialize the measurement and update vector with zeros
         setSubscribers();
 
         pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
@@ -53,6 +53,14 @@ namespace ns_vel_est
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_cleanup(const rclcpp_lifecycle::State &state) 
     {
+        /* Subscriber cleanup */
+        vn_velocity_sub_.reset();
+        vn_imu_sub_.reset();
+        wheel_encoder_sub_.reset();
+        steering_sub_.reset();
+        master_sub_.reset();
+
+        /* VelEst class and Publisher cleanup */
         estimator_.reset();
         pub_.reset();
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Un-Configured!");
@@ -62,7 +70,26 @@ namespace ns_vel_est
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_shutdown(const rclcpp_lifecycle::State &state) 
     {  
+        using NodeState = lifecycle_msgs::msg::State;
+
+        uint8_t currentState = state.id();
+        
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Shutdown!");
+            return ns_vel_est::CallbackReturn::SUCCESS;
+        }
+
+        /* Subscriber cleanup */
+        vn_velocity_sub_.reset();
+        vn_imu_sub_.reset();
+        wheel_encoder_sub_.reset();
+        steering_sub_.reset();
+        master_sub_.reset();
+
+        /* VelEst class and Pulibhser cleanup */
+        estimator_.reset();
         pub_.reset();
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Shutdown!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

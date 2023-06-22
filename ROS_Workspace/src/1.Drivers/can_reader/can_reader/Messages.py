@@ -285,6 +285,8 @@ class SystemHealthMsg(CanInterfaceMessage):
         sensor_status_bits[1] = int(self._ros_msg.vn_300_error)
         sensor_status_bits[2] = int(self._ros_msg.camera_right_error)
         sensor_status_bits[3] = int(self._ros_msg.camera_left_error)
+        sensor_status_bits[4] = int(self._ros_msg.ins_mode & 2)
+        sensor_status_bits[5] = int(self._ros_msg.ins_mode & 1)
         out_msg[5] = bitsToByte(sensor_status_bits)
 
         # Set node status byte

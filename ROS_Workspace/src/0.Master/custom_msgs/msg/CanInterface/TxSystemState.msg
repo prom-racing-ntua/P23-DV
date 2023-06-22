@@ -21,6 +21,8 @@ bool        mpc_controls_error
 bool        path_planning_error
 bool        pi_pp_controls_error
 
+# INS Mode
+uint8       ins_mode
 
 # Lap and Cone Counters
 uint8        lap_counter

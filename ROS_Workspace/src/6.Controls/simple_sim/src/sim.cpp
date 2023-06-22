@@ -1,4 +1,5 @@
 #include "sim.hpp"
+#include <random>
 using namespace sim;
 
 double State::calc_sa_r(double v_y, double r, double v_x) const
@@ -149,10 +150,12 @@ double State::s_next(double s, double v_x, double v_y, double a_x, double a_y, d
 
 void State::next(double dt, double frx, double delta)
 {
+	this->frx = frx;
+	d = delta;
 	sa_r = calc_sa_r(v_y, r, v_x);
 	sa_f = calc_sa_f(v_y, r, v_x, delta);
-	double ffz = calc_ffz(v_x);
-	double frz = calc_frz(v_x);
+	ffz = calc_ffz(v_x);
+	frz = calc_frz(v_x);
 	fry = calc_fry(sa_r, frz);
 	ffy = calc_ffy(sa_f, ffz);
 	double f_drag = calc_drag(v_x);
@@ -166,6 +169,25 @@ void State::next(double dt, double frx, double delta)
 	v_x = v_x_next(v_x, a_x, dt);
 	v_y = v_y_next(v_y, a_y, dt);
 	t += dt;
+}
+
+void State::check_ellipses(std::ostream &out)const
+{
+	//Full vehicle
+	const double Fz = frz + ffz;
+	const double Fz0 = 1112.0554070627252;
+	const double dFz_full = (Fz-Fz0)/Fz0;
+	const double mx_max_full = 0.66 * (2.21891927 - 1.36151651e-07 * dFz_full);
+	const double my_max_full = 0.66 * (2.46810824 - 0.21654031 * dFz_full);
+	const double fx = a_x * constants.m;
+	const double fy = a_y * constants.m;
+	out<<(fx/mx_max_full)*(fx/mx_max_full)<<" "<<(fy/my_max_full)*(fy/my_max_full)<<" "<<Fz*Fz<<std::endl;
+	//Rear
+	const double dFz = (frz-Fz0)/Fz0;
+	const double mx_max = 0.66 * (2.21891927 - 1.36151651e-07 * dFz);
+	const double my_max = 0.66 * (2.46810824 - 0.21654031 * dFz);
+	
+
 }
 
 std::ostream &operator<<(std::ostream &out, const State &a)
@@ -259,7 +281,11 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 double add_noise(double x, double perc = 0.001)
 {
-	return x;
+	static std::default_random_engine generator;
+  	std::normal_distribution<double> distribution(0.0,perc);
+	double add = distribution(generator);
+	//std::cout<<add<<std::endl;
+	return x + add;
 }
 
 void sim_node::timer_callback()
@@ -270,6 +296,8 @@ void sim_node::timer_callback()
 		2. if 40Hz pose pub with noise
 		3. if 2Hz map pub
 	*/
+	
+
 	double f, d, dt = 1e-3;
 	for (int i = 0; i < 25; i++)
 	{
@@ -293,11 +321,12 @@ void sim_node::timer_callback()
 			last_d = last_d - 0.01;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt, f, last_d);
-		if ((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 and global_idx - idx_of_last_lap > 3000)
+		if ((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 and global_idx - idx_of_last_lap > 10000 and state.x)
 		{
 			idx_of_last_lap = global_idx;
 			state.lap++;
-			/*if(state.lap>=1)
+			/*
+			if(state.lap>=1)
 			{
 				std::ifstream mids;
 				mids.open("src/6.Controls/simple_sim/data/trackdrive_midpoints.txt");
@@ -310,8 +339,8 @@ void sim_node::timer_callback()
 				for (int i = 0; i < cnt; i++)
 				{
 					mids >> x >> y;
-					sample.x = y;
-					sample.y = x;
+					sample.x = x;
+					sample.y = y;
 					wp.push_back(sample);
 				}
 				auto msg5 = custom_msgs::msg::WaypointsMsg();
@@ -338,6 +367,10 @@ void sim_node::timer_callback()
 		// std::cout << state.t << "\t" << state.v_x << "\t" << state.r << "\t" << f << "\t" << d << std::endl;
 		log << int(f) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
 		log << state;
+		std::ofstream log2;
+		log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
+		state.check_ellipses(log2);
+		log2.close();
 		pos.x = add_noise(state.x);
 		pos.y = add_noise(state.y, 0.05);
 		msg.position = pos;
@@ -362,7 +395,7 @@ void sim_node::timer_callback()
 		for (int i = 0; i < unseen_cones.size(); i++)
 		{
 			double dsq = std::pow(state.x - unseen_cones[i].x, 2) + std::pow(state.y - unseen_cones[i].y, 2);
-			if (dsq < 13 * 13)
+			if (dsq < 13 * 13 && dsq > 4 && std::acos((std::cos(state.theta)*(-state.x + unseen_cones[i].x)+std::sin(state.theta)*(-state.y + unseen_cones[i].y))/std::sqrt(dsq))<(3.14159*105/180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);
@@ -388,10 +421,10 @@ void sim_node::timer_callback()
 		pub_map->publish(msg2);
 	}
 	/*
-	if (sent <= 10 and state.lap==1)
+	if (sent <= 10 and state.lap==0)
 	{
 		std::ifstream mids;
-		mids.open("src/6.Controls/simple_sim/data/trackdrive_midpoints.txt");
+		mids.open("src/6.Controls/simple_sim/data/accel_mids.txt");
 		int cnt;
 		mids >> cnt;
 		std::vector<custom_msgs::msg::Point2Struct> wp;
@@ -401,8 +434,8 @@ void sim_node::timer_callback()
 		for (int i = 0; i < cnt; i++)
 		{
 			mids >> x >> y;
-			sample.x = y;
-			sample.y = x;
+			sample.x = x;
+			sample.y = y;
 			wp.push_back(sample);
 		}
 		auto msg5 = custom_msgs::msg::WaypointsMsg();
@@ -414,7 +447,7 @@ void sim_node::timer_callback()
 		mids.close();
 		sent++;
 	}
-	
+	/*
 	if (state.lap == 2 and sent == 11)
 	{
 		sent = 12;

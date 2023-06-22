@@ -43,7 +43,7 @@ double Point::distance(const Point &a, const Point &b)
 PID::PID()
     : request_sum(0), total_requests(0), error_integral(0), last_error(-1) {}
 
-void PID::init(int kp, int ki, int kd, int dt, int damp, int integ_damp, int prop_damp, int der_damp)
+void PID::init(int kp, int ki, int kd, double dt, int damp, int integ_damp, int prop_damp, int der_damp)
 {
     Kp = kp;
     Ki = ki;
@@ -67,6 +67,8 @@ double PID::filter(double value, int dampener)
 double PID::operator()(double error)
 {
     error_integral += error * dt;
+    
+    //std::cout<<"INTEGRAL = "<<(last_error)<<std::endl;
     double proportional = this->filter(error * Kp, proportional_dampener);
     double integral = this->filter(error_integral * Ki, integral_dampener);
     double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
@@ -74,6 +76,7 @@ double PID::operator()(double error)
     double correction = this->filter(proportional + integral + derivative, dampener);
     request_sum += correction / 1000;
     total_requests++;
+    last_error = error;
     //std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
     return correction;
 }
@@ -254,6 +257,7 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
     max_idx = resolution;
     path_planning::PointsData spline_data = spline.getSplineData(resolution = resolution);
     spline_samples = new SplinePoint[resolution];
+    last_visited_index = 0;
     for (int i = 0; i < resolution; i++)
     {
         spline_samples[i] = SplinePoint(Point(spline_data(i, 0), spline_data(i, 1)), spline_data(i, 4), spline_data(i, 2), spline_data(i, 3));
@@ -293,7 +297,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
 {
     double min_error = DBL_MAX, min_error_index = -1, error_x, error_y, error;
     //std::cout << "max index = " << max_idx << std::endl;
-    for (int i = std::max(last_visited_index, 0); i < max_idx; i++)
+    for (int i = std::max(last_visited_index-2, 0); i < max_idx; i++)
     {
         /*
         error_x = std::sin(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::cos(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
@@ -309,12 +313,11 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         {
             min_error = error;
             min_error_index = i;
-            break;
         }
     }
     if (min_error_index == -1)
         return 0;
-    return std::min(int(min_error_index)+2, max_idx-1);
+    return std::min(int(min_error_index), max_idx-1);
 }
 
 Point VelocityProfile::get_target_point(double ld, const Point &position, double min_radius, double theta) const
@@ -342,6 +345,11 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     /* ELSE TBD */
 }
 
+Point VelocityProfile::get_last_projection()const
+{
+    return spline_samples[last_visited_index].position();
+}
+
 void VelocityProfile::solve_profile(int resolution, double initial_speed, bool is_end)
 {
     //std::cout<<'*';
@@ -352,17 +360,27 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     double g = model->g;
     double m = model->m;
     double mu = model->my_max(m * g);
-    
+    //log.open("k.txt", std::ios::app);
     for (int i = 0; i < resolution; i++)
     {
         double k = std::abs(spline_samples[i].k());
         if(k!=0)
+        {
             spline_samples[i].set_target_speed(std::min(max_speed, std::sqrt(mu * g / k)));
+            //log<<mu*g/k<<std::endl;
+        }
         else
+        {
             spline_samples[i].set_target_speed(max_speed);
-        
+            //log<<DBL_MAX<<std::endl;
+        }
+        if(spline_samples[i].s()*total_length>80)
+        {
+            //spline_samples[i].set_target_speed(0);
+            //std::cout<<spline_samples[i].s()*total_length<<std::endl;
+        }
     }
-    
+    //log.close();
     //std::cout<<initial_speed<<" "<<spline_samples[0].target_speed()<<std::endl;
     spline_samples[0].set_target_speed(initial_speed);
     if(unknown)spline_samples[resolution - 1].set_target_speed(0); // Safety Check
@@ -386,7 +404,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     */
     double ds;
     double max_accel_eng, drag; //= model->max_positive_force / m;
-    double local_accel, fy_req, fz_avail, local_speed, u_accel, fx_rem;
+    double local_accel, fy_req, fz_avail, local_speed, u_accel, fx_rem, fz_rear_avail, fx_rear_rem;
     for (int i = 0; i < resolution - 1; i++)
     {
         local_speed = spline_samples[i].target_speed();
@@ -402,6 +420,9 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         
         //std::cout<<fx_rem<<" "<<local_speed<<" "<<spline_samples[i+1].target_speed()<<std::endl;
         //if(std::isnan(fx_rem)&&!std::isnan(local_speed))exit(50);
+        fz_rear_avail = model->Fz_calc("rear", 0, 0);
+        fx_rear_rem = model->my_max(fz_rear_avail) * fz_rear_avail;//available fx assuming 0 fy
+        fx_rem = std::min(fx_rem, fx_rear_rem);
 
         local_accel = std::min(fx_rem / m, max_accel_eng);
 
@@ -435,14 +456,21 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         drag = 0.5 * model->cd_A * std::pow(local_speed, 2);
         max_decel_eng = (model->max_negative_force + drag) / m;
 
+        fz_rear_avail = model->Fz_calc("rear", 1, 1, local_speed);
+        fx_rear_rem = -model->mx_max(fz_rear_avail)*fz_rear_avail;
+        fx_rem = std::max(fx_rem, fx_rear_rem);
+
         local_decel = std::max(fx_rem / m, max_decel_eng);
 
-        //std::cout<<local_decel<<", ";
+        //std::cout<<local_decel<<std::endl;
 
-        ds = spline_samples[i].s() - spline_samples[i - 1].s();
+        ds = (spline_samples[i].s() - spline_samples[i - 1].s())*total_length;
 
+        //std::cout<<local_speed - u_decel<<std::endl;
         u_decel = std::sqrt(local_speed * local_speed - 2 * local_decel * ds);
         
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
     }
+
+    spline_samples[0].set_target_speed(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()));//prevents initial target from beign 0
 }

@@ -6,6 +6,8 @@
 #include <map>
 #include <climits>
 #include <cmath>
+#include <cfloat>
+
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_2.h>
@@ -86,7 +88,7 @@ private:
     int cost_function(const std::vector<my_edge>&, const Point&, const Direction_2&) const;
     int cost_function_advanced(const std::vector<my_edge>&, const Point&, const Direction_2&, bool verbose = 0) const;
     std::pair<std::vector<my_edge>, int> find_best_path(const Point&, const Direction_2&, const my_edge&,  std::vector<my_edge>, std::unordered_set<Face_handle>, Face_handle, const Face_handle&, int, const Point &);
-    std::pair<std::vector<my_edge>, int> filter_best_path(std::pair<std::vector<my_edge>, int>, const Point &, const Direction_2 &);
+    std::pair<std::vector<my_edge>, int> filter_best_path(std::pair<std::vector<my_edge>, int> best_path, const Point &starting_position, const Direction_2 &starting_direction, int times_applied = 0);
 
 public:
     // creates either empty or full triangulation

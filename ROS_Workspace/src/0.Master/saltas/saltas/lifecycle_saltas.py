@@ -73,22 +73,25 @@ class SaltasNode(Node):
         return TransitionCallbackReturn.SUCCESS
     
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().warn(f'\n-- Saltas Un-Configured')
+        self.get_logger().warn(f'\n-- Saltas Un-Configured!')
         self.saltas_clock.cancel()
 
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
 
-        self.get_logger().warn(f'\n-- Saltas Un-Configured')
+        self.get_logger().warn(f'\n-- Saltas Un-Configured!')
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
+        if (state.state_id == 1):
+            return TransitionCallbackReturn.SUCCESS
+        
         self.saltas_clock.cancel()
         
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
 
-        self.get_logger().warn(f'\n-- Saltas Shut Down')
+        self.get_logger().warn(f'\n-- Saltas Shutdown!')
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:
