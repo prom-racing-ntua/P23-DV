@@ -35,6 +35,7 @@
 
 #include "custom_msgs/srv/driverless_transition.hpp"
 #include "custom_msgs/srv/ins_mode.hpp"
+#include "custom_msgs/srv/set_total_laps.hpp"
 
 #include "custom_msgs/action/driverless_transition.hpp"
 
@@ -106,6 +107,9 @@ private:
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr vectornav_heartbeat_client_;
 
+    // Max Laps Service
+    rclcpp::Service<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_server_;
+
     //Actions
     rclcpp_action::Client<Transition>::SharedPtr dv_transition_client_;
     void TransitionResponse(GoalHandle::SharedPtr goal_handle);
@@ -145,6 +149,10 @@ private:
 
     /* DV Status Client function */
     void changeDVStatus(p23::DV_Transitions newStatus);
+
+    /* Callback to set total laps*/
+    void setTotalLaps(const std::shared_ptr<custom_msgs::srv::SetTotalLaps::Request> request,
+          std::shared_ptr<custom_msgs::srv::SetTotalLaps::Response> response);
 
 public:
     explicit P23StatusNode();

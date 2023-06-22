@@ -149,6 +149,7 @@ namespace ns_slam
         /* If we send a shutdown signal from the unconfigured state, then just straight up
             send a success signal.*/
         if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+            RCLCPP_INFO(get_logger(), "\n-- SLAM Shutdown!");
             return ns_slam::CallbackReturn::SUCCESS;
         }
 
@@ -171,7 +172,7 @@ namespace ns_slam
 
         if (is_mapping_) map_log_.close();
 
-        RCLCPP_WARN(get_logger(), "\n-- SLAM Shutdown!");
+        RCLCPP_INFO(get_logger(), "\n-- SLAM Shutdown!");
         return ns_slam::CallbackReturn::SUCCESS;
     }
 

@@ -26,8 +26,9 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::S
     }
 
     // Check if mission finished
-    if (currentLap == maxLaps and standstill)
+    if ((currentLap == maxLaps) and standstill and (currentDvStatus!=p23::MISSION_FINISHED))
     {
+        RCLCPP_WARN(get_logger(), "Laps Completed and vehicle at Standstill. MISSION FINISHED!");
         currentDvStatus = p23::MISSION_FINISHED;
     }
 }
@@ -58,13 +59,19 @@ void P23StatusNode::checkVectornav() {
         nodeStatusMap["vn_300"] = !result->sensor_connected;
         if (result->sensor_connected)
         {
-            if (insMode != 2) //result->ins_mode)
+            // If in mission inspection set ins mode to 2
+            if (currentMission == p23::INSPECTION) {
+                insMode = 2;
+            }
+            // Check if we received the same mode as before
+            else if (insMode != 2) //result->ins_mode)
             {
                 insMode = 2;//result->ins_mode;
                 RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
-            if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
-            {
+
+            // If in mode 2 and all nodes configured transition to DV Ready State
+            if ((insMode == 2) and nodesReady and (currentDvStatus == p23::MISSION_SELECTED) and (currentAsStatus == p23::AS_OFF)) {
                 RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
                 currentDvStatus = p23::DV_READY;
             }
@@ -149,5 +156,20 @@ void P23StatusNode::sendSystemState() {
     systemStateMsg.pi_pp_controls_error = nodeStatusMap["pure_pursuit"];
 
     canbus_system_state_publisher_->publish(systemStateMsg);
+}
+
+void P23StatusNode::setTotalLaps(const std::shared_ptr<custom_msgs::srv::SetTotalLaps::Request> request,
+        std::shared_ptr<custom_msgs::srv::SetTotalLaps::Response> response) {
+    // If we are in Inspection mission count this as a mission finished signal
+    if (currentMission == p23::INSPECTION) {
+        RCLCPP_WARN(get_logger(), "Inspection Mission Finished");
+        currentDvStatus = p23::MISSION_FINISHED;
+    }
+    else {
+        // Just set the total laps and return
+        maxLaps = request->total_laps;
+        RCLCPP_WARN_STREAM(get_logger(), "Received new total laps count: " << maxLaps);
+    }
+    response->success = true;
 }
 } // p23_status_namespace

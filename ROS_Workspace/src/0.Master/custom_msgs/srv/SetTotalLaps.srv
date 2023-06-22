@@ -1,0 +1,5 @@
+# Used to dynamically set the mission's total laps to p23_status node
+
+uint8 total_laps
+---
+bool success

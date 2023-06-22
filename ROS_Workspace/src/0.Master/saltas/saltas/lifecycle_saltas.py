@@ -84,6 +84,7 @@ class SaltasNode(Node):
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         if (state.state_id == 1):
+            self.get_logger().info(f'\n-- Saltas Shutdown!')
             return TransitionCallbackReturn.SUCCESS
         
         self.saltas_clock.cancel()
@@ -91,7 +92,7 @@ class SaltasNode(Node):
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
 
-        self.get_logger().warn(f'\n-- Saltas Shutdown!')
+        self.get_logger().info(f'\n-- Saltas Shutdown!')
         return TransitionCallbackReturn.SUCCESS
 
     def globalTimerCallback(self) -> None:
@@ -153,8 +154,11 @@ def main(args=None):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        p23_master_node.destroy_node()
-        rclpy.shutdown()
+        try:
+            p23_master_node.destroy_node()
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     main()

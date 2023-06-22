@@ -63,7 +63,7 @@ namespace mpc{
         uint8_t currentState = state.id();
         
         if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
-            RCLCPP_WARN(get_logger(), "\n-- MPC Shutdown!");
+            RCLCPP_INFO(get_logger(), "\n-- MPC Shutdown!");
             return mpc::CallbackReturn::SUCCESS;
         }
 

@@ -40,33 +40,34 @@ namespace lifecycle_manager_namespace{
         switch(mission) {
             case(p23::ACCELERATION):
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                nodesToShutdown = {"path_planning", "mpc"};
+                nodesToShutdown = {"inspection", "path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                nodesToShutdown = {"path_planning", "pure_pursuit"};
+                nodesToShutdown = {"inspection", "path_planning", "pure_pursuit"};
                 controlsNode = {"mpc"};
+                break;
+            case(p23::AUTOX):
+                configurationFileSelected += std::string("/autox_config.yaml");
+                nodesToShutdown = {"inspection", "mpc"};
+                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::TRACKDRIVE):
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
-                nodesToShutdown = {"pure_pursuit", "path_planning"};
+                nodesToShutdown = {"inspection", "pure_pursuit", "path_planning"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::EBS_TEST):
                 configurationFileSelected += std::string("/ebs_test_config.yaml");
-                nodesToShutdown = {"path_planning", "mpc"};
+                nodesToShutdown = {"inspection", "path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::INSPECTION):
                 configurationFileSelected += std::string("/inspection_config.yaml");
-                nodesToShutdown = {"path_planning", "mpc", "pure_pursuit", "slam", "velocity_estimation", "acquisition_left", "acquisition_right", "inference"};
+                nodesToShutdown = {"saltas", "acquisition_left", "inference", //"acquisition_right",
+                    "velocity_estimation", "slam", "path_planning", "mpc", "pure_pursuit"};
                 controlsNode = {"inspection"};
-                break;
-            case(p23::AUTOX):
-                configurationFileSelected += std::string("/autox_config.yaml");
-                nodesToShutdown = {"mpc"};
-                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::MANUAL):
                 RCLCPP_INFO(get_logger(), "Mission is in manual mode, PC will shutdown");

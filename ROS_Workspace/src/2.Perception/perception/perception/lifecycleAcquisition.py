@@ -118,6 +118,7 @@ class AcquisitionLifecycleNode(Node):
     
     def on_shutdown(self, state: State) -> TransitionCallbackReturn:
         if (state.state_id == 1):
+            self.get_logger().info(f"\n-- Acquisition Shutdown!")
             return TransitionCallbackReturn.SUCCESS
         
         self.camera.cleanupCamera()
@@ -125,7 +126,7 @@ class AcquisitionLifecycleNode(Node):
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
 
-        self.get_logger().warn(f"\n-- Acquisition Shutdown!")
+        self.get_logger().info(f"\n-- Acquisition Shutdown!")
         return TransitionCallbackReturn.SUCCESS
 
     def trigger_callback(self, msg):
@@ -159,8 +160,11 @@ def main(args=None):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        perception_handler.destroy_node()
-        rclpy.shutdown()
+        try:
+            perception_handler.destroy_node()
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     main()

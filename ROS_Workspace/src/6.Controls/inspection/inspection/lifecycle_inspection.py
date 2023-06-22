@@ -3,8 +3,10 @@ from rclpy.lifecycle import Node
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
+from rclpy._rclpy_pybind11 import InvalidHandle
 
 from custom_msgs.msg import *
+from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
 
 
@@ -22,7 +24,7 @@ class InspectionMission(Node):
         self.mission_finished = False
         self._steering_angle = 0.0
         self._actual_torque = 0.0
-        self.get_logger().info(f"Inspection Node Initialized")
+        self.get_logger().warn(f"\n-- Inspection Node Created")
 
     def on_configure(self, state:State) -> TransitionCallbackReturn:
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
@@ -34,6 +36,7 @@ class InspectionMission(Node):
         self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
         self._command_timer.cancel()
 
+        self.get_logger().warn(f"\n-- Inspection Configured!")
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state:State) -> TransitionCallbackReturn:
@@ -41,11 +44,14 @@ class InspectionMission(Node):
         self._command_timer.reset()
 
         self._start_time = self.get_time()
+
+        self.get_logger().warn(f"\n-- Inspection Activated!")
         return super().on_activate(state)
     
     def on_deactivate(self, state:State) -> TransitionCallbackReturn:
         self._command_timer.cancel()
         
+        self.get_logger().warn(f"\n-- Inspection Deactivated!")
         return TransitionCallbackReturn.SUCCESS
 
     def on_cleanup(self, state:State) -> TransitionCallbackReturn:
@@ -61,25 +67,31 @@ class InspectionMission(Node):
         self._steering_angle = 0.0
         self._actual_torque = 0.0
 
+        self.get_logger().warn(f"\n-- Inspection Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
     def on_shutdown(self, state:State) -> TransitionCallbackReturn:
+        if (state.state_id == 1):
+            self.get_logger().info(f'\n-- Inspection Shutdown!')
+            return TransitionCallbackReturn.SUCCESS
+
         self._command_timer.cancel()
-        self._command_timer.destroy()
+        self.destroy_timer(self._command_timer)
 
-        self._command_publisher.destroy()
-        self._state_publisher.destroy()
+        self.destroy_publisher(self._command_publisher)
+        self.destroy_publisher(self._state_publisher)
 
-        self._steering_sub.destroy()
-        self._motor_sub.destroy()
+        self.destroy_subscription(self._steering_sub)
+        self.destroy_subscription(self._motor_sub)
 
+        self.get_logger().info(f"\n-- Inspection Shutdown!")
         return TransitionCallbackReturn.SUCCESS
 
     def send_commands(self) -> None:
         if self.mission_finished:
             msg = TxControlCommand()
             self._command_publisher.publish(msg)  
-            return     
+            return
 
         time = self.get_time() - self._start_time
         msg = TxControlCommand()
@@ -95,7 +107,15 @@ class InspectionMission(Node):
         if time > MISSION_DURATION:
             # Mission Finished, should call p23_status service (not implemented yet)
             self.mission_finished = True
-            self.get_logger().warn("Mission Finished", once=True)
+
+            finished_cli = self.create_client(SetTotalLaps, "/p23_status/set_total_laps")
+            if not finished_cli.wait_for_service(timeout_sec=5.0):
+                self.get_logger().error("P23 Service is not available")
+            else:
+                req = SetTotalLaps.Request()
+                req.total_laps = 0
+                self.future = finished_cli.call_async(req)
+                self.future.add_done_callback(self.client_callback)
         return
 
     def set_steering(self, msg:RxSteeringAngle) -> None:
@@ -109,6 +129,13 @@ class InspectionMission(Node):
     def get_time(self):
         sec, nano = self.get_clock().now().seconds_nanoseconds()
         return sec + round(nano / 10**9, 3)
+    
+    def client_callback(self, response):
+        if response is not None:
+            self.get_logger().warn("Mission Finished")
+        else:
+            self.get_logger().error("Client call failed")
+        return
 
 
 
@@ -122,5 +149,8 @@ def main(args=None) -> None:
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        lifecycle_inspection.destroy_node()
-        rclpy.shutdown()
+        try:
+            lifecycle_inspection.destroy_node()
+            rclpy.shutdown()
+        except Exception:
+            pass

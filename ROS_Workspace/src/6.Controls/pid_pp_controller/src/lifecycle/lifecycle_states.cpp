@@ -103,7 +103,7 @@ namespace pid_pp{
         uint8_t currentState = state.id();
         
         if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
-            RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Shutdown!");
+            RCLCPP_INFO(get_logger(), "\n-- Pure Pursuit Shutdown!");
             return pid_pp::CallbackReturn::SUCCESS;
         }
 
@@ -114,7 +114,7 @@ namespace pid_pp{
         pub_target.reset();
         /* Edw prepei na kanoyme kai clean up to model */
 
-        RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Shutdown!");
+        RCLCPP_INFO(get_logger(), "\n-- Pure Pursuit Shutdown!");
         return pid_pp::CallbackReturn::SUCCESS;
     }
 

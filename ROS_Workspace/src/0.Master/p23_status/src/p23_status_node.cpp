@@ -96,6 +96,12 @@ void P23StatusNode::setServices() {
     p23_status_client_ = create_client<custom_msgs::srv::DriverlessTransition>("lifecycle_manager/change_driverless_status");
     ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("/vn_300/get_ins_mode");
     vectornav_heartbeat_client_ = create_client<custom_msgs::srv::InsMode>("/vn_200/get_ins_mode");
+
+    // Create server to receive total laps
+    total_laps_server_ = create_service<custom_msgs::srv::SetTotalLaps>(
+        std::string(get_name()) + "/set_total_laps", std::bind(&P23StatusNode::setTotalLaps, this, std::placeholders::_1, std::placeholders::_2),
+        rmw_qos_profile_services_default, mission_selection_group_
+    );
 }
 
 // Callback function when receiving new mission message
@@ -187,10 +193,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
     case(p23::AS_Status::AS_FINISHED):
         // Mission is finished, probably shutdown nodes
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_FINISHED. De-activating nodes");
-
-        // TODO: If in standstill shutdown nodes
-        if (standstill)
-            changeDVStatus(p23::SHUTDOWN_NODES);
+        changeDVStatus(p23::SHUTDOWN_NODES);
         break;
 
     case(p23::AS_Status::AS_EMERGENCY):

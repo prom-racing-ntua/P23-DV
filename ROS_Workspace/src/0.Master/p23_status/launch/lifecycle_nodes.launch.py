@@ -101,13 +101,13 @@ def generate_launch_description():
     ldList.append(purePursuitNode)
     
     # Can be uncommented when running the inspection mission
-    # inspectionNode = Node(
-    #     package="inspection",
-    #     executable="inspection",
-    #     name="inspection",
-    #     emulate_tty=True
-    # )
-    # ldList = [inspectionNode]
+    inspectionNode = Node(
+        package="inspection",
+        executable="insp",
+        name="inspection",
+        emulate_tty=True
+    )
+    ldList.append(inspectionNode)
 
     ld = LaunchDescription(ldList)
     return ld

@@ -75,7 +75,7 @@ namespace ns_vel_est
         uint8_t currentState = state.id();
         
         if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
-            RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Shutdown!");
+            RCLCPP_INFO(get_logger(), "\n-- Velocity Estimation Shutdown!");
             return ns_vel_est::CallbackReturn::SUCCESS;
         }
 
@@ -89,7 +89,7 @@ namespace ns_vel_est
         /* VelEst class and Pulibhser cleanup */
         estimator_.reset();
         pub_.reset();
-        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Shutdown!");
+        RCLCPP_INFO(get_logger(), "\n-- Velocity Estimation Shutdown!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

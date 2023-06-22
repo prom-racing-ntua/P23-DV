@@ -80,11 +80,13 @@ class InferenceLifecycleNode(Node):
         # Cleanup Models
 
         if (state.state_id == 1):
+            self.get_logger().info("\n-- Inference Shutdown!")
             return TransitionCallbackReturn.SUCCESS
+
         del self.yoloModel, self.smallModel, self.largeModel
         self.destroy_publisher(self.publisher_)
 
-        self.get_logger().warn("\n-- Inference Shutdown!")
+        self.get_logger().info("\n-- Inference Shutdown!")
         return TransitionCallbackReturn.SUCCESS
 
     def listener_callback(self, msg):
@@ -157,8 +159,11 @@ def main(args=None):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        inference_node.destroy_node()
-        rclpy.shutdown()
+        try:
+            inference_node.destroy_node()
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
