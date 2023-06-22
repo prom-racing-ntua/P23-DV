@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(std_srvs REQUIRED)
 
 include_directories(
   include
@@ -38,7 +39,7 @@ install(DIRECTORY include/common/ DESTINATION include/)
 # --- P23 Node
 add_executable(${PROJECT_NAME} src/main.cpp src/p23_status_node.cpp src/p23_status_callbacks.cpp src/p23_status_action.cpp)
 target_link_libraries(${PROJECT_NAME} p23_common)
-ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs rclcpp_action)
+ament_target_dependencies(${PROJECT_NAME} rclcpp custom_msgs rclcpp_action std_srvs)
 
 install(DIRECTORY
   config launch

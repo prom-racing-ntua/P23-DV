@@ -1,17 +1,30 @@
+#ifndef P23_STATUS_NODE_HPP
+#define P23_STATUS_NODE_HPP
+
+/* C/C++ Imports */
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
+#include <unordered_map>
 #include <vector>
 #include <algorithm>
-#include <unordered_map>
+#include <string>
+#include <cstring>
+#include <thread>
+#include <unistd.h>
 
+/* ROS2 Libraries */
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
+#include <rmw/qos_profiles.h>
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp/parameter_client.hpp"
+#include "rclcpp/utilities.hpp"
 
+/* Messages */
 #include "custom_msgs/msg/mission_selection.hpp"
 #include "custom_msgs/msg/autonomous_status.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
@@ -27,6 +40,21 @@
 
 #include "p23_common.h"
 
+
+template<typename FutureT, typename WaitTimeT>
+std::future_status wait_for_result(FutureT & future, WaitTimeT time_to_wait)
+{
+    auto end = std::chrono::steady_clock::now() + time_to_wait;
+    std::chrono::milliseconds wait_period(100);
+    std::future_status status = std::future_status::timeout;
+    do {
+        auto now = std::chrono::steady_clock::now();
+        auto time_left = end - now;
+        if (time_left <= std::chrono::seconds(0)) {break;}
+        status = future.wait_for((time_left < wait_period) ? time_left : wait_period);
+    } while (rclcpp::ok() && status != std::future_status::ready);
+    return status;
+}
 
 namespace p23_status_namespace
 {
@@ -53,7 +81,11 @@ private:
     p23::Mission currentMission;
     p23::AS_Status currentAsStatus;
     p23::DV_Status currentDvStatus;
-    bool missionLocked, missionFinished, standstill, pcError;
+    bool missionLocked, missionFinished, pcError;
+
+    // Standstill variables
+    bool standstill;
+    double standstill_time;
 
     /* Map of all the current statuses of the nodes. Might not keep it and just
         send a message directly from the lifecycle manager, will see */
@@ -118,3 +150,5 @@ public:
     explicit P23StatusNode();
 };
 } // p23_status_namespace
+
+#endif

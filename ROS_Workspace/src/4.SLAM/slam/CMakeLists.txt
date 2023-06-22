@@ -26,6 +26,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(TBB REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 
 # GTSAM
 find_package(GTSAMCMakeTools REQUIRED)

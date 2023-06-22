@@ -69,43 +69,50 @@ namespace p23_status_namespace
             }
             currentDvStatus = transition_to;
 
-            // Get max laps
-            if (currentAsStatus == p23::AS_READY)
-            {
-                if (currentMission == p23::INSPECTION or currentMission == p23::EBS_TEST) {maxLaps = 255;}
-                else
-                {
-                    auto enabled_nodes{ get_node_names() };
-                    bool is_mpc_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/mpc") != enabled_nodes.end() };
-                    bool is_pid_active{ std::find(enabled_nodes.begin(), enabled_nodes.end(), "/pid_pp_controller") != enabled_nodes.end() };
+            // Get max laps: DOES NOT WORK
+            // if (currentAsStatus == p23::AS_READY)
+            // {
+            //     rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedPtr param_cli;
 
-                    if (is_mpc_active and is_pid_active)
-                    {
-                        RCLCPP_ERROR(get_logger(), "Both MPC and PID are active in AS Ready");
-                    }
-                    else if (is_mpc_active)
-                    {
-                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/mpc") };
-                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
-                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
-                        else \
-                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
-                    }
-                    else if (is_pid_active)
-                    {
-                        auto param_cli{ std::make_shared<rclcpp::SyncParametersClient>(this, "/pid_pp_controller") };
-                        if (!param_cli->wait_for_service(std::chrono::seconds(1))) \
-                            RCLCPP_ERROR(get_logger(), "Controls node not responding, using default value for max laps");
-                        else \
-                            maxLaps = param_cli->get_parameter("max_laps", maxLaps);
-                    }
-                    else
-                    {
-                        RCLCPP_ERROR(get_logger(), "No controller nodes are active");
-                    }
-                    RCLCPP_WARN_STREAM(get_logger(), "Max laps set to: " << maxLaps);
-                }
-            }
+            //     if (currentMission == p23::INSPECTION or currentMission == p23::EBS_TEST) {
+            //         maxLaps = 255;
+            //         RCLCPP_WARN(get_logger(), "Inspection or EBS mission, no max laps");
+            //         return;
+            //     }
+            //     else if((currentMission == p23::SKIDPAD) or (currentMission == p23::TRACKDRIVE)) {
+            //         RCLCPP_INFO(get_logger(), "Loading max laps parameter from MPC node");
+            //         param_cli = create_client<rcl_interfaces::srv::GetParameters>("mpc/get_parameters");
+            //     }
+            //     else if ((currentMission==p23::ACCELERATION) or (currentMission==p23::AUTOX)) {
+            //         RCLCPP_INFO(get_logger(), "Loading max laps parameter from Pure Pursuit node");
+            //         param_cli = create_client<rcl_interfaces::srv::GetParameters>("pure_pursuit/get_parameters");
+            //     }
+            //     else {
+            //         RCLCPP_ERROR_STREAM(get_logger(), "Unknown mission, using default value for max laps: " << maxLaps);
+            //         return;
+            //     }
+
+            //     if (!param_cli->wait_for_service(std::chrono::seconds(1))) {
+            //         RCLCPP_ERROR_STREAM(get_logger(), "Controls node not responding, using default value for max laps: " << maxLaps);
+            //         return;
+            //     }
+
+            //     auto request{ std::make_shared<rcl_interfaces::srv::GetParameters::Request>() };
+            //     request->names.push_back("total_laps");
+
+            //     auto max_laps_callback = [this](rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture future) {
+            //         RCLCPP_ERROR(get_logger(), "In callback");
+            //         auto result = future.get();
+            //         if (result->values.empty()) {
+            //             RCLCPP_ERROR_STREAM(get_logger(), "Get parameter failed, using default value for max laps: " << maxLaps);
+            //             return;
+            //         }
+            //         maxLaps = result->values[0].integer_value;
+            //         RCLCPP_WARN_STREAM(get_logger(), "Max laps set to: " << maxLaps);
+            //     };
+
+            //     auto get_max_laps_result = param_cli->async_send_request(request, max_laps_callback);
+            // }
         }
         else
         {

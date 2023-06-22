@@ -40,9 +40,10 @@ void P23StatusNode::initializeNode() {
     insMode = 0;
     nodesReady = false;
 
-    currentLap = -1;
+    currentLap = 0;
     // Initialize to 255 because current lap received might be 0
     maxLaps = 255;
+    standstill = false;
     pcError = false;
 
     missionLocked = false;
@@ -198,7 +199,7 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
 
         // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
-        // changeDVStatus(p23::SHUTDOWN_NODES);
+        changeDVStatus(p23::SHUTDOWN_NODES);
         break;
     }
 }

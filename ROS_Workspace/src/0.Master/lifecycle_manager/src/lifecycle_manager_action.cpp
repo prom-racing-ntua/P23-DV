@@ -53,7 +53,7 @@ namespace lifecycle_manager_namespace
                 break;
             case(p23::DV_Transitions::ON_AS_READY):
                 RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
-                goalCounter = nodeList.size() + nodesToShutdown.size();
+                goalCounter = nodeList.size() + nodesToShutdown.size() - 1;
                 std::thread{std::bind(&LifecycleManagerNode::activateSystem, this)}.detach();
                 break;
             case(p23::DV_Transitions::ON_AS_DRIVING):
@@ -62,7 +62,7 @@ namespace lifecycle_manager_namespace
                 std::thread{std::bind(&LifecycleManagerNode::activateControls, this)}.detach();
                 break;
             default:
-                RCLCPP_ERROR(get_logger(), "Unkown Transition Requested");
+                RCLCPP_ERROR(get_logger(), "Unknown Transition Requested");
                 return;
         }
         goalTimer->reset();

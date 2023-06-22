@@ -9,15 +9,17 @@
     ROIy: 1024
     orientation: "left"
 
+
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220040196"
-    exposureTime: 40000
+    exposureTime: 25000
     autoExposure: False
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "right"
+
 
 /slam:
   ros__parameters:
@@ -53,10 +55,12 @@
 
     logger: true
 
+
 /saltas:
   ros__parameters:
       velocity_estimation_frequency: 40   # Hz
       perception_frequency: 10            # Hz
+
 
 /velocity_estimation:
   ros__parameters:
@@ -70,12 +74,12 @@
                                   0.0,    0.0,    0.0,    0.0, 1.0e-3,    0.0,
                                   0.0,    0.0,    0.0,    0.0,    0.0, 1.0e-3]
     
-    process_noise_covariance: [  0.007,      0.0,      0.0,      0.0,      0.0,      0.0,
-                                   0.0,    0.008,      0.0,      0.0,      0.0,      0.0,
-                                   0.0,      0.0,   0.0001,      0.0,      0.0,      0.0,
-                                   0.0,      0.0,      0.0,   0.0005,      0.0,      0.0,
-                                   0.0,      0.0,      0.0,      0.0,   0.0003,      0.0,
-                                   0.0,      0.0,      0.0,      0.0,      0.0,   0.0001]
+    process_noise_covariance: [7.0e-3,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                  0.0, 8.0e-3,    0.0,    0.0,    0.0,    0.0,
+                                  0.0,    0.0, 5.0e-6,    0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0, 5.0e-4,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0, 3.0e-4,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0, 1.0e-4]
 
     measurement_noise_covariance: [   0.030,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
                                    -13.0e-4,   0.024,      0.0,       0.0,       0.0,  0.0,   0.0,
@@ -101,6 +105,7 @@
     wheel_radius: 0.1995        # [m]
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]
+
 
 /path_planning:
   ros__parameters:

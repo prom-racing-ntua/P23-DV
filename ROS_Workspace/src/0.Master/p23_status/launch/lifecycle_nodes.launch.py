@@ -24,7 +24,7 @@ def generate_launch_description():
     # Saltas Node
     saltasNode = Node(
         package='saltas',
-        executable='lifecycle_saltas',
+        executable='l_sal',
         name='saltas',
         emulate_tty=True
     )
@@ -33,7 +33,7 @@ def generate_launch_description():
     # Velocity Estimation Node
     velocityEstimationNode = Node(
         package='velocity_estimation',
-        executable='lifecycle_velocity_estimation',
+        executable='l_vel',
         name='velocity_estimation',
         emulate_tty=True
     )
@@ -42,7 +42,7 @@ def generate_launch_description():
     # Acquisition Nodes
     acquisitionLeftNode = Node(
         package='perception',
-        executable='lifecycle_acquisition',
+        executable='l_acq',
         name='acquisition_left',
         emulate_tty=True
     )
@@ -50,7 +50,7 @@ def generate_launch_description():
     
     acquisitionRightNode = Node(
         package='perception',
-        executable='lifecycle_acquisition',
+        executable='l_acq',
         name='acquisition_right',
         emulate_tty=True
     )
@@ -59,7 +59,7 @@ def generate_launch_description():
     # Inference Node
     inferenceNode = Node(
         package='perception',
-        executable='lifecycle_inference',
+        executable='l_inf',
         name='inference',
         emulate_tty=True
     )
@@ -68,7 +68,7 @@ def generate_launch_description():
     # SLAM Node
     slamNode = Node(
         package='slam',
-        executable='lifecycle_slam',
+        executable='l_slm',
         name='slam',
         emulate_tty=True
     )
@@ -77,7 +77,7 @@ def generate_launch_description():
     # Pathplanning Node
     pathplanningNode = Node(
         package='path_planner',
-        executable='lifecycle_path_planner',
+        executable='l_pth',
         name='path_planning',
         emulate_tty=True
     )
@@ -86,19 +86,28 @@ def generate_launch_description():
     # Controls Node
     mpcNode = Node(
         package='mpc',
-        executable='lifecycle_mpc',
+        executable='l_mpc',
         name='mpc',
         emulate_tty=True
     )
-    # ldList.append(mpcNode)
+    ldList.append(mpcNode)
 
     purePursuitNode = Node(
         package="pid_pp_controller",
-        executable='lifecycle_pid_pp_controller',
+        executable='l_pid',
         name='pure_pursuit',
         emulate_tty=True
     )
-    # ldList.append(purePursuitNode)
+    ldList.append(purePursuitNode)
     
+    # Can be uncommented when running the inspection mission
+    # inspectionNode = Node(
+    #     package="inspection",
+    #     executable="inspection",
+    #     name="inspection",
+    #     emulate_tty=True
+    # )
+    # ldList = [inspectionNode]
+
     ld = LaunchDescription(ldList)
     return ld

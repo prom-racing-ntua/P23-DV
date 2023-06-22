@@ -40,13 +40,12 @@ namespace lifecycle_manager_namespace{
         switch(mission) {
             case(p23::ACCELERATION):
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                // nodesToShutdown = {"path_planning", "mpc"};
-                // controlsNode = {"pure_pursuit"};
+                nodesToShutdown = {"path_planning", "mpc"};
+                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                // nodesToShutdown = {"path_planning", "pure_pursuit"};
-                nodesToShutdown = {"path_planning"};
+                nodesToShutdown = {"path_planning", "pure_pursuit"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::TRACKDRIVE):
@@ -66,8 +65,8 @@ namespace lifecycle_manager_namespace{
                 break;
             case(p23::AUTOX):
                 configurationFileSelected += std::string("/autox_config.yaml");
-                // nodesToShutdown = {"mpc"};
-                // controlsNode = {"pure_pursuit"};
+                nodesToShutdown = {"mpc"};
+                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::MANUAL):
                 RCLCPP_INFO(get_logger(), "Mission is in manual mode, PC will shutdown");

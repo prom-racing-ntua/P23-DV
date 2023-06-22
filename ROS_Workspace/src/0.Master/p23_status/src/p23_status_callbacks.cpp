@@ -9,14 +9,43 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::S
     conesActual = msg->cones_count_actual;
     currentLap = msg->lap_count;
 
-    /* Should send a standstill bit as well here... */
+    // Checking if the car as zero velocity for a set amount of time for standstill
+    if (msg->pose.velocity_state.velocity_x < 0.005) // small value to see if vx = 0
+    {
+        if (now().seconds() - standstill_time > 2 and !standstill) 
+        {
+            standstill = true;
+            RCLCPP_WARN(get_logger(), "Vehicle at standstill");
+        }
+    }
+    else
+    {
+        if (standstill) RCLCPP_WARN(get_logger(), "Vehicle moving");
+        standstill = false;
+        standstill_time = now().seconds();
+    }
 
-    if (currentLap >= maxLaps)
+    // Check if mission finished
+    if (currentLap == maxLaps and standstill)
     {
         currentDvStatus = p23::MISSION_FINISHED;
-        /* Tha doume... */
     }
 }
+
+// void P23StatusNode::receiveMissionFinished(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+//     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+// {
+//     RCLCPP_INFO(get_logger(), "Received mission finished trigger from control node");
+
+//     /* Cancel Vectornav/Lifecycle Node status as to not go to PC Error by mistake */
+//     sensorCheckupTimer_.reset();
+//     lifecycle_node_status_subscription_.reset();
+
+//     currentDvStatus = p23::DV_Status::MISSION_FINISHED;
+//     /* With currentDvStatus set as Mission Finished, the VCU will automatically send an AS_FINISHED message that will later then change our
+//         AS Status and shutdown the nodes. */
+//     response->success = true;
+// }
 
 void P23StatusNode::checkVectornav() {
     using namespace std::chrono_literals;
@@ -34,7 +63,6 @@ void P23StatusNode::checkVectornav() {
                 insMode = 2;//result->ins_mode;
                 RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
-
             if ((insMode == 2) and nodesReady and (currentDvStatus != p23::DV_READY) and (currentAsStatus == p23::AS_OFF) and (currentDvStatus != p23::DV_DRIVING))
             {
                 RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
@@ -62,6 +90,7 @@ void P23StatusNode::checkVectornav() {
     // Wait for service for 0.2 sec
     if (!vectornav_heartbeat_client_->wait_for_service(std::chrono::milliseconds(200)))
     {
+        // TODO: this to true, changed for testing...
         nodeStatusMap["vn_200"] = false;
         RCLCPP_WARN(get_logger(), "VN-200 service is not available");
     }
@@ -86,17 +115,11 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
         if (it.second)
         {
             // RCLCPP_ERROR(get_logger(), "Node %s has no heartbeat.", it.first.c_str());
-            // statusBeforeError = currentDvStatus;
-            currentDvStatus = p23::NODE_PROBLEM;
-            nodesReady = false;
-            if (std::find(nodeList.begin(), nodeList.end(), it.first) != nodeList.end())
-            {
-                /* TODO: Talk about which node should send us to AS_EMERGENCY mode. To go to AS_EMERGENCY, 
-                    just set the pcError flag high and the EV system will do the rest. */
-                    
-            }
+            /* handleNodeProblem();*/
+            // currentDvStatus = p23::NODE_PROBLEM;
+            // nodesReady = false;
         }
-    }    
+    }
 }
 
 void P23StatusNode::sendSystemState() {
@@ -111,6 +134,7 @@ void P23StatusNode::sendSystemState() {
 
     systemStateMsg.vn_200_error = nodeStatusMap["vn_200"];
     systemStateMsg.vn_300_error = nodeStatusMap["vn_300"];
+    systemStateMsg.ins_mode = insMode;
 
     /* Information that is sent by the Lifecycle Manager Node*/
     systemStateMsg.camera_left_error = nodeStatusMap["acquisition_left"];
