@@ -6,7 +6,24 @@ namespace lifecycle_manager_namespace
     rclcpp_action::GoalResponse LifecycleManagerNode::handleGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const DVTransition::Goal> goal)
     {
         RCLCPP_INFO(get_logger(), "New Goal From P23 Status");
-        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+        if (ongoing_goal_handle == nullptr) {
+            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+        }
+        
+        p23::DV_Transitions requested_transition{ static_cast<p23::DV_Transitions>(goal->transition.id) };
+        // Complete current transition successfully and then accept incoming
+        if ((requested_transition == p23::ON_AS_READY) or (requested_transition == p23::ON_AS_DRIVING) or (requested_transition == p23::SHUTDOWN_NODES)) {
+            // Ugly but works
+            while (ongoing_goal_handle!=nullptr) continue;
+            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+        }
+        // Complete current transition returning failure and then accept incoming
+        else {
+            incoming_transition = true;
+            // Ugly but works
+            while (ongoing_goal_handle!=nullptr) continue;
+            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+        }
     }
 
     rclcpp_action::CancelResponse LifecycleManagerNode::handleCancellation(const std::shared_ptr<GoalHandle> goal_handle)
@@ -99,8 +116,11 @@ namespace lifecycle_manager_namespace
         ongoing_goal_handle->publish_feedback(feedback);
 
         if (goalCounter <= 0) {
-            result->success = true;
+            if (incoming_transition) result->success = false;
+            else result->success = true;
+
             ongoing_goal_handle->succeed(result);
+            incoming_transition = false;
             ongoing_goal_handle = nullptr;
             goalTimer->cancel();
             RCLCPP_INFO(get_logger(), "Driverless Transition complete!");

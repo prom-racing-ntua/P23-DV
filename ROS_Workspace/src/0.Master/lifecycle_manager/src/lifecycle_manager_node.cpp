@@ -31,6 +31,7 @@ namespace lifecycle_manager_namespace
         heartbeatTimerDuration = (1000/heartbeatFrequency);
 
         /* Action Feedback Publishing Timer */
+        incoming_transition = false;
         timer_cb_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         goalTimer = create_wall_timer(std::chrono::seconds(1), std::bind(&LifecycleManagerNode::publishActionFeedback, this), timer_cb_group);
         goalTimer->cancel();

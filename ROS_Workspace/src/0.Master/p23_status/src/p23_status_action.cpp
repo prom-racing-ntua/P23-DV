@@ -68,51 +68,6 @@ namespace p23_status_namespace
                 RCLCPP_WARN_STREAM(get_logger(), "Driverless Status successfully changed to: " << p23::driverless_status_list.at(transition_to));
             }
             currentDvStatus = transition_to;
-
-            // Get max laps: DOES NOT WORK
-            // if (currentAsStatus == p23::AS_READY)
-            // {
-            //     rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedPtr param_cli;
-
-            //     if (currentMission == p23::INSPECTION or currentMission == p23::EBS_TEST) {
-            //         maxLaps = 255;
-            //         RCLCPP_WARN(get_logger(), "Inspection or EBS mission, no max laps");
-            //         return;
-            //     }
-            //     else if((currentMission == p23::SKIDPAD) or (currentMission == p23::TRACKDRIVE)) {
-            //         RCLCPP_INFO(get_logger(), "Loading max laps parameter from MPC node");
-            //         param_cli = create_client<rcl_interfaces::srv::GetParameters>("mpc/get_parameters");
-            //     }
-            //     else if ((currentMission==p23::ACCELERATION) or (currentMission==p23::AUTOX)) {
-            //         RCLCPP_INFO(get_logger(), "Loading max laps parameter from Pure Pursuit node");
-            //         param_cli = create_client<rcl_interfaces::srv::GetParameters>("pure_pursuit/get_parameters");
-            //     }
-            //     else {
-            //         RCLCPP_ERROR_STREAM(get_logger(), "Unknown mission, using default value for max laps: " << maxLaps);
-            //         return;
-            //     }
-
-            //     if (!param_cli->wait_for_service(std::chrono::seconds(1))) {
-            //         RCLCPP_ERROR_STREAM(get_logger(), "Controls node not responding, using default value for max laps: " << maxLaps);
-            //         return;
-            //     }
-
-            //     auto request{ std::make_shared<rcl_interfaces::srv::GetParameters::Request>() };
-            //     request->names.push_back("total_laps");
-
-            //     auto max_laps_callback = [this](rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture future) {
-            //         RCLCPP_ERROR(get_logger(), "In callback");
-            //         auto result = future.get();
-            //         if (result->values.empty()) {
-            //             RCLCPP_ERROR_STREAM(get_logger(), "Get parameter failed, using default value for max laps: " << maxLaps);
-            //             return;
-            //         }
-            //         maxLaps = result->values[0].integer_value;
-            //         RCLCPP_WARN_STREAM(get_logger(), "Max laps set to: " << maxLaps);
-            //     };
-
-            //     auto get_max_laps_result = param_cli->async_send_request(request, max_laps_callback);
-            // }
         }
         else
         {

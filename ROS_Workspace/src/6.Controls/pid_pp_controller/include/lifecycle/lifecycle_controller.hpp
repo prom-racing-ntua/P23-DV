@@ -12,6 +12,7 @@
 #include "custom_msgs/msg/waypoints_msg.hpp"
 #include "custom_msgs/msg/tx_control_command.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
+#include "custom_msgs/srv/set_total_laps.hpp"
 
 #include "pid_pp_module.hpp"
 
@@ -36,6 +37,8 @@ private:
     // PUBLISHER
     rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::TxControlCommand>::SharedPtr pub_actuators;
     rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::Point2Struct>::SharedPtr pub_target;
+    // CLIENT
+    rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_cli;
 
     // OBJECTS
     VelocityProfile *profile;

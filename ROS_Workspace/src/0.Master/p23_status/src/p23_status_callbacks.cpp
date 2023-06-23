@@ -121,10 +121,9 @@ void P23StatusNode::receiveNodeStatus(const custom_msgs::msg::LifecycleNodeStatu
         /* If a node has a problem then check if this node is a critical one */
         if (it.second)
         {
-            // RCLCPP_ERROR(get_logger(), "Node %s has no heartbeat.", it.first.c_str());
-            /* handleNodeProblem();*/
-            // currentDvStatus = p23::NODE_PROBLEM;
-            // nodesReady = false;
+            /* TODO: handleNodeProblem();*/
+            currentDvStatus = p23::NODE_PROBLEM;
+            nodesReady = false;
         }
     }
 }

@@ -47,16 +47,27 @@ namespace pid_pp{
 
         is_end = false;
 
-        mutexCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        auto sub_opt = rclcpp::SubscriptionOptions();
-        sub_opt.callback_group = mutexCallbackGroup;
-
-        sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&LifecyclePID_PP_Node::waypoints_callback, this, _1), sub_opt);
-        sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&LifecyclePID_PP_Node::pose_callback, this, _1), sub_opt);
-
         pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
         pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
         
+        total_laps_cli = this->create_client<custom_msgs::srv::SetTotalLaps>("/p23_status/set_total_laps");
+
+        // Callback Function
+        auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future) {
+            auto result = future.get();
+            if (result->success) \
+                RCLCPP_INFO(get_logger(), "Total mission laps set successfully");
+        };
+
+        if (!total_laps_cli->wait_for_service(std::chrono::seconds(2))) {
+            RCLCPP_ERROR(get_logger(), "P23 Status service is not available");
+        }
+        else {
+            auto request = std::make_shared<custom_msgs::srv::SetTotalLaps::Request>();
+            request->total_laps = laps_to_do;
+            auto future_result = total_laps_cli->async_send_request(request, response_received_callback);
+        }
+
         RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Configured!");
         return pid_pp::CallbackReturn::SUCCESS;
     }
@@ -64,6 +75,13 @@ namespace pid_pp{
     pid_pp::CallbackReturn
         LifecyclePID_PP_Node::on_activate(const rclcpp_lifecycle::State &state)
     {
+        mutexCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        auto sub_opt = rclcpp::SubscriptionOptions();
+        sub_opt.callback_group = mutexCallbackGroup;
+
+        sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&LifecyclePID_PP_Node::waypoints_callback, this, _1), sub_opt);
+        sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&LifecyclePID_PP_Node::pose_callback, this, _1), sub_opt);
+        
         pub_actuators->on_activate();
         pub_target->on_activate();
 

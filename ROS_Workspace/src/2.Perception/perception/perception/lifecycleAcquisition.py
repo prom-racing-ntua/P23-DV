@@ -121,10 +121,12 @@ class AcquisitionLifecycleNode(Node):
             self.get_logger().info(f"\n-- Acquisition Shutdown!")
             return TransitionCallbackReturn.SUCCESS
         
-        self.camera.cleanupCamera()
 
-        del self.camera, self.bridge
+        self.destroy_subscription(self.subscription)
         self.destroy_publisher(self.publisher_)
+        
+        self.camera.cleanupCamera()
+        del self.camera, self.bridge
 
         self.get_logger().info(f"\n-- Acquisition Shutdown!")
         return TransitionCallbackReturn.SUCCESS

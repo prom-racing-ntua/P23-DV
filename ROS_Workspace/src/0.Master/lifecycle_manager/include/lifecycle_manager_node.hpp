@@ -108,10 +108,13 @@ namespace lifecycle_manager_namespace
         rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
         rclcpp::TimerBase::SharedPtr heartbeatTimer;
         int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;
+        
         /* All Action based things for the Lifecycle Manager */
         rclcpp_action::Server<DVTransition>::SharedPtr dv_status_service;
         std::shared_ptr<GoalHandle> ongoing_goal_handle;
         uint8_t goalCounter, failedTransitionCounter;
+        bool incoming_transition;
+
         // When receiving new action goal
         rclcpp_action::GoalResponse handleGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const DVTransition::Goal> goal);
         // When current goal is canceled
