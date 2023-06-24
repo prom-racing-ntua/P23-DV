@@ -29,7 +29,7 @@ NormalForces MpcSolver::getFz(const double X[X_SIZE]) {
     return {Ffz,Frz};
 }
 
-SlipAngles MpcSolver::getSlipAngles(const double X[X_SIZE]){
+SlipAngles MpcSolver::getSlipAngles(const double X[X_SIZE]) {
     double saf=std::atan((X[4]+l_f*X[5])/(X[3]+1e-3)) - X[7];
     double sar=std::atan((X[4]-l_r*X[5])/(X[3]+1e-3));
     return {saf,sar};
@@ -68,25 +68,16 @@ MuConstraints MpcSolver::getEllipseParams(const double &Fz) {
     }
 
     double MpcSolver::custom_max(double aa, double bb){
-    if(aa<bb){
-        return bb;
-    }
-    else {
-        return aa;
-    }
+        if(aa<bb) return bb;
+        else return aa;
     }
 
     double MpcSolver::custom_min(double aa, double bb){
-        if(aa<bb){
-            return aa;
-        }
-        else {
-            return bb;
-        }
+        if(aa<bb) return aa;
+        else return bb;
     }
 
-    void MpcSolver::Integrator()
-    {
+    void MpcSolver::Integrator() {
         getF(X,U,k1);
         for (int i = 0; i<X_SIZE;++i) {
             X2[i] = X[i] +(ts/2)*k1[i];
@@ -134,7 +125,7 @@ void MpcSolver::Initialize_all_local() {
 
 void MpcSolver::UpdateFromLastIteration() {
     for (int j = 0; j < X_SIZE; ++j) params.xinit[j] = X[j];
-    std::cout << "simulation at update is: "<< simulation_ << std::endl;
+    std::cout << "simulation parameter is: "<< simulation_ << std::endl;
     if(!simulation_) {
         X[0] = pose_struct.x;
         X[1] = pose_struct.y;
@@ -154,14 +145,14 @@ void MpcSolver::generateFirstPoint() {
         error_eucl.push_back(std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0)));
     }
     closest_index_eucl = std::distance(error_eucl.begin(), std::min_element(error_eucl.begin(), error_eucl.end()));
-    dist_eucl = error_eucl[closest_index_eucl];
-    for(int j = 0 ; j< whole_track.rows(); ++j) {
-        error_ver.push_back(std::abs(std::sin(whole_track(j,2))*(X[0]-whole_track(j,0)) - std::cos(whole_track(j,2))*(X[1]-whole_track(j,1)))); 
-    }
-    closest_index_ver = std::distance(error_ver.begin(), std::min_element(error_ver.begin(), error_ver.end()));
-    dist_ver = error_ver[closest_index_ver];
-    std::cout << "eucleidian and vertical distances are: " << dist_eucl << " " << dist_ver << std::endl;
-    std::cout << "eucleidian and vertical indices are: " << closest_index_eucl << " " <<  closest_index_ver << std::endl;
+    // dist_eucl = error_eucl[closest_index_eucl];
+    // for(int j = 0 ; j< whole_track.rows(); ++j) {
+    //     error_ver.push_back(std::abs(std::sin(whole_track(j,2))*(X[0]-whole_track(j,0)) - std::cos(whole_track(j,2))*(X[1]-whole_track(j,1)))); 
+    // }
+    // closest_index_ver = std::distance(error_ver.begin(), std::min_element(error_ver.begin(), error_ver.end()));
+    // // dist_ver = error_ver[closest_index_ver];
+    // std::cout << "eucleidian and vertical distances are: " << dist_eucl << " " << dist_ver << std::endl;
+    // std::cout << "eucleidian and vertical indices are: " << closest_index_eucl << " " <<  closest_index_ver << std::endl;
     std::vector<double> target_lengths_temp;
     target_lengths_temp.push_back(0.0);
     for (int i{ 1 }; i <= closest_index_eucl; i++) {
@@ -176,9 +167,10 @@ void MpcSolver::generateFirstPoint() {
     }
     if(s_init > sol) s_init = 0.0;
     s_array_final[0] = s_init;
-    std::cout << "sinit is:" << s_init << std::endl;
-    std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << std::endl;
-    }
+    std::cout << "sinit and sol are: " << s_init << " " << sol << std::endl;
+    std::cout << "percentage progress is: " << (s_init/sol)*100 << std::endl;
+    std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
+}
 
 void MpcSolver::generateFirstPointUnknown() {
     error_eucl.clear();
@@ -214,7 +206,7 @@ void MpcSolver::generateFirstPointUnknown() {
     }
     if(s_init > sol) s_init = sol;
     s_array_final[0] = s_init;
-    int ind_of_closest = (s_init/sol)*40;
+    int ind_of_closest = (s_init/sol)*lookahead_;
     std::cout << "generated first point " << s_init << " " << params_array(ind_of_closest,0) << " " << params_array(ind_of_closest,1) << std::endl;
     }
 
@@ -231,7 +223,6 @@ void MpcSolver::generateFirstPointUnknown() {
             Point temp1 = spline_final->getPoint(param);
             double temp2 = spline_final->getTangent(param);
             double temp3 = spline_final->getVelocity(param,mu.my_max,v_limit_);
-            if(i==0) std::cout << "closest spline point is: " << temp1(0) << " " << temp1(1) << std::endl; 
             spline_data(i, 0) = temp1(0);
             spline_data(i, 1) = temp1(1);
             spline_data(i, 2) = temp2;
@@ -243,7 +234,7 @@ void MpcSolver::generateFirstPointUnknown() {
 
     void MpcSolver::writeParamsKnown(int global_int) {
         std::cout << "started writing of known_params" << std::endl;
-        for (int i = 1; i < LOOKAHEAD; ++i){
+        for (int i = 1; i < LOOKAHEAD; ++i) {
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else s_array_final[i] = s_array_final[i-1] + (ds_vector[i-1]);
             if(s_array_final[i]>sol) {
@@ -260,7 +251,7 @@ void MpcSolver::generateFirstPointUnknown() {
     void MpcSolver::writeParamsUnknown() {
         std::cout << "started writing of unknown_params" << std::endl;
         s_array_final[0] = (float)s_array_final[0];
-        for (int i = 1; i < LOOKAHEAD; ++i){
+        for (int i = 1; i < LOOKAHEAD; ++i) {
             s_array_final[i] = s_array_final[i-1] + s_interval_;
             if(s_array_final[i]>sol) {
                 std::cout << "finished spline" << std::endl;
@@ -297,6 +288,77 @@ void MpcSolver::generateFirstPointUnknown() {
         std::cout << "finished writing of all unknown_params" << std::endl;
     }
 
+    void MpcSolver::generateTrackConfig() {
+        if(mission_=="accel") {
+            center_point.x = 75+l_f;
+            center_point.y = 0.0;
+            midpoints_txt_ = "src/6.Controls/mpc/data/Acceleration.txt";
+            known_track_ = true; 
+        }
+        if(mission_=="skidpad") {
+            center_point.x = 15+l_f;
+            center_point.y = 0.0;
+            midpoints_txt_ = "src/6.Controls/mpc/data/skidpad_straight1.txt";
+            known_track_ = true; 
+        }
+        if(mission_=="autox") {
+            center_point.x = 0.0;
+            center_point.y = 0.0;
+            known_track_ = false; 
+        }
+        if(mission_=="trackdrive") {
+            center_point.x = 0.0;
+            center_point.y = 0.0;
+            midpoints_txt_ = "src/6.Controls/mpc/data/trackdrive_midpoints.txt";
+            known_track_ = false; 
+        }
+    }
+
+    void MpcSolver::updateSkidpadSpline(int lap_counter) {
+        if(lap_counter==1 or lap_counter==2) updateSplineParameters("src/6.Controls/mpc/data/skidpad_right.txt");
+        if(lap_counter==3 or lap_counter==4) updateSplineParameters("src/6.Controls/mpc/data/skidpad_left.txt");
+        if(lap_counter==5) updateSplineParameters("src/6.Controls/mpc/data/skidpad_straight2.txt");
+    }
+
+    void MpcSolver::customLapCounter() {
+        double critical_dist = std::sqrt(std::pow(X[0] - center_point.x, 2) + std::pow(X[1] - center_point.y, 2));
+        if(critical_dist <= 2*l_f && lap_lock==0) {
+            lap_lock=1;
+            lap_counter++;
+        }
+        if(critical_dist > 2*l_f) lap_lock=0;
+    }
+
+    void MpcSolver::generateFinishFlag(int lap_counter) {
+        if(mission_=="accel" and lap_counter==1){
+            finish_flag=1;
+        }
+        if(mission_=="skidpad" and lap_counter==5){
+            finish_flag=1;
+        }
+        if(mission_=="autox" and lap_counter==2){
+            finish_flag=1;
+        }
+        if(mission_=="trackdrive" and lap_counter==11){
+            finish_flag=1;
+        }
+    }
+
+    void MpcSolver::updateSplineParameters(std::string txt_file) {
+        std::cout << "File I read from is: " << txt_file << std::endl;
+        Eigen::MatrixXd spline_input = readTrack(txt_file);
+        path_planning::PointsArray midpoints{spline_input};
+        midpoints.conservativeResize(midpoints.rows(), midpoints.cols());
+        // midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
+        path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::NaturalSpline);
+        spline_final = spline_init;
+        spline_resolution = int (spline_init->getApproximateLength()/s_interval_);
+        sol = spline_init->getApproximateLength(); 
+        std::cout << "length of track and resolution are: "<< sol << " " << spline_resolution << std::endl;
+        whole_track = spline_init->getSplineData(spline_resolution);
+        std::cout << "read known track" << std::endl;
+    }
+
     void MpcSolver::writeLookaheadArray1() {
         s_vector.clear();
         s_vector.push_back(output.x01[2]);
@@ -329,16 +391,6 @@ void MpcSolver::generateFirstPointUnknown() {
         s_vector.push_back(output.x28[2]);
         s_vector.push_back(output.x29[2]);
         s_vector.push_back(output.x30[2]);
-        s_vector.push_back(output.x31[2]);
-        s_vector.push_back(output.x32[2]);
-        s_vector.push_back(output.x33[2]);
-        s_vector.push_back(output.x34[2]);
-        s_vector.push_back(output.x35[2]);
-        s_vector.push_back(output.x36[2]);
-        s_vector.push_back(output.x37[2]);
-        s_vector.push_back(output.x38[2]);
-        s_vector.push_back(output.x39[2]);
-        s_vector.push_back(output.x40[2]);
     }
 
     void MpcSolver::writeLookaheadArray2() {
@@ -373,16 +425,6 @@ void MpcSolver::generateFirstPointUnknown() {
         ds_vector.push_back(output.x28[2]);
         ds_vector.push_back(output.x29[2]);
         ds_vector.push_back(output.x30[2]);
-        ds_vector.push_back(output.x31[2]);
-        ds_vector.push_back(output.x32[2]);
-        ds_vector.push_back(output.x33[2]);
-        ds_vector.push_back(output.x34[2]);
-        ds_vector.push_back(output.x35[2]);
-        ds_vector.push_back(output.x36[2]);
-        ds_vector.push_back(output.x37[2]);
-        ds_vector.push_back(output.x38[2]);
-        ds_vector.push_back(output.x39[2]);
-        ds_vector.push_back(output.x40[2]);
         for (int i = 0; i < LOOKAHEAD; ++i){
             if(ds_vector[i]>s_space_max) ds_vector[i]=s_space_max;
             if(ds_vector[i]<s_space_min) ds_vector[i]=s_space_min;
@@ -390,23 +432,19 @@ void MpcSolver::generateFirstPointUnknown() {
     }
 
     void MpcSolver::generateOutput() { 
-          //dF ddelta dindex
-          for(int k = 0; k<3; k++){
-              U[k]=output.x02[k];
-          }
-          writeLookaheadArray1();
-          writeLookaheadArray2();
-          std::cout << "U final array is: " << U[0] << " " << U[1] << " " << U[2] << std::endl;
-          std::cout << "X,Y,phi is: " << X[0] << " " << X[1] << " " << X[2] << std::endl;  
-          std::cout << "vy and r is: " << X[3] << " " << X[4] << " " << X[5] << std::endl;        
-          //define message to ROS2
-          output_struct.speed_target = (int)(5.0);
-          output_struct.speed_actual = (int)(vel_struct.velocity_x);
-          output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
-          output_struct.steering_angle_target = (float)(X[7]);
-          output_struct.brake_pressure_target = (bool)(0);
-          Integrator();
-        }
+        //dF ddelta dindex
+        for(int k = 0; k<3; k++) U[k]=output.x02[k];
+        //writeLookaheadArray1();
+        writeLookaheadArray2();        
+        //define message to ROS2
+        output_struct.speed_target = (int)(5.0);
+        output_struct.speed_actual = (int)(vel_struct.velocity_x);
+        output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
+        output_struct.steering_angle_target = (float)(X[7]);
+        output_struct.brake_pressure_target = (bool)(0);
+        Integrator();
+        std::cout << "U final array is: " << U[0] << " " << U[1] << " " << U[2] << std::endl;
+    }
 
     int MpcSolver::callSolver(int global_int) {
         exitflag = FORCESNLPsolver_solve(&params, &output, &info, mem, NULL, extfunc_eval);

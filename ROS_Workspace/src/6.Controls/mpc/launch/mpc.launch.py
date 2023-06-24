@@ -8,14 +8,14 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     mpc_dir = get_package_share_directory("mpc")
-    mpc_node = Node(
+    mpc = Node(
         package="mpc",
-        name="mpc_node",
+        name="mpc",
         executable="mpc",
         output="screen",
         emulate_tty=True,
         parameters=[os.path.join(mpc_dir, "config", "mpc_params.yaml")]
     )
 
-    ld.add_action(mpc_node)
+    ld.add_action(mpc)
     return ld

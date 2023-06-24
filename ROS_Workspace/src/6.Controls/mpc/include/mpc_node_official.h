@@ -8,6 +8,7 @@
 #include "custom_msgs/msg/pose_msg.hpp"
 #include "custom_msgs/msg/waypoints_msg.hpp"
 #include "custom_msgs/msg/tx_control_command.hpp"
+#include "custom_msgs/srv/set_total_laps.hpp"
 
 using namespace mpc;
 using namespace path_planning;
@@ -22,14 +23,21 @@ class MpcHandler : public rclcpp::Node {
   private:
     void pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg);
     void path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg);
+    void local_map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr local_map_msg);
     void loadParameters();
+    void declareParameters();
     void ReadKnownTrack();
+    void setSubscribers();
+    void setPublishers();
+    void setClient();
     int node_freq_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr pose_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::WaypointsMsg>::SharedPtr path_subscriber_;
+    rclcpp::Subscription<custom_msgs::msg::LocalMapMsg>::SharedPtr local_map_subscriber_;
     rclcpp::Publisher<custom_msgs::msg::TxControlCommand>::SharedPtr mpc_publisher_;
+    rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_client;
     rclcpp::TimerBase::SharedPtr mpc_clock_;
     size_t count_;
     std::ofstream outputFile;

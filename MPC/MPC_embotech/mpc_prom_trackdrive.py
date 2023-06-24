@@ -757,11 +757,11 @@ def main():
                 emergency_bool=1
                 s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool)
                 ds_emerg=0.1
-                if(s_start > INDEX_MAX): s_start = INDEX_MAX
+                if(s_start > INDEX_MAX): s_start = 0.0 
                 parameters_array_emergency=[s_start]
                 for i in range (model.N-1):
                     s_start+=ds_emerg
-                    if(s_start>INDEX_MAX): s_start = INDEX_MAX
+                    if(s_start>INDEX_MAX): s_start = 0.0
                     parameters_array_emergency.append(s_start)
                 x_for_splines=problem["xinit"]
                 next_data_points = reference_track[:,idx_start:idx_start+model.N]

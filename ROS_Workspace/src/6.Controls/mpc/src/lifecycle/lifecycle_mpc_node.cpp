@@ -4,37 +4,97 @@ using namespace mpc;
 using namespace path_planning;
 using namespace std::chrono_literals;
 namespace mpc {
-    LifecycleMpcHandler::LifecycleMpcHandler():LifecycleNode("mpc"), count_(0){
-        loadParameters();
+    LifecycleMpcHandler::LifecycleMpcHandler():LifecycleNode("mpc"), count_(0) {
+        declareParameters();
         std::cout << "simulation param is: " << mpc_solver.simulation_ << std::endl;
         RCLCPP_WARN(get_logger(), "\n-- MPC Node Created");
     }
 
     void LifecycleMpcHandler::setSubscribers() {
         pose_subscriber_ = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&LifecycleMpcHandler::pose_callback, this, std::placeholders::_1));
+        local_map_subscriber_ = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecycleMpcHandler::local_map_callback, this, std::placeholders::_1));
+    }
+
+    void LifecycleMpcHandler::setPublishers() {
+        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
+    }
+
+    void LifecycleMpcHandler::setClient() {
+        //client for total-laps request
+        auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future) {
+        auto result = future.get();
+        if (result->success) \
+            RCLCPP_INFO(get_logger(), "Total mission laps set successfully");
+        };
+
+        if (!total_laps_client->wait_for_service(std::chrono::seconds(2))) {
+            RCLCPP_ERROR(get_logger(), "P23 Status service is not available");
+        }
+        else {
+            auto request = std::make_shared<custom_msgs::srv::SetTotalLaps::Request>();
+            request->total_laps = mpc_solver.total_laps_;
+            auto future_result = total_laps_client->async_send_request(request, response_received_callback);
+        }
+    }
+
+    void LifecycleMpcHandler::declareParameters() {
+        declare_parameter<std::string>("mission","skidpad");
+        declare_parameter<bool>("simulation",true);
+        declare_parameter<float>("s_interval",0.1);
+        declare_parameter<float>("distance_safe",0.95);
+        declare_parameter<float>("emergency_forward",1.0);
+        declare_parameter<float>("F_init",300.0);
+        declare_parameter<float>("v_limit",12.5);
+        declare_parameter<int>("node_freq",40);
+        declare_parameter<float>("s_space_max",0.5);
+        declare_parameter<float>("s_space_min",0.1);
+        declare_parameter<int>("total_laps", 5);
     }
 
     void LifecycleMpcHandler::loadParameters() {
         global_int=-1;
-        mpc_solver.known_track_= declare_parameter<bool>("known_track",true); //they are set to false values to test yaml files
-        mpc_solver.simulation_= declare_parameter<bool>("simulation",true);
-        mpc_solver.midpoints_txt_= declare_parameter<std::string>("midpoints_txt","src/6.Controls/mpc/data/trackdrive_midpoints.txt");
-        mpc_solver.search_window_ = declare_parameter<int>("search_window",10);
-        mpc_solver.s_interval_ = declare_parameter<float>("s_interval",0.1);
-        mpc_solver.distance_safe_ = declare_parameter<float>("distance_safe",0.95);
-        mpc_solver.emergency_forward_ = declare_parameter<float>("emergency_forward",1.0);
-        mpc_solver.F_init = declare_parameter<float>("F_init",300.0);
-        mpc_solver.v_limit_ = declare_parameter<float>("v_limit",12.5);
-        node_freq_ = declare_parameter<int>("node_freq",40);
+        mpc_solver.mission_ = get_parameter("mission").as_string();
+        mpc_solver.simulation_= get_parameter("simulation").as_bool();
+        mpc_solver.generateTrackConfig();
+        mpc_solver.s_interval_ = get_parameter("s_interval").as_double();
+        mpc_solver.distance_safe_ = get_parameter("distance_safe").as_double();
+        mpc_solver.emergency_forward_ = get_parameter("emergency_forward").as_double();
+        mpc_solver.F_init = get_parameter("F_init").as_double();
+        mpc_solver.v_limit_ = get_parameter("v_limit").as_double();
+        node_freq_ = get_parameter("node_freq").as_int();
         mpc_solver.dt = (1/node_freq_);
-        mpc_solver.s_space_max = declare_parameter<float>("s_space_max",0.5);
-        mpc_solver.s_space_min = declare_parameter<float>("s_space_min",0.1);
-        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << mpc_solver.search_window_ << " " << mpc_solver.midpoints_txt_ << std::endl;
+        mpc_solver.s_space_max = get_parameter("s_space_max").as_double();
+        mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
+        mpc_solver.total_laps_ = get_parameter("total_laps").as_int();
+        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << node_freq_ << std::endl;
         std::cout << "declared params" << std::endl;
     }
         
+    void LifecycleMpcHandler::ReadKnownTrack() {
+        std::cout << "File to read from is: " << mpc_solver.midpoints_txt_ << std::endl;
+        Eigen::MatrixXd spline_input = readTrack(mpc_solver.midpoints_txt_);
+        path_planning::PointsArray midpoints{spline_input};
+        midpoints.conservativeResize(midpoints.rows(), midpoints.cols());
+        // midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
+        std::cout << "midpoints are: " << midpoints << std::endl;
+        path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::NaturalSpline);
+        mpc_solver.spline_final = spline_init;
+        mpc_solver.spline_resolution = int (spline_init->getApproximateLength()/mpc_solver.s_interval_);
+        mpc_solver.sol = spline_init->getApproximateLength(); 
+        std::cout << "length of track and resolution are: "<< mpc_solver.sol << " " << mpc_solver.spline_resolution << std::endl;
+        mpc_solver.whole_track = spline_init->getSplineData(mpc_solver.spline_resolution);
+        path_flag=1;
+        std::cout << "read known track" << std::endl;
+    }
+
+    void LifecycleMpcHandler::local_map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr local_map_msg) {
+        std::cout << "mpika local map" << std::endl;
+        std::cout << "lap count from lm is: " << float(local_map_msg->lap_count) << std::endl;
+    }
+
     void LifecycleMpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg) {
-        std::cout << "mpika pose_call" << std::endl;
+        std::cout << "Im at mission: " << mpc_solver.mission_ << " and lap: " << mpc_solver.lap_counter << std::endl;
+        std::cout << "Finish flag is: " << mpc_solver.finish_flag << std::endl;
         mpc_solver.pose_struct.theta = float(pose_msg->theta);
         mpc_solver.pose_struct.x = float(pose_msg->position.x);
         mpc_solver.pose_struct.y = float(pose_msg->position.y);
@@ -57,12 +117,14 @@ namespace mpc {
         else {
             if(global_int==-1) mpc_solver.Initialize_all_local();
             mpc_solver.UpdateFromLastIteration();
+            mpc_solver.customLapCounter();
+            mpc_solver.generateFinishFlag(mpc_solver.lap_counter);
+            if(mpc_solver.mission_=="skidpad") mpc_solver.updateSkidpadSpline(mpc_solver.lap_counter);
             if(mpc_solver.known_track_) {
                 mpc_solver.generateFirstPoint();
                 mpc_solver.writeParamsKnown(global_int);
             }
             else {
-                std::cout << "unknown track parameter estimation" << std::endl;
                 mpc_solver.generateFirstPointUnknown();
                 mpc_solver.writeParamsUnknown();
             }
@@ -129,23 +191,7 @@ namespace mpc {
         if(path_flag==0) path_flag=1;
     }
 
-    void LifecycleMpcHandler::ReadKnownTrack() {
-        std::cout << "Read points" << std::endl;
-        Eigen::MatrixXd spline_input = readTrack(mpc_solver.midpoints_txt_);
-        path_planning::PointsArray midpoints{spline_input};
-        midpoints.conservativeResize(midpoints.rows() + 1, midpoints.cols());
-        midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
-        path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-        mpc_solver.spline_final = spline_init;
-        mpc_solver.spline_resolution = int (spline_init->getApproximateLength()/mpc_solver.s_interval_);
-        mpc_solver.sol = spline_init->getApproximateLength(); 
-        std::cout << "length of track is: "<< mpc_solver.sol << std::endl;
-        mpc_solver.whole_track = spline_init->getSplineData(mpc_solver.spline_resolution);
-        path_flag=1;
-        std::cout << "read known track" << std::endl;
-    }
-
-    LifecycleMpcHandler::~LifecycleMpcHandler(){
+    LifecycleMpcHandler::~LifecycleMpcHandler() {
         // delete mpc_solver.spline_final;
         std::cout << "mpc node destroyed!" << std::endl;
     }

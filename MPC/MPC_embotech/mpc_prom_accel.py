@@ -189,7 +189,7 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             + 1e-3*(z[5]-current_target[2])**2 #dphi gap
             + 5e2*(z[6]-current_target[3])**2
