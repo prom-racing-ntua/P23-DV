@@ -59,6 +59,7 @@ void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimatio
     pose_msg.position.y = current_pose[1];
     pose_msg.theta = current_pose[2];
     pose_msg.velocity_state = *msg;
+    pose_msg.lap_count = completed_laps_;
     pose_publisher_->publish(pose_msg);
 
     // Keep odometry log
@@ -190,9 +191,7 @@ void LifecycleSlamHandler::optimizationCallback() {
     map_msg.pose.position.y = current_pose[1];
     map_msg.pose.theta = current_pose[2];
     map_msg.pose.velocity_state = last_vel_msg_;
-
-    if (completed_laps_ < 0) { map_msg.lap_count = 0; }
-    else { map_msg.lap_count = completed_laps_; }
+    map_msg.lap_count = completed_laps_;
     map_msg.cones_count_all = slam_object_.getConeCount();
 
     map_publisher_->publish(map_msg);

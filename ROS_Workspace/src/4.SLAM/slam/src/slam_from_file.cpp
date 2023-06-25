@@ -15,6 +15,10 @@ SlamFromFile::SlamFromFile() : Node("slam_from_file_node"), slam_object_(this) {
     num_observations_ = 0;
     accel_map_.clear();
 
+    completed_laps_ = 0;
+    cooldown_ = 0;
+	cooldown_max_ = 10;
+
 	loadParameters();
 
 	readNextOdometry();
@@ -68,8 +72,17 @@ void SlamFromFile::run_slam() {
 		odometry_measurement.yaw_rate = odometry_.yaw_rate;
 		odometry_measurement.measurement_noise = odometry_.covariance_matrix;
 
-		slam_object_.addOdometryMeasurement(odometry_measurement);
-
+		bool is_completed_lap{ slam_object_.addOdometryMeasurement(odometry_measurement) };
+    	if (is_completed_lap && (cooldown_ == 0))
+    	{
+    	    completed_laps_++;
+    	    cooldown_ = cooldown_max_;
+    	    RCLCPP_WARN(get_logger(), "Lap Completed!");
+    	}
+    	else if (cooldown_ > 0)
+    	{
+    	    cooldown_--;
+    	}
 		odometry_eof_ = readNextOdometry();
 	}
 
@@ -84,6 +97,7 @@ void SlamFromFile::run_slam() {
 	pose_msg.velocity_state.velocity_y = odometry_.velocity_y;
 	pose_msg.velocity_state.yaw_rate = odometry_.yaw_rate;
 	for (int i{ 0 }; i < 9;i++) { pose_msg.velocity_state.variance_matrix[i] = odometry_.covariance_matrix(i / 3, i % 3); }
+    pose_msg.lap_count = completed_laps_;
 
 	pose_publisher_->publish(pose_msg);
 
@@ -163,6 +177,7 @@ void SlamFromFile::run_slam() {
 		map_msg.pose.velocity_state.velocity_x = odometry_.velocity_x;
 		map_msg.pose.velocity_state.velocity_y = odometry_.velocity_y;
 		map_msg.pose.velocity_state.yaw_rate = odometry_.yaw_rate;
+		map_msg.lap_count = completed_laps_;
 		for (int i{ 0 }; i < 9;i++) { map_msg.pose.velocity_state.variance_matrix[i] = odometry_.covariance_matrix(i / 3, i % 3); }
 
 		if (track.empty())

@@ -58,6 +58,10 @@ private:
     double odometry_weight_;
     double perception_weight_;
 
+    int completed_laps_;
+    int cooldown_;
+	int cooldown_max_;
+    
     // Load ROS parameters from config files
     void loadParameters();
 
