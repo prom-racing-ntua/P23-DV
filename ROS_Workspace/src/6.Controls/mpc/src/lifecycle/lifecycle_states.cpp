@@ -3,19 +3,18 @@
 
 namespace mpc{
     rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-        LifecycleMpcHandler::on_configure(const rclcpp_lifecycle::State &state)
-    {
+        LifecycleMpcHandler::on_configure(const rclcpp_lifecycle::State &state) {
+        loadParameters();
         mpc_solver.mem = FORCESNLPsolver_internal_mem(0);
         if(!mpc_solver.known_track_){
             path_subscriber_ = create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&LifecycleMpcHandler::path_callback, this, std::placeholders::_1));
         }
-        else {
-            ReadKnownTrack();
-        }
+        else ReadKnownTrack();
         setSubscribers();
         // mpc_clock_ = create_wall_timer(std::chrono::milliseconds(static_cast<int>(1000/node_freq_)),std::bind(&LifecycleMpcHandler::mpc_callback, this));
         // mpc_clock_->cancel();
-        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
+        setPublishers();
+        setClient();
 
         RCLCPP_WARN(get_logger(), "\n-- MPC Configured!");
         return mpc::CallbackReturn::SUCCESS;

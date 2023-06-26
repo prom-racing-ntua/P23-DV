@@ -75,14 +75,14 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortRequiredContiguous(S, 0, 1); /*direct input signal access*/
 	
 	/* Input Port 1 */
-    ssSetInputPortMatrixDimensions(S,  1, 480, 1);
+    ssSetInputPortMatrixDimensions(S,  1, 360, 1);
     ssSetInputPortDataType(S, 1, SS_DOUBLE);
     ssSetInputPortComplexSignal(S, 1, COMPLEX_NO); /* no complex signals suppported */
     ssSetInputPortDirectFeedThrough(S, 1, 1); /* Feedthrough enabled */
     ssSetInputPortRequiredContiguous(S, 1, 1); /*direct input signal access*/
 	
 	/* Input Port 2 */
-    ssSetInputPortMatrixDimensions(S,  2, 160, 1);
+    ssSetInputPortMatrixDimensions(S,  2, 120, 1);
     ssSetInputPortDataType(S, 2, SS_DOUBLE);
     ssSetInputPortComplexSignal(S, 2, COMPLEX_NO); /* no complex signals suppported */
     ssSetInputPortDirectFeedThrough(S, 2, 1); /* Feedthrough enabled */
@@ -108,7 +108,7 @@ static void mdlInitializeSizes(SimStruct *S)
     if (!ssSetNumOutputPorts(S, 1)) return;    
     	
 	/* Output Port 0 */
-    ssSetOutputPortMatrixDimensions(S,  0, 480, 1);
+    ssSetOutputPortMatrixDimensions(S,  0, 360, 1);
     ssSetOutputPortDataType(S, 0, SS_DOUBLE);
     ssSetOutputPortComplexSignal(S, 0, COMPLEX_NO); /* no complex signals suppported */
 
@@ -219,12 +219,12 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 		params.xinit[i] = (double) xinit[i];
 	}
 
-	for(i = 0; i < 480; i++)
+	for(i = 0; i < 360; i++)
 	{
 		params.x0[i] = (double) x0[i];
 	}
 
-	for(i = 0; i < 160; i++)
+	for(i = 0; i < 120; i++)
 	{
 		params.all_parameters[i] = (double) all_parameters[i];
 	}
@@ -412,56 +412,6 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 	for(i = 0; i < 12; i++)
 	{
 		outputs[348 + i] = (real_T) output.x30[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[360 + i] = (real_T) output.x31[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[372 + i] = (real_T) output.x32[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[384 + i] = (real_T) output.x33[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[396 + i] = (real_T) output.x34[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[408 + i] = (real_T) output.x35[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[420 + i] = (real_T) output.x36[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[432 + i] = (real_T) output.x37[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[444 + i] = (real_T) output.x38[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[456 + i] = (real_T) output.x39[i];
-	}
-
-	for(i = 0; i < 12; i++)
-	{
-		outputs[468 + i] = (real_T) output.x40[i];
 	}
 
 	

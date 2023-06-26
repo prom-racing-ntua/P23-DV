@@ -12,6 +12,7 @@
 
 namespace pid_pp
 {
+    typedef std::string string;
     class Point
     {
     private:

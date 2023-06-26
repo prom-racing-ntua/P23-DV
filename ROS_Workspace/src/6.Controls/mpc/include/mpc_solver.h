@@ -82,12 +82,18 @@ struct output_data {
     float brake_pressure_target;
 };
 
+struct center {
+    float x;
+    float y;
+};
+
 class MpcSolver {
     public:
         constexpr static int X_SIZE = 9;
         constexpr static int U_SIZE = 3;
         constexpr static int Z_SIZE = X_SIZE + U_SIZE;
-        constexpr static int LOOKAHEAD = 40;
+        constexpr static int LOOKAHEAD = 30; 
+        int lookahead_;
         double X[X_SIZE];
         double U[U_SIZE];
         double s_array_final[LOOKAHEAD];
@@ -109,13 +115,24 @@ class MpcSolver {
         int callSolver(int global_int);
         void generateOutput();
         void copyToParameters();
+        void updateSkidpadSpline(int lap_counter);
+        void customLapCounter();
+        void generateTrackConfig();
+        void generateFinishFlag(int lap_counter);
+        void updateSplineParameters(std::string txt_file);
+        std::string mission_;
         std::string midpoints_txt_;
-        // path_planning::ArcLengthSplin
         std::vector<double> error_ver;
         std::vector<double> error_eucl;
         std::vector<double> s_vector;
         std::vector<double> ds_vector;
+        center center_point;
+        int lap_counter=0;
+        bool lap_lock;
+        bool finish_flag=0;
+        bool braking_manouvre;
         float emergency_forward_;
+        int lap_counter_slam_;
         bool emergency;
         float sol;
         float dt;
@@ -133,10 +150,10 @@ class MpcSolver {
         float F_init;
         float s_space_max;
         float s_space_min;
+        int total_laps_;
         PointsData params_array;
         PointsData whole_track;
         FORCESNLPsolver_mem *mem;
-        // std::vector<double> X_spl(LOOKAHEAD), Y_spl(LOOKAHEAD), tang_spl(LOOKAHEAD), curv_spl(LOOKAHEAD);
         std::vector<double> X_spl = std::vector<double>(LOOKAHEAD);
         std::vector<double> Y_spl = std::vector<double>(LOOKAHEAD);
         std::vector<double> tang_spl = std::vector<double>(LOOKAHEAD);
@@ -170,7 +187,7 @@ class MpcSolver {
         const double m = 190.0; // mass of the car
         const double g = 9.81;
         const double Iz = 110.0;
-        const double ts = 0.05;
+        const double ts = 0.025;
         //for dynamic model
         const double B=-8.266;
         const double C=1.456;

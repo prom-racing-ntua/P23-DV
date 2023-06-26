@@ -82,7 +82,7 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
     in[2] = l;
     in[3] = y;
 
-	if ((0 <= stage && stage <= 38))
+	if ((0 <= stage && stage <= 28))
 	{
 		
 		
@@ -147,7 +147,7 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_h_sparse, nabla_h);
 		}
 	}
-	if ((39 == stage))
+	if ((29 == stage))
 	{
 		
 		
