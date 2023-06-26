@@ -120,7 +120,7 @@ namespace path_planner
     std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
     rclcpp::Duration total_time = this->now() - starting_time;
     total_execution_time += total_time.nanoseconds() / 1000000.0;
-    std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
+    RCLCPP_INFO_STREAM(get_logger(), "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms.");
     }
 
     LifecyclePathPlanner::~LifecyclePathPlanner() {

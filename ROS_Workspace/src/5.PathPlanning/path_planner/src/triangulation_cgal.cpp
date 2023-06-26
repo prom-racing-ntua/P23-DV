@@ -81,6 +81,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     std::cout << ']' << std::endl;
     */
     // std::cout << local_map.size() << std::endl;
+
     triangulation_object.clear(); // faster than "smarter" methods
     cone_lookup.clear();
     no_of_batches++;
@@ -141,11 +142,15 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
             a = it->first->vertex((it->second + 1) % 3)->point();
             b = it->first->vertex((it->second + 2) % 3)->point();
             edge = Segment_2(a, b);
-            
             if(it->first->vertex((it->second + 1) % 3)==triangulation_object.infinite_vertex() || it->first->vertex((it->second + 2) % 3)==triangulation_object.infinite_vertex()){
                 continue;
             }
-            if (1/*triangulation_object.is_infinite(it->first->neighbor(it->second))*/)
+            /*if((CGAL::squared_distance(a, Point(0,0))>1e8) || (CGAL::squared_distance(b, Point(0,0))>1e8)) //norm bigger than 10000m
+            {
+                std::cout<<"b"<<std::endl;
+                continue;
+            }*/
+            else
             {
                 dist = CGAL::squared_distance(position, edge);
                 cross = CGAL::squared_distance(dir_vector, edge);
@@ -189,14 +194,17 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
                 perp = Point(1, 0);
             else
                 perp = Point(-ab.y() / ab.x(), 1);
-            mid_p = Point(mid.x() + 0.001 * perp.x(), mid.y() + 0.001 * perp.y());
-            mid_n = Point(mid.x() - 0.001 * perp.x(), mid.y() - 0.001 * perp.y());
+            mid_p = Point(mid.x() + perp.x() / (100*std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())), mid.y() + perp.y() / (100*std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())));
+            mid_n = Point(mid.x() - perp.x() / (100*std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())), mid.y() - perp.y() / (100*std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())));
             starting_face = triangulation_object.locate(mid_p);
             if (triangulation_object.is_infinite(starting_face))
+            {
                 starting_face = triangulation_object.locate(mid_n);
+            }
             
+
             //not_visited_faces.erase(starting_face);
-            std::cout<<triangulation_object.triangle(starting_face)<<" "<<triangulation_object.triangle(infinite)<<" "<<starting_edge.a().coords<<" "<<starting_edge.b().coords<<std::endl;
+            //std::cout<<triangulation_object.triangle(starting_face)<<" "<<triangulation_object.triangle(infinite)<<" "<<starting_edge.a().coords<<" "<<starting_edge.b().coords<<std::endl;
             Point dir(2 * starting_edge.midpoint().x() - position.x(), 2 * starting_edge.midpoint().y() - position.y());
             best_best_path = find_best_path(position, direction, starting_edge, selected_edges, not_visited_faces, starting_face, infinite, 0, dir);
             //best_best_path = filter_best_path(best_best_path, position, direction);
@@ -220,9 +228,10 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         for (int i = 0; i < 3; i++)
         {
             other_a = starting_triangle.vertex((i + 1) % 3);
-            if(other_a.x()*other_a.x()+other_a.y()*other_a.y()<0.00001)std::cout<<other_a<<std::endl;
+            //if(other_a.x()*other_a.x()+other_a.y()*other_a.y()<0.00001)std::cout<<other_a<<std::endl;
             other_b = starting_triangle.vertex((i + 2) % 3);
-            if(other_b.x()*other_b.x()+other_b.y()*other_b.y()<0.00001)std::cout<<other_b<<std::endl;
+            //if(other_b.x()*other_b.x()+other_b.y()*other_b.y()<0.00001)std::cout<<other_b<<std::endl;
+            
             my_edge starting_edge(Cone(other_a, cone_lookup[other_a]),
                                   Cone(other_b, cone_lookup[other_b]));
 
@@ -280,6 +289,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     {
         no_of_midpoints++;
         /*if(!first or selected_edges.size()==1)*/ out.push_back(edge.midpoint());
+        
         /*else first=0;*/
     }
     if (out.size() >= 3)
