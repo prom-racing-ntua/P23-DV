@@ -196,8 +196,8 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
                 perp = Point(1, 0);
             else
                 perp = Point(-ab.y() / ab.x(), 1);
-            mid_p = Point(mid.x() + 0.001 * perp.x(), mid.y() + 0.001 * perp.y());
-            mid_n = Point(mid.x() - 0.001 * perp.x(), mid.y() - 0.001 * perp.y());
+            mid_p = Point(mid.x() + perp.x() / (100 * std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())), mid.y() + perp.y() / (100 * std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())));
+            mid_n = Point(mid.x() - perp.x() / (100 * std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())), mid.y() - perp.y() / (100 * std::sqrt(perp.x()*perp.x()+perp.y()*perp.y())));
             starting_face = triangulation_object.locate(mid_p);
             if (triangulation_object.is_infinite(starting_face))
                 starting_face = triangulation_object.locate(mid_n);

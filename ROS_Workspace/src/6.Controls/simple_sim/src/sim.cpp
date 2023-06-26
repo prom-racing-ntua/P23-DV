@@ -241,7 +241,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	std::ifstream fs;
 
-	fs.open("src/6.Controls/simple_sim/data/map.txt");
+	fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
 	/*
 		Format:
 			count
@@ -255,7 +255,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	unseen_cones.reserve(count);
 	for (int i = 0; i < count; i++)
 	{
-		fs >> x >> y >> c;
+		fs >> c >> x >> y;
 		unseen_cones.push_back(Cone(x, y, c));
 	}
 	fs.close();
@@ -321,7 +321,7 @@ void sim_node::timer_callback()
 			last_d = last_d - 0.01;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt, f, last_d);
-		if ((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 and global_idx - idx_of_last_lap > 10000 and state.x)
+		if (((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 or (std::pow(state.x-75, 2) + std::pow(state.y, 2)) < 2.25) and global_idx - idx_of_last_lap > 1000)
 		{
 			idx_of_last_lap = global_idx;
 			state.lap++;
@@ -384,6 +384,7 @@ void sim_node::timer_callback()
 		vel.acceleration_x = add_noise(state.a_x, 1e-4);
 		vel.acceleration_y = add_noise(state.a_y, 1e-4);
 		msg.velocity_state = vel;
+		msg.lap_count = state.lap;
 		pub_pose->publish(msg);
 	}
 

@@ -56,6 +56,7 @@ private:
     double max_speed, spline_res_per_meter;
     double safe_speed_to_break;
     int laps_to_do;
+    int prev_lap;
     string discipline, midpoints;
     std::ifstream mids;
 

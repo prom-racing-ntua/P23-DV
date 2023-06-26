@@ -43,7 +43,7 @@ void PID_PP_Node::parameter_load()
     declare_parameter<string>("midpoints", "");
 }
 
-PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0)
+PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1)
 {
     // PARAMETER LOADING
     parameter_load();
@@ -152,9 +152,9 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
         delete spline_to_delete;
         delete profile_to_delete;
     }
-    if (discipline == "Acceleration")
+    else if (discipline == "Acceleration")
     {
-        if (lap == 1)
+        if (lap == 1 or lap==0)
         {
             path_planning::PointsArray midpoints(30, 2);
             for (int i = 0; i < 30; i++)
@@ -165,7 +165,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
             double ms = max_speed;
-            double v_init = 0;
+            double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
@@ -204,6 +204,10 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
+    }
+    else if(discipline=="Skidpad")
+    {
+
     }
 }
 
@@ -270,6 +274,7 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
 
 void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 {
+    std::cout<<">>> >>> "<<has_run_waypoints<<" "<<!has_run_waypoints<<std::endl;
     std::cout << "Entered Pose Callback" << std::endl;
     // std::cout << "Pos: " << msg->position.x << ", " << msg->position.y << ". theta: " << msg->theta << ". v_o : " << msg->velocity_state.velocity_x << std::endl;
     //  std::cout<<"1.. ";
@@ -277,7 +282,11 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
         if(discipline=="Autocross")return;
-        known_map_substitute(0,0);
+        known_map_substitute(0,laps_to_do);
+        has_run_waypoints = 1;
+        std::cout<<"<><><><><><><><><><>"<<std::endl;
+        std::cout<<"<><><><><><><><><><>"<<std::endl;
+        std::cout<<"<><><><><><><><><><>"<<std::endl;
     
     // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
@@ -286,6 +295,15 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     a_x = msg->velocity_state.acceleration_x;
     a_y = msg->velocity_state.acceleration_y;
     // std::cout<<"3.. ";
+
+    if(prev_lap!=msg->lap_count)
+    {
+        prev_lap = msg->lap_count;
+        known_map_substitute(prev_lap, laps_to_do);
+        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+    }
 
     Point position(msg->position.x, msg->position.y);
     // Point direction(std::cos(theta), std::sin(theta));

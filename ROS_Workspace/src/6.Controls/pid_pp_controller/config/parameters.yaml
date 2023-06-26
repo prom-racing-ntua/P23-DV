@@ -1,7 +1,7 @@
 pid_pp_controller:
   ros__parameters:
-    discipline: "Autocross"
-    midpoints: ".txt"
+    discipline: "Acceleration"
+    midpoints: "Acceleration.txt"
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
@@ -22,9 +22,9 @@ pid_pp_controller:
 
     #Pure Pursuit
     ld_min: 1.0                   
-    ld_max: 5.0
+    ld_max: 25.0
     v_min: 0.0
-    v_max: 10.0
+    v_max: 25.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
