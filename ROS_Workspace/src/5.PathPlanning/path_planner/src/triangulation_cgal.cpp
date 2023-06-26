@@ -81,6 +81,13 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     std::cout << ']' << std::endl;
     */
     // std::cout << local_map.size() << std::endl;
+    for(auto cone:local_map)
+    {
+        if(std::isinf(CGAL::squared_distance(cone.coords, Point(0,0))))
+        {
+            std::cout<<"Beginning! "<<cone.coords<<std::endl;
+        }
+    }
     triangulation_object.clear(); // faster than "smarter" methods
     cone_lookup.clear();
     no_of_batches++;
@@ -281,6 +288,10 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         no_of_midpoints++;
         /*if(!first or selected_edges.size()==1)*/ out.push_back(edge.midpoint());
         /*else first=0;*/
+        if(std::isinf(CGAL::squared_distance(edge.midpoint(), Point(0,0))))
+        {
+            std::cout<<"Here! "<<edge.a().coords<<" "<<edge.b().coords<<" "<<edge.midpoint()<<std::endl;
+        }
     }
     if (out.size() >= 3)
         out.erase(out.begin() + 1);
@@ -402,7 +413,7 @@ std::pair<std::vector<my_edge>, int> Triangulation::find_best_path(const Point &
 
 std::pair<std::vector<my_edge>, int> Triangulation::filter_best_path(std::pair<std::vector<my_edge>, int> best_path, const Point &starting_position, const Direction_2 &starting_direction, int times_applied)
 {
-    if (best_path.second < filtering_threshold || best_path.first.size() == 2 || times_applied>2)
+    if (best_path.second < filtering_threshold || best_path.first.size() == 2 /*|| times_applied>2*/)
         return best_path;
     best_path.first.pop_back();
     best_path.second = cost_function_advanced(best_path.first, starting_position, starting_direction);

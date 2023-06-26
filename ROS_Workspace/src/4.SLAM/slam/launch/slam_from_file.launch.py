@@ -28,5 +28,5 @@ def generate_launch_description():
     )
 
     ld.add_action(slam_from_file_node)
-    ld.add_action(path_planning_node)
+    #ld.add_action(path_planning_node)
     return ld

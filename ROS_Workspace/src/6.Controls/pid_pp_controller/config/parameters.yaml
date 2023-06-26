@@ -1,5 +1,7 @@
 pid_pp_controller:
   ros__parameters:
+    discipline: "Autocross"
+    midpoints: ".txt"
     #model
     mass: 193.5
     gravitational_acceleration: 9.81

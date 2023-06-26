@@ -66,10 +66,17 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     rclcpp::Time starting_time = this->now();
     int cone_count = msg->local_map.size();
     std::vector<Cone> full_map, local_map;
+    double x0,y0;
     full_map.reserve(cone_count);
     for (custom_msgs::msg::ConeStruct cone : msg->local_map)
     {
-        full_map.push_back(Cone(Point(cone.coords.x, cone.coords.y), cone.color));
+        x0 = cone.coords.x;
+        y0 = cone.coords.y;
+        if(std::isinf(x0*x0+y0*y0))
+        {
+            std::cout<<"from path_planner: "<<x0<<" "<<y0<<std::endl;
+        }
+        full_map.push_back(Cone(Point(x0, y0), cone.color));
     }
     //full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
     //full_map.push_back(Cone(Point(0, -1.5), 0));

@@ -387,7 +387,7 @@ void sim_node::timer_callback()
 		pub_pose->publish(msg);
 	}
 
-	if (global_idx % 500 == 0)
+	if (global_idx % 100 == 0)
 	{
 		std::cout << state.t << "\t\t" << state.v_x << std::endl;
 		// std::cout << '*' << std::endl;
@@ -403,7 +403,8 @@ void sim_node::timer_callback()
 			}
 		}
 
-		// msg2.cone_count = uint8_t(seen_cones.size());
+		msg2.cones_count_all = uint16_t(seen_cones.size());
+		msg2.cones_count_actual = uint8_t(seen_cones.size());
 		std::vector<custom_msgs::msg::ConeStruct> cs;
 		cs.reserve(int(seen_cones.size()));
 
