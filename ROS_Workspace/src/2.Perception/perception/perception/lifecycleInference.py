@@ -34,7 +34,7 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
 
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.65, iou=0.35)
+        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.6, iou=0.35)
         self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
 
         # Setup Message Transcoder

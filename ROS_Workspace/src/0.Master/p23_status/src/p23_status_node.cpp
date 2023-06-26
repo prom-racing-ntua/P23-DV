@@ -93,7 +93,6 @@ void P23StatusNode::setPublishers() {
 
 void P23StatusNode::setServices() {
     // Set a service to change DV Status and to receive IMU Mode
-    p23_status_client_ = create_client<custom_msgs::srv::DriverlessTransition>("lifecycle_manager/change_driverless_status");
     ins_mode_client_ = create_client<custom_msgs::srv::InsMode>("/vn_300/get_ins_mode");
     vectornav_heartbeat_client_ = create_client<custom_msgs::srv::InsMode>("/vn_200/get_ins_mode");
 
@@ -169,45 +168,50 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
     // Maybe not for the stopping in Finished or Emergency...
     // We are constantly receiving the status...so this is to avoid spam
     if (statusReceived == currentAsStatus) { return; }
-    currentAsStatus = statusReceived;
 
+    bool success;
     switch (statusReceived)
     {
     case(p23::AS_Status::AS_OFF):
         // Don't do anything, wait for mission selection
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_OFF. Waiting for mission lock");
+        success = true;
         break;
 
     case(p23::AS_Status::AS_READY):
         // Activate all nodes except controls. We are waiting for go signal now.
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_READY. Activating nodes");
-        changeDVStatus(p23::ON_AS_READY);
+        success = changeDVStatus(p23::ON_AS_READY);
         break;
         
     case(p23::AS_Status::AS_DRIVING):
         // This happens when we receive the go signal. Activate controls if we are not in DV_DRIVING.
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_DRIVING. Activating controls");
-        changeDVStatus(p23::ON_AS_DRIVING);
+        success = changeDVStatus(p23::ON_AS_DRIVING);
         break;
 
     case(p23::AS_Status::AS_FINISHED):
         // Mission is finished, probably shutdown nodes
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_FINISHED. De-activating nodes");
-        changeDVStatus(p23::SHUTDOWN_NODES);
+        currentAsStatus = statusReceived;
+        
+        success = changeDVStatus(p23::SHUTDOWN_NODES);
         break;
 
     case(p23::AS_Status::AS_EMERGENCY):
         /* Send a deactivation signal to the nodes.*/
         // Safely stop then shutdown nodes. Activate service brakes for redundancy.
         RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
+        currentAsStatus = statusReceived;
 
         // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
-        changeDVStatus(p23::SHUTDOWN_NODES);
+        success = changeDVStatus(p23::SHUTDOWN_NODES);
         break;
     }
+    if (success) currentAsStatus = statusReceived;
 }
 
-void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
+bool P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
     using namespace std::chrono_literals;
     p23::DV_Status transition_to;
 
@@ -219,7 +223,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
         if (currentDvStatus != p23::STARTUP)
         {
             RCLCPP_ERROR_STREAM(get_logger(), "Cannot transition to LV_ON from " << p23::driverless_status_list.at(currentDvStatus));
-            return;
+            return 0;
         }
         transition_to = p23::DV_Status::LV_ON;
         break;
@@ -235,7 +239,7 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
         if (!missionLocked)
         {
             RCLCPP_ERROR(get_logger(), "Mission is already unlocked, currently in LV_ON");
-            return;
+            return 0;
         }
         missionLocked = false;
         transition_to = p23::DV_Status::LV_ON;
@@ -243,20 +247,28 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     case p23::DV_Transitions::ON_AS_READY:
         // This happens when we receive an AS_READY signal from the VCU
-        if (currentAsStatus != p23::AS_READY)
-        {
-            RCLCPP_ERROR(get_logger(), "Current Autonomous System State is not AS_READY");
-            return;
+        if (currentAsStatus != p23::AS_OFF) {
+            RCLCPP_ERROR(get_logger(), "Cannot trnsition to AS_READY. Current Autonomous System State is not AS_OFF");
+            return 0;
+        }
+        // We need to be in DV_READY to transition to AS_READY
+        if (currentDvStatus != p23::DV_READY) {
+            RCLCPP_ERROR(get_logger(), "Cannot trnsition to AS_READY. Current Driverless System State is not DV_READY");
+            return 0;
         }
         transition_to = p23::DV_Status::DV_READY;
         break;
 
     case p23::DV_Transitions::ON_AS_DRIVING:
         // This happens when we receive an AS_DRIVING signal from the VCU
-        if (currentAsStatus != p23::AS_DRIVING)
-        {
-            RCLCPP_ERROR(get_logger(), "Current Autonomous System State is not AS_DRIVING");
-            return;
+        if (currentAsStatus != p23::AS_READY) {
+            RCLCPP_ERROR(get_logger(), "Cannot trnsition to AS_DRIVING. Current Autonomous System State is not AS_READY");
+            return 0;
+        }
+        // We need to be in DV_READY to transition to AS_DRIVING
+        if (currentDvStatus != p23::DV_READY) {
+            RCLCPP_ERROR(get_logger(), "Cannot trnsition to AS_DRIVING. Current Driverless System State is not DV_READY");
+            return 0;
         }
         transition_to = p23::DV_Status::DV_DRIVING;
         break;
@@ -276,12 +288,12 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
         break;
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid transition requested: " << requested_transition);
-        return;
+        return 0;
     }
 
     if (!dv_transition_client_->wait_for_action_server(std::chrono::milliseconds(2000))) {
         RCLCPP_ERROR(get_logger(), "Action server not available after waiting");
-        return;
+        return 0;
     }
 
     auto send_goal_options = rclcpp_action::Client<Transition>::SendGoalOptions();
@@ -299,6 +311,8 @@ void P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
 
     // Send goal to Lifecycle Manager
     dv_transition_client_->async_send_goal(goal, send_goal_options);
+
+    return 1;
 }
 
 void P23StatusNode::loadParameters() {

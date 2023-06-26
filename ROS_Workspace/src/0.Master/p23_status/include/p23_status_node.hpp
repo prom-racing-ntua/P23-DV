@@ -103,7 +103,6 @@ private:
     rclcpp::Publisher<custom_msgs::msg::TxSystemState>::SharedPtr canbus_system_state_publisher_;
 
     //Clients
-    rclcpp::Client<custom_msgs::srv::DriverlessTransition>::SharedPtr p23_status_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr ins_mode_client_;
     rclcpp::Client<custom_msgs::srv::InsMode>::SharedPtr vectornav_heartbeat_client_;
 
@@ -148,7 +147,7 @@ private:
     void checkVectornav();
 
     /* DV Status Client function */
-    void changeDVStatus(p23::DV_Transitions newStatus);
+    bool changeDVStatus(p23::DV_Transitions newStatus);
 
     /* Callback to set total laps*/
     void setTotalLaps(const std::shared_ptr<custom_msgs::srv::SetTotalLaps::Request> request,

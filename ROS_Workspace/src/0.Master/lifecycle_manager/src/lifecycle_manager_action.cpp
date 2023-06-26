@@ -12,18 +12,15 @@ namespace lifecycle_manager_namespace
         
         p23::DV_Transitions requested_transition{ static_cast<p23::DV_Transitions>(goal->transition.id) };
         // Complete current transition successfully and then accept incoming
-        if ((requested_transition == p23::ON_AS_READY) or (requested_transition == p23::ON_AS_DRIVING) or (requested_transition == p23::SHUTDOWN_NODES)) {
-            // Ugly but works
-            while (ongoing_goal_handle!=nullptr) continue;
-            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-        }
+        if ((requested_transition == p23::ON_AS_READY) or (requested_transition == p23::ON_AS_DRIVING) or (requested_transition == p23::SHUTDOWN_NODES)) \
+            incoming_transition = false;
         // Complete current transition returning failure and then accept incoming
-        else {
+        else \
             incoming_transition = true;
-            // Ugly but works
-            while (ongoing_goal_handle!=nullptr) continue;
-            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-        }
+        
+        // Wait until transition is over [Ugly but works]
+        while (ongoing_goal_handle!=nullptr) continue;
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
 
     rclcpp_action::CancelResponse LifecycleManagerNode::handleCancellation(const std::shared_ptr<GoalHandle> goal_handle)

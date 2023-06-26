@@ -54,7 +54,7 @@ def generate_launch_description():
         name='acquisition_right',
         emulate_tty=True
     )
-    # ldList.append(acquisitionRightNode)
+    ldList.append(acquisitionRightNode)
 
     # Inference Node
     inferenceNode = Node(
