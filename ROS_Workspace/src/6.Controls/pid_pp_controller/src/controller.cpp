@@ -130,14 +130,14 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
     {
         int count;
         mids >> count;
-        path_planning::PointsArray midpoints(count);
+        path_planning::PointsArray midpoints(count, 2);
         for (int i = 0; i < count; i++)
         {
             mids >> midpoints(i, 0) >> midpoints(i, 1);
         }
         path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
         bool is_end = lap == total_laps;
-        double ms = is_end > 0 : max_speed;
+        double ms = is_end ? 0 : max_speed;
         double v_init = lap == 0 ? 0 : this->v_x;
         VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
         path_planning::ArcLengthSpline *spline_to_delete = this->spline;
@@ -156,7 +156,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
     {
         if (lap == 1)
         {
-            path_planning::PointsArray midpoints(30);
+            path_planning::PointsArray midpoints(30, 2);
             for (int i = 0; i < 30; i++)
             {
                 midpoints(i, 0) = i * 5;
@@ -181,7 +181,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
         }
         if (lap == 2)
         {
-            path_planning::PointsArray midpoints(30);
+            path_planning::PointsArray midpoints(15, 2);
             for (int i = 15; i < 30; i++)
             {
                 midpoints(i, 0) = i * 5;
@@ -277,7 +277,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
         if(discipline=="Autocross")return;
-        known_map_substitute()
+        known_map_substitute(0,0);
     
     // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
