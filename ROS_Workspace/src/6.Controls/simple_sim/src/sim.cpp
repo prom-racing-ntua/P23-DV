@@ -284,7 +284,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 double add_noise(double x, double perc = 0.001)
 {
 	static std::default_random_engine generator;
-  	std::normal_distribution<double> distribution(0.0,perc);
+  	std::normal_distribution<double> distribution(0.0,5*perc);
 	double add = distribution(generator);
 	//std::cout<<add<<std::endl;
 	return x + add;
@@ -373,7 +373,7 @@ void sim_node::timer_callback()
 		log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
 		state.check_ellipses(log2);
 		log2.close();
-		pos.x = add_noise(state.x);
+		pos.x = add_noise(state.x, 0.05);
 		pos.y = add_noise(state.y, 0.05);
 		msg.position = pos;
 		msg.theta = add_noise(state.theta, 0.01);
