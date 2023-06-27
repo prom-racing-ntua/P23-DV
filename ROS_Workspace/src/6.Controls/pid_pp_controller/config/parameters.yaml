@@ -24,11 +24,11 @@ pid_pp_controller:
     ld_min: 1.0                   
     ld_max: 20.0
     v_min: 0.0
-    v_max: 30.0
+    v_max: 20.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
-    max_speed: 150.0
+    max_speed: 20.0
     dt: 0.025
     safe_speed_to_break: 3.0
 

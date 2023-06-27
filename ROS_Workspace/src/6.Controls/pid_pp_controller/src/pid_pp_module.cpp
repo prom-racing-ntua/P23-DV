@@ -140,6 +140,7 @@ double PurePursuit::operator()(const Point &target, double theta, double minimum
     {
         double turn_radius_1 = ld * ld / (2 * (-std::sin(theta) * target.x() + std::cos(theta) * target.y()));
         double turn_radius = turn_radius_1>0 ? std::max(turn_radius_1, minimum_radius) : std::min(turn_radius_1, -minimum_radius);
+
         heading = std::atan(wheelbase / turn_radius);
         //std::cout<<"target: ("<<target.x()<<", "<<target.y()<<"). R1: "<<turn_radius_1<<". Rmin:"<<minimum_radius<<" "<<ld<<" "<<theta<<std::endl;
     }else
@@ -287,7 +288,7 @@ std::pair<double, double> VelocityProfile::operator()(const Point &position, dou
     // return std::make_pair(0,0);
     int i = get_projection(position, theta);
     last_visited_index = i;
-    i = std::min(i+1, max_idx); //looking at next target
+    i = std::min(i, max_idx); //looking at next target
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
     //std::cout<<target<<std::endl;
@@ -383,7 +384,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         }
     }
     //log.close();
-    spline_samples[0].set_target_speed(initial_speed);
+    spline_samples[0].set_target_speed(std::max(0.0,initial_speed));
     if(unknown)spline_samples[resolution - 1].set_target_speed(0); // Safety Check
     /* SECOND PASS */
     /*
@@ -476,5 +477,5 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
     }
 
-    if(spline_samples[0].target_speed()==0)spline_samples[0].set_target_speed(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()));//prevents initial target from beign 0
+    spline_samples[0].set_target_speed(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()));//prevents initial target from beign 0
 }

@@ -44,7 +44,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Acceleration")
     {
-        if (lap == 1 or lap==0)
+        if (lap == 1 or lap == 0)
         {
             path_planning::PointsArray midpoints(30, 2);
             for (int i = 0; i < 30; i++)
@@ -81,7 +81,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 1;
             double ms = 0;
             double v_init = this->v_x;
-            std::cout<<"this vx = "<<v_init<<std::endl;
+            std::cout << "this vx = " << v_init << std::endl;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
@@ -96,11 +96,9 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete profile_to_delete;
         }
     }
-    else if(discipline=="Skidpad")
+    else if (discipline == "Skidpad")
     {
-
     }
-
 }
 
 void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
@@ -166,7 +164,10 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
 
 void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 {
+    // std::cout<<">>> >>> "<<has_run_waypoints<<" "<<!has_run_waypoints<<std::endl;
     std::cout << "Entered Pose Callback" << std::endl;
+    // std::cout << "Pos: " << msg->position.x << ", " << msg->position.y << ". theta: " << msg->theta << ". v_o : " << msg->velocity_state.velocity_x << std::endl;
+    //  std::cout<<"1.. ";
 
     rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
@@ -175,28 +176,41 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
             return;
         known_map_substitute(0, laps_to_do);
         has_run_waypoints = 1;
+        // std::cout<<"<><><><><><><><><><>"<<std::endl;
+        // std::cout<<"<><><><><><><><><><>"<<std::endl;
+        // std::cout<<"<><><><><><><><><><>"<<std::endl;
     }
+    // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
     v_y = msg->velocity_state.velocity_y;
     r = msg->velocity_state.yaw_rate;
     a_x = msg->velocity_state.acceleration_x;
     a_y = msg->velocity_state.acceleration_y;
+    // std::cout<<"3.. ";
 
     if (prev_lap != msg->lap_count)
     {
         prev_lap = msg->lap_count;
         known_map_substitute(prev_lap, laps_to_do);
+        // std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        // std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        // std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
     }
 
     Point position(msg->position.x, msg->position.y);
+    // Point direction(std::cos(theta), std::sin(theta));
     double theta = msg->theta;
     // std::cout<<"4.. ";
+    // std::pair<double, double> projection = (*this->profile)(position, theta);
     std::pair<double, double> projection = this->profile->operator()(position, theta);
-    std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
+    // std::cout<<"5.. ";
+    //std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
+    RCLCPP_INFO_STREAM(get_logger(), "target : " << projection.first << ". speed : " << this->v_x);
     log << projection.first << " " << this->v_x << std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
-    for_publish.speed_actual = this->v_x * 3.6;
-    for_publish.speed_target = projection.first * 3.6;
+    for_publish.speed_actual = std::abs(this->v_x * 3.6);
+    for_publish.speed_target = std::abs(projection.first * 3.6);
+    // std::cout<<"6.. ";
     double min_radius;
     double force = pid_controller(projection.first - this->v_x);
     // Checking Force
@@ -227,6 +241,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
             rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
         }
     }
+    // std::cout<<"8.. ";
     for_publish.motor_torque_target = model.Torque(force);
 
     // CALCULATING MIN RADIUS
@@ -242,15 +257,19 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     double mx_head = 3.14159 * 31.2 / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
+    
     mu *= safety_factor; // C_SF3
     min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
     double ld;
+    // std::cout<<"9.. ";
     if (projection.second < emergency_threshold)
         ld = pp_controller.lookahead(v_x, false);
     else
         ld = pp_controller.lookahead(v_x, true);
+    // std::cout<<"10.. ";
+    // std::cout<<"Ld = "<<ld<<" with v_x = "<<v_x<<std::endl;
 
     tp = this->profile->get_target_point(ld, position, min_radius, theta);
     double heading_angle;
@@ -258,15 +277,19 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         heading_angle = pp_controller(tp, theta, min_radius);
     else
         heading_angle = 0;
+    // std::cout<<"12.. ";
+    
     for_publish.steering_angle_target = heading_angle;
     bool switch_br = force < 0 && v_x < safe_speed_to_break;
 
     for_publish.brake_pressure_target = switch_br;
     if (switch_br)
         for_publish.motor_torque_target = 0;
+    // std::cout<<"13.. ";
 
     double lr = model.wb * model.wd;
     Point drear = Point(-lr * std::cos(theta), -lr * std::sin(theta));
+    //RCLCPP_INFO_STREAM(get_logger(), position.x()<<" "<<drear.x()<<" "<<tp.x());
     Point act_target(position.x() - drear.x() + tp.x(), position.y() - drear.y() + tp.y());
     custom_msgs::msg::Point2Struct tg;
     tg.x = act_target.x();
@@ -319,6 +342,9 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<int>("Integral_max_output", 1500);
     declare_parameter<int>("spline_resolution_per_meter", 10);
     declare_parameter<int>("total_laps", 1);
+
+    declare_parameter<string>("discipline", "Autocross");
+    declare_parameter<string>("midpoints", "");
 }
 
 int main(int argc, char *argv[])

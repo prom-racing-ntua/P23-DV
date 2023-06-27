@@ -93,8 +93,8 @@
     vectornav-vn-200:
       x: 0.49                   # [m]
       y: 0.00                   # [m]
-      roll: -0.147              # [deg]
-      pitch: -3.358             # [deg]
+      roll: -0.98              # [deg]
+      pitch: -4.53             # [deg]
     vectornav-vn-300:
       x: 0.18                   # [m]
       y: 0.00                   # [m]
@@ -130,6 +130,8 @@
 
 /pure_pursuit:
   ros__parameters:
+    discipline: "Autocross"
+    midpoints: ""
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
@@ -149,14 +151,14 @@
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 1.0                             #EDIT BEFORE
-    ld_max: 5.0                             #EDIT BEFORE
+    ld_min: 2.5                             #EDIT BEFORE
+    ld_max: 7.0                             #EDIT BEFORE
     v_min: 0.0                              #EDIT BEFORE
     v_max: 10.0                             #EDIT BEFORE
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
-    max_speed: 10.0                         #EDIT BEFORE
+    max_speed: 5.0                         #EDIT BEFORE
     dt: 0.025
     safe_speed_to_break: 3.0
 
