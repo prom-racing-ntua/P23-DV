@@ -281,12 +281,14 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     
     rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
+    {
         if(discipline=="Autocross")return;
         known_map_substitute(0,laps_to_do);
         has_run_waypoints = 1;
         std::cout<<"<><><><><><><><><><>"<<std::endl;
         std::cout<<"<><><><><><><><><><>"<<std::endl;
         std::cout<<"<><><><><><><><><><>"<<std::endl;
+    }
     
     // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;

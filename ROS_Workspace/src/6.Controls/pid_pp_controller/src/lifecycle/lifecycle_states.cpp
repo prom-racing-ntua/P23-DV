@@ -1,10 +1,10 @@
 #include "lifecycle_controller.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
-
-namespace pid_pp{
+namespace pid_pp
+{
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_configure(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_configure(const rclcpp_lifecycle::State &state)
     {
         model = Model(
             get_parameter("mass").as_double(),
@@ -44,25 +44,30 @@ namespace pid_pp{
         safe_speed_to_break = get_parameter("safe_speed_to_break").as_double();
         spline_res_per_meter = get_parameter("spline_resolution_per_meter").as_int();
         laps_to_do = get_parameter("total_laps").as_int();
+        discipline = get_parameter("discipline").as_string();
+        midpoints = get_parameter("midpoints").as_string();
 
         is_end = false;
 
         pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
         pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
-        
+
         total_laps_cli = this->create_client<custom_msgs::srv::SetTotalLaps>("/p23_status/set_total_laps");
 
         // Callback Function
-        auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future) {
+        auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future)
+        {
             auto result = future.get();
-            if (result->success) \
+            if (result->success)
                 RCLCPP_INFO(get_logger(), "Total mission laps set successfully");
         };
 
-        if (!total_laps_cli->wait_for_service(std::chrono::seconds(2))) {
+        if (!total_laps_cli->wait_for_service(std::chrono::seconds(2)))
+        {
             RCLCPP_ERROR(get_logger(), "P23 Status service is not available");
         }
-        else {
+        else
+        {
             auto request = std::make_shared<custom_msgs::srv::SetTotalLaps::Request>();
             request->total_laps = laps_to_do;
             auto future_result = total_laps_cli->async_send_request(request, response_received_callback);
@@ -73,7 +78,7 @@ namespace pid_pp{
     }
 
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_activate(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_activate(const rclcpp_lifecycle::State &state)
     {
         mutexCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto sub_opt = rclcpp::SubscriptionOptions();
@@ -81,7 +86,7 @@ namespace pid_pp{
 
         sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&LifecyclePID_PP_Node::waypoints_callback, this, _1), sub_opt);
         sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&LifecyclePID_PP_Node::pose_callback, this, _1), sub_opt);
-        
+
         pub_actuators->on_activate();
         pub_target->on_activate();
 
@@ -90,7 +95,7 @@ namespace pid_pp{
     }
 
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_deactivate(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_deactivate(const rclcpp_lifecycle::State &state)
     {
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
@@ -100,7 +105,7 @@ namespace pid_pp{
     }
 
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_cleanup(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_cleanup(const rclcpp_lifecycle::State &state)
     {
         pub_actuators->on_deactivate();
         pub_target->on_deactivate();
@@ -115,12 +120,13 @@ namespace pid_pp{
     }
 
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_shutdown(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_shutdown(const rclcpp_lifecycle::State &state)
     {
         using NodeState = lifecycle_msgs::msg::State;
         uint8_t currentState = state.id();
-        
-        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED) {
+
+        if (currentState == NodeState::PRIMARY_STATE_UNCONFIGURED)
+        {
             RCLCPP_INFO(get_logger(), "\n-- Pure Pursuit Shutdown!");
             return pid_pp::CallbackReturn::SUCCESS;
         }
@@ -137,8 +143,8 @@ namespace pid_pp{
     }
 
     pid_pp::CallbackReturn
-        LifecyclePID_PP_Node::on_error(const rclcpp_lifecycle::State &state)
+    LifecyclePID_PP_Node::on_error(const rclcpp_lifecycle::State &state)
     {
-        return pid_pp::CallbackReturn::SUCCESS;   
+        return pid_pp::CallbackReturn::SUCCESS;
     }
 }

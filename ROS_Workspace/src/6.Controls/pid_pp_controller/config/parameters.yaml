@@ -1,6 +1,6 @@
 pid_pp_controller:
   ros__parameters:
-    discipline: "Acceleration"
+    discipline: "Autocross"
     midpoints: "Acceleration.txt"
     #model
     mass: 193.5

@@ -55,6 +55,7 @@ private:
     // OTHER METHODS
     void parameter_load();
     Point find_target(/*TBD*/);
+    void known_map_substitute(int lap, int total_laps);
 
     // VARIABLES
     double v_x, v_y, r, a_x, a_y;
@@ -64,8 +65,12 @@ private:
     double max_speed, spline_res_per_meter;
     double safe_speed_to_break;
     int laps_to_do;
+    int prev_lap;
+    string discipline, midpoints;
+    std::ifstream mids;
 
     bool is_end;
+    std::ofstream log;
 
     //Multithreading shit -- Ntroph :(
     rclcpp::CallbackGroup::SharedPtr mutexCallbackGroup;

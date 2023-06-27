@@ -241,7 +241,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	std::ifstream fs;
 
-	fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
+	fs.open("src/6.Controls/simple_sim/data/map.txt");
 	/*
 		Format:
 			count
@@ -255,7 +255,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	unseen_cones.reserve(count);
 	for (int i = 0; i < count; i++)
 	{
-		fs >> c >> x >> y;
+		fs >> x >> y >> c;
 		unseen_cones.push_back(Cone(x, y, c));
 	}
 	fs.close();

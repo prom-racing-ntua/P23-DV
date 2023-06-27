@@ -14,6 +14,92 @@ LifecyclePID_PP_Node::~LifecyclePID_PP_Node()
     std::cout << "Object destroyed" << std::endl;
 }
 
+void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
+{
+    if (discipline == "Trackdrive")
+    {
+        int count;
+        mids >> count;
+        path_planning::PointsArray midpoints(count, 2);
+        for (int i = 0; i < count; i++)
+        {
+            mids >> midpoints(i, 0) >> midpoints(i, 1);
+        }
+        path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+        bool is_end = lap == total_laps;
+        double ms = is_end ? 0 : max_speed;
+        double v_init = lap == 0 ? 0 : this->v_x;
+        VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+        path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+        VelocityProfile *profile_to_delete = this->profile;
+        this->has_run_waypoints = true;
+        this->is_end = is_end;
+        this->profile = profile;
+        this->spline = spline;
+        /* VARIABLE UNLOCK */
+        // pthread_spin_unlock(&global_lock_);
+
+        delete spline_to_delete;
+        delete profile_to_delete;
+    }
+    else if (discipline == "Acceleration")
+    {
+        if (lap == 1 or lap == 0)
+        {
+            path_planning::PointsArray midpoints(30, 2);
+            for (int i = 0; i < 30; i++)
+            {
+                midpoints(i, 0) = i * 5;
+                midpoints(1, 1) = 0;
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        if (lap == 2)
+        {
+            path_planning::PointsArray midpoints(15, 2);
+            for (int i = 15; i < 30; i++)
+            {
+                midpoints(i, 0) = i * 5;
+                midpoints(1, 1) = 0;
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 1;
+            double ms = 0;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+    }
+    else if (discipline == "Skidpad")
+    {
+    }
+}
+
 void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
 {
     std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
@@ -48,7 +134,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     bool is_end = msg->lap_count == laps_to_do;
     double ms = is_end ? 0 : max_speed;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count==0); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count == 0); // last available speed is used. Alternatively should be in waypoints msg
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
         (a) The new objects can be constructed locally and the modification required is only the copying of the pointer address
@@ -67,7 +153,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     delete profile_to_delete;
     rclcpp::Duration total_time = this->now() - starting_time;
     total_execution_time += total_time.nanoseconds() / 1000000.0;
-    //std::cout << "Time of Waypoints Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
+    // std::cout << "Time of Waypoints Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
 
 void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
@@ -77,7 +163,12 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     //  std::cout<<"1.. ";
     rclcpp::Time starting_time = this->now();
     if (!has_run_waypoints)
-        return;
+    {
+        if (discipline == "Autocross")
+            return;
+        known_map_substitute(0, laps_to_do);
+        has_run_waypoints = 1;
+    }
     // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
     v_y = msg->velocity_state.velocity_y;
@@ -86,6 +177,12 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     a_y = msg->velocity_state.acceleration_y;
     // std::cout<<"3.. ";
 
+    if (prev_lap != msg->lap_count)
+    {
+        prev_lap = msg->lap_count;
+        known_map_substitute(prev_lap, laps_to_do);
+    }
+
     Point position(msg->position.x, msg->position.y);
     // Point direction(std::cos(theta), std::sin(theta));
     double theta = msg->theta;
@@ -93,7 +190,8 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     // std::pair<double, double> projection = (*this->profile)(position, theta);
     std::pair<double, double> projection = this->profile->operator()(position, theta);
     // std::cout<<"5.. ";
-    //std::cout<<"target : "<<projection.first<<". speed : "<<this->v_x<<std::endl;
+    std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
+    log << projection.first << " " << this->v_x << std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
     for_publish.speed_actual = this->v_x * 3.6;
     for_publish.speed_target = projection.first * 3.6;
@@ -104,24 +202,26 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     double fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
     double fx; // old fx, new fx
     fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
-    // COG TBD
     double fz = model.Fz_calc("full", 1, 0, v_x);
-    // std::cout<<"Fz = "<<fz<<". Fx = "<<fx_next<<std::endl;
     double rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
+
+    double frz = model.Fz_calc("rear", 1, 1, v_x, a_x);
     // std::cout<<"7.. ";
     if (rem < 0)
     {
         // exei ginei malakia
-        if (model.m * a_x > fx_next)
+        // exei ginei malakia
+        if (std::abs(model.m * a_x) > std::abs(fx_next))
         {
             // spiniaroume right now. HANDLING TBD
+            force = 0; // Let go
         }
         else
         {
             // tha spiniaroume otan efarmostei
-            force = 0.5 * v_x * v_x - v_y * r * model.m + safety_factor * (model.mx_max(fz) * fz);
-            fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
-            fx = std::max(model.m * a_x, fx_next);
+            force = 0.5 * v_x * v_x - v_y * r * model.m + safety_factor * std::min((model.mx_max(fz) * fz) * (force > 0 ? 1 : -1), force > 0 ? model.max_positive_force : model.max_negative_force);
+            fx_next = (force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m) * (force > 0 ? 1 : -1);
+            fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
             rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
         }
     }
@@ -160,8 +260,11 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         heading_angle = 0;
     // std::cout<<"12.. ";
     for_publish.steering_angle_target = heading_angle;
-    for_publish.brake_pressure_target = is_end && v_x < safe_speed_to_break;
-    // std::cout<<"13.. ";
+    bool switch_br = force < 0 && v_x < safe_speed_to_break;
+
+    for_publish.brake_pressure_target = switch_br;
+    if (switch_br)
+        for_publish.motor_torque_target = 0;
 
     double lr = model.wb * model.wd;
     Point drear = Point(-lr * std::cos(theta), -lr * std::sin(theta));
