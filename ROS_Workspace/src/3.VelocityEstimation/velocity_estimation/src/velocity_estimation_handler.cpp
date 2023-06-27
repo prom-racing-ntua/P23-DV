@@ -13,7 +13,7 @@ VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimatio
     cli_ = create_client<custom_msgs::srv::GetFrequencies>("get_frequencies");
 
     // Initialize the states object and set the time step
-    node_frequency_ = getNodeFrequency();
+    node_frequency_ = 40; // for testing purposes normally used getNodeFrequency(); 
     if (!node_frequency_)
     {
         rclcpp::shutdown();
@@ -80,6 +80,10 @@ void VelocityEstimationHandler::publishResults() {
 
     if (std::fabs(pub_state(StateVx)) < 0.05) \
         msg.velocity_x = 0.0;
+    else if (pub_state(StateVx) < 0.0) {
+        msg.velocity_x = 0.0;
+        if (pub_state(StateVx) < -0.5) RCLCPP_ERROR(get_logger(), "Negative Velocity Accumulation!");
+    }
     else \
         msg.velocity_x = pub_state(StateVx);
 

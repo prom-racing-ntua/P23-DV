@@ -28,7 +28,7 @@ class RotationCompensation(Node):
     '''
     def __init__(self) -> None:
         super().__init__("rotation_compensation_node")
-        self.sampling_time = self.declare_parameter("sampling_time", 3).value
+        self.sampling_time = self.declare_parameter("sampling_time", 10).value
         
         self.vn_200_average_accelerations = np.empty((1,3))
         self.vn_300_average_accelerations = np.empty((1,3))
