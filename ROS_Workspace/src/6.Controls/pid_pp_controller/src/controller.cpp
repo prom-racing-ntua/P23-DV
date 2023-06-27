@@ -139,7 +139,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
         bool is_end = lap == total_laps;
         double ms = is_end ? 0 : max_speed;
         double v_init = lap == 0 ? 0 : this->v_x;
-        VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+        VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
         path_planning::ArcLengthSpline *spline_to_delete = this->spline;
         VelocityProfile *profile_to_delete = this->profile;
         this->has_run_waypoints = true;
@@ -166,7 +166,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -191,7 +191,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 1;
             double ms = 0;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0);
+            std::cout<<"this vx = "<<v_init<<std::endl;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -245,7 +246,7 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
     bool is_end = msg->lap_count == laps_to_do;
     double ms = is_end ? 0 : max_speed;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count < 1); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count < 1, safety_factor); // last available speed is used. Alternatively should be in waypoints msg
 
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
@@ -326,9 +327,11 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     double fx; // old fx, new fx
     fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
     double fz = model.Fz_calc("full", 1, 0, v_x);
+    fz *= safety_factor; //C_SF1
     double rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
 
     double frz = model.Fz_calc("rear", 1, 1, v_x, a_x);
+    frz *= safety_factor; //C_SF2
     /*TBC*/
     if (rem < 0)
     {
@@ -362,7 +365,9 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     // min_radius = model.m * v_x * v_x / rem;
     double mx_head = 3.14159 * 31.2 / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
-    min_radius = std::min(v_x * v_x / (model.my_max(fz) * model.g), mn_radius_wheel);
+    double mu = model.my_max(fz);
+    mu *= safety_factor; //C_SF3
+    min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
     double ld;

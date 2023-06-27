@@ -239,15 +239,17 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	state.init(constants, 0);
 
-	std::ifstream fs;
+	std::ifstream fs1, fs2;
 
-	fs.open("src/6.Controls/simple_sim/data/map.txt");
+	fs1.open("src/6.Controls/simple_sim/data/map.txt");
+	fs2.open("src/6.Controls/simple_sim/data/Acceleration.txt");
 	/*
 		Format:
 			count
 			x y color
 			...
 	*/
+	std::ifstream &fs = fs2;
 	int count;
 	fs >> count;
 	double x, y;
@@ -321,7 +323,7 @@ void sim_node::timer_callback()
 			last_d = last_d - 0.01;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt, f, last_d);
-		if (((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 or (std::pow(state.x-75, 2) + std::pow(state.y, 2)) < 2.25) and global_idx - idx_of_last_lap > 1000)
+		if ((/*(std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 or*/ (std::pow(state.x-75, 2) + std::pow(state.y, 2)) < 2.25 or std::abs(state.x-75)<2.25) and global_idx - idx_of_last_lap > 1000)
 		{
 			idx_of_last_lap = global_idx;
 			state.lap++;
