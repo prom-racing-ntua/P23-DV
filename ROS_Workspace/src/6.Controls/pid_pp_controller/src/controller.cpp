@@ -274,7 +274,7 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
 
 void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 {
-    std::cout<<">>> >>> "<<has_run_waypoints<<" "<<!has_run_waypoints<<std::endl;
+    //std::cout<<">>> >>> "<<has_run_waypoints<<" "<<!has_run_waypoints<<std::endl;
     std::cout << "Entered Pose Callback" << std::endl;
     // std::cout << "Pos: " << msg->position.x << ", " << msg->position.y << ". theta: " << msg->theta << ". v_o : " << msg->velocity_state.velocity_x << std::endl;
     //  std::cout<<"1.. ";
@@ -285,11 +285,10 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
         if(discipline=="Autocross")return;
         known_map_substitute(0,laps_to_do);
         has_run_waypoints = 1;
-        std::cout<<"<><><><><><><><><><>"<<std::endl;
-        std::cout<<"<><><><><><><><><><>"<<std::endl;
-        std::cout<<"<><><><><><><><><><>"<<std::endl;
+        //std::cout<<"<><><><><><><><><><>"<<std::endl;
+        //std::cout<<"<><><><><><><><><><>"<<std::endl;
+        //std::cout<<"<><><><><><><><><><>"<<std::endl;
     }
-    
     // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
     v_y = msg->velocity_state.velocity_y;
@@ -302,9 +301,9 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     {
         prev_lap = msg->lap_count;
         known_map_substitute(prev_lap, laps_to_do);
-        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
-        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
-        std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        //std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        //std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
+        //std::cout<<"!!!???!!!???!!!???!!!???!!!???"<<std::endl;
     }
 
     Point position(msg->position.x, msg->position.y);

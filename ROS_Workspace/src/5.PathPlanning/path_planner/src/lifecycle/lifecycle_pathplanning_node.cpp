@@ -62,6 +62,9 @@ namespace path_planner
         full_map.reserve(cone_count);
         for (custom_msgs::msg::ConeStruct cone : msg->local_map)
         {
+            x0 = cone.coords.x;
+            y0 = cone.coords.y;
+
             full_map.push_back(Cone(Point(x0, y0), cone.color));
         }
         // full_map.push_back(Cone(Point(0, +1.5), 1)); //adjusting for big orange cones at start line
