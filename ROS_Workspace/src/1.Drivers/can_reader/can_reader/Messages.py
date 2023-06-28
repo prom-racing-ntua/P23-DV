@@ -412,17 +412,12 @@ class SensorVariablesMsg(CanInterfaceMessage):
         msg = self.msg_type()
         
         # Set Motor Torque
-        motor_torque = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=True)
+        motor_torque = int.from_bytes(self._can_msg[2:4], byteorder='big', signed=True)
         msg.motor_torque_actual = motor_torque
 
         # Set Brake Hydraulic Pressure
-        integer_part = int.from_bytes(self._can_msg[0:1], byteorder='big')
-        decimal_part = int.from_bytes(self._can_msg[1:2], byteorder='big')
-        msg.brake_pressure_front = integer_part + decimal_part / 10
-
-        integer_part = int.from_bytes(self._can_msg[2:3], byteorder='big')
-        decimal_part = int.from_bytes(self._can_msg[3:4], byteorder='big')
-        msg.brake_pressure_rear = integer_part + decimal_part / 10
+        msg.brake_pressure_front = int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False)
+        msg.brake_pressure_rear = int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False)
 
         return msg
 
