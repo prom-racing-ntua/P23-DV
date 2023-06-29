@@ -154,7 +154,7 @@
     mission: "trackdrive"
     total_laps: 11
     v_limit: 18.0
-    node_freq: 40
+    node_freq: 40.0
     s_interval: 0.1
     distance_safe: 0.95
     emergency_forward: 1.0

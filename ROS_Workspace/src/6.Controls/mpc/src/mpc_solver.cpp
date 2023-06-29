@@ -132,6 +132,7 @@ void MpcSolver::UpdateFromLastIteration() {
         X[3] = vel_struct.velocity_x;
         X[4] = vel_struct.velocity_y;
         X[5] = vel_struct.yaw_rate;
+        if(mission_!="skidpad")lap_counter = lap_counter_official;
     }
     std::cout << "pose at start is: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
     std::cout << "velocity at start is: " << X[3] << " " << X[4] << " " << X[5] << std::endl; 

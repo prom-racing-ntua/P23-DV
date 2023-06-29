@@ -37,17 +37,17 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::declareParameters() {
-        declare_parameter<std::string>("mission","trackdrive");
+        declare_parameter<std::string>("mission","skidpad");
         declare_parameter<bool>("simulation",true);
         declare_parameter<float>("s_interval",0.1);
         declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);
         declare_parameter<float>("F_init",300.0);
-        declare_parameter<float>("v_limit",10.0);
-        declare_parameter<int>("node_freq",40);
+        declare_parameter<float>("v_limit",15.0);
+        declare_parameter<float>("node_freq",40.0);
         declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
-        declare_parameter<int>("total_laps",5);
+        declare_parameter<int>("total_laps",5); 
     }
 
     void LifecycleMpcHandler::loadParameters() {
@@ -60,8 +60,8 @@ namespace mpc {
         mpc_solver.emergency_forward_ = get_parameter("emergency_forward").as_double();
         mpc_solver.F_init = get_parameter("F_init").as_double();
         mpc_solver.v_limit_ = get_parameter("v_limit").as_double();
-        node_freq_ = get_parameter("node_freq").as_int();
-        mpc_solver.dt = (1/node_freq_);
+        node_freq_ = get_parameter("node_freq").as_double();
+        mpc_solver.dt = (float)(1/node_freq_);
         mpc_solver.s_space_max = get_parameter("s_space_max").as_double();
         mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
         mpc_solver.total_laps_ = get_parameter("total_laps").as_int();
@@ -128,7 +128,7 @@ namespace mpc {
                 mpc_solver.writeParamsUnknown();
             }
             mpc_solver.callSolver(global_int);
-            mpc_solver.generateOutput();         
+            mpc_solver.generateOutput();    
             //define message to ROS2
             mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
             mpc_msg.speed_actual = mpc_solver.output_struct.speed_target;
@@ -143,7 +143,7 @@ namespace mpc {
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
-        }
+    }
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
         std::cout << "mpika path callback" << std::endl;

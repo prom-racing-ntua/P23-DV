@@ -34,14 +34,13 @@ namespace mpc {
     void setSubscribers();
     void setPublishers();
     void setClient();
-    int node_freq_;
+    double node_freq_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<custom_msgs::msg::VelEstimation>::SharedPtr velocity_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::PoseMsg>::SharedPtr pose_subscriber_;
     rclcpp::Subscription<custom_msgs::msg::WaypointsMsg>::SharedPtr path_subscriber_;
     rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::TxControlCommand>::SharedPtr mpc_publisher_;
     rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_client;
-    rclcpp::TimerBase::SharedPtr mpc_clock_;
     size_t count_;
     std::ofstream outputFile;
     int path_flag = 0;

@@ -10,7 +10,7 @@ MpcHandler::MpcHandler():Node("mpc"), count_(0){
     loadParameters();
     mpc_solver.mem = FORCESNLPsolver_internal_mem(0);
     std::cout << "mpika mpc constructor" << std::endl;
-    if(mpc_solver.mission_=="autox"){
+    if(mpc_solver.mission_=="autox") {
         path_subscriber_ = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&MpcHandler::path_callback, this, std::placeholders::_1));
     }
     else ReadKnownTrack();
@@ -56,7 +56,7 @@ void MpcHandler::declareParameters() {
     declare_parameter<float>("emergency_forward",1.0);
     declare_parameter<float>("F_init",300.0);
     declare_parameter<float>("v_limit",10.0);
-    declare_parameter<int>("node_freq",40);
+    declare_parameter<float>("node_freq",40.0);
     declare_parameter<float>("s_space_max",0.5);
     declare_parameter<float>("s_space_min",0.1);
     declare_parameter<int>("total_laps",5);
@@ -72,7 +72,7 @@ void MpcHandler::loadParameters() {
     mpc_solver.emergency_forward_ = get_parameter("emergency_forward").as_double();
     mpc_solver.F_init = get_parameter("F_init").as_double();
     mpc_solver.v_limit_ = get_parameter("v_limit").as_double();
-    node_freq_ = get_parameter("node_freq").as_int();
+    node_freq_ = get_parameter("node_freq").as_double();
     mpc_solver.dt = (1/node_freq_);
     mpc_solver.s_space_max = get_parameter("s_space_max").as_double();
     mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
