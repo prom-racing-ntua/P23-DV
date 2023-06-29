@@ -197,6 +197,7 @@ void MpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_m
     }
     std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
     RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
+    RCLCPP_INFO(this->get_logger(), "Exitflag is: %1i", mpc_solver.exitflag);
     mpc_publisher_->publish(mpc_msg);
     rclcpp::Duration total_time = this->now() - starting_time;
     total_execution_time += total_time.nanoseconds() / 1000000.0;

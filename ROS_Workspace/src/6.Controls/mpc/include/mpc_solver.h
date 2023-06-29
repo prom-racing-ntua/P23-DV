@@ -166,6 +166,7 @@ class MpcSolver {
         float F_init;
         float s_space_max;
         float s_space_min;
+        int exitflag = 0;
         int total_laps_;
         PointsData params_array;
         PointsData whole_track;
@@ -214,7 +215,6 @@ class MpcSolver {
         const double eff=0.85;
         //useful arrays
         int return_val = 0;
-        int exitflag = 0;
         double k1[X_SIZE];
         double k2[X_SIZE];
         double k3[X_SIZE];

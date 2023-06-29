@@ -13,7 +13,9 @@ namespace mpc{
         else ReadKnownTrack();
 
         setPublishers();
-        // setClient();
+
+        total_laps_client = this->create_client<custom_msgs::srv::SetTotalLaps>("/p23_status/set_total_laps");
+        setClient();
 
         RCLCPP_WARN(get_logger(), "\n-- MPC Configured!");
         return mpc::CallbackReturn::SUCCESS;

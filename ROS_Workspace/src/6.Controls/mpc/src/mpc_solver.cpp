@@ -293,6 +293,7 @@ void MpcSolver::generateFirstPointUnknown() {
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
                 double step_temp = ds_vector[i-1]*dt;
+                // s_array_final[i] = s_array_final[i-1] +  s_interval_;
                 if(step_temp>s_space_max) step_temp = s_space_max;
                 if(step_temp<s_space_min) step_temp = s_space_min;
                 s_array_final[i] = s_array_final[i-1] +  s_interval_;
@@ -492,13 +493,14 @@ void MpcSolver::generateFirstPointUnknown() {
 
     void MpcSolver::generateOutput() { 
         //dF ddelta dindex
-        for(int k = 0; k<3; k++) U[k]=output.x02[k];
+        if(exitflag==1) for(int k = 0; k<3; k++) U[k]=output.x02[k];
+        else for(int k = 0; k<3; k++) U[k]=0.0;
         //writeLookaheadArray1();
         writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
-        if(X[6]>2750.0) X[6]=2750.0;
-        if(X[6]<-2750.0) X[6]=-2750.0; //to be added as parameter
+        if(X[6]>2000.0) X[6]=2000.0;
+        if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
         if(X[7]>29.5/57.2958) X[7] = 29.5/57.29;
         if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.29);
         if(!brake_flag) {

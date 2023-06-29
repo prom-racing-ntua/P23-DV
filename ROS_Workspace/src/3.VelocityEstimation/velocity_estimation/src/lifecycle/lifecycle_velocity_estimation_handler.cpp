@@ -51,6 +51,10 @@ namespace ns_vel_est
 
         if (std::fabs(pub_state(StateVx)) < 0.05) \
             msg.velocity_x = 0.0;
+        else if (pub_state(StateVx) < 0.0) {
+            msg.velocity_x = 0.0;
+            if (pub_state(StateVx) < -0.5) RCLCPP_ERROR(get_logger(), "Negative Velocity Accumulation!");
+        }
         else \
             msg.velocity_x = pub_state(StateVx);
 

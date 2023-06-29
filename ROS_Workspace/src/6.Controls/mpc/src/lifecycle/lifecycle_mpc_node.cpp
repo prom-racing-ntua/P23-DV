@@ -21,9 +21,9 @@ namespace mpc {
     void LifecycleMpcHandler::setClient() {
         //client for total-laps request
         auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future) {
-        auto result = future.get();
-        if (result->success) \
-            RCLCPP_INFO(get_logger(), "Total mission laps set successfully");
+            auto result = future.get();
+            if (result->success) \
+                RCLCPP_INFO(get_logger(), "Total mission laps set successfully");
         };
 
         if (!total_laps_client->wait_for_service(std::chrono::seconds(2))) {

@@ -330,7 +330,7 @@ def generate_pathplanner():
 
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
-    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
+    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
     model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX_ALL, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX_ALL*100])
 
     model.nh = 3 #number of inequality constr
