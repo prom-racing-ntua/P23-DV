@@ -2,6 +2,7 @@
 
 # This script needs to be sourced in the .bashrc configuration file as to always be available. 
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=~/.ros/cyclonedds.xml
 scriptFolder="/home/prom/P23_DV/scripts"
 
 alias launchBase="${scriptFolder}/launchP23base.sh"
