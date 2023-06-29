@@ -88,6 +88,11 @@ struct center {
     float y;
 };
 
+struct start {
+    float x;
+    float y;
+};
+
 class MpcSolver {
     public:
         constexpr static int X_SIZE = 9;
@@ -133,6 +138,7 @@ class MpcSolver {
         std::vector<double> u_third_pass;
         std::vector<double> u_final_pass;
         center center_point;
+        center start_point;
         int lap_counter=0;
         int lap_counter_official=0;
         bool lap_lock;
@@ -199,6 +205,7 @@ class MpcSolver {
         const double Iz = 110.0;
         const double ts = 0.025;
         const double fr_par = 0.03;
+        const double wing = 0.874;
         //for dynamic model
         //compute l_a
         const double umin=4.0;

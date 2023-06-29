@@ -38,7 +38,7 @@ namespace mpc {
 
     void LifecycleMpcHandler::declareParameters() {
         declare_parameter<std::string>("mission","skidpad");
-        declare_parameter<bool>("simulation",true);
+        declare_parameter<bool>("simulation",false);
         declare_parameter<float>("s_interval",0.1);
         declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);

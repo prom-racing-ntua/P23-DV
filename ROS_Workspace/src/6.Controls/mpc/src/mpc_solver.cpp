@@ -109,7 +109,7 @@ void MpcSolver::Initialize_all_local() {
     //X_array is: X  Y  phi vx vy  r F delta index
     // const double xinit_temp[9];
     if(known_track_) {
-        const double xinit_temp_known[9] = {whole_track(0,0),whole_track(0,1),whole_track(0,2),0.1,0.0,0.0,F_init,0.0,0.0};
+        const double xinit_temp_known[9] = {start_point.x,start_point.y,whole_track(0,2),0.1,0.0,0.0,F_init,0.0,0.0};
         for (int i = 0; i < X_SIZE; ++i) X[i] = xinit_temp_known[i];
     }
     else {
@@ -132,7 +132,7 @@ void MpcSolver::UpdateFromLastIteration() {
         X[3] = vel_struct.velocity_x;
         X[4] = vel_struct.velocity_y;
         X[5] = vel_struct.yaw_rate;
-        if(mission_!="skidpad")lap_counter = lap_counter_official;
+        if(mission_!="skidpad") lap_counter = lap_counter_official;
     }
     std::cout << "pose at start is: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
     std::cout << "velocity at start is: " << X[3] << " " << X[4] << " " << X[5] << std::endl; 
@@ -357,7 +357,9 @@ void MpcSolver::generateFirstPointUnknown() {
             known_track_ = true; 
         }
         if(mission_=="skidpad") {
-            center_point.x = 15+l_f;
+            start_point.x = -15 - l_f - wing; 
+            start_point.y = 0.0;
+            center_point.x = 0.0;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/skidpad_straight1.txt";
             known_track_ = true; 
@@ -495,6 +497,10 @@ void MpcSolver::generateFirstPointUnknown() {
         writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
+        if(X[6]>2750.0) X[6]=2750.0;
+        if(X[6]<-2750.0) X[6]=-2750.0; //to be added as parameter
+        if(X[7]>29.5/57.2958) X[7] = 29.5/57.29;
+        if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.29);
         if(!brake_flag) {
             output_struct.speed_target = (int)(5.0);
             output_struct.speed_actual = (int)(vel_struct.velocity_x);
