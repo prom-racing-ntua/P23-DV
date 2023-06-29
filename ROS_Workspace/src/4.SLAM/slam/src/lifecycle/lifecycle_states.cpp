@@ -41,7 +41,7 @@ namespace ns_slam
             std::string track_file{ share_dir_ + get_parameter("track_map").as_string()};
             slam_object_.loadMap(track_file);
             // Check if we are using dynamic map creation for acceleration
-            if (get_parameter("track_map").as_string() == std::string("/test_tracks/Acceleration.txt"))
+            if (get_parameter("track_map").as_string() == std::string("/Tracks/Acceleration.txt"))
             {
                 map_ready_ = !get_parameter("dynamic_accel_map").as_bool();
             }

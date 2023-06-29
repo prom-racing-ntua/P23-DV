@@ -241,6 +241,10 @@ void GraphSLAM<T>::init() {
 
 template <class T>
 void GraphSLAM<T>::reset() {
+	previous_global_index_ = 0;
+	landmark_counter_ = 0;
+	cone_count_ = 0;
+	landmark_id_map_.clear();
 	delete isam_;
 }
 
@@ -520,6 +524,7 @@ void GraphSLAM<T>::setAccelWidth(double width) {
 	{
 		cone.second.estimated_pose(1) = cone.second.estimated_pose(1) * width / 4.0;
 	}
+	RCLCPP_INFO_STREAM(node_handler_->get_logger(), "Acceleration track width set to: " << width << " m");
 }
 
 template <class T>

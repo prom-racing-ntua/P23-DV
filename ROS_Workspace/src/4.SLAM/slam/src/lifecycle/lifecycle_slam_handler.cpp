@@ -114,7 +114,7 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
 
     if (!landmark_list.empty())
     {
-        perception_count_ = landmark_list.size();
+        perception_count_ += landmark_list.size();
         if (!map_ready_) {
             addAccelObservations(landmark_list);
             return;
@@ -144,6 +144,8 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
 }
 
 void LifecycleSlamHandler::optimizationCallback() {
+    if (!map_ready_) return;
+
     rclcpp::Time starting_time{ this->now() };
     // RCLCPP_INFO(get_logger(), "SLAM Optimization");
 
@@ -171,18 +173,15 @@ void LifecycleSlamHandler::optimizationCallback() {
     custom_msgs::msg::LocalMapMsg map_msg{};
     custom_msgs::msg::ConeStruct cone_msg{};
 
-    if (is_mapping_)
+    if (is_mapping_) map_log_ << optimization_pose_symbol.index() << '\n';
+    for (auto cone : track)
     {
-        map_log_ << optimization_pose_symbol.index() << '\n';
-        for (auto cone : track)
-        {
-            map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+        if (is_mapping_) map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
 
-            cone_msg.color = cone[0];
-            cone_msg.coords.x = cone[1];
-            cone_msg.coords.y = cone[2];
-            map_msg.local_map.push_back(cone_msg);
-        }
+        cone_msg.color = cone[0];
+        cone_msg.coords.x = cone[1];
+        cone_msg.coords.y = cone[2];
+        map_msg.local_map.push_back(cone_msg);
     }
 
     map_msg.cones_count_actual = perception_count_;
@@ -263,17 +262,18 @@ void LifecycleSlamHandler::addAccelObservations(const std::vector<PerceptionMeas
         double track_width{100.0};
         for (auto& yellow_cone : accel_map_)
         {
-            if (yellow_cone.second.color == ConeColor::Blue) {continue;}
+            if (yellow_cone.second.color != ConeColor::Yellow) {continue;}
             for (auto& blue_cone : accel_map_) 
             {
-                if (blue_cone.second.color == ConeColor::Yellow) {continue;}
+                if (blue_cone.second.color != ConeColor::Blue) {continue;}
                 double  dist{std::sqrt( std::pow(yellow_cone.second.estimated_pose(0)-blue_cone.second.estimated_pose(0),2) \
                     + std::pow(yellow_cone.second.estimated_pose(1)-blue_cone.second.estimated_pose(1),2) )};
                 if (dist < track_width) { track_width = dist; }
             }
         }
-        slam_object_.setAccelWidth(track_width);
         map_ready_ = true;
+        if (track_width > 99.0) return;
+        slam_object_.setAccelWidth(track_width);
     }
 }
 
