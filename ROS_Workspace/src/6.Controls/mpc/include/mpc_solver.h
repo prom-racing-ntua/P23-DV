@@ -13,6 +13,7 @@
 #include <math.h>
 #include <cmath>
 #include <unistd.h>
+#include <iterator>
 #include <chrono>
 #include <iomanip>
 #include <functional>
@@ -120,18 +121,27 @@ class MpcSolver {
         void generateTrackConfig();
         void generateFinishFlag(int lap_counter);
         void updateSplineParameters(std::string txt_file);
+        void checkReliability();
         std::string mission_;
         std::string midpoints_txt_;
         std::vector<double> error_ver;
         std::vector<double> error_eucl;
         std::vector<double> s_vector;
         std::vector<double> ds_vector;
+        std::vector<double> u_first_pass;
+        std::vector<double> u_second_pass;
+        std::vector<double> u_third_pass;
+        std::vector<double> u_final_pass;
         center center_point;
         int lap_counter=0;
+        int lap_counter_official=0;
         bool lap_lock;
         bool finish_flag=0;
+        bool brake_flag=0;
         bool braking_manouvre;
         float emergency_forward_;
+        int emergency_counter=0;
+        int ellipse_counter=0;
         int lap_counter_slam_;
         bool emergency;
         float sol;
@@ -181,25 +191,19 @@ class MpcSolver {
         const double CdA = 2.0; // for drag (updated)
         const double ClA = 7.0; // for downforce
         const double p_air = 1.225;
+        const double h_cog = 0.27;
         const double gr = 3.9;
-        const double sr = 3.17;
         const double Rw = 0.2;
         const double m = 190.0; // mass of the car
         const double g = 9.81;
         const double Iz = 110.0;
         const double ts = 0.025;
+        const double fr_par = 0.03;
         //for dynamic model
-        const double B=-8.266;
-        const double C=1.456;
-        const double C_tire=0.66;
-        const double D = 1739.47;
-        const double cs=-16419.31;
         //compute l_a
         const double umin=4.0;
         const double umax=7.0;
         //ellipse params
-        const double a=1.46;
-        const double b=1.62;
         const double eff=0.85;
         //useful arrays
         int return_val = 0;

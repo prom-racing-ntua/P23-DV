@@ -47,13 +47,15 @@ dist_thres=2*l_f
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=11.0
+u_upper=9.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 ds_wanted=0.1
+mi_fric = 0.03
 eff=0.85
 window=10
+h_cog=0.27
 ellipse_array=[]
 
 #for dynamic model
@@ -104,7 +106,7 @@ def continuous_dynamics(x, u):
     Fry = getFy(Frz,sar)
 
     #friction forces
-    Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
+    Fdrag = 0.5*CdA*pair*(x[3])**2 + mi_fric*(Frz+Ffz)
 
     #blending with changing lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
@@ -123,6 +125,7 @@ def continuous_dynamics(x, u):
 
 err_array=[]
 def getFy(Fz,sa):
+    print("sa input is: ",sa)
     ex=1e-7
     P=[1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04]
     C=P[0]
@@ -145,20 +148,24 @@ def getSas(z):
     sar_temp=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
     return saf_temp,sar_temp
 
-def getFz(z):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    return Ffz_temp,Frz_temp
-
-def getFzWithState(x):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    return Ffz_temp,Frz_temp
-
 def getSasWithState(x):
     saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
     sar_temp=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
     return saf_temp,sar_temp
+
+def getFz(z):
+    a_temp = (z[9] - 0.5*CdA*pair*(z[6])**2)/m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) + dw
+    return Ffz_temp,Frz_temp
+
+def getFzWithState(x):
+    a_temp = (x[6] - 0.5*CdA*pair*(x[3])**2)/m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) + dw
+    return Ffz_temp,Frz_temp
 
 def getEllipseParams(Fz):
     Fz0=1112.0554070627252
@@ -184,7 +191,7 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             # + 0e1*(e_c)**2 # costs on deviating on the
             #                             # path in y-direction
@@ -201,7 +208,7 @@ def obj(z,current_target):
             + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
             - 1e-3*(z[6])
-            - 1e-3*(z[11]/INDEX_MAX_ALL)
+            - 0e-6*(z[11]/INDEX_MAX_ALL)
             - 1e-3*(z[2]/INDEX_MAX_ALL))
 
 def constr(z,current_target):
@@ -229,6 +236,7 @@ def find_closest_point(points, ref_point):
     squared_diff = np.power(diff,2)
     squared_dist = squared_diff[0,:] + squared_diff[1,:]
     return np.argmin(squared_dist)
+
 
 def find_closest_point_vertical(data, ref_point):
     """Find the index of the closest point in points from the current car position
@@ -323,7 +331,7 @@ def generate_pathplanner():
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
     model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX_ALL, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX_ALL*10])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX_ALL, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX_ALL*100])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
@@ -569,9 +577,13 @@ def cubic_spline_inference(cs,parameter,x,counter_all):
             x_temp[3]=u_output1
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if((Frz)**2-(Fy_remain/b)**2<0): Fx_remain=0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            print("Fy_remain bef: ",Fy_remain)
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((mi_fric*m*g)**2-(Fy_remain)**2<0): Fx_remain=0 #tbc
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2) 
+            print("Fx,Fy and Fz of vel.profile for are: ",Fx_remain,Fy_remain,Frz)
             ds_temp=parameter[i]-parameter[i-1]
             # ds_temp=0.1
             u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*np.abs(ds_temp))
@@ -601,9 +613,12 @@ def cubic_spline_inference(cs,parameter,x,counter_all):
             saf,sar = getSasWithState(x_temp) 
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature 
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((mi_fric*m*g)**2-(Fy_remain)**2<0): Fx_remain=0 #tbc
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2)  #tbc
+            print("Fx,Fy and Fz of vel.profile back are: ",Fx_remain,Fy_remain,Frz)
             ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]
             # ds_temp=0.1
             if(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)<0):u_backward=x_temp[3]

@@ -52,12 +52,14 @@ factor_bef=1.1/2
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=15.0
+u_upper=18.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 ds_wanted=0.1
+h_cog=0.27
 eff=0.85
+mi_fric = 0.03
 ellipse_array=[]
 
 #for dynamic model
@@ -151,14 +153,19 @@ def getSas(z):
     return saf_temp,sar_temp
 
 def getFz(z):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    a_temp = (z[9] - 0.5*CdA*pair*(z[6])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) + dw
     return Ffz_temp,Frz_temp
 
 def getFzWithState(x):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
+    a_temp = (x[6] - 0.5*CdA*pair*(x[3])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) + dw
     return Ffz_temp,Frz_temp
+
 
 def getSasWithState(x):
     saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
@@ -189,17 +196,17 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-            3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+            2e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             + 1e-3*(z[5]-current_target[2])**2 #dphi gap
             + 5e2*(z[6]-current_target[3])**2
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
-            + 5e2*z[1]**2 #penalty on delta,ddelta
-            + 5e2*z[10]**2
+            + 1e3*z[1]**2 #penalty on delta,ddelta
+            + 1e3*z[10]**2
             + 1e-3*(sar**2)
-            + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
-            - 1e-3*(z[6])
+            + 5e1*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            - 1e-2*(z[6])
             - 1e-3*(z[11]/INDEX_MAX)
             - 1e-3*(z[2]/INDEX_MAX))
 
@@ -566,9 +573,11 @@ def cubic_spline_inference(cs,parameter,x):
             x_temp[3]=u_output1
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if((Frz)**2-(Fy_remain/b)**2<0): Fx_remain=0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((mi_fric*m*g)**2-(Fy_remain)**2<0): Fx_remain=0
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2) - 0.5*CdA*pair*(u_output1)**2
             ds_temp=parameter[i]-parameter[i-1]
             # ds_temp=0.1
             u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*np.abs(ds_temp))
@@ -598,9 +607,11 @@ def cubic_spline_inference(cs,parameter,x):
             saf,sar = getSasWithState(x_temp) 
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((mi_fric*m*g)**2-(Fy_remain)**2<0): Fx_remain = 0.0
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2) - 0.5*CdA*pair*(u_output2)**2
             ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]
             # ds_temp=0.1
             if(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)<0):u_backward=x_temp[3]

@@ -55,6 +55,7 @@ g = 9.81
 Iz = 110.0
 ds_wanted=0.1
 eff=0.85
+h_cog=0.27
 window=10
 ellipse_array=[]
 
@@ -148,14 +149,19 @@ def getSas(z):
     return saf_temp,sar_temp
 
 def getFz(z):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    a_temp = (z[9] - 0.5*CdA*pair*(z[6])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) + dw
     return Ffz_temp,Frz_temp
 
 def getFzWithState(x):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
+    a_temp = (x[6] - 0.5*CdA*pair*(x[3])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) + dw
     return Ffz_temp,Frz_temp
+
 
 def getSasWithState(x):
     saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
@@ -567,7 +573,9 @@ def cubic_spline_inference(cs,parameter,x,finish_flag):
             x_temp[3]=u_output1
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            Fy_remain = getFy(Frz,sar) #actual Fry
             if((Frz)**2-(Fy_remain/b)**2<0): Fx_remain=0
             else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
             ds_temp=parameter[i]-parameter[i-1]
@@ -599,7 +607,9 @@ def cubic_spline_inference(cs,parameter,x,finish_flag):
             saf,sar = getSasWithState(x_temp) 
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            Fy_remain = getFy(Frz,sar) #actual Fry
             if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
             else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
             ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]

@@ -16,6 +16,13 @@ def generate_launch_description():
         emulate_tty=True,
         parameters=[os.path.join(mpc_dir, "config", "mpc_params.yaml")]
     )
+    # rviz2_node = Node(
+    #     package="rviz2",
+    #     executable="rviz2",
+    #     name="rviz2",
+    #     arguments=['-d' + os.path.join(mpc_dir, "launch", "control_viz.rviz")]
+    # )
 
     ld.add_action(mpc)
+    # ld.add_action(rviz2_node)
     return ld

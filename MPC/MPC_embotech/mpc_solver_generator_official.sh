@@ -1,7 +1,7 @@
 pyenv local 3.9.0
 if [ $# -eq 0 ]
   then
-    scriptToRun=mpc_solver_generator.py
+    scriptToRun=mpc_prom_skidpad.py
   else
     scriptToRun=mpc_prom_$1.py
 fi

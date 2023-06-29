@@ -49,13 +49,15 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper = 17.5
+u_upper = 15.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
 ds_wanted=0.1
 eff=0.85
+h_cog=0.27
 window=10
+mi_fric=0.03
 ellipse_array=[]
 
 #for dynamic model
@@ -148,13 +150,17 @@ def getSas(z):
     return saf_temp,sar_temp
 
 def getFz(z):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2)
+    a_temp = (z[9] - 0.5*CdA*pair*(z[6])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(z[6]**2) + dw
     return Ffz_temp,Frz_temp
 
 def getFzWithState(x):
-    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
-    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2)
+    a_temp = (x[6] - 0.5*CdA*pair*(x[3])**2)/ m
+    dw = (h_cog/lol)*(a_temp/g)*m*g
+    Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) - dw
+    Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) + dw
     return Ffz_temp,Frz_temp
 
 def getSasWithState(x):
@@ -567,9 +573,11 @@ def cubic_spline_inference(cs,parameter,x):
             x_temp[3]=u_output1
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if((Frz)**2-(Fy_remain/b)**2<0): Fx_remain=0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((m*g*mi_fric)**2-(Fy_remain)**2<0): Fx_remain=0
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2) - 0.5*CdA*pair*(u_output1)**2
             ds_temp=parameter[i]-parameter[i-1]
             # ds_temp=0.1
             u_forward=np.sqrt(x_temp[3]**2+2*(Fx_remain/m)*np.abs(ds_temp))
@@ -599,9 +607,11 @@ def cubic_spline_inference(cs,parameter,x):
             saf,sar = getSasWithState(x_temp) 
             Ffz,Frz = getFzWithState(x_temp)
             a,b = getEllipseParams(Frz)
-            Fy_remain = m*(x_temp[3]**2)*curvature
-            if(Frz**2-(Fy_remain/b)**2<0): Fx_remain = 0.0
-            else: Fx_remain = a*np.sqrt(Frz**2-(Fy_remain/b)**2)
+            Fy_remain = m*(x_temp[3]**2)*curvature #Fry with kentromolos
+            saf,sar = getSasWithState(x) 
+            # Fy_remain = getFy(Frz,sar) #actual Fry
+            if((m*g*mi_fric)**2-(Fy_remain)**2<0): Fx_remain=0
+            else: Fx_remain = np.sqrt((mi_fric*m*g)**2-(Fy_remain)**2) - 0.5*CdA*pair*(u_output2)**2
             ds_temp=parameter[np.shape(parameter)[0]-1-j]-parameter[np.shape(parameter)[0]-j]
             # ds_temp=0.1
             if(x_temp[3]**2-2*(Fx_remain/m)*np.abs(ds_temp)<0):u_backward=x_temp[3]

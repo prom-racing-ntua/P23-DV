@@ -12,7 +12,6 @@ namespace mpc {
 
     void LifecycleMpcHandler::setSubscribers() {
         pose_subscriber_ = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&LifecycleMpcHandler::pose_callback, this, std::placeholders::_1));
-        local_map_subscriber_ = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecycleMpcHandler::local_map_callback, this, std::placeholders::_1));
     }
 
     void LifecycleMpcHandler::setPublishers() {
@@ -38,17 +37,17 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::declareParameters() {
-        declare_parameter<std::string>("mission","skidpad");
+        declare_parameter<std::string>("mission","trackdrive");
         declare_parameter<bool>("simulation",true);
         declare_parameter<float>("s_interval",0.1);
-        declare_parameter<float>("distance_safe",0.95);
+        declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);
         declare_parameter<float>("F_init",300.0);
-        declare_parameter<float>("v_limit",12.5);
+        declare_parameter<float>("v_limit",10.0);
         declare_parameter<int>("node_freq",40);
         declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
-        declare_parameter<int>("total_laps", 5);
+        declare_parameter<int>("total_laps",5);
     }
 
     void LifecycleMpcHandler::loadParameters() {
@@ -87,23 +86,22 @@ namespace mpc {
         std::cout << "read known track" << std::endl;
     }
 
-    void LifecycleMpcHandler::local_map_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr local_map_msg) {
-        std::cout << "mpika local map" << std::endl;
-        std::cout << "lap count from lm is: " << float(local_map_msg->lap_count) << std::endl;
-    }
-
     void LifecycleMpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg) {
-        std::cout << "Im at mission: " << mpc_solver.mission_ << " and lap: " << mpc_solver.lap_counter << std::endl;
-        std::cout << "Finish flag is: " << mpc_solver.finish_flag << std::endl;
+        std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
+        std::cout << "Im at mission: " << mpc_solver.mission_ << " and lap: " << mpc_solver.lap_counter << " out of " << mpc_solver.total_laps_ << " laps." << std::endl;
+        std::cout << "Finish and brake flags are: " << mpc_solver.finish_flag << " " << mpc_solver.brake_flag << std::endl;
         mpc_solver.pose_struct.theta = float(pose_msg->theta);
         mpc_solver.pose_struct.x = float(pose_msg->position.x);
         mpc_solver.pose_struct.y = float(pose_msg->position.y);
         mpc_solver.vel_struct.velocity_x = float(pose_msg->velocity_state.velocity_x);
         mpc_solver.vel_struct.velocity_y = float(pose_msg->velocity_state.velocity_y);
         mpc_solver.vel_struct.yaw_rate = float(pose_msg->velocity_state.yaw_rate);
-        std::cout << "I get pose " << mpc_solver.pose_struct.x << " " << mpc_solver.pose_struct.y << " " << mpc_solver.pose_struct.theta << std::endl;
-        std::cout << "I get velocity " << mpc_solver.vel_struct.velocity_x << " " << mpc_solver.vel_struct.velocity_y << " " << mpc_solver.vel_struct.yaw_rate << std::endl;
-        std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
+        mpc_solver.lap_counter_official = uint8_t(pose_msg->lap_count);
+        if(!mpc_solver.simulation_) { 
+            std::cout << "I get pose " << mpc_solver.pose_struct.x << " " << mpc_solver.pose_struct.y << " " << mpc_solver.pose_struct.theta << std::endl;
+            std::cout << "I get velocity " << mpc_solver.vel_struct.velocity_x << " " << mpc_solver.vel_struct.velocity_y << " " << mpc_solver.vel_struct.yaw_rate << std::endl;
+            std::cout << "I get lap counter " << mpc_solver.lap_counter_official << std::endl;
+        }
         auto mpc_msg = custom_msgs::msg::TxControlCommand();  
         rclcpp::Time starting_time = this->now();
         if(path_flag==0) {
@@ -117,6 +115,7 @@ namespace mpc {
         else {
             if(global_int==-1) mpc_solver.Initialize_all_local();
             mpc_solver.UpdateFromLastIteration();
+            mpc_solver.checkReliability();
             mpc_solver.customLapCounter();
             mpc_solver.generateFinishFlag(mpc_solver.lap_counter);
             if(mpc_solver.mission_=="skidpad") mpc_solver.updateSkidpadSpline(mpc_solver.lap_counter);
@@ -138,12 +137,13 @@ namespace mpc {
             mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
             global_int++;
         }
-        RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" " ,brake pressure: %.6f" , mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target, mpc_msg.brake_pressure_target);
+        std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
+        RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
         mpc_publisher_->publish(mpc_msg);
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
-    }
+        }
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
         std::cout << "mpika path callback" << std::endl;
@@ -189,7 +189,7 @@ namespace mpc {
         std::cout << "first point of path callback is: " << mpc_solver.params_array(0,0) << " " << mpc_solver.params_array(0,1) << std::endl;
         std::cout << "finished path callback" << std::endl;
         if(path_flag==0) path_flag=1;
-    }
+}
 
     LifecycleMpcHandler::~LifecycleMpcHandler() {
         // delete mpc_solver.spline_final;

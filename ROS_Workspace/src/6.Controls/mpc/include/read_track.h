@@ -34,12 +34,12 @@ inline Eigen::MatrixXd readTrack(const std::string& filename) {
     data_file.close();
     rows--;
     // Populate the eigen matrix with the numbers from the buffer
-    std::cout << "rows and cols on read_track are: " << rows << " " << cols << std::endl;
+    // std::cout << "rows and cols on read_track are: " << rows << " " << cols << std::endl;
     Eigen::MatrixXd result{ rows, cols };
     for (int i{ 0 }; i < rows; i++)
         for (int j{ 0 }; j < cols; j++) {
             result(i, j) = buffer[cols * i + j];
-            std::cout << "i, j and result is: " << i << " " << j << " " << buffer[cols*i+j] << std::endl;
+            // std::cout << "i, j and result is: " << i << " " << j << " " << buffer[cols*i+j] << std::endl;
     }
     return result;
 }
