@@ -6,11 +6,16 @@ lol = 1.59
 WD_front = 0.467
 l_f = lol*(1-WD_front)
 l_r = lol*WD_front
-d0=l_f
 ds_wanted = 0.1
-final = 2*75+(d0+0.3)
+wing = 0.874
+start = -0.3-l_f-wing
+final = start+2*75
+length = final-start  
+manual_stop = -start+75+1
+percentage = (manual_stop)/(length)
+print("stop at percentage: ",percentage)
 res1= int(final/ds_wanted)
-x1 = np.linspace(0.0,final,res1)
+x1 = np.linspace(start,final,res1)
 y1 = np.linspace(0.0,0.0,res1)
 array_straight_one=[]
 print(res1)

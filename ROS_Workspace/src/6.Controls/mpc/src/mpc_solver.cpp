@@ -169,8 +169,8 @@ void MpcSolver::generateFirstPoint() {
         std::cout << "mpika emergency!!!" << std::endl;
         s_init += emergency_forward_;
     }
+    else emergency = 0;
     if(s_init > sol) s_init = sol;
-    std::cout << "before sarray final[0] at first point" << std::endl;
     s_array_final[0] = s_init;
     std::cout << "sinit and sol are: " << s_init << " " << sol << " (" << percentage_*100 << "%) " << std::endl;
     std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
@@ -283,8 +283,18 @@ void MpcSolver::generateFirstPointUnknown() {
                     spline_data(i,3) = 0.0;
                 }
             }
+            if(mission_=="accel") {
+                if(lap_counter < 1) spline_data(i,3) = u_second_pass[i];
+                else if (lap_counter == 1 and X[3]>=6.0) spline_data(i,3) = 6.0;
+                else if (lap_counter == 1 and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
+                else if (lap_counter == 1 and X[3]<3.0) {
+                    brake_flag = 1;
+                    spline_data(i,3) = 0.0;
+                }
+            }
+            if(emergency==1) spline_data(i,3) = 5.0; 
         }
-        std::cout << "values of all passes are: " << u_first_pass[1] << " " << u_second_pass[1] << std::endl;
+        std::cout << "values of all passes are: " << u_first_pass[1] << " " << u_second_pass[1] << " " << spline_data(1,3) << std::endl;
         return spline_data;
         std::cout << "got spline data local" << std::endl;
     }
@@ -304,6 +314,10 @@ void MpcSolver::generateFirstPointUnknown() {
             if(mission_=="skidpad") { 
                 if(s_array_final[i]>sol*0.25 and lap_counter==5) s_array_final[i]=sol*0.25;
                 if(lap_counter>0 and lap_counter<=4 and s_array_final[i]>sol ) s_array_final[i]=0.0;
+                if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol;
+            } 
+            if(mission_=="accel") { 
+                if(s_array_final[i]>sol*0.52 and lap_counter==1) s_array_final[i]=sol*0.52;
                 if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol;
             } 
         }
@@ -354,8 +368,10 @@ void MpcSolver::generateFirstPointUnknown() {
     }
 
     void MpcSolver::generateTrackConfig() {
-        if(mission_=="accel") {
-            center_point.x = 75+l_f;
+        if(mission_=="accel") { 
+            start_point.x = -0.3-wing-l_f;
+            start_point.y = 0.0;
+            center_point.x = 75+wing+l_f+0.3;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/Acceleration.txt";
             lookahead_ = 30;
@@ -393,11 +409,19 @@ void MpcSolver::generateFirstPointUnknown() {
 
     void MpcSolver::customLapCounter() {
         double critical_dist = std::sqrt(std::pow(X[0] - center_point.x, 2) + std::pow(X[1] - center_point.y, 2));
-        if(critical_dist <= 2*l_f && lap_lock==0) {
-            lap_lock=1;
-            lap_counter++;
+        if(mission_=="skidpad") {
+            if(critical_dist <= 2*l_f && lap_lock==0) {
+                lap_lock=1;
+                lap_counter++;
+            }
+            if(critical_dist > 2*l_f) lap_lock=0;
         }
-        if(critical_dist > 2*l_f) lap_lock=0;
+        if(mission_=="accel") {
+            if(critical_dist<l_f and lap_lock==0) {
+                lap_counter++;
+                lap_lock=1;
+            }
+        }
     }
 
     void MpcSolver::generateFinishFlag(int lap_counter) {
@@ -506,6 +530,10 @@ void MpcSolver::generateFirstPointUnknown() {
         writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
+        if(mission_=="accel" and finish_flag==1) { //just no steering when finishing accel
+            X[7] = 0.0; 
+            U[1] = 0.0;
+        } 
         checkReliability();
         if(X[6]>2000.0) X[6]=2000.0;
         if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
@@ -539,7 +567,8 @@ void MpcSolver::generateFirstPointUnknown() {
             std::cout << "Vgika apo ellipse with Frx_bef -> " << X[6] << std::endl;
             double Frx_remain_act = std::pow(Fz.Frz,2) - std::pow(Fry/mu.my_max,2);
             if(Frx_remain_act<=0.0) Frx_remain_act = 0.0;
-            X[6] = 0.8*mu.mx_max*std::sqrt(Frx_remain_act);
+            if(X[6]<=0.0) X[6] = -0.8*mu.mx_max*std::sqrt(Frx_remain_act);
+            else X[6] = 0.8*mu.mx_max*std::sqrt(Frx_remain_act);
             std::cout << "Vgika apo ellipse with Frx_after -> " << X[6] << std::endl;
             ellipse_counter+=1;
         }

@@ -46,9 +46,11 @@ lol = 1.59
 WD_front = 0.467
 l_f = lol*(1-WD_front)
 l_r = lol*WD_front
-d0=l_f
-final = 75+(d0+0.3)
-factor_bef=1.1/2
+wing = 0.874
+start = -0.3-l_f-wing
+final = start+2*75
+length = final-start  
+factor_bef=0.52
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
@@ -73,9 +75,9 @@ dt_integration=0.025
 #compute l_a
 umin=4.0
 umax=7.0
-INDEX_MAX=151.14747
+INDEX_MAX=length
 # INDEX_MAX=100.0
-DINDEX_MAX=151.14747 #just for one lap (TBC)
+DINDEX_MAX=length #just for one lap (TBC)
 
 #ellipse params
 # a=1.46
@@ -326,7 +328,7 @@ def generate_pathplanner():
 
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
-    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  0.0, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
+    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
     model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 20.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*10])
 
     model.nh = 3 #number of inequality constr
