@@ -1,6 +1,6 @@
 mpc:
   ros__parameters:
-    simulation: false
+    simulation: true
     mission: "skidpad"
     total_laps: 5
     v_limit: 15.0

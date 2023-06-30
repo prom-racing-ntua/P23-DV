@@ -104,8 +104,10 @@ void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]
         }
     }
 
+
 void MpcSolver::Initialize_all_local() {
-    for (int i = 0; i < Z_SIZE*LOOKAHEAD; i++) params.x0[i] = 0.0;
+    s_array_final.resize(lookahead_,0); //resize of array
+    for (int i = 0; i < Z_SIZE*lookahead_; i++) params.x0[i] = 0.0;
     //X_array is: X  Y  phi vx vy  r F delta index
     // const double xinit_temp[9];
     if(known_track_) {
@@ -123,9 +125,8 @@ void MpcSolver::Initialize_all_local() {
 
 void MpcSolver::UpdateFromLastIteration() {
     for (int j = 0; j < X_SIZE; ++j) params.xinit[j] = X[j];
-    std::cout << "simulation parameter is: "<< simulation_ << std::endl;
     if(!simulation_) {
-        std::cout << "i get feedback from car" << std::endl;
+        std::cout << "I get feedback from car" << std::endl;
         X[0] = pose_struct.x;
         X[1] = pose_struct.y;
         X[2] = pose_struct.theta;
@@ -169,6 +170,7 @@ void MpcSolver::generateFirstPoint() {
         s_init += emergency_forward_;
     }
     if(s_init > sol) s_init = sol;
+    std::cout << "before sarray final[0] at first point" << std::endl;
     s_array_final[0] = s_init;
     std::cout << "sinit and sol are: " << s_init << " " << sol << " (" << percentage_*100 << "%) " << std::endl;
     std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
@@ -212,7 +214,8 @@ void MpcSolver::generateFirstPointUnknown() {
     std::cout << "generated first point " << s_init << " " << params_array(ind_of_closest,0) << " " << params_array(ind_of_closest,1) << std::endl;
     }
 
-    PointsData MpcSolver::getSplineDataLocal(double parameters[LOOKAHEAD]) {
+    // PointsData MpcSolver::getSplineDataLocal(double parameters[lookahead_]) {
+    PointsData MpcSolver::getSplineDataLocal(std::vector<double> parameters) {
         // Iterate through all points and data of interest (X,Y,tang,curv)
         // int rows_ = (int)sizeof(parameters);
         std::cout << "started spline data local" << std::endl;
@@ -223,8 +226,8 @@ void MpcSolver::generateFirstPointUnknown() {
         double u_forward_temp=X[3];
         double u_backward_temp=X[3];
         std::copy(X, X+X_SIZE, X_copy); 
-        PointsData spline_data{LOOKAHEAD,4};
-        for (long int i{ 0 }; i < LOOKAHEAD; i++) { //parameter_writing + first pass
+        PointsData spline_data{lookahead_,4};
+        for (long int i{ 0 }; i < lookahead_; i++) { //parameter_writing + first pass
             double param = parameters[i];
             Point temp1 = spline_final->getPoint(param);
             double temp2 = spline_final->getTangent(param);
@@ -250,11 +253,11 @@ void MpcSolver::generateFirstPointUnknown() {
             double u_first_temp = custom_min(u_forward_temp,u_max_temp);
             u_first_pass.push_back(u_first_temp);
         }
-        X_copy[3] = u_first_pass[LOOKAHEAD-1];
-        for (long int j{ 0 }; j < LOOKAHEAD; j++) { //second pass
-            double param = parameters[LOOKAHEAD-1-j];
+        X_copy[3] = u_first_pass[lookahead_-1];
+        for (long int j{ 0 }; j < lookahead_; j++) { //second pass
+            double param = parameters[lookahead_-1-j];
             double curv = spline_final->getCurvature(param);
-            if(j==0) u_backward_temp = u_first_pass[LOOKAHEAD-1-j];
+            if(j==0) u_backward_temp = u_first_pass[lookahead_-1-j];
             else {
                 X_copy[3] = u_backward_temp;
                 double Fy_remain = m*std::pow(X_copy[3],2)*curv;
@@ -262,15 +265,15 @@ void MpcSolver::generateFirstPointUnknown() {
                 double Fx_remain;
                 if(Fx_remain_powered<=0.0) Fx_remain = 0.0;
                 else Fx_remain = std::sqrt(Fx_remain_powered);
-                double u_backward_powered = std::pow(X_copy[3],2)-2*(Fx_remain/m)*sol*std::abs(parameters[LOOKAHEAD-j]-parameters[LOOKAHEAD-j-1]);
+                double u_backward_powered = std::pow(X_copy[3],2)-2*(Fx_remain/m)*sol*std::abs(parameters[lookahead_-j]-parameters[lookahead_-j-1]);
                 if(u_backward_powered<=0.0) u_backward_temp = X_copy[3];
                 else u_backward_temp = std::sqrt(u_backward_powered); 
             }
-            double u_second_temp = custom_min(u_backward_temp,u_first_pass[LOOKAHEAD-1-j]);
+            double u_second_temp = custom_min(u_backward_temp,u_first_pass[lookahead_-1-j]);
             u_second_pass.push_back(u_second_temp);
         }
         std::reverse(u_second_pass.begin(), u_second_pass.end());
-        for (long int i{ 0 }; i < LOOKAHEAD; i++) {
+        for (long int i{ 0 }; i < lookahead_; i++) {
             if(mission_=="skidpad") {
                 if(lap_counter < 5) spline_data(i,3) = u_second_pass[i];
                 else if (lap_counter == 5 and X[3]>=6.0) spline_data(i,3) = 6.0;
@@ -288,7 +291,7 @@ void MpcSolver::generateFirstPointUnknown() {
 
     void MpcSolver::writeParamsKnown(int global_int) {
         std::cout << "started writing of known_params" << std::endl;
-        for (int i = 1; i < LOOKAHEAD; ++i) {
+        for (int i = 1; i < lookahead_; ++i) {
             if(s_array_final[i]>sol) std::cout << "finished lap" << std::endl;
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
@@ -304,7 +307,7 @@ void MpcSolver::generateFirstPointUnknown() {
                 if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol;
             } 
         }
-        for(int i=0; i<LOOKAHEAD; ++i) s_array_final[i]=s_array_final[i]/sol;
+        for(int i=0; i<lookahead_; ++i) s_array_final[i]=s_array_final[i]/sol;
         std::cout << "finished generation of s_profile" << std::endl;
         params_array = getSplineDataLocal(s_array_final);
         copyToParameters();
@@ -313,14 +316,14 @@ void MpcSolver::generateFirstPointUnknown() {
     void MpcSolver::writeParamsUnknown() {
         std::cout << "started writing of unknown_params" << std::endl;
         s_array_final[0] = (float)s_array_final[0];
-        for (int i = 1; i < LOOKAHEAD; ++i) {
+        for (int i = 1; i < lookahead_; ++i) {
             s_array_final[i] = s_array_final[i-1] + s_interval_;
             if(s_array_final[i]>sol) {
                 std::cout << "finished spline" << std::endl;
                 s_array_final[i]=sol;
             }
         }
-        for(int i=0; i<LOOKAHEAD; ++i) s_array_final[i]=s_array_final[i]/sol;
+        for(int i=0; i<lookahead_; ++i) s_array_final[i]=s_array_final[i]/sol;
         std::cout << "finished generation of s_profile" << std::endl;
         std::cout << "three s_final params are: " << s_array_final[0] << " " << s_array_final[1] << " " << s_array_final[5];
         params_array = getSplineDataLocal(s_array_final);
@@ -328,7 +331,7 @@ void MpcSolver::generateFirstPointUnknown() {
     }
 
     void MpcSolver::copyToParameters() {
-        for(int k = 0; k < 4*LOOKAHEAD; ++k) { 
+        for(int k = 0; k < 4*lookahead_; ++k) { 
             int mod_ = k%4;
             if (mod_ == 0) {
                 params.all_parameters[k] = params_array(int(k/4),0); 
@@ -355,6 +358,7 @@ void MpcSolver::generateFirstPointUnknown() {
             center_point.x = 75+l_f;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/Acceleration.txt";
+            lookahead_ = 30;
             known_track_ = true; 
         }
         if(mission_=="skidpad") {
@@ -363,17 +367,20 @@ void MpcSolver::generateFirstPointUnknown() {
             center_point.x = 0.0;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/skidpad_straight1.txt";
+            lookahead_ = 30;
             known_track_ = true; 
         }
         if(mission_=="autox") {
             center_point.x = 0.0;
             center_point.y = 0.0;
+            lookahead_ = 20;
             known_track_ = false; 
         }
         if(mission_=="trackdrive") {
             center_point.x = 0.0;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/trackdrive_midpoints.txt";
+            lookahead_ = 30;
             known_track_ = false; 
         }
     }
@@ -499,6 +506,7 @@ void MpcSolver::generateFirstPointUnknown() {
         writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
+        checkReliability();
         if(X[6]>2000.0) X[6]=2000.0;
         if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
         if(X[7]>29.5/57.2958) X[7] = 29.5/57.29;
@@ -528,7 +536,11 @@ void MpcSolver::generateFirstPointUnknown() {
         double Fry = getFy(Fz.Frz,sa.sar);
         double ellipse_per = std::pow(X[6]/(mu.mx_max*Fz.Frz),2) + std::pow(Fry/(mu.my_max*Fz.Frz),2);
         if(ellipse_per>1.0) {
-            std::cout << "Vgika apo ellipse" << std::endl;
+            std::cout << "Vgika apo ellipse with Frx_bef -> " << X[6] << std::endl;
+            double Frx_remain_act = std::pow(Fz.Frz,2) - std::pow(Fry/mu.my_max,2);
+            if(Frx_remain_act<=0.0) Frx_remain_act = 0.0;
+            X[6] = 0.8*mu.mx_max*std::sqrt(Frx_remain_act);
+            std::cout << "Vgika apo ellipse with Frx_after -> " << X[6] << std::endl;
             ellipse_counter+=1;
         }
         std::cout << "Emergency and ellipse counters are: " << emergency_counter << " " << ellipse_counter << std::endl;

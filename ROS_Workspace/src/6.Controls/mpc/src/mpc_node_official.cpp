@@ -77,7 +77,7 @@ void MpcHandler::loadParameters() {
     mpc_solver.s_space_max = get_parameter("s_space_max").as_double();
     mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
     mpc_solver.total_laps_ = get_parameter("total_laps").as_int();
-    std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.simulation_ << " " << node_freq_ << std::endl;
+    std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.lookahead_ << " " << node_freq_ << std::endl;
     std::cout << "declared params" << std::endl;
 }
 
@@ -173,7 +173,6 @@ void MpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_m
     else {
         if(global_int==-1) mpc_solver.Initialize_all_local();
         mpc_solver.UpdateFromLastIteration();
-        mpc_solver.checkReliability();
         mpc_solver.customLapCounter();
         mpc_solver.generateFinishFlag(mpc_solver.lap_counter);
         if(mpc_solver.mission_=="skidpad") mpc_solver.updateSkidpadSpline(mpc_solver.lap_counter);

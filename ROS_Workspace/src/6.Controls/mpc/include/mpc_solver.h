@@ -98,11 +98,9 @@ class MpcSolver {
         constexpr static int X_SIZE = 9;
         constexpr static int U_SIZE = 3;
         constexpr static int Z_SIZE = X_SIZE + U_SIZE;
-        constexpr static int LOOKAHEAD = 30; 
         int lookahead_;
         double X[X_SIZE];
         double U[U_SIZE];
-        double s_array_final[LOOKAHEAD];
         NormalForces getFz(const double X[X_SIZE]);
         MuConstraints getEllipseParams(const double &Fz);
         SlipAngles getSlipAngles(const double X[X_SIZE]);
@@ -115,7 +113,7 @@ class MpcSolver {
         void writeParamsUnknown();
         void Initialize_all_local();
         void UpdateFromLastIteration();
-        PointsData getSplineDataLocal(double parameters[LOOKAHEAD]);
+        PointsData getSplineDataLocal(std::vector<double>parameters);
         void generateFirstPoint();
         void generateFirstPointUnknown();
         int callSolver(int global_int);
@@ -127,6 +125,7 @@ class MpcSolver {
         void generateFinishFlag(int lap_counter);
         void updateSplineParameters(std::string txt_file);
         void checkReliability();
+        void declareArrays();
         std::string mission_;
         std::string midpoints_txt_;
         std::vector<double> error_ver;
@@ -171,10 +170,6 @@ class MpcSolver {
         PointsData params_array;
         PointsData whole_track;
         FORCESNLPsolver_mem *mem;
-        std::vector<double> X_spl = std::vector<double>(LOOKAHEAD);
-        std::vector<double> Y_spl = std::vector<double>(LOOKAHEAD);
-        std::vector<double> tang_spl = std::vector<double>(LOOKAHEAD);
-        std::vector<double> curv_spl = std::vector<double>(LOOKAHEAD);
         bool known_track_;
         bool simulation_;
         int search_window_;
@@ -183,9 +178,11 @@ class MpcSolver {
         ~MpcSolver();
     private:         
         double custom_max(double aa, double bb);
-        double custom_min(double aa, double bb);   
+        double custom_min(double aa, double bb);
+        std::vector<double> s_array_final;   
         const int SIM = 1000;
         const int SPLINE_RES = 2000;
+        // double s_array_final[LOOKAHEAD];
         int track_resolution;
         double X2[X_SIZE];
         double X3[X_SIZE];
