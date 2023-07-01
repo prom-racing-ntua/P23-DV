@@ -61,7 +61,7 @@ class InferenceNode(Node):
                 smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
                 keypointsTiming = time.time()
                 keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
-                finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
+                finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
                 try:
                     # This sometimes throughs an error,don't know why
                     rangeList, thetaList = zip(*finalCoords)
