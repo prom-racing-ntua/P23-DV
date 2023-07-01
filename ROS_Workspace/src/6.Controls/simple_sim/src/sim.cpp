@@ -249,7 +249,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 			x y color
 			...
 	*/
-	std::ifstream &fs = fs2;
+	std::ifstream &fs = fs1;
 	int count;
 	fs >> count;
 	double x, y;
@@ -277,14 +277,19 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	log.open("src/6.Controls/simple_sim/data/log.txt");
 	log << state;
-	st_d_ticks = 1;
-	mot_d_ticks = 1;
+	st_d_ticks = 2;
+	mot_d_ticks = 2;
+
+	std::ofstream log2;
+	log2.open("src/6.Controls/simple_sim/data/log2.txt");
+	//state.check_ellipses(log2);
+	log2.close();
 }
 
 double add_noise(double x, double perc = 0.001)
 {
 	static std::default_random_engine generator;
-  	std::normal_distribution<double> distribution(0.0,5*perc);
+  	std::normal_distribution<double> distribution(0.0,perc);
 	double add = distribution(generator);
 	//std::cout<<add<<std::endl;
 	return x + add;
@@ -317,14 +322,15 @@ void sim_node::timer_callback()
 		else
 			d = steering[int(steering.size()) - st_d_ticks - 1];
 
-		if (last_d + 0.01 < d)
-			last_d = last_d + 0.01;
-		else if (last_d - 0.01 > d)
-			last_d = last_d - 0.01;
+		if (last_d + 0.0005 < d)
+			last_d = last_d + 0.0005;
+		else if (last_d - 0.0005 > d)
+			last_d = last_d - 0.0005;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt, f, last_d);
-		if ((/*(std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 or*/ (std::pow(state.x-75, 2) + std::pow(state.y, 2)) < 2.25 or std::abs(state.x-75)<2.25) and global_idx - idx_of_last_lap > 1000)
+		if (((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 /*or (state.x>75 and state.x<76)*/) and global_idx - idx_of_last_lap > 5000)
 		{
+			std::cout<<"Lap "<<state.lap+1<<std::endl;
 			idx_of_last_lap = global_idx;
 			state.lap++;
 			/*
@@ -373,7 +379,7 @@ void sim_node::timer_callback()
 		log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
 		state.check_ellipses(log2);
 		log2.close();
-		pos.x = add_noise(state.x, 0.05);
+		pos.x = add_noise(state.x);
 		pos.y = add_noise(state.y, 0.05);
 		msg.position = pos;
 		msg.theta = add_noise(state.theta, 0.01);
@@ -390,7 +396,7 @@ void sim_node::timer_callback()
 		pub_pose->publish(msg);
 	}
 
-	if (global_idx % 100 == 0)
+	if (global_idx % 250 == 0)
 	{
 		std::cout << state.t << "\t\t" << state.v_x << std::endl;
 		// std::cout << '*' << std::endl;

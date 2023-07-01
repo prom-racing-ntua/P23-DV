@@ -38,6 +38,11 @@ double Point::distance(const Point &a, const Point &b)
 {
     return std::pow(std::pow(a.x() - b.x(), 2) + std::pow(a.y() - b.y(), 2), 0.5);
 }
+std::ostream &pid_pp::operator<<(std::ostream &out, const Point &a)
+{
+    out<<"("<<a.x()<<","<<a.y()<<")";
+    return out;
+}
 
 // Class PID
 PID::PID()
@@ -288,10 +293,9 @@ std::pair<double, double> VelocityProfile::operator()(const Point &position, dou
     // return std::make_pair(0,0);
     int i = get_projection(position, theta);
     last_visited_index = i;
-    i = std::min(i, max_idx); //looking at next target
+    i = std::min(i+1, max_idx); //looking at next target
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
-    //std::cout<<target<<std::endl;
     return std::make_pair(target, cross_track);
 }
 
@@ -299,7 +303,9 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
 {
     double min_error = DBL_MAX, min_error_index = -1, error_x, error_y, error;
     //std::cout << "max index = " << max_idx << std::endl;
-    for (int i = std::max(last_visited_index-2, 0); i < max_idx; i++)
+    //for (int i = std::max(last_visited_index-2, 0); i < max_idx; i++)
+    //for(int i = max_idx-1; i>= std::max(last_visited_index-2, 0); i--)
+    for(int i = max_idx-1; i>= 0; i--)
     {
         /*
         error_x = std::sin(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::cos(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
@@ -311,7 +317,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         error_y = spline_samples[i].position().y() - position.y();
         error = error_x * error_x + error_y * error_y;
         // std::cout<<error<<std::endl;
-        if (error < min_error)
+        if (error <= min_error)
         {
             min_error = error;
             min_error_index = i;
@@ -328,12 +334,15 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     double dist, R;
     double lr = model->wb * model->wd;
     Point closest_p, trans, rear = position - Point(-lr * std::cos(theta), -lr * std::sin(theta));
-    for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
+    //for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
+    for(int i = total_length * samples_per_meter-1; i>=last_visited_index; i--)
+    //for(int i = total_length * samples_per_meter-1; i>=0; i--)
     {
         dist = Point::distance(rear, spline_samples[i].position());
         trans = spline_samples[i].position() - rear;
+        if(trans.x() * std::cos(theta) + trans.y() * std::sin(theta) < 0 )continue; //target point should be in front
         R = (ld * ld) / (2 * (-trans.x() * std::sin(theta) + trans.y() * std::cos(theta)));
-        if (std::abs(ld - dist) < closest_d && std::abs(R) > min_radius)
+        if (std::abs(ld - dist) <= closest_d && std::abs(R) > min_radius)
         {
             closest_d = std::abs(ld - dist);
             closest_p = trans;
@@ -342,6 +351,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     if (closest_d < DBL_MAX)
         return closest_p;
     Point a(0, 0);
+    std::cout<<"??"<<std::endl;
     a.error=1;
     return a;
     /* ELSE TBD */
@@ -384,7 +394,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         }
     }
     //log.close();
-    spline_samples[0].set_target_speed(std::max(0.0,initial_speed));
+    spline_samples[0].set_target_speed(std::max(1.0, initial_speed));
     if(unknown)spline_samples[resolution - 1].set_target_speed(0); // Safety Check
     /* SECOND PASS */
     /*
@@ -430,12 +440,13 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         fx_rem = std::min(fx_rem, fx_rear_rem);
 
         local_accel = std::min(fx_rem / m, max_accel_eng);
-
-        ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
         
+        ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
         u_accel = std::sqrt(local_speed * local_speed + 2 * local_accel * ds);
+
+        spline_samples[i + 1].set_target_speed(std::min(u_accel, spline_samples[i + 1].target_speed()));
+        
     }
-    
     /* THIRD PASS */
     /*
         The ellipse constraints will be calculated using single axis, so as to calculate the total -a_x of the vehicle.
@@ -477,5 +488,5 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
     }
 
-    spline_samples[0].set_target_speed(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()));//prevents initial target from beign 0
+    if(spline_samples[0].target_speed()<0.5)spline_samples[0].set_target_speed(std::min(1.0,(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()))));//prevents initial target from beign 0
 }

@@ -122,8 +122,11 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
 
     std::pair<std::vector<my_edge>, int> best_best_path;
 
+    bool out_of_convex = 0;
+
     if (triangulation_object.is_infinite(starting_face))
     {
+        out_of_convex = 1;
         std::cout << "Exited convex hull" << std::endl;
         
         Face_handle infinite = starting_face;
@@ -279,7 +282,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         best_best_path = best_path[best_index];
     }
     // cost_function_advanced(best_best_path.first, position, direction ,1);
-    best_best_path = filter_best_path(best_best_path, position, direction);
+    if(!out_of_convex)best_best_path = filter_best_path(best_best_path, position, direction);
     std::vector<Point> out;
     out.reserve(selected_edges.size() + 1);
     out.push_back(position);
@@ -413,7 +416,7 @@ std::pair<std::vector<my_edge>, int> Triangulation::filter_best_path(std::pair<s
     if (best_path.second < filtering_threshold || best_path.first.size() == 2 /*|| times_applied>2*/)
         return best_path;
     best_path.first.pop_back();
-    best_path.second = cost_function_advanced(best_path.first, starting_position, starting_direction, 1);
+    best_path.second = cost_function_advanced(best_path.first, starting_position, starting_direction);
     return filter_best_path(best_path, starting_position, starting_direction, times_applied + 1);
     
 }
@@ -567,8 +570,6 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
             }
         }
         if(f and verbose)std::cout<<"Wrong orientation "<<i<< '(' << selected_edges[i].a().coords.x() << "," << selected_edges[i].a().coords.y() << "),"<<'(' << selected_edges[i].b().coords.x() << "," << selected_edges[i].b().coords.y() << ") "<<selected_edges[i].a().color<<" "<<selected_edges[i].b().color<<std::endl;
-        //if(f and verbose)RCLCPP_INFO_STREAM(get_logger(),"Wrong orientation "<<i<< '(' << selected_edges[i].a().coords.x() << "," << selected_edges[i].a().coords.y() << "),"<<'(' << selected_edges[i].b().coords.x() << "," << selected_edges[i].b().coords.y() << ") "<<selected_edges[i].a().color<<" "<<selected_edges[i].b().color);
-
     }
     /*if (verbose)
     {

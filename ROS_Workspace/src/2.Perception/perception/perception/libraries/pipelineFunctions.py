@@ -201,7 +201,7 @@ def rt_converter(camera, pnp_dist):
     return r[0]/100, theta
 
 
-def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY, image):
+def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY):
     rt = []
     for j in range(len(classes)):
         cone_keypoints = []
@@ -220,7 +220,6 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY,
             for k in range(11):
                 x = predictions[j][k][0]*(cropped_img_corners[j][2] - cropped_img_corners[j][0])/48 + cropped_img_corners[j][0]
                 y = OffsetY + predictions[j][k][1]*(cropped_img_corners[j][3] - cropped_img_corners[j][1])/64 + cropped_img_corners[j][1]
-                image[int(y)-4:int(y)+4, int(x)-4:int(x)+4] = np.array([0,255,0])
 
                 cone_keypoints.append([x,y]) 
             cone_keypoints_numpy = np.array(cone_keypoints)
@@ -241,7 +240,6 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY,
             for k in range(7):
                 x = predictions[j][k][0]*(cropped_img_corners[j][2] - cropped_img_corners[j][0])/48 + cropped_img_corners[j][0]
                 y = OffsetY + predictions[j][k][1]*(cropped_img_corners[j][3] - cropped_img_corners[j][1])/64 + cropped_img_corners[j][1]
-                image[int(y)-4:int(y)+4, int(x)-4:int(x)+4] = np.array([0,255,0])
 
                 cone_keypoints.append([x,y]) 
             cone_keypoints_numpy = np.array(cone_keypoints)
