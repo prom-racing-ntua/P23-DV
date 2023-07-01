@@ -30,7 +30,7 @@
     track_map: ""
 
     # Defines the starting position of the car
-    starting_position: [ -7.5, 0.0, 0.0 ]
+    starting_position: [ -6.847, 0.0, 0.0 ] #before -7.5
     starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
@@ -179,7 +179,7 @@
     v_limit: 5.0
     node_freq: 40
     s_interval: 0.1
-    distance_safe: 0.95
+    distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0
     s_space_max: 0.5

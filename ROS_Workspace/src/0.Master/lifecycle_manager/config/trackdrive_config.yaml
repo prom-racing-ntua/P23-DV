@@ -30,7 +30,7 @@
     track_map: ""         ## Insert AutoX map file here
 
     # Defines the starting position of the car
-    starting_position: [ -7.5, 0.0, 0.0 ]
+    starting_position: [ -6.847, 0.0, 0.0 ]
     starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
