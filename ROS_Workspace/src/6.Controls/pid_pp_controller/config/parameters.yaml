@@ -1,7 +1,7 @@
 pid_pp_controller:
   ros__parameters:
-    discipline: "Acceleration"
-    midpoints: "Acceleration.txt"
+    discipline: "Autocross"
+    midpoints: "trackdrive_midpoints.txt"
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
@@ -17,26 +17,25 @@ pid_pp_controller:
     Fz_0: 1112.0554070627252
     max_positive_torque: 186.2
     max_negative_torque: -186.2          #!!!
-    minimum_weight_distribution_rear: 1.0  #!!!
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 1.0                   
-    ld_max: 20.0
-    v_min: 0.0
-    v_max: 20.0
+    ld_min: 3.0                 
+    ld_max: 5.0
+    v_min: 3.0
+    v_max: 10.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
-    safety_factor: 0.75
-    max_speed: 20.0
+    safety_factor: 0.6
+    max_speed: 6.0
     dt: 0.025
     safe_speed_to_break: 3.0
 
     #PID
-    kp: 1000
-    ki: 1000
+    kp: 2000  
+    ki: 2000
     kd: 100
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 10
+    total_laps: 4

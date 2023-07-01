@@ -28,6 +28,7 @@ namespace pid_pp
         //friend Point operator+(const Point &a, const Point &b);
         //friend Point operator-(const Point &a, const Point &b);
         //friend Point operator*(double a, const Point &b);
+        friend std::ostream &operator<<(std::ostream &out, const Point &a);
         static Point midpoint(const Point &a, const Point &b);
         static double distance(const Point &a, const Point &b);
     };
