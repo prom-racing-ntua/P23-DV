@@ -8,6 +8,9 @@ from math import pi
 
 ### --------------------------- Helper Functions --------------------------- ###
 
+# Break Pressure Target for service brake [bar]
+SERVICE_BRAKE_TARGET = 10
+
 # These are specific to P23 steering geometry. Positive displacement and wheel angle is to the right of the car as the positive x-axis.
 RACK_DISPLACEMENT_LOOKUP = np.array([
 # Steer Travel [mm] # Avg Wheel Angle [deg]
@@ -212,7 +215,7 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
         if self.node_handle._shuting_down:
             self._ros_msg.steering_angle_target = 0
             self._ros_msg.motor_torque_target = 0
-            self._ros_msg.brake_pressure_target = 0
+            self._ros_msg.brake_pressure_target = False
             self._ros_msg.speed_actual = 0
             self._ros_msg.speed_target = 0
 
@@ -220,7 +223,8 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
         out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
         # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
         out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
-        out_msg[5] = self._ros_msg.brake_pressure_target
+        if self._ros_msg.brake_pressure_target: out_msg[5] = SERVICE_BRAKE_TARGET
+        else: out_msg[5] = 0
 
         # Speed Actual and speed target
         out_msg[6] = self._ros_msg.speed_actual
