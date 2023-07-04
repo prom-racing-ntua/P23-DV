@@ -91,7 +91,7 @@ double State::calc_lr(bool simplified, double a_x) const
 	double wf = w * constants.wd - dwx;
 
 	// std::cout<<constants.wheelbase * constants.wd - constants.h_cog * a_x<<std::endl;
-	return constants.wheelbase * (wf / w); //new wd = wf/w
+	return constants.wheelbase * (wf / w); // new wd = wf/w
 }
 double State::calc_lf(double l_r) const
 {
@@ -102,6 +102,11 @@ double State::calc_drag(double v_x) const
 {
 	return 0.5 * constants.P_air * constants.CdA * v_x * v_x;
 }
+double State::calc_roll(double fz) const
+{
+	double coeff = 0.03;
+	return coeff * fz;
+}
 double State::v_x_next(double v_x, double a_x, double dt) const
 {
 	return std::max(0.0, v_x + a_x * dt);
@@ -110,10 +115,10 @@ double State::v_y_next(double v_y, double a_y, double dt) const
 {
 	return v_y + a_y * dt;
 }
-double State::calc_a_x(double frx, double f_drag, double ffy, double d, double v_y, double r) const
+double State::calc_a_x(double frx, double f_drag, double f_roll, double ffy, double d, double v_y, double r) const
 {
 	// std::cout<<frx<<" "<<f_drag<<" "<<d<<" "<<std::sin(d)<<" "<<ffy * std::sin(d)<<" "<<v_y<<" "<<r<<std::endl;
-	return (frx - f_drag - 0 - ffy * std::sin(d)) / constants.m + v_y * r;
+	return (frx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;
 }
 double State::calc_a_y(double fry, double ffy, double d, double v_x, double r) const
 {
@@ -159,35 +164,34 @@ void State::next(double dt, double frx, double delta)
 	fry = calc_fry(sa_r, frz);
 	ffy = calc_ffy(sa_f, ffz);
 	double f_drag = calc_drag(v_x);
+	double f_roll = calc_roll(frz + ffz);
 	x = x_next(v_x, theta, v_y, x, dt);
 	y = y_next(v_x, theta, v_y, y, dt);
 	r = r_next(ffy, delta, fry, r, dt);
 	theta = theta_next(r, theta, dt);
 	s = s_next(s, v_x, v_y, a_x, a_y, dt);
-	a_x = calc_a_x(frx, f_drag, ffy, delta, v_y, r);
+	a_x = calc_a_x(frx, f_drag, f_roll, ffy, delta, v_y, r);
 	a_y = calc_a_y(fry, ffy, delta, v_x, r);
 	v_x = v_x_next(v_x, a_x, dt);
 	v_y = v_y_next(v_y, a_y, dt);
 	t += dt;
 }
 
-void State::check_ellipses(std::ostream &out)const
+void State::check_ellipses(std::ostream &out) const
 {
-	//Full vehicle
+	// Full vehicle
 	const double Fz = frz + ffz;
 	const double Fz0 = 1112.0554070627252;
-	const double dFz_full = (Fz-Fz0)/Fz0;
+	const double dFz_full = (Fz - Fz0) / Fz0;
 	const double mx_max_full = 0.66 * (2.21891927 - 1.36151651e-07 * dFz_full);
 	const double my_max_full = 0.66 * (2.46810824 - 0.21654031 * dFz_full);
 	const double fx = a_x * constants.m;
 	const double fy = a_y * constants.m;
-	out<<(fx/mx_max_full)*(fx/mx_max_full)<<" "<<(fy/my_max_full)*(fy/my_max_full)<<" "<<Fz*Fz<<std::endl;
-	//Rear
-	const double dFz = (frz-Fz0)/Fz0;
+	out << (fx / mx_max_full) * (fx / mx_max_full) << " " << (fy / my_max_full) * (fy / my_max_full) << " " << Fz * Fz << std::endl;
+	// Rear
+	const double dFz = (frz - Fz0) / Fz0;
 	const double mx_max = 0.66 * (2.21891927 - 1.36151651e-07 * dFz);
 	const double my_max = 0.66 * (2.46810824 - 0.21654031 * dFz);
-	
-
 }
 
 std::ostream &operator<<(std::ostream &out, const State &a)
@@ -239,17 +243,35 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	state.init(constants, 0);
 
-	std::ifstream fs1, fs2;
+	std::ifstream fs;
 
-	fs1.open("src/6.Controls/simple_sim/data/map.txt");
-	fs2.open("src/6.Controls/simple_sim/data/Acceleration.txt");
+	declare_parameter<string>("discipline", "Autocross");
+	string d = get_parameter("discipline").as_string();
+	if (d == "Autocross")
+		discipline = 0;
+	else if (d == "Trackdrive")
+		discipline = 1;
+	else if (d == "Acceleration")
+		discipline = 2;
+	else if (d == "Skidpad")
+		discipline = 3;
+	else
+		discipline = 0;
+
 	/*
 		Format:
 			count
 			x y color
 			...
 	*/
-	std::ifstream &fs = fs1;
+	if (discipline == 0 or discipline == 1)
+		fs.open("src/6.Controls/simple_sim/data/map.txt");
+	else if (discipline == 2)
+		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
+	else if (discipline == 3)
+		fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
+		
+	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
 	int count;
 	fs >> count;
 	double x, y;
@@ -282,16 +304,34 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 
 	std::ofstream log2;
 	log2.open("src/6.Controls/simple_sim/data/log2.txt");
-	//state.check_ellipses(log2);
+	// state.check_ellipses(log2);
 	log2.close();
+}
+
+bool sim_node::lap_change() const
+{
+	double x = state.x;
+	double y = state.y;
+	if (discipline == 0 or discipline == 1)
+	{
+		return x >= 0 && x <= 3 && y >= -3 && y <= 3;
+	}
+	if (discipline == 2)
+	{
+		return x >= 75 && x <= 80;
+	}
+	if(discipline == 3)
+	{
+		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) or ( x >= 10 && x <= 11 && y >= -3 && y <= 3);
+	}
 }
 
 double add_noise(double x, double perc = 0.001)
 {
 	static std::default_random_engine generator;
-  	std::normal_distribution<double> distribution(0.0,perc);
+	std::normal_distribution<double> distribution(0.0, perc);
 	double add = distribution(generator);
-	//std::cout<<add<<std::endl;
+	// std::cout<<add<<std::endl;
 	return x + add;
 }
 
@@ -303,7 +343,6 @@ void sim_node::timer_callback()
 		2. if 40Hz pose pub with noise
 		3. if 2Hz map pub
 	*/
-	
 
 	double f, d, dt = 1e-3;
 	for (int i = 0; i < 25; i++)
@@ -328,38 +367,11 @@ void sim_node::timer_callback()
 			last_d = last_d - 0.0005;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt, f, last_d);
-		if (((std::pow(state.x, 2) + std::pow(state.y, 2)) < 2.25 /*or (state.x>75 and state.x<76)*/) and global_idx - idx_of_last_lap > 5000)
+
+		if (lap_change() && global_idx - idx_of_last_lap > 2000)
 		{
-			std::cout<<"Lap "<<state.lap+1<<std::endl;
+			std::cout << "Lap " << ++state.lap << std::endl;
 			idx_of_last_lap = global_idx;
-			state.lap++;
-			/*
-			if(state.lap>=1)
-			{
-				std::ifstream mids;
-				mids.open("src/6.Controls/simple_sim/data/trackdrive_midpoints.txt");
-				int cnt;
-				mids >> cnt;
-				std::vector<custom_msgs::msg::Point2Struct> wp;
-				wp.reserve(cnt);
-				custom_msgs::msg::Point2Struct sample;
-				double x, y;
-				for (int i = 0; i < cnt; i++)
-				{
-					mids >> x >> y;
-					sample.x = x;
-					sample.y = y;
-					wp.push_back(sample);
-				}
-				auto msg5 = custom_msgs::msg::WaypointsMsg();
-				msg5.count = cnt;
-				msg5.initial_v_x = state.v_x;
-				msg5.lap_count = state.lap;
-				msg5.waypoints = wp;
-				pub_way->publish(msg5);
-				mids.close();
-			}*/
-			
 		}
 	}
 	auto msg = custom_msgs::msg::PoseMsg();
@@ -404,7 +416,7 @@ void sim_node::timer_callback()
 		for (int i = 0; i < unseen_cones.size(); i++)
 		{
 			double dsq = std::pow(state.x - unseen_cones[i].x, 2) + std::pow(state.y - unseen_cones[i].y, 2);
-			if (dsq < 13 * 13 && dsq > 4 && std::acos((std::cos(state.theta)*(-state.x + unseen_cones[i].x)+std::sin(state.theta)*(-state.y + unseen_cones[i].y))/std::sqrt(dsq))<(3.14159*105/180))
+			if (dsq < 13 * 13 && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);
@@ -490,8 +502,6 @@ void sim_node::timer_callback()
 		pub_way->publish(msg5);
 	}
 	*/
-
-	
 }
 void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg)
 {

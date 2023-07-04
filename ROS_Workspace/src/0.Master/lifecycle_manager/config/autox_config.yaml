@@ -131,7 +131,6 @@
 /pure_pursuit:
   ros__parameters:
     discipline: "Autocross"
-    midpoints: ""
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
