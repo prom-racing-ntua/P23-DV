@@ -35,8 +35,7 @@ def generate_launch_description():
     vectornav_launch = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')
     vectornav = IncludeLaunchDescription(PythonLaunchDescriptionSource(vectornav_launch))
 
-    # TODO: Add back canbus
-    ldList = [p23_status, lifecycle_manager, vectornav]
+    ldList = [p23_status, lifecycle_manager, vectornav, canbus]
 
     ld = LaunchDescription(ldList)
     return ld

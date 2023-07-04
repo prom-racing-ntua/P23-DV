@@ -28,8 +28,8 @@ slam_node:
     perception_covariance_weight: 0.01
 
     # Big orange cones for starting/finish line
-    left_orange: [0.0, -2.5]
-    right_orange: [0.0, 2.5]
+    left_orange: [0.0, -1.5]
+    right_orange: [0.0, 1.5]
 
     lap_counter_cooldown: 10
 

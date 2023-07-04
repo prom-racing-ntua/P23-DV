@@ -151,15 +151,23 @@ def pitch_matrix(pitch):
                     [-np.sin(math.pi*pitch/180), 0, np.cos(math.pi*pitch/180)]])
 
 def rt_converter(camera, pnp_dist):
+    X_COG = -76
+    Y_COG = 0
+    Z_COG = -105
+
     # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
     if camera == 'left':
-        pitch = -9.5
-        yaw = -34
+        pitch = -12
+        yaw = -25
 
         cog2camera_pitch = pitch_matrix(pitch)
         cog2camera_yaw = yaw_matrix(yaw)
         cog2camera_rotation = cog2camera_pitch @ cog2camera_yaw
-        cog2camera_translation = np.array([[-31], [-10], [-105]])
+        
+        x = -109.34 - X_COG     # X_COG = dist(front, cog)
+        y = -5.97 - Y_COG       # Y_COG = divergence from centerline
+        z = Z_COG
+        cog2camera_translation = np.array([[x], [y], [z]])
         camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
         cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation
 
@@ -169,36 +177,24 @@ def rt_converter(camera, pnp_dist):
         theta = math.atan2(y, x)
 
     elif camera == 'right':
-        pitch = -9.5
-        yaw = 34
+        pitch = -12
+        yaw = 25
 
         cog2camera_pitch = pitch_matrix(pitch)
         cog2camera_yaw = yaw_matrix(yaw)
         cog2camera_rotation = cog2camera_pitch @ cog2camera_yaw
-        cog2camera_translation = np.array([[-31], [10], [-105]])
-        camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
-        cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation
-
-        x = cone_coords[0]
-        y = cone_coords[1]
-        r = np.sqrt(x**2 + y**2)
-        theta = math.atan2(y, x)
-
-    elif camera == 'center':
-        pitch = -9.5
-
-        cog2camera_pitch = pitch_matrix(pitch)
-        cog2camera_rotation = cog2camera_pitch 
-        cog2camera_translation = np.array([[-30], [0], [-100]])
-        camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
-        cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation
-
-        x = cone_coords[0]
-        y = cone_coords[1]
-        r = np.sqrt(x**2 + y**2)
-        theta = math.atan2(y, x)
         
-    return r[0]/100, theta
+        x = -109.34 - X_COG     # X_COG = dist(front, cog)
+        y = -5.97 - Y_COG       # Y_COG = divergence from centerline
+        z = Z_COG
+        cog2camera_translation = np.array([[x], [y], [z]])
+        camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
+        cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation
+        
+        x = cone_coords[0]
+        y = cone_coords[1]
+        r = np.sqrt(x**2 + y**2)
+        theta = math.atan2(y, x)
 
 
 def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY):

@@ -1,7 +1,7 @@
 acquisition_left:
   ros__parameters:
-    serialNumber: "KE0220030137"
-    exposureTime: 40000
+    serialNumber: "KE0220040188"
+    exposureTime: 2000
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50
@@ -9,24 +9,25 @@ acquisition_left:
     ROIy: 1024
     orientation: "left"
 
+
 acquisition_right:
   ros__parameters:
-    serialNumber: "KE0220040196"
-    exposureTime: 40000
+    serialNumber: "KE0220030138"
+    exposureTime: 2000
     autoExposure: False
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "right"
 
-acquisition_center:
-  ros__parameters:
-    serialNumber: "KE0220030138"
-    exposureTime: 1500
-    autoExposure: False
-    expectedGrayValue: 50
-    ROIx: 1280
-    ROIy: 1024
-    orientation: "center"
+# acquisition_center:
+#   ros__parameters:
+#     serialNumber: "KE0220030138"
+#     exposureTime: 1500
+#     autoExposure: False
+#     expectedGrayValue: 50
+#     ROIx: 1280
+#     ROIy: 1024
+#     orientation: "center"
 
     # Na vazete double times (float, dhladh gia osous den kseroun, kinhths ypodiastolhs kai OXI integer, giati komplarei to ROS)

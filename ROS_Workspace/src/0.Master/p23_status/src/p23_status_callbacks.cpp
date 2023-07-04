@@ -64,9 +64,9 @@ void P23StatusNode::checkVectornav() {
                 insMode = 2;
             }
             // Check if we received the same mode as before
-            else if (insMode != 2) //result->ins_mode)
+            else if (insMode != result->ins_mode)
             {
-                insMode = 2;//result->ins_mode;
+                insMode = result->ins_mode;
                 RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
 
@@ -97,8 +97,7 @@ void P23StatusNode::checkVectornav() {
     // Wait for service for 0.2 sec
     if (!vectornav_heartbeat_client_->wait_for_service(std::chrono::milliseconds(200)))
     {
-        // TODO: this to true, changed for testing...
-        nodeStatusMap["vn_200"] = false;
+        nodeStatusMap["vn_200"] = true;
         RCLCPP_WARN(get_logger(), "VN-200 service is not available");
     }
     else { auto future_result = vectornav_heartbeat_client_->async_send_request(vn200_request, vn200_heartbeat_callback); }

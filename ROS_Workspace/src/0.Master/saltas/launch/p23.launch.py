@@ -38,6 +38,11 @@ def generate_launch_description():
     slam = IncludeLaunchDescription(PythonLaunchDescriptionSource(slamLaunch))
 
 
+    # Path Planning Node
+    path_planning_dir = get_package_share_directory('path_planner')
+    pathPlanningLaunch = os.path.join(path_planning_dir, 'launch', 'path_planner.launch.py')
+    path_planning = IncludeLaunchDescription(PythonLaunchDescriptionSource(pathPlanningLaunch))
+
 
     # TODO: First start every node EXCEPT salta, then start salta when you are ready to run
     # Master Node
@@ -56,7 +61,7 @@ def generate_launch_description():
     )
 
 
-    ldList = [can_interface, vectornav, perception, velocity_estimation, slam]
+    ldList = [can_interface, vectornav, perception, velocity_estimation, slam, path_planning, saltas]
 
     ld = LaunchDescription(ldList)
     return ld
