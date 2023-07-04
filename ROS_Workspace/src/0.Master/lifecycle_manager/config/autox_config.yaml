@@ -96,10 +96,10 @@
       roll: -0.98              # [deg]
       pitch: -4.53             # [deg]
     vectornav-vn-300:
-      x: 0.18                   # [m]
+      x: -0.5262                # [m]
       y: 0.00                   # [m]
-      roll: -1.121              # [deg]
-      pitch: 1.452              # [deg]
+      roll: 0.00                # [deg]
+      pitch: 10.00              # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]
