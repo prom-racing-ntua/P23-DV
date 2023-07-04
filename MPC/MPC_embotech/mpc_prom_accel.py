@@ -200,15 +200,15 @@ def obj(z,current_target):
     return (
             2e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
             + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
-            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            + 1e-5*(z[5]-current_target[2])**2 #dphi gap
             + 5e2*(z[6]-current_target[3])**2
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
             + 1e3*z[1]**2 #penalty on delta,ddelta
             + 1e3*z[10]**2
             + 1e-3*(sar**2)
-            + 5e1*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
-            - 1e-2*(z[6])
+            + 1e-3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            - 1e-1*(z[6])
             - 1e-3*(z[11]/INDEX_MAX)
             - 1e-3*(z[2]/INDEX_MAX))
 

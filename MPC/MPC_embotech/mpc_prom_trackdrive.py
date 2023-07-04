@@ -198,17 +198,17 @@ def obj(z,current_target):
             #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
             #                     #path in x-direction
-            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            # + 1e-3*(z[5]-current_target[2])**2 #dphi gap
             + 5e2*(z[6]-current_target[3])**2
-            + 1e2*(z[0]/1000)**2 # penalty on input F,dF
-            + 1e2*(z[9]/1000)**2
+            + 1e0*(z[0]/1000)**2 # penalty on input F,dF
+            + 1e0*(z[9]/1000)**2
             + 5e2*z[1]**2 #penalty on delta,ddelta
             + 5e2*z[10]**2
             + 1e-3*(sar**2)
             # + 1e-3*(dsa**2)
-            + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 1e-3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
-            - 1e-3*(z[6])
+            - 1e0*(z[6])
             - 1e-3*(z[11]/INDEX_MAX)
             - 1e-3*(z[2]/INDEX_MAX))
 
@@ -329,7 +329,7 @@ def generate_pathplanner():
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
     model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*10])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*100])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
@@ -750,7 +750,7 @@ def main():
                     ds_step=pred_u[2,i]*dt_integration
                     if(ds_step<0.1):ds_step=0.1
                     if(ds_step>0.5): ds_step=0.5
-                    # ds_step=0.25 #constant with vel.profile
+                    ds_step=0.25 #constant with vel.profile
                     # ds_step=0.1 
                     s_new+=ds_step
                     s_solver=pred_x[8,i] 

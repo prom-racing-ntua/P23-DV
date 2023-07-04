@@ -22,7 +22,8 @@ namespace mpc{
     }
 
     mpc::CallbackReturn
-        LifecycleMpcHandler::on_activate(const rclcpp_lifecycle::State &state) {   
+        LifecycleMpcHandler::on_activate(const rclcpp_lifecycle::State &state) {
+        setLogger();   
         setSubscribers();
         /* Activate MPC Publisher */
         mpc_publisher_->on_activate();
@@ -35,7 +36,7 @@ namespace mpc{
         LifecycleMpcHandler::on_deactivate(const rclcpp_lifecycle::State &state)
     {
         mpc_publisher_->on_deactivate();
-    
+        
         RCLCPP_INFO(get_logger(), "\n-- MPC Deactivated");
         return mpc::CallbackReturn::SUCCESS;
     }
@@ -72,7 +73,7 @@ namespace mpc{
 
     mpc::CallbackReturn
         LifecycleMpcHandler::on_error(const rclcpp_lifecycle::State &state)
-    {
+    {   
         return mpc::CallbackReturn::SUCCESS;
     }
 
