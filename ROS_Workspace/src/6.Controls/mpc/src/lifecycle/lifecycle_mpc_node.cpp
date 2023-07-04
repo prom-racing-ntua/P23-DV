@@ -18,6 +18,11 @@ namespace mpc {
         mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
     }
 
+    void LifecycleMpcHandler::setLogger() {
+        data_logger.open(data_logger_txt);
+        data_logger << "emerg_counter,flag,torque,steering\n";
+    }
+
     void LifecycleMpcHandler::setClient() {
         //client for total-laps request
         auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future) {
@@ -37,17 +42,17 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::declareParameters() {
-        declare_parameter<std::string>("mission","accel");
-        declare_parameter<bool>("simulation",false);
+        declare_parameter<bool>("simulation",true);
+        declare_parameter<std::string>("mission","trackdrive");
+        declare_parameter<float>("v_limit",14.0);
+        declare_parameter<int>("total_laps",11);
         declare_parameter<float>("s_interval",0.1);
         declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);
         declare_parameter<float>("F_init",300.0);
-        declare_parameter<float>("v_limit",17.5);
         declare_parameter<float>("node_freq",40.0);
         declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
-        declare_parameter<int>("total_laps",1);
     }
 
     void LifecycleMpcHandler::loadParameters() {
@@ -65,6 +70,7 @@ namespace mpc {
         mpc_solver.s_space_max = get_parameter("s_space_max").as_double();
         mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
         mpc_solver.total_laps_ = get_parameter("total_laps").as_int();
+        data_logger_txt = "src/6.Controls/mpc/data/data_logger.csv";
         std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.lookahead_ << " " << node_freq_ << std::endl;
         std::cout << "declared params" << std::endl;
     }
@@ -135,6 +141,7 @@ namespace mpc {
             mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
             mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
             global_int++;
+            mpc_solver.global_int_ = global_int;
         }
         std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
         RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
@@ -143,27 +150,30 @@ namespace mpc {
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
+        data_logger << "--,iteration"<<global_int<<",--\n";
+        data_logger << mpc_solver.emergency_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
 }
 
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
         std::cout << "mpika path callback" << std::endl;
         int pp_points = int(path_msg->count);
+        std::cout << "received path points = " << pp_points << std::endl;
         Eigen::MatrixXd spline_input{path_msg->count, 2};
         if(pp_points==2) spline_input.resize(pp_points+1,2);
         int rows_temp=0;
         for (custom_msgs::msg::Point2Struct midpoints_new : path_msg->waypoints) {
-        if((pp_points==2) && (rows_temp==1)) {
-            spline_input(rows_temp,0) = (spline_input(0,0) + midpoints_new.x)/2;
-            spline_input(rows_temp,1) = (spline_input(0,1) + midpoints_new.y)/2;
-            rows_temp++;
+            if((pp_points==2) && (rows_temp==1)) {
+                spline_input(rows_temp,0) = (spline_input(0,0) + midpoints_new.x)/2;
+                spline_input(rows_temp,1) = (spline_input(0,1) + midpoints_new.y)/2;
+                rows_temp++;
+                spline_input(rows_temp,0) = midpoints_new.x;
+                spline_input(rows_temp,1) = midpoints_new.y;
+                break;
+            }
             spline_input(rows_temp,0) = midpoints_new.x;
             spline_input(rows_temp,1) = midpoints_new.y;
-            break;
-        }
-        spline_input(rows_temp,0) = midpoints_new.x;
-        spline_input(rows_temp,1) = midpoints_new.y;
-        rows_temp++;
+            rows_temp++;
         }
         //wrong needs to be changed
         std::vector<double> target_lengths_init;
@@ -175,25 +185,29 @@ namespace mpc {
         double sol_temp = target_lengths_init[path_msg->count -1];
         std::cout << "sol is: " << sol_temp << std::endl;
         int points = int (sol_temp/mpc_solver.s_interval_);
-        if(points <40) points = 40;
+        if(points < mpc_solver.lookahead_) points = mpc_solver.lookahead_;
         std::cout << "points for splines are " << points <<std::endl;
         path_planning::PointsArray midpoints{spline_input};
-        midpoints.conservativeResize(midpoints.rows()+1 , midpoints.cols());
-        midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
+        // midpoints.conservativeResize(midpoints.rows()+1 , midpoints.cols());
+        // midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
         path_planning::ArcLengthSpline spline{midpoints, path_planning::BoundaryCondition::Anchored};
         path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-        PointsData params_array_bef;
+        PointsData whole_track_bef;
         mpc_solver.spline_final = spline_init;
+        mpc_solver.spline_resolution = int (spline_init->getApproximateLength()/mpc_solver.s_interval_);
         mpc_solver.sol = spline.getApproximateLength();
-        params_array_bef = spline.getSplineData(points);
-        mpc_solver.params_array = params_array_bef.topRows(40);
-        std::cout << "first point of path callback is: " << mpc_solver.params_array(0,0) << " " << mpc_solver.params_array(0,1) << std::endl;
+        mpc_solver.whole_track = spline.getSplineData(points);
+        // mpc_solver.params_array = params_array_bef.topRows(mpc_solver.lookahead_);
+        // mpc_solver.whole_track = whole_track_bef;
+        std::cout << "first point of path callback is: " << mpc_solver.whole_track(0,0) << " " << mpc_solver.whole_track(0,1) << std::endl;
+        std::cout << "last point of path callback is: " << mpc_solver.whole_track(points-1,0) << " " << mpc_solver.whole_track(points-1,1) << std::endl;
         std::cout << "finished path callback" << std::endl;
         if(path_flag==0) path_flag=1;
 }
 
     LifecycleMpcHandler::~LifecycleMpcHandler() {
         // delete mpc_solver.spline_final;
+        data_logger.close();
         std::cout << "mpc node destroyed!" << std::endl;
     }
 }//namespace mpc

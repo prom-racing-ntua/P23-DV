@@ -83,7 +83,6 @@ void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]
     }
 
     void MpcSolver::Integrator() {
-        std::cout << "integration dt is: " << dt << std::endl;
         getF(X,U,k1);
         for (int i = 0; i<X_SIZE;++i) {
             X2[i] = X[i] +(dt/2)*k1[i];
@@ -116,7 +115,7 @@ void MpcSolver::Initialize_all_local() {
     }
     else {
         std::cout << "initialized unknown" << std::endl;
-        const double xinit_temp_unknown[9] = {params_array(0,0),params_array(0,1),params_array(0,2),0.1,0.0,0.0,F_init,0.0,0.0};
+        const double xinit_temp_unknown[9] = {start_point.x,start_point.y,whole_track(0,2),0.1,0.0,0.0,F_init,0.0,0.0};
         for (int i = 0; i < X_SIZE; ++i) X[i] = xinit_temp_unknown[i];
     }
     std::cout << "finished initialization of parameters " << std::endl;
@@ -141,7 +140,6 @@ void MpcSolver::UpdateFromLastIteration() {
 
 void MpcSolver::generateFirstPoint() {
     error_eucl.clear();
-    error_ver.clear();
     for(int i = 0; i<whole_track.rows(); ++i) { //second to second to last for ds comparison
         error_eucl.push_back(std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0)));
     }
@@ -176,42 +174,29 @@ void MpcSolver::generateFirstPoint() {
     std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
 }
 
-void MpcSolver::generateFirstPointUnknown() {
+void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
     error_eucl.clear();
-    error_ver.clear();
-    for(int i = 0; i<params_array.rows(); ++i) { //second to second to last for ds comparison
-        error_eucl.push_back(std::sqrt(std::pow((X[0]-params_array(i,0)),2.0) + std::pow((X[1] - params_array(i,1)),2.0)));
+    for(int i = 0; i<whole_track.rows(); ++i) { //second to second to last for ds comparison
+        error_eucl.push_back(std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0)));
     }
     closest_index_eucl = std::distance(error_eucl.begin(), std::min_element(error_eucl.begin(), error_eucl.end()));
+    std::cout << "closest_index_eucl is: " << closest_index_eucl << std::endl;
     dist_eucl = error_eucl[closest_index_eucl];
-    for(int j = 0 ; j< params_array.rows(); ++j) {
-        error_ver.push_back(std::abs(std::sin(params_array(j,2))*(X[0]-params_array(j,0)) - std::cos(params_array(j,2))*(X[1]-params_array(j,1)))); 
-    }
-    closest_index_ver = std::distance(error_ver.begin(), std::min_element(error_ver.begin(), error_ver.end()));
-    dist_ver = error_ver[closest_index_ver];
-    std::cout << "eucleidian and vertical distances are: " << dist_eucl << " " << dist_ver << std::endl;
-    std::cout << "eucleidian and vertical indices are: " << closest_index_eucl << " " <<  closest_index_ver << std::endl;
-    std::vector<double> target_lengths_temp;
-    target_lengths_temp.push_back(0.0);
-    double s_init = 0.0;
-    if(closest_index_eucl>0) {
-        for (int i{ 1 }; i <= closest_index_eucl; i++) {
-            target_lengths_temp.push_back(target_lengths_temp[i - 1] + \
-                std::sqrt(std::pow(params_array(i, 0) - params_array(i - 1, 0), 2) + std::pow(params_array(i, 1) - params_array(i - 1, 1), 2)));
-        }
-    s_init = target_lengths_temp[closest_index_eucl];
-    }
-    else s_init = 0.0;
-    std::cout << "found s_init" << std::endl;
+    double whole_length = (double) whole_track.rows();
+    float percentage_ = closest_index_eucl/whole_length;
+    double s_init = percentage_*sol;
     if(dist_eucl > distance_safe_) {
         emergency = 1;
+        emergency_counter+=1;
         std::cout << "mpika emergency!!!" << std::endl;
         s_init += emergency_forward_;
     }
-    if(s_init > sol) s_init = sol;
+    else emergency = 0;
+    if(s_init >= sol) s_init = sol-1e-3;
     s_array_final[0] = s_init;
-    int ind_of_closest = (s_init/sol)*lookahead_;
-    std::cout << "generated first point " << s_init << " " << params_array(ind_of_closest,0) << " " << params_array(ind_of_closest,1) << std::endl;
+    std::cout << "sinit and sol are: " << s_init << " " << sol << " (" << percentage_*100 << "%) " << std::endl;
+    std::cout << "thetas from slam and splines are: " << pose_struct.theta*57.2958 << " " << (spline_final->getTangent(s_init/sol))*57.2958 << std::endl;
+    std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
     }
 
     // PointsData MpcSolver::getSplineDataLocal(double parameters[lookahead_]) {
@@ -274,25 +259,14 @@ void MpcSolver::generateFirstPointUnknown() {
         }
         std::reverse(u_second_pass.begin(), u_second_pass.end());
         for (long int i{ 0 }; i < lookahead_; i++) {
-            if(mission_=="skidpad") {
-                if(lap_counter < 5) spline_data(i,3) = u_second_pass[i];
-                else if (lap_counter == 5 and X[3]>=6.0) spline_data(i,3) = 6.0;
-                else if (lap_counter == 5 and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
-                else if (lap_counter == 5 and X[3]<3.0) {
-                    brake_flag = 1;
-                    spline_data(i,3) = 0.0;
-                }
+            if(lap_counter < total_laps_) spline_data(i,3) = u_second_pass[i];
+            else if (lap_counter == total_laps_ and X[3]>=6.0) spline_data(i,3) = 6.0;
+            else if (lap_counter == total_laps_ and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
+            else if (lap_counter == total_laps_ and X[3]<3.0) {
+                brake_flag = 1;
+                spline_data(i,3) = 0.0;
             }
-            if(mission_=="accel") {
-                if(lap_counter < 1) spline_data(i,3) = u_second_pass[i];
-                else if (lap_counter == 1 and X[3]>=6.0) spline_data(i,3) = 6.0;
-                else if (lap_counter == 1 and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
-                else if (lap_counter == 1 and X[3]<3.0) {
-                    brake_flag = 1;
-                    spline_data(i,3) = 0.0;
-                }
-            }
-            if(emergency==1) spline_data(i,3) = 5.0; 
+            if(emergency==1) spline_data(i,3) = 3.0;  
         }
         std::cout << "values of all passes are: " << u_first_pass[1] << " " << u_second_pass[1] << " " << spline_data(1,3) << std::endl;
         return spline_data;
@@ -306,6 +280,7 @@ void MpcSolver::generateFirstPointUnknown() {
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
                 double step_temp = ds_vector[i-1]*dt;
+                if(mission_=="trackdrive") step_temp = 0.25;
                 // s_array_final[i] = s_array_final[i-1] +  s_interval_;
                 if(step_temp>s_space_max) step_temp = s_space_max;
                 if(step_temp<s_space_min) step_temp = s_space_min;
@@ -314,12 +289,15 @@ void MpcSolver::generateFirstPointUnknown() {
             if(mission_=="skidpad") { 
                 if(s_array_final[i]>sol*0.25 and lap_counter==5) s_array_final[i]=sol*0.25;
                 if(lap_counter>0 and lap_counter<=4 and s_array_final[i]>sol ) s_array_final[i]=0.0;
-                if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol;
+                if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol-1e-6;
             } 
             if(mission_=="accel") { 
                 if(s_array_final[i]>sol*0.52 and lap_counter==1) s_array_final[i]=sol*0.52;
-                if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol;
-            } 
+                if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol-1e-6;
+            }
+            if(mission_=="trackdrive") { 
+                if(s_array_final[i]>=sol) s_array_final[i]=0.0;
+            }
         }
         for(int i=0; i<lookahead_; ++i) s_array_final[i]=s_array_final[i]/sol;
         std::cout << "finished generation of s_profile" << std::endl;
@@ -332,14 +310,12 @@ void MpcSolver::generateFirstPointUnknown() {
         s_array_final[0] = (float)s_array_final[0];
         for (int i = 1; i < lookahead_; ++i) {
             s_array_final[i] = s_array_final[i-1] + s_interval_;
-            if(s_array_final[i]>sol) {
-                std::cout << "finished spline" << std::endl;
-                s_array_final[i]=sol;
-            }
+            if(s_array_final[i]>=sol) s_array_final[i]=sol-1e-3;
         }
         for(int i=0; i<lookahead_; ++i) s_array_final[i]=s_array_final[i]/sol;
         std::cout << "finished generation of s_profile" << std::endl;
-        std::cout << "three s_final params are: " << s_array_final[0] << " " << s_array_final[1] << " " << s_array_final[5];
+        std::cout << "s_final params 0,1,5 and 19 are: " << s_array_final[0] << " " << s_array_final[1] << " " << s_array_final[5] << " " << s_array_final[19] << std::endl;
+        std::cout << "generated last autox point: " << spline_final->getPoint(s_array_final[19]) << std::endl;
         params_array = getSplineDataLocal(s_array_final);
         copyToParameters();
     }
@@ -349,14 +325,17 @@ void MpcSolver::generateFirstPointUnknown() {
             int mod_ = k%4;
             if (mod_ == 0) {
                 params.all_parameters[k] = params_array(int(k/4),0); 
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
                 // std::cout << "added X " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 1) {
                 params.all_parameters[k] = params_array(int((k-1)/4),1);
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
                 // std::cout << "added Y " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 2) {
                 params.all_parameters[k] = params_array(int((k-2)/4),2);
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0; //to be changed
                 // std::cout << "added phi " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if (mod_ == 3) {
@@ -387,17 +366,27 @@ void MpcSolver::generateFirstPointUnknown() {
             known_track_ = true; 
         }
         if(mission_=="autox") {
+            start_point.x = -6 - l_f ;
+            start_point.y = 0.0;
             center_point.x = 0.0;
             center_point.y = 0.0;
-            lookahead_ = 20;
+            lookahead_ = 30;
             known_track_ = false; 
         }
         if(mission_=="trackdrive") {
+            if(!simulation_){
+                start_point.x = -( 6 + l_f); 
+                start_point.y = 0.0;
+            }
+            else {
+                start_point.x = 0.0; 
+                start_point.y = 6+l_f;
+            }
             center_point.x = 0.0;
             center_point.y = 0.0;
             midpoints_txt_ = "src/6.Controls/mpc/data/trackdrive_midpoints.txt";
             lookahead_ = 30;
-            known_track_ = false; 
+            known_track_ = true; 
         }
     }
 
@@ -421,6 +410,20 @@ void MpcSolver::generateFirstPointUnknown() {
                 lap_counter++;
                 lap_lock=1;
             }
+        }
+        if(mission_=="autox") {
+            if(critical_dist<l_f and lap_lock==0) {
+                lap_counter++;
+                lap_lock=1;
+            }
+            if(critical_dist > l_f) lap_lock=0;
+        }
+        if(mission_=="trackdrive") {
+            if(critical_dist<l_f and lap_lock==0) {
+                lap_counter++;
+                lap_lock=1;
+            }
+            if(critical_dist > l_f) lap_lock=0;
         }
     }
 
@@ -476,16 +479,18 @@ void MpcSolver::generateFirstPointUnknown() {
         s_vector.push_back(output.x18[2]);
         s_vector.push_back(output.x19[2]);
         s_vector.push_back(output.x20[2]);
-        s_vector.push_back(output.x21[2]);
-        s_vector.push_back(output.x22[2]);
-        s_vector.push_back(output.x23[2]);
-        s_vector.push_back(output.x24[2]);
-        s_vector.push_back(output.x25[2]);
-        s_vector.push_back(output.x26[2]);
-        s_vector.push_back(output.x27[2]);
-        s_vector.push_back(output.x28[2]);
-        s_vector.push_back(output.x29[2]);
-        s_vector.push_back(output.x30[2]);
+        // if(mission_!="autox") {
+        //     s_vector.push_back(output.x21[2]);
+        //     s_vector.push_back(output.x22[2]);
+        //     s_vector.push_back(output.x23[2]);
+        //     s_vector.push_back(output.x24[2]);
+        //     s_vector.push_back(output.x25[2]);
+        //     s_vector.push_back(output.x26[2]);
+        //     s_vector.push_back(output.x27[2]);
+        //     s_vector.push_back(output.x28[2]);
+        //     s_vector.push_back(output.x29[2]);
+        //     s_vector.push_back(output.x30[2]);
+        // }
     }
 
     void MpcSolver::writeLookaheadArray2() {
@@ -527,18 +532,22 @@ void MpcSolver::generateFirstPointUnknown() {
         if(exitflag==1) for(int k = 0; k<3; k++) U[k]=output.x02[k];
         else for(int k = 0; k<3; k++) U[k]=0.0;
         //writeLookaheadArray1();
-        writeLookaheadArray2();        
+        if(mission_!="autox") writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
         if(mission_=="accel" and finish_flag==1) { //just no steering when finishing accel
             X[7] = 0.0; 
             U[1] = 0.0;
         } 
+        if(brake_flag==1) { //just no steering when entering braking for all events
+            X[7] = 0.0; 
+            U[1] = 0.0;
+        } 
         checkReliability();
         if(X[6]>2000.0) X[6]=2000.0;
         if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
-        if(X[7]>29.5/57.2958) X[7] = 29.5/57.29;
-        if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.29);
+        if(X[7]>29.5/57.2958) X[7] = 29.5/57.2958;
+        if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.2958);
         if(!brake_flag) {
             output_struct.speed_target = (int)(5.0);
             output_struct.speed_actual = (int)(vel_struct.velocity_x);

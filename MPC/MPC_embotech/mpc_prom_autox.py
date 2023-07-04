@@ -49,7 +49,7 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=6.0
+u_upper=15.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -192,21 +192,21 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+        1e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 1e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             # + 0e1*(e_c)**2 # costs on deviating on the
             #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
             #                     #path in x-direction
-            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
-            + 3e2*(z[6]-current_target[3])**2
+            # + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            + 1e2*(z[6]-current_target[3])**2
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
-            + 1e2*z[1]**2 #penalty on delta,ddelta
-            + 1e2*z[10]**2
+            + 8e2*z[1]**2 #penalty on delta,ddelta
+            + 8e2*z[10]**2
             + 1e-3*(sar**2)
             # + 1e-3*(dsa**2)MPC/MPC_embotech/mpc_prom_simple.py
-            + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
             - 1e-3*(z[6])
             - 1e-3*(z[11]/INDEX_MAX)
@@ -303,7 +303,7 @@ def generate_pathplanner():
     
     # Problem dimensions
     model = forcespro.nlp.SymbolicModel()
-    model.N = 20  # horizon length
+    model.N = 30  # horizon length
     model.nvar = 12  # number of variables
     model.neq = 9  # number of equality constraints
     model.npar = 4 # number of runtime parameters
@@ -329,7 +329,7 @@ def generate_pathplanner():
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
     model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*10])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*100])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr
@@ -744,7 +744,7 @@ def main():
                     finish_flag=1
                     s_closest = INDEX_MAX + 7.5 #reset index for next lap
                 for i in range (model.N-1):
-                    ds_step=0.125 #constant with vel.profile 
+                    ds_step=0.25 #constant with vel.profile 
                     s_new+=ds_step
                     if(s_new>INDEX_MAX+7.5):s_new=INDEX_MAX+7.5
                     s_solver=pred_x[8,i] 
@@ -761,7 +761,7 @@ def main():
                 emergency_count+=1
                 emergency_bool=1
                 s_start, idx_start = generate_closest_s(reference_track, x[0:num_ins-1,k], emergency_bool)
-                ds_emerg=0.125
+                ds_emerg=0.25
                 if(s_start > INDEX_MAX): s_start = INDEX_MAX
                 parameters_array_emergency=[s_start]
                 for i in range (model.N-1):

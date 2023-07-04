@@ -125,7 +125,6 @@ class MpcSolver {
         void generateFinishFlag(int lap_counter);
         void updateSplineParameters(std::string txt_file);
         void checkReliability();
-        void declareArrays();
         std::string mission_;
         std::string midpoints_txt_;
         std::vector<double> error_ver;
@@ -136,6 +135,7 @@ class MpcSolver {
         std::vector<double> u_second_pass;
         std::vector<double> u_third_pass;
         std::vector<double> u_final_pass;
+        int global_int_=0;
         center center_point;
         center start_point;
         int lap_counter=0;
