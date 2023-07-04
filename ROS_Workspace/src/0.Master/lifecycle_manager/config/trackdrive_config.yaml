@@ -109,6 +109,8 @@
 
 /pure_pursuit: #logika den tha xrisimopoithei alla as yparxei
   ros__parameters:
+    discipline: "Trackdrive"
+    midpoints: ""                           #MUST ENTER BEFORE RUN
     #model
     mass: 193.5
     gravitational_acceleration: 9.81

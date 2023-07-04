@@ -29,6 +29,7 @@ using std::placeholders::_1;
 
 namespace sim
 {
+typedef std::string string;
 struct Constants
 {
     double m, Iz, wheelbase, c_tire, P_air, CdA, ClA, gr, eff, R_wheel, g, h_cog, wd;
@@ -51,7 +52,7 @@ public:
     double v_x, v_y, a_x, a_y, r, x, y, theta;
     double sa_f, sa_r, s, t, ffy, fry, ffz, frz, frx, d;
     int lap;
-    State() : v_x(0), v_y(0), a_x(0), a_y(0), r(0), x(0), y(0), theta(0), sa_f(0), sa_r(0), s(0), t(0), fry(0), ffy(0), lap(1), ffz(0), frz(0) {}
+    State() : v_x(0), v_y(0), a_x(0), a_y(0), r(0), x(-15), y(0), theta(0), sa_f(0), sa_r(0), s(0), t(0), fry(0), ffy(0), lap(1), ffz(0), frz(0) {}
     void init(Constants a, bool b){constants=a;simplified=b;}
     void check_ellipses(std::ostream &out)const;
     void next(double dt, double Frx, double delta);
@@ -68,9 +69,10 @@ private:
     double calc_lr(bool simplified = 1, double a_x = 0) const;
     double calc_lf(double lr) const;
     double calc_drag(double v_x) const;
+    double calc_roll(double fz)const;
     double v_x_next(double v_x, double a_x, double dt) const;
     double v_y_next(double v_y, double a_y, double dt) const;
-    double calc_a_x(double frx, double f_drag, double ffy, double d, double v_y, double r) const;
+    double calc_a_x(double frx, double f_drag, double f_roll, double ffy, double d, double v_y, double r) const;
     double calc_a_y(double fry, double ffy, double d, double v_x, double r) const;
     double r_next(double ffy, double d, double fry, double r, double dt) const;
     double theta_next(double r, double theta, double dt)const;
@@ -101,6 +103,7 @@ class sim_node: public rclcpp::Node
     void timer_callback();
     void command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg);
     rclcpp::TimerBase::SharedPtr timer_;
+    bool lap_change()const;
 
     std::ofstream log;
     long long int global_idx;
@@ -111,6 +114,8 @@ class sim_node: public rclcpp::Node
     double last_d;
     int idx_of_last_lap;
     int sent;
+    int discipline;
+    
 
 };
 }
