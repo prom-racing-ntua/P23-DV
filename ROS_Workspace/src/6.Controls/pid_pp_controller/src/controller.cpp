@@ -6,7 +6,7 @@ void PID_PP_Node::parameter_load()
 {
     declare_parameter<float>("mass", 193.5);
     declare_parameter<float>("gravitational_acceleration", 9.81);
-    declare_parameter<float>("wheelbase", 1.59);
+    declare_parameter<float>("wheelbase", 1.759);
     declare_parameter<float>("weight_distribution", 0.467);
     declare_parameter<float>("h_cog", 0.275);
     declare_parameter<float>("air_density", 1.225);
@@ -43,7 +43,7 @@ void PID_PP_Node::parameter_load()
     declare_parameter<string>("midpoints", "");
 }
 
-PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1)
+PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), last_steering(0), last_torque(0)
 {
     // PARAMETER LOADING
     parameter_load();
@@ -377,7 +377,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
-            double ms = 3;
+            double ms = 5;
             double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;

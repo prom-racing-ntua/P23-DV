@@ -265,11 +265,20 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 			...
 	*/
 	if (discipline == 0 or discipline == 1)
+	{
 		fs.open("src/6.Controls/simple_sim/data/map.txt");
+		state.x = -5.5;
+	}
 	else if (discipline == 2)
+	{
 		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
+		state.x = -1;
+	}
 	else if (discipline == 3)
+	{
 		fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
+		state.x = -16;
+	}
 		
 	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
 	int count;
@@ -280,7 +289,8 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	for (int i = 0; i < count; i++)
 	{
 		fs >> x >> y >> c;
-		unseen_cones.push_back(Cone(x, y, c));
+		if(discipline == 0)unseen_cones.push_back(Cone(x, y, c));
+		else seen_cones.push_back(Cone(x, y, c));
 	}
 	fs.close();
 
@@ -337,6 +347,7 @@ double add_noise(double x, double perc = 0.001)
 
 void sim_node::timer_callback()
 {
+	if(state.lap>1 && state.v_x==0)exit(0);
 	// std::cout << state.t << std::endl;
 	/*
 		1. state update 1kHz
@@ -387,10 +398,7 @@ void sim_node::timer_callback()
 		// std::cout << state.t << "\t" << state.v_x << "\t" << state.r << "\t" << f << "\t" << d << std::endl;
 		log << int(f) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
 		log << state;
-		std::ofstream log2;
-		log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
-		state.check_ellipses(log2);
-		log2.close();
+		
 		pos.x = add_noise(state.x);
 		pos.y = add_noise(state.y, 0.05);
 		msg.position = pos;
@@ -410,13 +418,13 @@ void sim_node::timer_callback()
 
 	if (global_idx % 250 == 0)
 	{
-		std::cout << state.t << "\t\t" << state.v_x << std::endl;
+		std::cout << "Lap: "<< state.lap<< "\t\t" << state.t << "\t\t" << state.v_x << std::endl;
 		// std::cout << '*' << std::endl;
 		//  std::cout<<"> "<<unseen_cones.size()<<" "<<seen_cones.size()<<std::endl;
 		for (int i = 0; i < unseen_cones.size(); i++)
 		{
 			double dsq = std::pow(state.x - unseen_cones[i].x, 2) + std::pow(state.y - unseen_cones[i].y, 2);
-			if (dsq < 13 * 13 && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
+			if (dsq < 9 * 9 && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);
@@ -508,6 +516,10 @@ void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::Shared
 	// std::cout << ">>> COMMAND <<<" << std::endl;
 	torques.push_back(msg->motor_torque_target);
 	steering.push_back(msg->steering_angle_target);
+	std::ofstream log2;
+	log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
+	if(steering.size()>1)log2<<steering[steering.size()-1] - steering[steering.size()-2]<<std::endl;
+	log2.close();
 	// td::cout<<">>> "<<msg->steering_angle_target<<" "<<steering[steering.size()-1]<<std::endl;
 }
 
