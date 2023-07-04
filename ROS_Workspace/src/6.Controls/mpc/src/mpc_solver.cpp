@@ -60,6 +60,7 @@ void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]
     double Ffy = getFy(Fz.Ffz,sa.saf);
     double Fdrag = 0.5*CdA*p_air*std::pow(X[3],2) + 0.03*(Fz.Frz+Fz.Ffz);
     double beta = std::atan(l_r/(l_f + l_r) * std::tan(X[7]));
+    l_a = 1; //ignoring model
 
     kappa[0] = (1)*(X[3]*std::cos(X[2]) - X[4]*std::sin(X[2])) + (0)*(X[3]*std::cos(X[2] + beta));  
     kappa[1] = (1)*(X[3]*std::sin(X[2]) + X[4]*std::cos(X[2])) + (0)*(X[3]*std::sin(X[2] + beta));
@@ -325,12 +326,12 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             int mod_ = k%4;
             if (mod_ == 0) {
                 params.all_parameters[k] = params_array(int(k/4),0); 
-                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = start_point.x;
                 // std::cout << "added X " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 1) {
                 params.all_parameters[k] = params_array(int((k-1)/4),1);
-                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = start_point.y;
                 // std::cout << "added Y " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 2) {

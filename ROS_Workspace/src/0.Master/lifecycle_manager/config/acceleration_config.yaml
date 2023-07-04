@@ -157,9 +157,24 @@
     total_laps: 1
     v_limit: 17.5
     node_freq: 40
-    s_interval: 0.1
+    s_interval: 0.25
     distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0
     s_space_max: 0.5
     s_space_min: 0.1
+
+# /mpc: #slow config testing
+#   ros__parameters:
+#     simulation: false
+#     mission: "accel"
+#     total_laps: 1
+#     v_limit: 5.0
+#     node_freq: 40
+#     s_interval: 0.1
+#     distance_safe: 1.0
+#     emergency_forward: 1.0
+#     F_init: 300.0
+#     s_space_max: 0.5
+#     s_space_min: 0.1
+

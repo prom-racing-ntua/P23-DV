@@ -108,7 +108,7 @@
     rear_axle: 0.89             # [m]
 
 
-mpc:
+/mpc:
   ros__parameters:
     simulation: false
     mission: "skidpad"
