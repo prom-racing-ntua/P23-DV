@@ -47,7 +47,7 @@ dist_thres=2*l_f
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=12.0
+u_upper=13.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -197,7 +197,7 @@ def obj(z,current_target):
             #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
             #                     #path in x-direction
-            + 1e-3*(z[5]-current_target[2])**2 #dphi gap
+            + 1e-4*(z[5]-current_target[2])**2 #dphi gap
             + 3e2*(z[6]-current_target[3])**2
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
@@ -207,7 +207,7 @@ def obj(z,current_target):
             # + 1e-3*(dsa**2)
             + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
-            - 1e-3*(z[6])
+            - 1e-2*(z[6])
             - 0e-6*(z[11]/INDEX_MAX_ALL)
             - 1e-3*(z[2]/INDEX_MAX_ALL))
 

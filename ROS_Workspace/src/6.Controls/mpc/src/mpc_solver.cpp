@@ -172,6 +172,7 @@ void MpcSolver::generateFirstPoint() {
     if(s_init > sol) s_init = sol;
     s_array_final[0] = s_init;
     std::cout << "sinit and sol are: " << s_init << " " << sol << " (" << percentage_*100 << "%) " << std::endl;
+    std::cout << "thetas from slam and splines are: " << pose_struct.theta*57.2958 << " " << (spline_final->getTangent(s_init/sol))*57.2958 << std::endl;
     std::cout << "generated first point " << spline_final->getPoint(s_init/sol) << " at distance " << dist_eucl << std::endl;
 }
 
@@ -261,6 +262,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         std::reverse(u_second_pass.begin(), u_second_pass.end());
         for (long int i{ 0 }; i < lookahead_; i++) {
             if(lap_counter < total_laps_) spline_data(i,3) = u_second_pass[i];
+            if(mission_=="skidpad" and (lap_counter<=1 or lap_counter==3)) spline_data(i,3) = 5.0; 
             else if (lap_counter == total_laps_ and X[3]>=6.0) spline_data(i,3) = 6.0;
             else if (lap_counter == total_laps_ and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
             else if (lap_counter == total_laps_ and X[3]<3.0) {
@@ -282,7 +284,8 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             else {
                 double step_temp = ds_vector[i-1]*dt;
                 if(mission_=="trackdrive") step_temp = 0.15;
-                if(mission_=="skidpad") step_temp = 0.1;
+                // if(mission_=="skidpad") step_temp = 0.1;
+                if(mission_=="skidpad") step_temp = 0.15;
                 if(mission_=="autox") step_temp = 0.2;
                 if(mission_=="accel") step_temp = 0.2; //stathero
                 // s_array_final[i] = s_array_final[i-1] +  s_interval_;
@@ -291,7 +294,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
                 s_array_final[i] = s_array_final[i-1] +  step_temp; //changed
             }  
             if(mission_=="skidpad") { 
-                if(s_array_final[i]>sol*0.25 and lap_counter==5) s_array_final[i]=sol*0.25;
+                if(s_array_final[i]>sol*0.3 and lap_counter==5) s_array_final[i]=sol*0.3;
                 if(lap_counter>0 and lap_counter<=4 and s_array_final[i]>sol ) s_array_final[i]=0.0;
                 if(lap_counter==0 and s_array_final[i]>sol) s_array_final[i]=sol-1e-6;
             } 
@@ -403,11 +406,11 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
     void MpcSolver::customLapCounter() {
         double critical_dist = std::sqrt(std::pow(X[0] - center_point.x, 2) + std::pow(X[1] - center_point.y, 2));
         if(mission_=="skidpad") {
-            if(critical_dist <= 2*l_f && lap_lock==0) {
+            if(critical_dist <= 2*l_f+0.5 && lap_lock==0) {
                 lap_lock=1;
                 lap_counter++;
             }
-            if(critical_dist > 2*l_f) lap_lock=0;
+            if(critical_dist > 2*l_f+0.5) lap_lock=0;
         }
         if(mission_=="accel") {
             if(critical_dist<l_f and lap_lock==0) {
