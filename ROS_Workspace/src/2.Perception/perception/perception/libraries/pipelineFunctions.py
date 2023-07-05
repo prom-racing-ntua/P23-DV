@@ -156,7 +156,7 @@ def rt_converter(camera, pnp_dist):
     # Z_COG = -105
     X_COG = 0
     Y_COG = 0
-    Z_COG = 0
+    Z_COG = -105.34
 
     # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
     if camera == 'left':
