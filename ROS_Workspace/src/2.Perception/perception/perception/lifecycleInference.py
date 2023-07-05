@@ -17,11 +17,10 @@ from ament_index_python.packages import get_package_share_directory
 from .libraries.pipelineFunctions import *
 
 class InferenceLifecycleNode(Node):
-    def __init__(self, yoloModel, smallKeypointsModel, largeKeypointsModel):
+    def __init__(self, yoloModel, smallKeypointsModel):
         super().__init__('inference')
         self.yoloModelPath = yoloModel
         self.smallKeypointsModelPath = smallKeypointsModel
-        self.largeKeypointsModelPath = largeKeypointsModel
         # Create a log file
         self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
         self.get_logger().warn("\n-- Inference Node Created")
@@ -35,7 +34,7 @@ class InferenceLifecycleNode(Node):
 
         # Initialize Models
         self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.6, iou=0.35)
-        self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
+        self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath)
 
         # Setup Message Transcoder
         self.bridge = CvBridge()
@@ -109,9 +108,9 @@ class InferenceLifecycleNode(Node):
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
-                smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
-                keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallModel, self.largeModel)
-                finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 200, 3)
+                keypointsPredictions = runKeypoints(smallConesList, self.smallModel)
+                finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
                 try:
                     # This sometimes throughs an error,don't know why
                     rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
@@ -146,12 +145,12 @@ def main(args=None):
     # Small Yolo v5
     yolov5s_model_path = f"{models}/yolov5s6.pt"
     # Small Keypoints Parh
-    smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
+    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
     # Large Keypoints dated 17/1/2023
-    largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
+    # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
     
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath, largeKeypointsModel=largeKeypointsModelPath)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:
