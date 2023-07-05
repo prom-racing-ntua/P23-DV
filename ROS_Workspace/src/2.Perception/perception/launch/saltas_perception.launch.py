@@ -32,11 +32,5 @@ def generate_launch_description():
             executable='saltas_acquisition',
             name='acquisition_right',
             parameters=[config]
-        ),
-        Node(
-            package='perception',
-            executable='saltas_acquisition',
-            name='acquisition_center',
-            parameters=[config]
-        ),
+        )
     ])

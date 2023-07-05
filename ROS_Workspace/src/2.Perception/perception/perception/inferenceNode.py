@@ -15,7 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 from .libraries.pipelineFunctions import *
 
 class InferenceNode(Node):
-    def __init__(self, yoloModel, smallKeypointsModel, largeKeypointsModel):
+    def __init__(self, yoloModel, smallKeypointsModel):
         super().__init__('inference_node')
 
         # Subscribe to acquisition topic
@@ -32,7 +32,6 @@ class InferenceNode(Node):
         # Models
         self.yoloModel = yoloModel
         self.smallKeypointsModel = smallKeypointsModel
-        self.largeKeypointsModel = largeKeypointsModel
 
         self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
 
@@ -58,10 +57,18 @@ class InferenceNode(Node):
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
-                smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
+                # smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
+                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 200, 3)
                 keypointsTiming = time.time()
-                keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
-                finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                # keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
+                keypointsPredictions = runKeypoints(smallConesList, self.smallKeypointsModel)
+                # finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+
+                if len(classesList) == 0:
+                    self.get_logger().info(f"No cones found from {cameraOrientation} camera - Keypoints would not be reliable")
+                    return
+
                 try:
                     # This sometimes throughs an error,don't know why
                     rangeList, thetaList = zip(*finalCoords)
@@ -99,16 +106,18 @@ def main(args=None):
     tpu_yolo_v5 = f"{models}/yolov5n6_640_edgetpu.tflite"
 
     # Small Keypoints Parh
-    smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
+    # smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
+    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
     # Large Keypoints dated 17/1/2023
-    largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
+    # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
 
     # Initialize Models 
-    yoloModel = initYOLOModel(tpu_yolo_v5, conf=0.65)
-    smallModel, largeModel = initKeypoint(smallKeypointsModelPath, largeKeypointsModelPath)
+    yoloModel = initYOLOModel(tpu_yolo_v5, conf=0.50)
+    # smallModel, largeModel = initKeypoint(smallKeypointsModelPath, largeKeypointsModelPath)
+    smallModel = initKeypoint(smallKeypointsModelPath)
 
     # Spin inference node
-    inference_node = InferenceNode(yoloModel=yoloModel, smallKeypointsModel=smallModel, largeKeypointsModel=largeModel)
+    inference_node = InferenceNode(yoloModel=yoloModel, smallKeypointsModel=smallModel)
     executor = MultiThreadedExecutor(num_threads=3)
 
     try:
