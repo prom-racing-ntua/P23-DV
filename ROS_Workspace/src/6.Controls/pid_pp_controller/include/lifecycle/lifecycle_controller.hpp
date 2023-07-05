@@ -71,6 +71,7 @@ private:
     std::ifstream mids;
 
     bool is_end;
+    bool switch_br;
     std::ofstream log;
 
     //Multithreading shit -- Ntroph :(

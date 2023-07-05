@@ -1,7 +1,7 @@
 #include "lifecycle_controller.hpp"
 #include <iomanip>
 
-LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1)
+LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false)
 {
     parameter_load();
     RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
@@ -49,7 +49,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Acceleration")
     {
-        if (lap == 1 or lap == 0)
+        if (lap == 0)
         {
             path_planning::PointsArray midpoints(30, 2);
             for (int i = 0; i < 30; i++)
@@ -74,7 +74,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        if (lap == 2)
+        if (lap == 1)
         {
             path_planning::PointsArray midpoints2(16, 2);
             for (int i = 14; i < 30; i++)
@@ -102,7 +102,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Skidpad")
     {
-        if (lap == 1)
+        if (lap == 0)
         {
             // first straight
             path_planning::PointsArray midpoints(21, 2);
@@ -133,7 +133,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 2)
+        else if (lap == 1)
         {
             // first right hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -160,7 +160,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 3)
+        else if (lap == 2)
         {
             // second right hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -192,7 +192,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 4)
+        else if (lap == 3)
         {
             // first left hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -219,7 +219,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 5)
+        else if (lap == 4)
         {
             // second left hand turn
             path_planning::PointsArray midpoints(45, 2);
@@ -252,7 +252,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 6)
+        else if (lap == 5)
         {
             // ending straight
             path_planning::PointsArray midpoints(5, 2);
@@ -280,7 +280,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 7)
+        else if (lap == 6)
         {
             // ending straight with braking
             path_planning::PointsArray midpoints(4, 2);
@@ -498,7 +498,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     if(!switch_br && (force < 0 && v_x < safe_speed_to_break))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
 
-    bool switch_br = force < 0 && v_x < safe_speed_to_break;
+    switch_br = force < 0 && v_x < safe_speed_to_break;
 
     for_publish.brake_pressure_target = switch_br;
     if (switch_br)
