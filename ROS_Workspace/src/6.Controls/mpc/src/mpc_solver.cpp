@@ -60,6 +60,7 @@ void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]
     double Ffy = getFy(Fz.Ffz,sa.saf);
     double Fdrag = 0.5*CdA*p_air*std::pow(X[3],2) + 0.03*(Fz.Frz+Fz.Ffz);
     double beta = std::atan(l_r/(l_f + l_r) * std::tan(X[7]));
+    l_a = 1; //ignoring model
 
     kappa[0] = (1)*(X[3]*std::cos(X[2]) - X[4]*std::sin(X[2])) + (0)*(X[3]*std::cos(X[2] + beta));  
     kappa[1] = (1)*(X[3]*std::sin(X[2]) + X[4]*std::cos(X[2])) + (0)*(X[3]*std::sin(X[2] + beta));
@@ -280,11 +281,14 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
                 double step_temp = ds_vector[i-1]*dt;
-                if(mission_=="trackdrive") step_temp = 0.25;
+                if(mission_=="trackdrive") step_temp = 0.15;
+                if(mission_=="skidpad") step_temp = 0.1;
+                if(mission_=="autox") step_temp = 0.2;
+                if(mission_=="accel") step_temp = 0.2; //stathero
                 // s_array_final[i] = s_array_final[i-1] +  s_interval_;
                 if(step_temp>s_space_max) step_temp = s_space_max;
                 if(step_temp<s_space_min) step_temp = s_space_min;
-                s_array_final[i] = s_array_final[i-1] +  s_interval_;
+                s_array_final[i] = s_array_final[i-1] +  step_temp; //changed
             }  
             if(mission_=="skidpad") { 
                 if(s_array_final[i]>sol*0.25 and lap_counter==5) s_array_final[i]=sol*0.25;
@@ -325,12 +329,12 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             int mod_ = k%4;
             if (mod_ == 0) {
                 params.all_parameters[k] = params_array(int(k/4),0); 
-                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = start_point.x;
                 // std::cout << "added X " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 1) {
                 params.all_parameters[k] = params_array(int((k-1)/4),1);
-                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = 0.0;
+                if((mission_=="autox" or mission_=="trackdrive") and finish_flag==1) params.all_parameters[k] = start_point.y;
                 // std::cout << "added Y " << params.all_parameters[k] <<  " at kappa  " << k << std::endl;
             }
             else if(mod_ == 2) {
@@ -384,7 +388,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             }
             center_point.x = 0.0;
             center_point.y = 0.0;
-            midpoints_txt_ = "src/6.Controls/mpc/data/trackdrive_midpoints.txt";
+            midpoints_txt_ = "src/6.Controls/mpc/data/trackdrive_midpoints_2.txt";
             lookahead_ = 30;
             known_track_ = true; 
         }
@@ -535,10 +539,12 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         if(mission_!="autox") writeLookaheadArray2();        
         //define message to ROS2
         Integrator();
-        if(mission_=="accel" and finish_flag==1) { //just no steering when finishing accel
-            X[7] = 0.0; 
-            U[1] = 0.0;
-        } 
+        if(!finish_flag) steer_last = X[7];
+        // if(mission_=="accel" and finish_flag==1) { //just no steering when finishing accel
+        //     X[7] = 0.0; 
+        //     U[1] = 0.0;
+        // }
+        if(finish_flag==1 and mission_!="skidpad" ) X[7]=steer_last;
         if(brake_flag==1) { //just no steering when entering braking for all events
             X[7] = 0.0; 
             U[1] = 0.0;

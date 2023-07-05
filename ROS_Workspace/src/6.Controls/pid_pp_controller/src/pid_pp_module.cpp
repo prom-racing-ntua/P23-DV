@@ -275,10 +275,10 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
     std::cout<<std::endl<<"------"<<std::endl;
     for (int i = 0; i < resolution; i++)
     {
-        std::cout<<spline_samples[i].target_speed()<<", ";
+        std::cout<<spline_samples[i].position()<<", ";
     }
     std::cout<<std::endl<<"------"<<std::endl;
-    
+    //exit(0);
     
 }
 
@@ -305,7 +305,8 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
     //std::cout << "max index = " << max_idx << std::endl;
     //for (int i = std::max(last_visited_index-2, 0); i < max_idx; i++)
     //for(int i = max_idx-1; i>= std::max(last_visited_index-2, 0); i--)
-    for(int i = max_idx-1; i>= 0; i--)
+    //for(int i = max_idx-1; i>= 0; i--)
+    for(int i = 0; i<max_idx; i++)
     {
         /*
         error_x = std::sin(spline_samples[i].phi())*(position.x() - spline_samples[i].position().x()) - std::cos(spline_samples[i].phi())*(position.y() - spline_samples[i].position().y());
@@ -321,6 +322,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         {
             min_error = error;
             min_error_index = i;
+            if(error < 0.01)break;
         }
     }
     if (min_error_index == -1)
@@ -332,10 +334,11 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
 {
     double closest_d = DBL_MAX;
     double dist, R;
+    int sel_idx=0;
     double lr = model->wb * model->wd;
     Point closest_p, trans, rear = position - Point(-lr * std::cos(theta), -lr * std::sin(theta));
-    //for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
-    for(int i = total_length * samples_per_meter-1; i>=last_visited_index; i--)
+    for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
+    //for(int i = total_length * samples_per_meter-1; i>=last_visited_index; i--)
     //for(int i = total_length * samples_per_meter-1; i>=0; i--)
     {
         dist = Point::distance(rear, spline_samples[i].position());
@@ -344,8 +347,11 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
         R = (ld * ld) / (2 * (-trans.x() * std::sin(theta) + trans.y() * std::cos(theta)));
         if (std::abs(ld - dist) <= closest_d && std::abs(R) > min_radius)
         {
+            //if(closest_d<DBL_MAX && i - sel_idx > 100)continue; //Ds>10meters
             closest_d = std::abs(ld - dist);
             closest_p = trans;
+            sel_idx = i;
+            if(closest_d<0.1)break;
         }
     }
     if (closest_d < DBL_MAX)

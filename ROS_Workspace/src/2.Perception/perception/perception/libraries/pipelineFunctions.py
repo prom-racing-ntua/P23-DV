@@ -113,9 +113,12 @@ def pitch_matrix(pitch):
                     [-np.sin(math.pi*pitch/180), 0, np.cos(math.pi*pitch/180)]])
 
 def rt_converter(camera, pnp_dist):
-    X_COG = -76
+    # X_COG = -76
+    # Y_COG = 0
+    # Z_COG = -105
+    X_COG = 0
     Y_COG = 0
-    Z_COG = -105
+    Z_COG = 0
 
     # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
     if camera == 'left':
@@ -147,7 +150,7 @@ def rt_converter(camera, pnp_dist):
         cog2camera_rotation = cog2camera_pitch @ cog2camera_yaw
         
         x = -109.34 - X_COG     # X_COG = dist(front, cog)
-        y = -5.97 - Y_COG       # Y_COG = divergence from centerline
+        y = 5.97 - Y_COG       # Y_COG = divergence from centerline
         z = Z_COG
         cog2camera_translation = np.array([[x], [y], [z]])
         camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])

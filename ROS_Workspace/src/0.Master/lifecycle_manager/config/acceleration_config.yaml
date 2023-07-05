@@ -98,10 +98,10 @@
       roll: -0.147              # [deg]
       pitch: -3.358             # [deg]
     vectornav-vn-300:
-      x: 0.18                   # [m]
+      x: -0.5262                # [m]
       y: 0.00                   # [m]
-      roll: -1.121              # [deg]
-      pitch: 1.452              # [deg]
+      roll: 0.00                # [deg]
+      pitch: 10.00              # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]
@@ -111,6 +111,7 @@
 
 /pure_pursuit:
   ros__parameters:
+    discipline: "Acceleration"
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
@@ -157,9 +158,24 @@
     total_laps: 1
     v_limit: 17.5
     node_freq: 40
-    s_interval: 0.1
+    s_interval: 0.2
     distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0
     s_space_max: 0.5
     s_space_min: 0.1
+
+# /mpc: #slow config testing
+#   ros__parameters:
+#     simulation: false
+#     mission: "accel"
+#     total_laps: 1
+#     v_limit: 5.0
+#     node_freq: 40
+#     s_interval: 0.1
+#     distance_safe: 1.0
+#     emergency_forward: 1.0
+#     F_init: 300.0
+#     s_space_max: 0.5
+#     s_space_min: 0.1
+

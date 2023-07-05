@@ -14,6 +14,7 @@ def generate_launch_description():
         executable="simple_sim",
         output="screen",
         emulate_tty=True,
+        parameters=[os.path.join(simple_sim_dir, "config", "parameters.yaml")]
     )
 
     ld.add_action(simple_sim_node)

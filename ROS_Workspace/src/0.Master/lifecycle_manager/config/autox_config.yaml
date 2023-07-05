@@ -96,10 +96,10 @@
       roll: -0.98              # [deg]
       pitch: -4.53             # [deg]
     vectornav-vn-300:
-      x: 0.18                   # [m]
+      x: -0.5262                # [m]
       y: 0.00                   # [m]
-      roll: -1.121              # [deg]
-      pitch: 1.452              # [deg]
+      roll: 0.00                # [deg]
+      pitch: 10.00              # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]
@@ -131,7 +131,6 @@
 /pure_pursuit:
   ros__parameters:
     discipline: "Autocross"
-    midpoints: ""
     #model
     mass: 193.5
     gravitational_acceleration: 9.81
@@ -176,9 +175,9 @@
     simulation: false
     mission: "autox"
     total_laps: 2
-    v_limit: 5.0
+    v_limit: 6.0
     node_freq: 40
-    s_interval: 0.25
+    s_interval: 0.2
     distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0

@@ -40,7 +40,7 @@ void MpcHandler::setClient() {
 }
 
 void MpcHandler::setPublishers() {
-    mpc_publisher_ = this->create_publisher<custom_msgs::msg::TxControlCommand>("tx_control", 10);
+    mpc_publisher_ = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
 }
 
 void MpcHandler::setLogger() {
