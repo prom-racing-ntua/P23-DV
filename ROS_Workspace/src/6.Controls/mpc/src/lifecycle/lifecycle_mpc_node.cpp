@@ -15,7 +15,7 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::setPublishers() {
-        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
+        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
     }
 
     void LifecycleMpcHandler::setLogger() {
@@ -42,10 +42,10 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::declareParameters() {
-        declare_parameter<bool>("simulation",true);
-        declare_parameter<std::string>("mission","trackdrive");
-        declare_parameter<float>("v_limit",14.0);
-        declare_parameter<int>("total_laps",11);
+        declare_parameter<bool>("simulation",false);
+        declare_parameter<std::string>("mission","skidpad");
+        declare_parameter<float>("v_limit",13.0);
+        declare_parameter<int>("total_laps",5);
         declare_parameter<float>("s_interval",0.1);
         declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);

@@ -144,6 +144,7 @@ class MpcSolver {
         bool finish_flag=0;
         bool brake_flag=0;
         bool braking_manouvre;
+        double steer_last;
         float emergency_forward_;
         int emergency_counter=0;
         int ellipse_counter=0;

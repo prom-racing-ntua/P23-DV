@@ -175,9 +175,9 @@
     simulation: false
     mission: "autox"
     total_laps: 2
-    v_limit: 5.0
+    v_limit: 6.0
     node_freq: 40
-    s_interval: 0.25
+    s_interval: 0.2
     distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0

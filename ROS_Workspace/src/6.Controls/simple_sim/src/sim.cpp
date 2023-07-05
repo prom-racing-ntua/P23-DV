@@ -267,17 +267,17 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	if (discipline == 0 or discipline == 1)
 	{
 		fs.open("src/6.Controls/simple_sim/data/map.txt");
-		state.x = -5.5;
+		state.x = -6.0;
 	}
 	else if (discipline == 2)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
-		state.x = -1;
+		state.x = -2.021;
 	}
 	else if (discipline == 3)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
-		state.x = -16;
+		state.x = -16.847;
 	}
 		
 	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
@@ -355,7 +355,8 @@ void sim_node::timer_callback()
 		3. if 2Hz map pub
 	*/
 
-	double f, d, dt = 1e-3;
+	// double f, d, dt = 1e-3;
+	double f, d, dt = 0.001;
 	for (int i = 0; i < 25; i++)
 	{
 		global_idx++;
@@ -363,6 +364,7 @@ void sim_node::timer_callback()
 			f = 0;
 		else
 			f = torques[int(torques.size()) - mot_d_ticks - 1] * constants.gr * constants.eff / constants.R_wheel;
+			std::cout << "f is: " <<  f << std::endl;
 
 		if (int(steering.size()) - st_d_ticks - 1 < 0)
 		{
@@ -371,6 +373,7 @@ void sim_node::timer_callback()
 		}
 		else
 			d = steering[int(steering.size()) - st_d_ticks - 1];
+			std::cout << "steering is: " << d << std::endl;
 
 		if (last_d + 0.0005 < d)
 			last_d = last_d + 0.0005;
@@ -412,7 +415,7 @@ void sim_node::timer_callback()
 		vel.acceleration_x = add_noise(state.a_x, 1e-4);
 		vel.acceleration_y = add_noise(state.a_y, 1e-4);
 		msg.velocity_state = vel;
-		msg.lap_count = state.lap;
+		msg.lap_count = state.lap-1; //temp change
 		pub_pose->publish(msg);
 	}
 
@@ -513,7 +516,7 @@ void sim_node::timer_callback()
 }
 void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg)
 {
-	// std::cout << ">>> COMMAND <<<" << std::endl;
+	std::cout << "receiving: " << msg->motor_torque_target << " " << msg->steering_angle_target << std::endl;
 	torques.push_back(msg->motor_torque_target);
 	steering.push_back(msg->steering_angle_target);
 	std::ofstream log2;

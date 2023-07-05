@@ -155,7 +155,7 @@
     simulation: false
     mission: "trackdrive"
     total_laps: 11
-    v_limit: 14.0
+    v_limit: 13.0
     node_freq: 40.0
     s_interval: 0.1
     distance_safe: 1.0

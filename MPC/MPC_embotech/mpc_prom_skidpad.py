@@ -205,7 +205,7 @@ def obj(z,current_target):
             + 1e2*z[10]**2
             + 1e-3*(sar**2)
             # + 1e-3*(dsa**2)
-            + 1e2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
             - 1e-3*(z[6])
             - 0e-6*(z[11]/INDEX_MAX_ALL)
