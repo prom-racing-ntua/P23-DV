@@ -55,7 +55,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             for (int i = 0; i < 30; i++)
             {
                 midpoints(i, 0) = i * 5;
-                midpoints(1, 1) = 0;
+                midpoints(i, 1) = 0;
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -76,13 +76,13 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
         }
         if (lap == 2)
         {
-            path_planning::PointsArray midpoints(15, 2);
-            for (int i = 15; i < 30; i++)
+            path_planning::PointsArray midpoints2(16, 2);
+            for (int i = 14; i < 30; i++)
             {
-                midpoints(i, 0) = i * 5;
-                midpoints(1, 1) = 0;
+                midpoints2(i - 14, 0) = i * 5;
+                midpoints2(i - 14, 1) = 0;
             }
-            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints2, path_planning::BoundaryCondition::Anchored);
             bool is_end = 1;
             double ms = 0;
             double v_init = this->v_x;
@@ -102,6 +102,212 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Skidpad")
     {
+        if (lap == 1)
+        {
+            // first straight
+            path_planning::PointsArray midpoints(21, 2);
+            for (int i = -5; i <= 0; i++)
+            {
+                midpoints(i + 5, 0) = i * 3;
+                midpoints(i + 5, 1) = 0;
+            }
+            for (int i = 1; i <= 15; i++)
+            {
+                midpoints(i + 5, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 30)));
+                midpoints(i + 5, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 30)));
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = 3;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 2)
+        {
+            // first right hand turn
+            path_planning::PointsArray midpoints(60, 2);
+
+            for (int i = 0; i < 60; i++)
+            {
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 3)
+        {
+            // second right hand turn
+            path_planning::PointsArray midpoints(60, 2);
+
+            for (int i = 0; i < 40; i++)
+            {
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+            }
+            for (int i = 0; i < 20; i++)
+            {
+                midpoints(i + 40, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i + 40, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 4)
+        {
+            // first left hand turn
+            path_planning::PointsArray midpoints(60, 2);
+
+            for (int i = 0; i < 60; i++)
+            {
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 5)
+        {
+            // second left hand turn
+            path_planning::PointsArray midpoints(45, 2);
+
+            for (int i = 0; i < 40; i++)
+            {
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                midpoints(i+40, 0) = i * 5;
+                midpoints(i+40, 1) = 0;
+            }
+
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = max_speed;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 6)
+        {
+            // ending straight
+            path_planning::PointsArray midpoints(5, 2);
+
+            for (int i = 0; i < 5; i++)
+            {
+                midpoints(i, 0) = i * 5;
+                midpoints(i, 1) = 0;
+            }
+
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 0;
+            double ms = 5;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+        else if (lap == 7)
+        {
+            // ending straight with braking
+            path_planning::PointsArray midpoints(4, 2);
+
+            for (int i = 0; i < 4; i++)
+            {
+                midpoints(i, 0) = (i + 2) * 5;
+                midpoints(i, 1) = 0;
+            }
+
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 1;
+            double ms = 0;
+            double v_init = this->v_x;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
     }
 }
 
@@ -109,11 +315,9 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
 {
     std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
     rclcpp::Time starting_time = this->now();
-    // Object variables should only be updated in the end
     path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
     if (msg->count >= 3)
     {
-        // std::cout<<"3+ "<<std::endl;
         for (int i = 0; i < msg->count; i++)
         {
             midpoints(i, 0) = msg->waypoints[i].x;
@@ -122,7 +326,6 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     }
     else if (msg->count == 2)
     {
-        // std::cout<<"2 "<<std::endl;
         midpoints(0, 0) = msg->waypoints[0].x;
         midpoints(0, 1) = msg->waypoints[0].y;
         midpoints(1, 0) = 0.5 * msg->waypoints[0].x + 0.5 * msg->waypoints[1].x;
@@ -132,7 +335,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     }
     else
     {
-        // std::cout<<"1? "<<std::endl;
+        RCLCPP_INFO_STREAM(get_logger(), "Only "<<msg->count<<" midpoints.");
         return;
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
@@ -169,24 +372,20 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
 void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 {
     std::cout << "Entered Pose Callback" << std::endl;
-    // std::cout << "Pos: " << msg->position.x << ", " << msg->position.y << ". theta: " << msg->theta << ". v_o : " << msg->velocity_state.velocity_x << std::endl;
-    //  std::cout<<"1.. ";
 
     rclcpp::Time starting_time = this->now();
 
-    // std::cout<<"2.. ";
     v_x = msg->velocity_state.velocity_x;
     v_y = msg->velocity_state.velocity_y;
     r = msg->velocity_state.yaw_rate;
     a_x = msg->velocity_state.acceleration_x;
     a_y = msg->velocity_state.acceleration_y;
-    // std::cout<<"3.. ";
 
     if (!has_run_waypoints)
     {
         if (discipline == "Autocross")
             return;
-        known_map_substitute(0, laps_to_do);
+        known_map_substitute(1, laps_to_do);
         has_run_waypoints = 1;
     }
 
@@ -210,12 +409,13 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     for_publish.speed_target = projection.first * 3.6;
     // std::cout<<"6.. ";
     double min_radius;
+    double fz = model.Fz_calc("full", 1, 0, v_x);
     double force = pid_controller(projection.first - this->v_x);
     // Checking Force
-    double fx_next = force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m;
+    double fx_next = force - 0.5 * v_x * v_x * model.cd_A - 0.03 * fz + v_y * r * model.m;
     double fx; // old fx, new fx
     fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
-    double fz = model.Fz_calc("full", 1, 0, v_x);
+
     fz *= safety_factor; // C_SF1
     double rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
 
@@ -233,13 +433,12 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         else
         {
             // tha spiniaroume otan efarmostei
-            force = 0.5 * v_x * v_x - v_y * r * model.m + safety_factor * std::min((model.mx_max(fz) * fz) * (force > 0 ? 1 : -1), force > 0 ? model.max_positive_force : model.max_negative_force);
-            fx_next = (force - 0.5 * v_x * v_x * model.cd_A + v_y * r * model.m) * (force > 0 ? 1 : -1);
+            force = 0.5 * v_x * v_x * model.cd_A + 0.03 * fz - v_y * r * model.m + safety_factor * std::min((model.mx_max(fz) * fz) * (force > 0 ? 1 : -1), force > 0 ? model.max_positive_force : model.max_negative_force);
+            fx_next = (force - 0.5 * v_x * v_x * model.cd_A - 0.03 * fz + v_y * r * model.m) * (force > 0 ? 1 : -1);
             fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
             rem = fz * fz - std::pow(fx / model.mx_max(fz), 2);
         }
     }
-    // std::cout<<"8.. ";
 
     double trq = model.Torque(force);
     trq = std::min(model.max_positive_torque, std::max(model.max_negative_torque, trq));
@@ -271,7 +470,8 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     }
     else
     {
-        std::cout<<"emergency manouevre"<<std::endl;
+        RCLCPP_INFO_STREAM(get_logger(), "Emergency Manouevre. Error = "<<projection.second<<"m");
+        std::cout << "emergency manouevre" << std::endl;
         for_publish.motor_torque_target *= 0.25;
         ld = pp_controller.lookahead(v_x, true);
     }
@@ -283,12 +483,21 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     if (!tp.error)
         heading_angle = pp_controller(tp, theta, min_radius);
     else
+    {
         heading_angle = 0;
-    // std::cout<<"12.. ";
+        RCLCPP_INFO_STREAM(get_logger(), "Target point error");
+    }
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
 
+    if(last_steering!=5)heading_angle = std::min(last_steering + 0.25, std::max( last_steering - 0.25, heading_angle));
+
+    last_steering = heading_angle;
+
     for_publish.steering_angle_target = heading_angle;
+
+    if(!switch_br && (force < 0 && v_x < safe_speed_to_break))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
+
     bool switch_br = force < 0 && v_x < safe_speed_to_break;
 
     for_publish.brake_pressure_target = switch_br;
