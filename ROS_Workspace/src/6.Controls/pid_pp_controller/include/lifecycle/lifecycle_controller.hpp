@@ -64,12 +64,14 @@ private:
     double safety_factor;
     double max_speed, spline_res_per_meter;
     double safe_speed_to_break;
+    double last_steering, last_torque;
     int laps_to_do;
     int prev_lap;
     string discipline, midpoints;
     std::ifstream mids;
 
     bool is_end;
+    bool switch_br;
     std::ofstream log;
 
     //Multithreading shit -- Ntroph :(

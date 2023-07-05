@@ -43,7 +43,7 @@ void PID_PP_Node::parameter_load()
     declare_parameter<string>("midpoints", "");
 }
 
-PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), last_steering(0), last_torque(0)
+PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), last_steering(5), last_torque(0)
 {
     // PARAMETER LOADING
     parameter_load();
@@ -92,7 +92,6 @@ PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(
 
     is_end = false;
 
-    // Initialize global lock
     if (pthread_spin_init(&global_lock_, PTHREAD_PROCESS_SHARED) != 0)
     {
         RCLCPP_ERROR(get_logger(), "Global lock initialization failed: exit program");
@@ -161,7 +160,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Acceleration")
     {
-        if (lap == 1 or lap == 0)
+        if ( lap == 0)
         {
             path_planning::PointsArray midpoints(30, 2);
             for (int i = 0; i < 30; i++)
@@ -186,7 +185,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        if (lap == 2)
+        if (lap == 1)
         {
             path_planning::PointsArray midpoints2(16, 2);
             for (int i = 14; i < 30; i++)
@@ -214,7 +213,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
     }
     else if (discipline == "Skidpad")
     {
-        if (lap == 1)
+        if (lap == 0)
         {
             // first straight
             path_planning::PointsArray midpoints(21, 2);
@@ -245,7 +244,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 2)
+        else if (lap == 1)
         {
             // first right hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -272,7 +271,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 3)
+        else if (lap == 2)
         {
             // second right hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -304,7 +303,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 4)
+        else if (lap == 3)
         {
             // first left hand turn
             path_planning::PointsArray midpoints(60, 2);
@@ -331,7 +330,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 5)
+        else if (lap == 4)
         {
             // second left hand turn
             path_planning::PointsArray midpoints(45, 2);
@@ -364,7 +363,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 6)
+        else if (lap == 5)
         {
             // ending straight
             path_planning::PointsArray midpoints(5, 2);
@@ -392,7 +391,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete spline_to_delete;
             delete profile_to_delete;
         }
-        else if (lap == 7)
+        else if (lap == 6)
         {
             // ending straight with braking
             path_planning::PointsArray midpoints(4, 2);
@@ -608,6 +607,10 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     // std::cout<<"12.. ";
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
+
+    if(last_steering!=5)heading_angle = std::min(last_steering + 0.25, std::max( last_steering - 0.25, heading_angle));
+
+    last_steering = heading_angle;
 
     for_publish.steering_angle_target = heading_angle;
     bool switch_br = force < 0 && v_x < safe_speed_to_break;

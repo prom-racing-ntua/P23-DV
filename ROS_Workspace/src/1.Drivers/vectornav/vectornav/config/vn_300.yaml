@@ -30,9 +30,9 @@ vn_300:
         y: +0.0
         z: -0.9077
       GpsBaselinePos: 
-        x: +0.7578
+        x: +0.7778
         y: +0.0
-        z: +0.4118  
+        z: +0.414  
       GpsBaselineUncertainty: 
         x: 0.0254
         y: 0.0254
