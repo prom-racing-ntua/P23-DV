@@ -1,12 +1,13 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
+from rcl_interfaces.msg import SetParametersResult
 from custom_msgs.msg import *
 from math import sin, cos, pi
 
 
-COMMAND_FREQUENCY = 40  # [Hz]
-STATE_FREQUENCY = 5     # [Hz]
+COMMAND_FREQUENCY = 20  # [Hz]
+STATE_FREQUENCY = 1     # [Hz]
 
 TORQUE_COMMAND = 0.7    # [N*m]
 MAX_STEERING = 24.0     # [mm]
@@ -20,13 +21,13 @@ class InspectionMission(Node):
         self._status = DriverlessStatus.LV_ON
         self._steering_angle = 0
         self._actual_torque = 0
+        self._brake_pressure = 0
         self._send_time = None
-        self._prev_send = 0.0
-        self._reached_goal = False
+        self._new_command = ''
 
-        self._steering_command = self.declare_parameter('steering', 0.0).value
-        self._brake_command = self.declare_parameter('brake', 0.0).value
-        # self._steering_command = MAX_STEERING
+        self._steering_command = self.declare_parameter('steering', 0.2).value
+        self._brake_command = self.declare_parameter('brake', False).value
+        self._torque_command = self.declare_parameter('torque', 0.0).value
 
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
         self._state_publisher = self.create_publisher(TxSystemState ,'/system_state', 10)
@@ -37,27 +38,53 @@ class InspectionMission(Node):
 
         self._state_timer = self.create_timer(1/STATE_FREQUENCY, self.send_state)
 
+        self.add_on_set_parameters_callback(self.parameters_callback)
         self.get_logger().info(f"Inspection Node Initialized")
+
+
+    def parameters_callback(self, params):
+        for param in params:
+            if param.name == 'steering' and self._steering_command != param.value:
+                self._steering_command = param.value
+                self._new_command = 'steering'
+            elif param.name == 'brake' and self._brake_command != param.value:
+                self._brake_command = param.value
+                self._new_command = 'brake'
+            elif param.name == 'torque' and self._torque_command != param.value:
+                self._torque_command = param.value
+                self._new_command = 'torque'
+        self._send_time = self.get_time()
+        self.get_logger().info(f"New command for {self._new_command}")
+        return SetParametersResult(successful=True)
 
 
     def set_steering(self, msg:RxSteeringAngle) -> None:
         self._steering_angle = msg.steering_angle
-        # self.get_logger().info(f"Received rack displacement {self._steering_angle}")
-        # if abs(self._steering_angle - self._steering_command) < 1e-3 and not self._reached_goal and self._send_time is not None:
-        #     self._reached_goal = True
-        #     response_time = self.get_time() - self._send_time
-        #     self.get_logger().warn(f"Response time to reach {self._steering_command} mm: {response_time}")
-        #     self._steering_command *= -1
-        #     self._reached_goal = False
+
+        if abs(self._steering_angle - self._steering_command) < 1e-3:# and self._new_command == 'steering':
+            # response_time = self.get_time() - self._send_time
+            # self._send_time = None
+            # self._new_command = ''
+            self._steering_command *= -1
+            # self.get_logger().warn(f"Response time to reach {self._steering_command} mm: {response_time}")
         return
 
 
     def set_motor(self, msg:RxVehicleSensors) -> None:
         self._actual_torque = msg.motor_torque_actual
-        # self.get_logger().info(f"Received motor actual torque {self._steering_angle}")
-        # if abs(self._actual_torque - TORQUE_COMMAND) < 1e-3:
-        #     response_time = self.get_time() - self._send_time
-        #     self.get_logger().warn(f"Response time to reach {TORQUE_COMMAND} mm: {response_time}", once=True)
+        self._brake_pressure = msg.brake_pressure_front # maybe rear as well ask Antonis
+
+        if abs(self._actual_torque - self._torque_command) < 1e-3 and self._new_command == 'torque':
+            response_time = self.get_time() - self._send_time
+            self._send_time = None
+            self._new_command = ''
+            self.get_logger().warn(f"Response time to reach {self._torque_command} Nm: {response_time}")
+
+        if abs(self._brake_pressure - 10) < 1e-3 and self._new_command == 'brake':
+            response_time = self.get_time() - self._send_time
+            self._send_time = None
+            self._new_command = ''
+            self.get_logger().warn(f"Response time to reach {self._brake_command} bar: {response_time}")
         return
 
 
@@ -67,17 +94,11 @@ class InspectionMission(Node):
             return
         
         msg = TxControlCommand()
-
-        self._steering_command = self.get_parameter('brake').value
-        msg.brake_pressure_target = self._steering_command
-
-        self._steering_command = self.get_parameter('steering').value
+        msg.brake_pressure_target = self._brake_command
         msg.steering_angle_target = self._steering_command
-
-
+        msg.motor_torque_target = self._torque_command
         msg.speed_actual = 0
         msg.speed_target = 0
-        msg.motor_torque_target = TORQUE_COMMAND
 
         # Normal inspection
         # msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)
@@ -94,7 +115,7 @@ class InspectionMission(Node):
         #     self.get_logger().warn(f'Steering command set to: {self._steering_command} mm')
         #     self._send_time = self.get_time()
         
-        self._command_publisher.publish(msg)        
+        self._command_publisher.publish(msg)
         
         # self.get_logger().info(f"Time passed: {time}")
         # if time > MISSION_DURATION:

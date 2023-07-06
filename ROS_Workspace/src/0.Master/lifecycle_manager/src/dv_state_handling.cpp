@@ -65,7 +65,7 @@ namespace lifecycle_manager_namespace{
                 break;
             case(p23::INSPECTION):
                 configurationFileSelected += std::string("/inspection_config.yaml");
-                nodesToShutdown = {"saltas", "acquisition_left", "inference", //"acquisition_right",
+                nodesToShutdown = {"saltas", "acquisition_left", "inference", "acquisition_right",
                     "velocity_estimation", "slam", "path_planning", "mpc", "pure_pursuit"};
                 controlsNode = {"inspection"};
                 break;

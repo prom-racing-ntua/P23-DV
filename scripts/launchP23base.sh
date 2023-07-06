@@ -6,7 +6,7 @@
 # 3. Vectornav
 # 4. CAN Module
 
-cd ~/P23-DV/ROS_Workspace
+cd /home/prom/P23-DV/ROS_Workspace
 . install/setup.bash
 ros2 launch p23_status p23base.launch.py &
 

@@ -17,8 +17,8 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
 
     if "v5" in modelpath:
-        # yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=True)
         yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=True)
+        
     elif "v7" in modelpath:
         yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=True)
 
@@ -29,22 +29,19 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
 
 def inferenceYOLO(model, img, tpu=True, debug=False):
     baseTime = time.time()
-    paddingTime = 0
     if tpu:
         # YOLO in TPU works only for square input i.e. (640,640) so we pad zeros below the actual image
         padded_img = np.zeros((640,640,3),dtype=np.uint8)
         # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
         padded_img[:512] = cv2.resize(img, (640,512))
         
-        paddingTime = (time.time() - baseTime)*1000
-        print(padded_img.dtype)
         results = model(padded_img)
-        # results.save(f"test{time.time()}.jpg")
     else:
         results = model(img)
+
     # now results are a numpy array containing xmin, ymin, xmax, ymax, confidence, class in each row
     inferenceTime = (time.time() - baseTime)*1000
-    return results.pred[0].numpy(), [paddingTime, inferenceTime]
+    return results.pred[0].numpy(), inferenceTime
 
 def initKeypoint(small_modelpath):
     core = ov.Core()
@@ -52,7 +49,7 @@ def initKeypoint(small_modelpath):
     small_model = core.compile_model(model=model, device_name="GPU")
     return small_model
 
-def cropResizeCones(yolo_results, image, margin, size_cutoff_small):
+def cropResizeCones(yolo_results, image, margin):
     img_h = image.shape[0]
     img_w = image.shape[1]
     small_bounding_boxes = yolo_results[(yolo_results[:,5]<3)]
@@ -74,7 +71,7 @@ def cropResizeCones(yolo_results, image, margin, size_cutoff_small):
         small_cones_imgs.append(cone_img)
         
         # Stack corners of cropped images
-        cropped_img_corners.append([xmin, ymin, xmax, ymax])
+        cropped_img_corners.append([xmin, ymin, xmax, ymax])        
 
         # Stack classes of cropped images
         classes.append(small_bounding_boxes[i,5])
@@ -118,7 +115,7 @@ def rt_converter(camera, pnp_dist):
     # Z_COG = -105
     X_COG = 0
     Y_COG = 0
-    Z_COG = 0
+    Z_COG = -19.95
 
     # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
     if camera == 'left':
@@ -216,7 +213,8 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
         if best_score < thresh:  
             rt.append(rt_converter(camera, trans))
             reduced_classes.append(classes[j])
-    return rt, reduced_classes 
+
+    return rt, reduced_classes
 
 # def initKeypoint(small_modelpath, large_modelpath):
 #     small_model = VGGLikeV3()

@@ -54,8 +54,8 @@ typedef enum DV_Status {
     MISSION_SELECTED = 2,
     DV_READY = 3,
     DV_DRIVING = 4,
-    MISSION_FINISHED = 5,
-    NODE_PROBLEM = 6
+    NODE_PROBLEM = 5,
+    MISSION_FINISHED = 6
 } DV_Status;
 
 const std::unordered_map<DV_Status, std::string> driverless_status_list{

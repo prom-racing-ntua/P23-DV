@@ -9,7 +9,7 @@
 # 6. MPC
 # 7. PID_PP
 
-cd ~/P23-DV/ROS_Workspace
+cd /home/prom/P23-DV/ROS_Workspace
 . install/setup.bash
 ros2 launch p23_status lifecycle_nodes.launch.py &
 

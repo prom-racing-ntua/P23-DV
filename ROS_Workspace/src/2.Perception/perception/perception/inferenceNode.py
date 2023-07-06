@@ -58,12 +58,12 @@ class InferenceNode(Node):
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 # smallConesList, largeConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 500, 600, 3)
-                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 200, 3)
+                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
                 keypointsTiming = time.time()
                 # keypointsPredictions = runKeypoints(smallConesList, largeConesList, self.smallKeypointsModel, self.largeKeypointsModel)
                 keypointsPredictions = runKeypoints(smallConesList, self.smallKeypointsModel)
                 # finalCoords = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
-                finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0, image)
 
                 if len(classesList) == 0:
                     self.get_logger().info(f"No cones found from {cameraOrientation} camera - Keypoints would not be reliable")
@@ -108,11 +108,12 @@ def main(args=None):
     # Small Keypoints Parh
     # smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
     smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
+
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
 
     # Initialize Models 
-    yoloModel = initYOLOModel(tpu_yolo_v5, conf=0.50)
+    yoloModel = initYOLOModel(tpu_yolo_v5, conf=0.70, iou=0.30)
     # smallModel, largeModel = initKeypoint(smallKeypointsModelPath, largeKeypointsModelPath)
     smallModel = initKeypoint(smallKeypointsModelPath)
 

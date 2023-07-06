@@ -1,0 +1,11 @@
+[Unit]
+Description=P23 Initialization Service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+ExecStart=/bin/bash /home/prom/P23-DV/scripts/initializeP23.sh
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

@@ -23,10 +23,10 @@ VelocityEstimationHandler::VelocityEstimationHandler(): Node("velocity_estimatio
     estimator_.init();
 
     vn_200_rotation_matrix_ = getRotationMatrix(get_parameter("vectornav-vn-200.roll").as_double(),
-        get_parameter("vectornav-vn-200.pitch").as_double());
+        get_parameter("vectornav-vn-200.pitch").as_double(), get_parameter("vectornav-vn-200.yaw").as_double());
 
     vn_300_rotation_matrix_ = getRotationMatrix(get_parameter("vectornav-vn-300.roll").as_double(),
-        get_parameter("vectornav-vn-300.pitch").as_double());
+        get_parameter("vectornav-vn-300.pitch").as_double(), get_parameter("vectornav-vn-300.yaw").as_double());
 
     // Initialize the measurement and update vector with zeros
     measurement_vector_.setZero();
@@ -278,9 +278,9 @@ void VelocityEstimationHandler::wheelSpeedCallback(const custom_msgs::msg::RxWhe
 }
 
 void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {
-    // 3.17 is the gear ratio of the steering rack
+    // 3.17 is the gear ratio of the steering rack [from P22]
     // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
-    input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad
+    input_vector_(InputSteering) = static_cast<double>(msg->steering_angle);       // converted to rad
 }
 
 // Loads the node parameters from the .yaml file

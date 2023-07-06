@@ -45,6 +45,7 @@ void P23StatusNode::initializeNode() {
     maxLaps = 255;
     standstill = false;
     pcError = false;
+    pcToBeShutdown = false;
 
     missionLocked = false;
     missionFinished = false;
@@ -73,7 +74,7 @@ void P23StatusNode::setSubscribers() {
         "/canbus/mission_selection", 10, std::bind(&P23StatusNode::updateMission, this, _1), options);
 
     canbus_status_subscription_ = create_subscription<custom_msgs::msg::AutonomousStatus>(
-        "/canbus/as_status", 10, std::bind(&P23StatusNode::updateASStatus, this, _1));
+        "/canbus/autonomous_status", 10, std::bind(&P23StatusNode::updateASStatus, this, _1));
 
     slam_subscription_ = create_subscription<custom_msgs::msg::LocalMapMsg>(
         "local_map", 10, std::bind(&P23StatusNode::updateSLAMInformation, this, _1));
@@ -116,6 +117,13 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
             ". Current mission is " << p23::mission_list.at(currentMission));
         return;
     }
+
+    /* If we are on manual and then we reselect, then stop the PC from shutting down */
+    if (pcToBeShutdown) {
+        pcToBeShutdown = false;
+        std::system("shutdown -c");
+    }
+
     currentMission = static_cast<p23::Mission>(msg->mission_selected);
 
     // TODO: Check again lap counts
@@ -146,7 +154,9 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
         break;
     case(p23::MANUAL):
         // The PC will shutdown so no one cares what happens here...
-        std::system("shutdown -h 1");
+        std::system("shutdown -h 30 sec");
+        pcToBeShutdown = true;
+        // TODO: Command to cancel is "shutdown -c. Create a flag that sets shutdown and cancels it if we change mission"
         return;
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid mission received " << currentMission);

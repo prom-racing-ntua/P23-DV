@@ -1,6 +1,6 @@
 # Python Imports
 import numpy as np
-from math import atan2, sqrt
+from math import atan2, sqrt, asin
 # Rclpy Import
 import rclpy
 from rclpy.node import Node
@@ -28,7 +28,7 @@ class RotationCompensation(Node):
     '''
     def __init__(self) -> None:
         super().__init__("rotation_compensation_node")
-        self.sampling_time = self.declare_parameter("sampling_time", 10).value
+        self.sampling_time = self.declare_parameter("sampling_time", 120).value
         
         self.vn_200_average_accelerations = np.empty((1,3))
         self.vn_300_average_accelerations = np.empty((1,3))
@@ -71,13 +71,13 @@ class RotationCompensation(Node):
         a_y = -np.average(self.vn_200_average_accelerations[1:,1])
         a_z = -np.average(self.vn_200_average_accelerations[1:,2])
         self.euler_angles[0,0] = atan2(a_y, a_z)
-        self.euler_angles[0,1] = atan2(-a_x, sqrt(a_y**2 + a_z**2))
+        self.euler_angles[0,1] = asin(a_x, sqrt(a_x**2 + a_y**2 + a_z**2))
 
         a_x = -np.average(self.vn_300_average_accelerations[1:,0])
         a_y = -np.average(self.vn_300_average_accelerations[1:,1])
         a_z = -np.average(self.vn_300_average_accelerations[1:,2])
         self.euler_angles[1,0] = atan2(a_y, a_z)
-        self.euler_angles[1,1] = atan2(-a_x, sqrt(a_y**2 + a_z**2))
+        self.euler_angles[1,1] = asin(a_x, sqrt(a_x**2 + a_y**2 + a_z**2))
 
         self.get_logger().info(f"Euler angles of IMU estimated at {np.rad2deg(self.euler_angles[0,0])} deg roll and {np.rad2deg(self.euler_angles[0,1])} deg pitch")
         self.get_logger().info(f"Euler angles of INS estimated at {np.rad2deg(self.euler_angles[1,0])} deg roll and {np.rad2deg(self.euler_angles[1,1])} deg pitch")

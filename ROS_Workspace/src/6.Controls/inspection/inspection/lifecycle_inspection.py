@@ -12,9 +12,9 @@ from math import sin, cos, pi, radians
 
 COMMAND_FREQUENCY = 40          # [Hz]
 
-TORQUE_COMMAND = 1.2            # [N*m]
-MAX_STEERING = radians(31.2)    # [rad]
-STEERING_PERIOD = 6             # [sec]
+TORQUE_COMMAND = 4.0            # [N*m]
+MAX_STEERING = radians(15.0)    # [rad]
+STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
 
 
@@ -56,13 +56,13 @@ class InspectionMission(Node):
 
     def on_cleanup(self, state:State) -> TransitionCallbackReturn:
         self._command_timer.cancel()
-        self._command_timer.destroy()
+        self.destroy_timer(self._command_timer)
 
-        self._command_publisher.destroy()
-        self._state_publisher.destroy()
+        self.destroy_publisher(self._command_publisher)
+        self.destroy_publisher(self._state_publisher)
 
-        self._steering_sub.destroy()
-        self._motor_sub.destroy()
+        self.destroy_subscription(self._steering_sub)
+        self.destroy_subscription(self._motor_sub)
         
         self._steering_angle = 0.0
         self._actual_torque = 0.0

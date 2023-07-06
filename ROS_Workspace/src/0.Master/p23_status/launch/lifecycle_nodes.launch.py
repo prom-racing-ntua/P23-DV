@@ -61,7 +61,7 @@ def generate_launch_description():
         package='perception',
         executable='l_inf',
         name='inference',
-        emulate_tty=True
+        emulate_tty=True,
     )
     ldList.append(inferenceNode)
 

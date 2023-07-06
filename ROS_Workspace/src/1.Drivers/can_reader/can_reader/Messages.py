@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from rclpy.node import Node
 from rclpy.publisher import Publisher
@@ -9,22 +10,22 @@ from math import pi
 ### --------------------------- Helper Functions --------------------------- ###
 
 # Break Pressure Target for service brake [bar]
-SERVICE_BRAKE_TARGET = 10
+# SERVICE_BRAKE_TARGET = 30
 
 # These are specific to P23 steering geometry. Positive displacement and wheel angle is to the right of the car as the positive x-axis.
 RACK_DISPLACEMENT_LOOKUP = np.array([
 # Steer Travel [mm] # Avg Wheel Angle [deg]
-    [ 24.0,              31.22029785],
-    [ 19.2,              24.45648575],
-    [ 14.4,              18.07310295],
-    [  9.6,              11.9302311 ],
-    [  4.8,               5.93125271],
-    [  0.0,               0.0       ],
-    [ -4.8,              -5.93125271],
-    [ -9.6,             -11.9302311 ],
-    [-14.4,             -18.07310295],
-    [-19.2,             -24.45648575],
-    [-24.0,             -31.22029785]
+    [ 24.0,       (23.96173 + 27.01392) / 2],
+    [ 19.2,       (19.15972 + 20.96173) / 2],
+    [ 14.4,       (14.39368 + 15.3505) / 2 ],
+    [  9.6,       (9.633149 + 10.04216) / 2],
+    [  4.8,       (4.846694 + 4.946667) / 2],
+    [  0.0,        0.0                     ],
+    [ -4.8,       (-4.946667 -4.846694) / 2],
+    [ -9.6,       (-10.04216 -9.633149) / 2],
+    [-14.4,       (-15.3505 -14.39368) / 2 ],
+    [-19.2,       (-20.96173 -19.15972) / 2],
+    [-24.0,       (-27.01392 -23.96173) / 2]
 ])
 
 def floatToBytes(num:float, byteorder:str='big', multiplier:int=256, signed=False, num_bytes=2) -> bytes:
@@ -88,7 +89,7 @@ def rad2rackDisplacement(steering_angle: float) -> float:
     # Input should be in rad, so transform to deg
     steering_angle = steering_angle * 180/pi
     # Check if input is in range of the possible values
-    if abs(steering_angle) > 31.2202: raise ValueError(f"The steering angle given is out of range: {steering_angle} deg")
+    if abs(steering_angle) > 24.0: raise ValueError(f"The steering angle given is out of range: {steering_angle} deg")
 
     for i in range(RACK_DISPLACEMENT_LOOKUP.shape[0]):
         # Current angle is bigger
@@ -96,7 +97,7 @@ def rad2rackDisplacement(steering_angle: float) -> float:
 
         # Found a smaller angle, do linear interpolation
         rack_displacement = RACK_DISPLACEMENT_LOOKUP[i-1,0] + (steering_angle - RACK_DISPLACEMENT_LOOKUP[i-1,1]) * (RACK_DISPLACEMENT_LOOKUP[i,0] - RACK_DISPLACEMENT_LOOKUP[i-1,0]) / (RACK_DISPLACEMENT_LOOKUP[i,1] - RACK_DISPLACEMENT_LOOKUP[i-1,1])
-        return rack_displacement
+        return float(rack_displacement)
 
 def rackDisplacement2rad(displacement: float) -> float:
     '''
@@ -120,7 +121,7 @@ def rackDisplacement2rad(displacement: float) -> float:
 
         # Output should be in rad, so transform output angle
         wheel_angle = wheel_angle * pi/180 
-        return wheel_angle
+        return float(wheel_angle)
 
 
 ### --------------------------- Base Message Class --------------------------- ###
@@ -160,13 +161,13 @@ class CanInterfaceMessage():
             # If it is from CanBus process it and send it to ROS
             
             if len(received_message) != self.byte_size + 3:
-                raise ValueError("Received message has invalid size")
+                raise ValueError(f"Received message has invalid size {self}")
             received_id = int.from_bytes(received_message[0:2], byteorder='big', signed=False)
             received_byte_size = int.from_bytes(received_message[2:3], byteorder='big', signed=False)
 
             # Checks that the received message is valid
             if received_id != self.can_id: raise ValueError('Received message id does not match the default value')
-            if received_byte_size != self.byte_size: raise ValueError('Received message id does not match the default value')
+            if received_byte_size != self.byte_size: raise ValueError(f'Received message id does not match the default value {received_byte_size}')
 
             self._can_msg = received_message[3:]
             return
@@ -219,11 +220,16 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
             self._ros_msg.speed_actual = 0
             self._ros_msg.speed_target = 0
 
-        temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
+        # Steering Limiter
+        try:
+            temp = rad2rackDisplacement(self._ros_msg.steering_angle_target)
+        except ValueError:
+            temp = 23.5 * self._ros_msg.steering_angle_target / abs(self._ros_msg.steering_angle_target)
+
         out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
         # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
         out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
-        if self._ros_msg.brake_pressure_target: out_msg[5] = SERVICE_BRAKE_TARGET
+        if self._ros_msg.brake_pressure_target: out_msg[5] = self.node_handle.get_parameter('service_target_pressure').value
         else: out_msg[5] = 0
 
         # Speed Actual and speed target
@@ -258,7 +264,7 @@ class SystemHealthMsg(CanInterfaceMessage):
 
         # Set lap counter and dv-state flags
         dv_state = self._ros_msg.dv_status.id
-        if dv_state == DriverlessStatus.LV_ON:
+        if dv_state == DriverlessStatus.LV_ON or dv_state == DriverlessStatus.STARTUP:
             state = 0x00
         elif dv_state == DriverlessStatus.MISSION_SELECTED:
             state = 0x01
@@ -277,7 +283,7 @@ class SystemHealthMsg(CanInterfaceMessage):
             self.node_handle.get_logger().error(f"Unknown DV State received: {dv_state}")
             state = 0x0F
         
-        if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
+        # if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
         out_msg[1] = (self._ros_msg.lap_counter << 4) | state
 
         out_msg[2] = self._ros_msg.cones_count_actual
@@ -307,8 +313,8 @@ class SystemHealthMsg(CanInterfaceMessage):
         # Get the CPU temperature reading and set the corresponding byte
         try:
             with open("/sys/class/thermal/thermal_zone0/temp", "r") as file:
-                pc_temp = file.read()
-                out_msg[7] = int(pc_temp)/1000
+                pc_temp = file.read().strip()
+                out_msg[7] = int(int(pc_temp)/1000)
         except Exception:
             self.node_handle.get_logger().error(f"{Exception}")
             out_msg[7] = 0
@@ -342,7 +348,7 @@ class AsStatusMsg(CanInterfaceMessage):
         elif received_status == 0x10:
             ros_msg.id = AutonomousStatus.AS_EMERGENCY
             ros_msg.label = "AS_EMERGENCY"
-            self.node_handle._shuting_down = True
+            # self.node_handle._shuting_down = True
         else:
             self.node_handle.get_logger().error(f"Invalid AS Status received: {received_status}")
             ros_msg.id = 0
@@ -359,11 +365,11 @@ class MissionMsg(CanInterfaceMessage):
     def handle_mission(self) -> bool:
         mission_confirmed = False
         mission_byte = int.from_bytes(self._can_msg, byteorder='big')
-        self.node_handle.get_logger().info(f"{mission_byte}")
+        # self.node_handle.get_logger().info(f"{mission_byte}")
         bits = []
         for bit in range(8):
             bits.append(get_bit(mission_byte, bit))
-        self.node_handle.get_logger().info(f"{bits}")
+        # self.node_handle.get_logger().info(f"{bits}")
         is_locked = bits[self.LOCKED]
         ones = bits.count(True) - is_locked
         
@@ -409,7 +415,7 @@ class MissionMsg(CanInterfaceMessage):
 
 class SensorVariablesMsg(CanInterfaceMessage):
     can_id = 0x300
-    byte_size = 6
+    byte_size = 4
     msg_type = RxVehicleSensors
 
     def to_ROS(self) -> msg_type:
@@ -420,8 +426,8 @@ class SensorVariablesMsg(CanInterfaceMessage):
         msg.motor_torque_actual = motor_torque
 
         # Set Brake Hydraulic Pressure
-        msg.brake_pressure_front = int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False)
-        msg.brake_pressure_rear = int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False)
+        msg.brake_pressure_front = float(int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False))
+        msg.brake_pressure_rear = float(int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False))
 
         return msg
 
@@ -444,13 +450,16 @@ class WheelEncodersMsg(CanInterfaceMessage):
 
 class SteeringAngleMsg(CanInterfaceMessage):
     can_id = 0x05
-    byte_size = 4
+    byte_size = 2
     msg_type = RxSteeringAngle
 
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
-        temp = int.from_bytes(self._can_msg[0:5], byteorder='little', signed=True) * (360/(2*4096)) / 3.17 / 66     #[mm rack]
-        msg.steering_angle = rackDisplacement2rad(temp)
+        temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
+        try:
+            msg.steering_angle = rackDisplacement2rad(temp)
+        except ValueError:
+            msg.steering_angle = rackDisplacement2rad(24 * temp/abs(temp))
         return msg
 
 

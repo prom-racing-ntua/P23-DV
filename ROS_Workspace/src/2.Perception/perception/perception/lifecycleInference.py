@@ -36,7 +36,6 @@ class InferenceLifecycleNode(Node):
         self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.6, iou=0.35)
         # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
         self.smallModel = initKeypoint(self.smallKeypointsModelPath)
-        self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath)
 
         # Setup Message Transcoder
         self.bridge = CvBridge()
@@ -71,7 +70,7 @@ class InferenceLifecycleNode(Node):
     def on_cleanup(self, state: State) -> TransitionCallbackReturn:
         # Cleanup Models
         self.publishing = False
-        del self.yoloModel, self.smallModel, self.largeModel
+        del self.yoloModel, self.smallModel
         self.destroy_publisher(self.publisher_)
 
         self.get_logger().warn("\n-- Inference Un-Configured!")
@@ -84,7 +83,7 @@ class InferenceLifecycleNode(Node):
             self.get_logger().info("\n-- Inference Shutdown!")
             return TransitionCallbackReturn.SUCCESS
 
-        del self.yoloModel, self.smallModel, self.largeModel
+        del self.yoloModel, self.smallModel
         self.destroy_publisher(self.publisher_)
 
         self.get_logger().info("\n-- Inference Shutdown!")
@@ -93,7 +92,6 @@ class InferenceLifecycleNode(Node):
     def listener_callback(self, msg):
         if not self.publishing:
             return
-        
         try:
             # Get data from message
             globalIndex = msg.global_index
@@ -106,18 +104,19 @@ class InferenceLifecycleNode(Node):
             # Perform Perception Pipeline
             inferenceTiming = time.time()
             results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True)
+            # self.get_logger().info(f"{cameraOrientation} results: {len(results)}")
             # self.get_logger().info(f"Padding Time and Inference Time {inferenceTime[0], inferenceTime[1]}")
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
-                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 200, 3)
+                smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
                 keypointsPredictions = runKeypoints(smallConesList, self.smallModel)
                 finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
                 try:
                     # This sometimes throughs an error,don't know why
                     rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
                 except ValueError:
-                    self.get_logger().error(f"No cones found from {cameraOrientation} camera")
+                    self.get_logger().error(f"Keypoints could not be determined from {cameraOrientation} camera")
                     return
                 
                 # Send message to SLAM Node
@@ -130,7 +129,6 @@ class InferenceLifecycleNode(Node):
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
-                # self.get_logger().info(f"Inference Time (including keypoints) {inferenceTiming}")
                 self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):

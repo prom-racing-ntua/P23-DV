@@ -19,7 +19,10 @@ def generate_launch_description():
         Node(
             package='perception',
             executable='inference',
-            name='inference_node'
+            name='inference_node',
+            emulate_tty=True,
+            output='screen'
+
         ),
         Node(
             package='perception',

@@ -82,7 +82,7 @@ private:
     p23::Mission currentMission;
     p23::AS_Status currentAsStatus;
     p23::DV_Status currentDvStatus;
-    bool missionLocked, missionFinished, pcError;
+    bool missionLocked, missionFinished, pcError, pcToBeShutdown;
 
     // Standstill variables
     bool standstill;

@@ -1,7 +1,7 @@
 /acquisition_left:
   ros__parameters:
     serialNumber: "KE0220040188"
-    exposureTime: 2000
+    exposureTime: 1000
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50
@@ -13,7 +13,7 @@
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220030138"
-    exposureTime: 2000
+    exposureTime: 1000
     autoExposure: False
     expectedGrayValue: 50
     ROIx: 1280

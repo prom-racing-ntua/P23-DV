@@ -36,7 +36,7 @@ class Camera:
             self.cam.ExposureTime.set(self.exposureTime)
         
         # Set Expected Gray Value
-        self.cam.ExpectedGrayValue.set(self.expectedGrayValue)
+        # self.cam.ExpectedGrayValue.set(self.expectedGrayValue)
 
         # Set TriggerMode to Trigger
         self.cam.TriggerMode.set(gx.GxTriggerSourceEntry.SOFTWARE)
