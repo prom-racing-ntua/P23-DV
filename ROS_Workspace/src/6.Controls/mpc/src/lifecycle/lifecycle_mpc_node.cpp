@@ -43,15 +43,15 @@ namespace mpc {
 
     void LifecycleMpcHandler::declareParameters() {
         declare_parameter<bool>("simulation",false);
-        declare_parameter<std::string>("mission","skidpad");
-        declare_parameter<float>("v_limit",11.0);
-        declare_parameter<int>("total_laps",5);
-        declare_parameter<float>("s_interval",0.1);
+        declare_parameter<std::string>("mission","autox");
+        declare_parameter<float>("v_limit",6.0);
+        declare_parameter<int>("total_laps",2);
+        declare_parameter<float>("s_interval",0.2);
         declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);
         declare_parameter<float>("F_init",300.0);
         declare_parameter<float>("node_freq",40.0);
-        declare_parameter<float>("s_space_max",0.3);
+        declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
     }
 
@@ -135,8 +135,8 @@ namespace mpc {
             mpc_solver.callSolver(global_int);
             mpc_solver.generateOutput();         
             //define message to ROS2
-            mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
-            mpc_msg.speed_actual = mpc_solver.output_struct.speed_target;
+            mpc_msg.speed_target = mpc_solver.output_struct.speed_target*3.6;
+            mpc_msg.speed_actual = mpc_solver.output_struct.speed_actual*3.6;
             mpc_msg.motor_torque_target = mpc_solver.output_struct.motor_torque_target;
             mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
             mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
@@ -145,7 +145,7 @@ namespace mpc {
         }
         std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
         RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
-        RCLCPP_INFO(this->get_logger(), "Exitflag is: %1i", mpc_solver.exitflag);
+        RCLCPP_INFO(this->get_logger(), "Publishing target speed: %1i" " and actual speed: %1i" "",mpc_msg.speed_target, mpc_msg.speed_actual);
         mpc_publisher_->publish(mpc_msg);
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;

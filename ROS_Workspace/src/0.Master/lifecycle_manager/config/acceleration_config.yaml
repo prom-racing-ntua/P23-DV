@@ -156,7 +156,7 @@
     simulation: false
     mission: "accel"
     total_laps: 1
-    v_limit: 17.5
+    v_limit: 18.0
     node_freq: 40
     s_interval: 0.2
     distance_safe: 1.0

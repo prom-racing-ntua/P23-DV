@@ -558,15 +558,16 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         if(X[7]>29.5/57.2958) X[7] = 29.5/57.2958;
         if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.2958);
         if(!brake_flag) {
-            output_struct.speed_target = (int)(5.0);
-            output_struct.speed_actual = (int)(vel_struct.velocity_x);
+            output_struct.speed_target = params_array(1,3);
+            output_struct.speed_actual = vel_struct.velocity_x;
             output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
             output_struct.steering_angle_target = (float)(X[7]);
             output_struct.brake_pressure_target = (bool)(0);
+            std::cout << "velocity values on output struct of solver are: " << output_struct.speed_target << " " << output_struct.speed_actual << std::endl;
         }
         else { 
-            output_struct.speed_target = (int)(5.0);
-            output_struct.speed_actual = (int)(vel_struct.velocity_x);
+            output_struct.speed_target = (int)params_array(1,3);
+            output_struct.speed_actual = (int)vel_struct.velocity_x;
             output_struct.motor_torque_target = (float)(0.0);
             output_struct.steering_angle_target = (float)(X[7]);
             output_struct.brake_pressure_target = (bool)(1);
