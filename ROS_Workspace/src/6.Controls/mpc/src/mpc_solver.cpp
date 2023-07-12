@@ -133,7 +133,7 @@ void MpcSolver::UpdateFromLastIteration() {
         X[3] = vel_struct.velocity_x;
         X[4] = vel_struct.velocity_y;
         X[5] = vel_struct.yaw_rate;
-        if(mission_!="skidpad") lap_counter = lap_counter_official;
+        if(mission_!="skidpad" or mission_!="autox") lap_counter = lap_counter_official;
     }
     std::cout << "pose at start is: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
     std::cout << "velocity at start is: " << X[3] << " " << X[4] << " " << X[5] << std::endl; 
@@ -283,11 +283,11 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
                 double step_temp = ds_vector[i-1]*dt;
-                if(mission_=="trackdrive") step_temp = 0.15;
+                if(mission_=="trackdrive") step_temp = 0.1;
                 // if(mission_=="skidpad") step_temp = 0.1;
-                if(mission_=="skidpad") step_temp = 0.15;
-                if(mission_=="autox") step_temp = 0.2;
-                if(mission_=="accel") step_temp = 0.2; //stathero
+                if(mission_=="skidpad") step_temp = 0.1;
+                if(mission_=="autox") step_temp = 0.15;
+                if(mission_=="accel") step_temp = 0.1; //stathero(0.2 normally)
                 // s_array_final[i] = s_array_final[i-1] +  s_interval_;
                 if(step_temp>s_space_max) step_temp = s_space_max;
                 if(step_temp<s_space_min) step_temp = s_space_min;
@@ -538,6 +538,10 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         //dF ddelta dindex
         if(exitflag==1) for(int k = 0; k<3; k++) U[k]=output.x02[k];
         else for(int k = 0; k<3; k++) U[k]=0.0;
+        if(emergency and (exitflag!=1)) {
+            finish_flag=1;
+            brake_flag=1;
+        }
         //writeLookaheadArray1();
         if(mission_!="autox") writeLookaheadArray2();        
         //define message to ROS2
@@ -547,18 +551,18 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         //     X[7] = 0.0; 
         //     U[1] = 0.0;
         // }
-        if(finish_flag==1 and mission_!="skidpad" ) X[7]=steer_last;
+        else if(finish_flag==1 and mission_!="skidpad" ) X[7]=steer_last;
         if(brake_flag==1) { //just no steering when entering braking for all events
             X[7] = 0.0; 
             U[1] = 0.0;
         } 
         checkReliability();
-        if(X[6]>2000.0) X[6]=2000.0;
-        if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
-        if(X[7]>29.5/57.2958) X[7] = 29.5/57.2958;
-        if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.2958);
+        if(X[6]>F_max) X[6]=F_max; 
+        if(X[6]<F_min) X[6]=F_min; 
+        if(X[7]>30.0/57.2958) X[7] = 30.0/57.2958;
+        if(X[7]<-(30.0/57.2958)) X[7] = -(30.0/57.2958);
         if(!brake_flag) {
-            output_struct.speed_target = params_array(1,3);
+            output_struct.speed_target = (int)params_array(1,3);
             output_struct.speed_actual = vel_struct.velocity_x;
             output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
             output_struct.steering_angle_target = (float)(X[7]);
@@ -600,7 +604,8 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             printf("\n\nFORCESNLPsolver returned optimal solution at step %d. Exiting.\n", global_int);
         }
         else {
-            std::cout << "something went wrong. Needs to be handled" << std::endl;
+            brake_flag=1;
+            std::cout << "Starting to brake" << std::endl;
         }
         return exitflag;
     }

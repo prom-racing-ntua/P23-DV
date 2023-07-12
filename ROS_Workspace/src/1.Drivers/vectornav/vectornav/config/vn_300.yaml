@@ -26,13 +26,13 @@ vn_300:
       errorMode: 1                     # ERRORMODE_SEND
       # Gps antenna offset and compass baseline
       GpsAntennaOffset: 
-        x: -0.371
+        x: -0.36
         y: +0.0
-        z: -0.987
+        z: -0.22
       GpsBaselinePos: 
-        x: +0.694
+        x: +0.6
         y: +0.0
-        z: +0.543
+        z: +0.22
       GpsBaselineUncertainty: 
         x: 0.0254
         y: 0.0254

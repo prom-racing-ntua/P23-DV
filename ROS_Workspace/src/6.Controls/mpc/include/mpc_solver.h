@@ -164,6 +164,8 @@ class MpcSolver {
         float s_interval_;
         float spline_resolution;
         float F_init;
+        float F_max;
+        float F_min;
         float s_space_max;
         float s_space_min;
         int exitflag = 0;

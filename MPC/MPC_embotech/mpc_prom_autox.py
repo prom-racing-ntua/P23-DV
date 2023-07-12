@@ -202,8 +202,8 @@ def obj(z,current_target):
             + 1e2*(z[6]-current_target[3])**2
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
-            + 8e2*z[1]**2 #penalty on delta,ddelta
-            + 8e2*z[10]**2
+            + 5e2*z[1]**2 #penalty on delta,ddelta
+            + 5e2*z[10]**2
             + 1e-3*(sar**2)
             # + 1e-3*(dsa**2)MPC/MPC_embotech/mpc_prom_simple.py
             + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
@@ -221,7 +221,8 @@ def constr(z,current_target):
     Ffz,Frz = getFz(z)
     Fry = getFy(Frz,sar)
     a,b = getEllipseParams(Frz)
-    constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    # constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    constr1 = (z[6]-current_target[3])**2 #velocity constraint
     constr2 = (z[8]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
     constr3 = saf
     return (constr1,constr2,constr3) 

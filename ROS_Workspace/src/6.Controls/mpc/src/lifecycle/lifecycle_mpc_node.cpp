@@ -44,12 +44,14 @@ namespace mpc {
     void LifecycleMpcHandler::declareParameters() {
         declare_parameter<bool>("simulation",false);
         declare_parameter<std::string>("mission","autox");
-        declare_parameter<float>("v_limit",6.0);
+        declare_parameter<float>("v_limit",5.0);
         declare_parameter<int>("total_laps",2);
-        declare_parameter<float>("s_interval",0.2);
-        declare_parameter<float>("distance_safe",1.0);
+        declare_parameter<float>("F_max",500.0);
+        declare_parameter<float>("F_min",-500.0);
+        declare_parameter<float>("s_interval",0.15);
+        declare_parameter<float>("distance_safe",0.9);
         declare_parameter<float>("emergency_forward",1.0);
-        declare_parameter<float>("F_init",300.0);
+        declare_parameter<float>("F_init",300.0); //18Nm
         declare_parameter<float>("node_freq",40.0);
         declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
@@ -63,6 +65,8 @@ namespace mpc {
         mpc_solver.s_interval_ = get_parameter("s_interval").as_double();
         mpc_solver.distance_safe_ = get_parameter("distance_safe").as_double();
         mpc_solver.emergency_forward_ = get_parameter("emergency_forward").as_double();
+        mpc_solver.F_max = get_parameter("F_max").as_double();
+        mpc_solver.F_min = get_parameter("F_min").as_double();
         mpc_solver.F_init = get_parameter("F_init").as_double();
         mpc_solver.v_limit_ = get_parameter("v_limit").as_double();
         node_freq_ = get_parameter("node_freq").as_double();
