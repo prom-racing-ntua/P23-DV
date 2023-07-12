@@ -455,7 +455,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     */
 
     // min_radius = model.m * v_x * v_x / rem;
-    double mx_head = 3.14159 * 31.2 / 180;
+    double mx_head = 3.14159 * 20 / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
@@ -513,6 +513,21 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     tg.x = act_target.x();
     tg.y = act_target.y();
     pub_target->publish(tg);
+
+    /* EXTRA SAFETY CHECKS */
+    if(this->v_x > 1.5 * projection.first)
+    {
+        for_publish.motor_torque_target = 0;
+        for_publish.brake_pressure_target = 1;
+    }
+    if(this->v_x > 2 * projection.first)
+    {
+        for_publish.steering_angle_target = 0;
+        for_publish.motor_torque_target = 0;
+        for_publish.brake_pressure_target = 1;
+        pub_actuators->publish(for_publish);
+        exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preffered
+    }
 
     pub_actuators->publish(for_publish);
     std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << (is_end && v_x < safe_speed_to_break) ? 1 : 0;
