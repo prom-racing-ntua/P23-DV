@@ -202,26 +202,26 @@ def obj(z,current_target):
             + 2e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             + 1e-5*(z[5]-current_target[2])**2 #dphi gap
             + 5e2*(z[6]-current_target[3])**2
-            + 1e2*(z[0]/1000)**2 # penalty on input F,dF
-            + 1e2*(z[9]/1000)**2
-            + 1e3*z[1]**2 #penalty on delta,ddelta
-            + 1e3*z[10]**2
+            + 1e0*(z[0]/1000)**2 # penalty on input F,dF
+            + 1e0*(z[9]/1000)**2
+            + 5e2*z[1]**2 #penalty on delta,ddelta
+            + 5e2*z[10]**2
             + 1e-3*(sar**2)
-            + 1e-3*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
+            + 1e-5*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             - 1e-1*(z[6])
             - 1e-3*(z[11]/INDEX_MAX)
             - 1e-3*(z[2]/INDEX_MAX))
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
-    z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta, index]
+    z = [dF,ddelta,dindex,xPos,yPos,phi, vx, vy, r, F, delta, index]
     current_target = point on path that is to be headed for
     """
     saf,sar = getSas(z) 
     Ffz,Frz = getFz(z)
     Fry = getFy(Frz,sar)
     a,b = getEllipseParams(Frz)
-    constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    constr1 = (z[3]-current_target[0])**2 + (z[4]-current_target[1])**2 #inside track constraint
     constr2 = (z[8]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
     constr3 = saf
     return (constr1,constr2,constr3) 
@@ -335,7 +335,7 @@ def generate_pathplanner():
     model.ineq = constr
     # model.hu = np.array([+np.inf,+1.0,+0.3])
     # model.hl = np.array([-np.inf,-np.inf,-0.3])
-    model.hu = np.array([+np.inf,+1.0,+np.inf])
+    model.hu = np.array([+np.inf,+np.inf,+np.inf]) 
     model.hl = np.array([-np.inf,-np.inf,-np.inf])
     #track - tyres - sar
     # model.hu = np.array([2.0,1.0,0.15])

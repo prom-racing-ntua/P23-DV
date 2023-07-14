@@ -60,7 +60,7 @@ void MpcSolver::getF(double X[X_SIZE], double U[U_SIZE], double (&kappa)[X_SIZE]
     double Ffy = getFy(Fz.Ffz,sa.saf);
     double Fdrag = 0.5*CdA*p_air*std::pow(X[3],2) + 0.03*(Fz.Frz+Fz.Ffz);
     double beta = std::atan(l_r/(l_f + l_r) * std::tan(X[7]));
-    l_a = 1; //ignoring model
+    l_a = 1; //ignoring kinematic model
 
     kappa[0] = (1)*(X[3]*std::cos(X[2]) - X[4]*std::sin(X[2])) + (0)*(X[3]*std::cos(X[2] + beta));  
     kappa[1] = (1)*(X[3]*std::sin(X[2]) + X[4]*std::cos(X[2])) + (0)*(X[3]*std::sin(X[2] + beta));
@@ -133,7 +133,7 @@ void MpcSolver::UpdateFromLastIteration() {
         X[3] = vel_struct.velocity_x;
         X[4] = vel_struct.velocity_y;
         X[5] = vel_struct.yaw_rate;
-        if(mission_!="skidpad") lap_counter = lap_counter_official;
+        if(mission_!="skidpad" or mission_!="autox") lap_counter = lap_counter_official;
     }
     std::cout << "pose at start is: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
     std::cout << "velocity at start is: " << X[3] << " " << X[4] << " " << X[5] << std::endl; 
@@ -283,11 +283,11 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             if(emergency || global_int==-1 ) s_array_final[i] = s_array_final[i-1] + s_interval_;
             else {
                 double step_temp = ds_vector[i-1]*dt;
-                if(mission_=="trackdrive") step_temp = 0.15;
+                if(mission_=="trackdrive") step_temp = 0.1;
                 // if(mission_=="skidpad") step_temp = 0.1;
-                if(mission_=="skidpad") step_temp = 0.15;
-                if(mission_=="autox") step_temp = 0.2;
-                if(mission_=="accel") step_temp = 0.2; //stathero
+                if(mission_=="skidpad") step_temp = 0.1;
+                if(mission_=="autox") step_temp = 0.15;
+                if(mission_=="accel") step_temp = 0.1; //stathero(0.2 normally)
                 // s_array_final[i] = s_array_final[i-1] +  s_interval_;
                 if(step_temp>s_space_max) step_temp = s_space_max;
                 if(step_temp<s_space_min) step_temp = s_space_min;
@@ -419,11 +419,13 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             }
         }
         if(mission_=="autox") {
-            if(critical_dist<l_f and lap_lock==0) {
-                lap_counter++;
+            if(critical_dist<0.1 and lap_lock==0) {
                 lap_lock=1;
             }
-            if(critical_dist > l_f) lap_lock=0;
+            if(critical_dist > l_f) {
+                lap_counter++;
+                lap_lock=0;
+        }
         }
         if(mission_=="trackdrive") {
             if(critical_dist<l_f and lap_lock==0) {
@@ -538,6 +540,10 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         //dF ddelta dindex
         if(exitflag==1) for(int k = 0; k<3; k++) U[k]=output.x02[k];
         else for(int k = 0; k<3; k++) U[k]=0.0;
+        if(emergency and (exitflag!=1)) {
+            finish_flag=1;
+            brake_flag=1;
+        }
         //writeLookaheadArray1();
         if(mission_!="autox") writeLookaheadArray2();        
         //define message to ROS2
@@ -547,32 +553,62 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         //     X[7] = 0.0; 
         //     U[1] = 0.0;
         // }
-        if(finish_flag==1 and mission_!="skidpad" ) X[7]=steer_last;
-        if(brake_flag==1) { //just no steering when entering braking for all events
+        else if(finish_flag==1 and mission_!="skidpad" ) X[7]=steer_last;
+        if(finish_flag==1) { //just no steering when finishing an event
             X[7] = 0.0; 
             U[1] = 0.0;
         } 
         checkReliability();
-        if(X[6]>2000.0) X[6]=2000.0;
-        if(X[6]<-2000.0) X[6]=-2000.0; //to be added as parameter
-        if(X[7]>29.5/57.2958) X[7] = 29.5/57.2958;
-        if(X[7]<-(29.5/57.2958)) X[7] = -(29.5/57.2958);
-        if(!brake_flag) {
-            output_struct.speed_target = (int)(5.0);
-            output_struct.speed_actual = (int)(vel_struct.velocity_x);
-            output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
-            output_struct.steering_angle_target = (float)(X[7]);
-            output_struct.brake_pressure_target = (bool)(0);
-        }
-        else { 
-            output_struct.speed_target = (int)(5.0);
-            output_struct.speed_actual = (int)(vel_struct.velocity_x);
+        if(X[6]>F_max) X[6]=F_max; 
+        if(X[6]<F_min) X[6]=F_min; 
+        if(X[7]>30.0/57.2958) X[7] = 30.0/57.2958;
+        if(X[7]<-(30.0/57.2958)) X[7] = -(30.0/57.2958);
+        if(brake_flag) { 
+            output_struct.speed_target = (int)params_array(1,3);
+            output_struct.speed_actual = (int)vel_struct.velocity_x;
             output_struct.motor_torque_target = (float)(0.0);
             output_struct.steering_angle_target = (float)(X[7]);
-            output_struct.brake_pressure_target = (bool)(1);
+            output_struct.brake_pressure_target = (float)(30.0); //constant braking
         }
+        else {
+            if(regen) {
+                output_struct.speed_target = (int)params_array(1,3);
+                output_struct.speed_actual = vel_struct.velocity_x;
+                output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
+                output_struct.steering_angle_target = (float)(X[7]);
+                output_struct.brake_pressure_target = (float)(0.0);            
+            }
+            else {
+                if(X[6] >= 0.0) {
+                    output_struct.speed_target = (int)params_array(1,3);
+                    output_struct.speed_actual = vel_struct.velocity_x;
+                    output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
+                    output_struct.steering_angle_target = (float)(X[7]);
+                    output_struct.brake_pressure_target = (float)(0.0);
+                }
+                else {
+                    output_struct.speed_target = (int)params_array(1,3);
+                    output_struct.speed_actual = vel_struct.velocity_x;
+                    output_struct.motor_torque_target = (float)(0.0);
+                    output_struct.steering_angle_target = (float)(X[7]);
+                    float press_out = convertForceToPressure(X[6]);
+                    output_struct.brake_pressure_target = (float)(press_out);
+                }
+            }
+        }
+        std::cout << "Frx is: " << X[6] << std::endl;
         std::cout << "U final array is: " << U[0] << " " << U[1] << " " << U[2] << std::endl;
         std::cout << "solver_s is: " << output.x02[11] << std::endl;
+    }
+
+    float MpcSolver::convertForceToPressure(float Frx_) {
+        // frx_ = - pressure_input*piston_area*constants.mi_disk*constants.N_rear*radius_ratio_r;
+		// ffx_ = - pressure_input*piston_area*constants.mi_disk*constants.N_front*radius_ratio_f;
+        float piston_area = 3.14159*std::pow(d_piston/2,2);
+        float radius_ratio_r =  (R_disk_r/Rw);
+        float pressure_wanted = std::abs(Frx_)/(piston_area*mi_disk*N_rear*radius_ratio_r*100000);
+        std::cout << "converting Frx " << Frx_ << " to pressure " << pressure_wanted << std::endl;
+        return pressure_wanted;
     }
 
     void MpcSolver::checkReliability() {
@@ -599,7 +635,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             printf("\n\nFORCESNLPsolver returned optimal solution at step %d. Exiting.\n", global_int);
         }
         else {
-            std::cout << "something went wrong. Needs to be handled" << std::endl;
+            std::cout << "Checking if im also out of track..." << std::endl;
         }
         return exitflag;
     }

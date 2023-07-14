@@ -114,6 +114,7 @@ class MpcSolver {
         void Initialize_all_local();
         void UpdateFromLastIteration();
         PointsData getSplineDataLocal(std::vector<double>parameters);
+        float convertForceToPressure(float Frx_);
         void generateFirstPoint();
         void generateFirstPointUnknown();
         int callSolver(int global_int);
@@ -150,6 +151,7 @@ class MpcSolver {
         int ellipse_counter=0;
         int lap_counter_slam_;
         bool emergency;
+        bool regen;
         float sol;
         float dt;
         int closest_index_eucl;
@@ -164,6 +166,8 @@ class MpcSolver {
         float s_interval_;
         float spline_resolution;
         float F_init;
+        float F_max;
+        float F_min;
         float s_space_max;
         float s_space_min;
         int exitflag = 0;
@@ -205,6 +209,13 @@ class MpcSolver {
         const double ts = 0.025;
         const double fr_par = 0.03;
         const double wing = 0.874;
+        //brake related parameters
+        const int N_front = 4;
+        const int N_rear = 2;
+        const double d_piston = 0.025;
+        const double R_disk_f = 0.079;
+        const double R_disk_r = 0.0735;
+        const double mi_disk = 0.6;
         //for dynamic model
         //compute l_a
         const double umin=4.0;

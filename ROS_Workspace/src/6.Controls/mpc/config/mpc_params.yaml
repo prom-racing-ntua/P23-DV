@@ -3,7 +3,9 @@ mpc:
     simulation: true
     mission: "skidpad"
     total_laps: 5
-    v_limit: 12.5
+    v_limit: 4.0
+    F_max: 500.0
+    F_min: -500.0
     node_freq: 40.0
     s_interval: 0.25
     distance_safe: 1.0
