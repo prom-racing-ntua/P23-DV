@@ -194,8 +194,8 @@ namespace ns_vel_est
         else
         {
             measurement_vector_(ObservationVyaw) = yaw_rate_vec(2);
-            measurement_vector_(ObservationAx) = acceleration_vec(0);
-            measurement_vector_(ObservationAy) = acceleration_vec(1);
+            measurement_vector_(ObservationAx) = acceleration_vec(1);
+            measurement_vector_(ObservationAy) = -acceleration_vec(0);
             // Set the update vector indices
             updated_sensors_[Accelerometer] = true;
             updated_sensors_[Gyroscope] = true;
@@ -217,7 +217,7 @@ namespace ns_vel_est
         else \
             measurement_vector_(ObservationVhall_front) = front_avg;
 
-        updated_sensors_[FrontWheelEncoders] = true;
+        updated_sensors_[FrontWheelEncoders] = false;
 
         // --- Rear Wheels
         double rear_right_rpm{ static_cast<double>(msg->rear_right) };
@@ -233,13 +233,13 @@ namespace ns_vel_est
         else \
             measurement_vector_(ObservationVhall_rear) = rear_avg;
 
-        updated_sensors_[RearWheelEncoders] = true;
+        updated_sensors_[RearWheelEncoders] = false;
     }
 
     void LifecycleVelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {
-        // 3.17 is the gear ratio of the steering rack
+        // 3.17 is the gear ratio of the steering rack [from P22]
         // RCLCPP_INFO_STREAM(get_logger(), "Steering angle: " << static_cast<int>(msg->steering_angle));
-        input_vector_(InputSteering) = static_cast<double>(static_cast<int>(msg->steering_angle)) * M_PI / 180.0 / 3.17;       // converted to rad
+        input_vector_(InputSteering) = static_cast<double>(msg->steering_angle);       // converted to rad
     }
 
     // Loads the node parameters from the .yaml file

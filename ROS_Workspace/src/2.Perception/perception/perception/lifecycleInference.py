@@ -21,8 +21,11 @@ class InferenceLifecycleNode(Node):
         super().__init__('inference')
         self.yoloModelPath = yoloModel
         self.smallKeypointsModelPath = smallKeypointsModel
+        
         # Create a log file
-        self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
+        path = get_package_share_directory("perception")
+        testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+        self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
         self.get_logger().warn("\n-- Inference Node Created")
         
     def on_configure(self, state: State) -> TransitionCallbackReturn:
@@ -33,7 +36,7 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
 
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.6, iou=0.35)
+        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
         # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
         self.smallModel = initKeypoint(self.smallKeypointsModelPath)
 
@@ -113,8 +116,8 @@ class InferenceLifecycleNode(Node):
                 keypointsPredictions = runKeypoints(smallConesList, self.smallModel)
                 finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
                 try:
-                    # This sometimes throughs an error,don't know why
-                    rangeList, thetaList = zip(*finalCoords) # Idea from Alex T(s)afos
+                    # This sometimes throws an error,don't know why
+                    rangeList, thetaList = zip(*finalCoords)
                 except ValueError:
                     self.get_logger().error(f"Keypoints could not be determined from {cameraOrientation} camera")
                     return
@@ -148,7 +151,7 @@ def main(args=None):
     smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
-    
+    smallKeypointsModelPath
     # Spin inference node
     inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)

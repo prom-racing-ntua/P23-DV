@@ -216,7 +216,7 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
         if self.node_handle._shuting_down:
             self._ros_msg.steering_angle_target = 0
             self._ros_msg.motor_torque_target = 0
-            self._ros_msg.brake_pressure_target = False
+            self._ros_msg.brake_pressure_target = True
             self._ros_msg.speed_actual = 0
             self._ros_msg.speed_target = 0
 
@@ -348,7 +348,7 @@ class AsStatusMsg(CanInterfaceMessage):
         elif received_status == 0x10:
             ros_msg.id = AutonomousStatus.AS_EMERGENCY
             ros_msg.label = "AS_EMERGENCY"
-            # self.node_handle._shuting_down = True
+            self.node_handle._shuting_down = True
         else:
             self.node_handle.get_logger().error(f"Invalid AS Status received: {received_status}")
             ros_msg.id = 0

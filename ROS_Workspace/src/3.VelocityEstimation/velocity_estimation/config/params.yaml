@@ -28,17 +28,15 @@ velocity_estimation_node:
 
     # Sensor Positions
     vectornav-vn-200:
-      x: 0.00                   # [m]
+      x: 0.6461                 # [m]
       y: 0.00                   # [m]
-      yaw: -90.0                # [deg]
-      pitch: -0.621             # [deg]
-      roll: 12.588              # [deg]
+      pitch: 0.849             # [deg]
+      roll: 12.8364             # [deg]
     vectornav-vn-300:
-      x: -0.5262                # [m]
+      x: 0.4278                 # [m]
       y: 0.00                   # [m]
-      yaw: 0.0                  # [deg]
-      pitch: 11.092             # [deg]
-      roll: -0.053              # [deg]
+      pitch: 11.08213           # [deg]
+      roll: 0.05579             # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]

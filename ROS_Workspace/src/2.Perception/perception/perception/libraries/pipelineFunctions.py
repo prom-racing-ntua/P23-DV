@@ -17,10 +17,10 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
 
     if "v5" in modelpath:
-        yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=True)
+        yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=False)
         
     elif "v7" in modelpath:
-        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=True)
+        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
 
     yolo_model.agnostic = True
     yolo_model.conf = conf
@@ -110,12 +110,7 @@ def pitch_matrix(pitch):
                     [-np.sin(math.pi*pitch/180), 0, np.cos(math.pi*pitch/180)]])
 
 def rt_converter(camera, pnp_dist):
-    # X_COG = -76
-    # Y_COG = 0
-    # Z_COG = -105
-    X_COG = 0
-    Y_COG = 0
-    Z_COG = -19.95
+    X_COG = -95.94
 
     # Takes distance calculated by solvePnP and calculates range,theta from CoG based on the camera used
     if camera == 'left':
@@ -127,8 +122,8 @@ def rt_converter(camera, pnp_dist):
         cog2camera_rotation = cog2camera_pitch @ cog2camera_yaw
         
         x = -109.34 - X_COG     # X_COG = dist(front, cog)
-        y = -5.97 - Y_COG       # Y_COG = divergence from centerline
-        z = Z_COG
+        y = -5.97 
+        z = -105.34
         cog2camera_translation = np.array([[x], [y], [z]])
         camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
         cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation
@@ -147,8 +142,8 @@ def rt_converter(camera, pnp_dist):
         cog2camera_rotation = cog2camera_pitch @ cog2camera_yaw
         
         x = -109.34 - X_COG     # X_COG = dist(front, cog)
-        y = 5.97 - Y_COG       # Y_COG = divergence from centerline
-        z = Z_COG
+        y = 5.97 
+        z = -105.34
         cog2camera_translation = np.array([[x], [y], [z]])
         camera2cone_translation = np.array([[pnp_dist[2][0]], [pnp_dist[0][0]], [pnp_dist[1][0]]])
         cone_coords = (cog2camera_rotation @ camera2cone_translation) + cog2camera_translation

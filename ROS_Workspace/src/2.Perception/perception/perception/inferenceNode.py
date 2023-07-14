@@ -33,7 +33,9 @@ class InferenceNode(Node):
         self.yoloModel = yoloModel
         self.smallKeypointsModel = smallKeypointsModel
 
-        self.fp = open(f'testingLogs/Inference_log_file_{int(time.time())}.txt', 'w')
+        path = get_package_share_directory("perception")
+        testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+        self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
 
         # Setup Message Transcoder
         self.bridge = CvBridge()

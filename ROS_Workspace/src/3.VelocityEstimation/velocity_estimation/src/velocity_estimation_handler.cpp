@@ -227,6 +227,7 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
     Eigen::Matrix<double, 3, 1> acceleration_vec{};
     acceleration_vec << static_cast<double>(msg->accel.x), static_cast<double>(msg->accel.y), static_cast<double>(msg->accel.z);
     acceleration_vec = vn_200_rotation_matrix_ * acceleration_vec;
+    RCLCPP_INFO_STREAM(get_logger(), acceleration_vec);
 
     if (std::isnan(acceleration_vec(0)) or std::isnan(acceleration_vec(1)) or std::isnan(yaw_rate_vec(2)))
     {
@@ -234,9 +235,10 @@ void VelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup:
     }
     else
     {
+        // Not the proper way, but works for now...?
         measurement_vector_(ObservationVyaw) = yaw_rate_vec(2);
-        measurement_vector_(ObservationAx) = acceleration_vec(0);
-        measurement_vector_(ObservationAy) = acceleration_vec(1);
+        measurement_vector_(ObservationAx) = acceleration_vec(1);
+        measurement_vector_(ObservationAy) = -acceleration_vec(0);
         // Set the update vector indices
         updated_sensors_[Accelerometer] = true;
         updated_sensors_[Gyroscope] = true;
@@ -258,7 +260,7 @@ void VelocityEstimationHandler::wheelSpeedCallback(const custom_msgs::msg::RxWhe
     else \
         measurement_vector_(ObservationVhall_front) = front_avg;
 
-    updated_sensors_[FrontWheelEncoders] = true;
+    updated_sensors_[FrontWheelEncoders] = false;
 
     // --- Rear Wheels
     double rear_right_rpm{ static_cast<double>(msg->rear_right) };
@@ -274,7 +276,7 @@ void VelocityEstimationHandler::wheelSpeedCallback(const custom_msgs::msg::RxWhe
     else \
         measurement_vector_(ObservationVhall_rear) = rear_avg;
 
-    updated_sensors_[RearWheelEncoders] = true;
+    updated_sensors_[RearWheelEncoders] = false;
 }
 
 void VelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {
