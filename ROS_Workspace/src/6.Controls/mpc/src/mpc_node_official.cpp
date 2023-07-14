@@ -179,7 +179,7 @@ void MpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_m
         mpc_msg.speed_actual = (float)(0.0);
         mpc_msg.motor_torque_target = (float)(0.0);
         mpc_msg.steering_angle_target = (float)(0.0);
-        mpc_msg.brake_pressure_target = (bool)(0);
+        mpc_msg.brake_pressure_target = (float)(0.0);
     }
     else {
         if(global_int==-1) mpc_solver.Initialize_all_local();

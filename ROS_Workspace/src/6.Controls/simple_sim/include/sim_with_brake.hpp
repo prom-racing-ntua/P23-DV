@@ -47,6 +47,11 @@ struct Cone
         x(a), y(b), color(c) {}
 };
 
+
+struct Forces {
+    double ffx, frx;
+};
+
 class State
 {
 public:
@@ -116,7 +121,6 @@ class sim_node: public rclcpp::Node
     int idx_of_last_lap;
     int sent;
     int discipline;
-    bool brake_bool;
-
+    float brake_press;
 };
 }

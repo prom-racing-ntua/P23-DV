@@ -154,6 +154,7 @@
   ros__parameters:
     simulation: false
     mission: "trackdrive"
+    regen: true
     total_laps: 11
     v_limit: 13.0
     node_freq: 40.0
@@ -161,5 +162,7 @@
     distance_safe: 1.0
     emergency_forward: 1.0
     F_init: 300.0
+    F_max: 500.0
+    F_min: -500.0
     s_space_max: 0.5
     s_space_min: 0.1  

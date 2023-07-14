@@ -118,7 +118,9 @@ double State::v_y_next(double v_y, double a_y, double dt) const
 double State::calc_a_x(double frx, double ffx, double f_drag, double f_roll, double ffy, double d, double v_y, double r) const
 {
 	// std::cout<<frx<<" "<<f_drag<<" "<<d<<" "<<std::sin(d)<<" "<<ffy * std::sin(d)<<" "<<v_y<<" "<<r<<std::endl;
-	return (frx + ffx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;
+	double ax_print = (frx + ffx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;
+	std::cout << "frx, ffx and ax are: " << frx << " " << ffx << " " << ax_print << std::endl;
+	return (frx + ffx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;	
 }
 double State::calc_a_y(double fry, double ffx, double ffy, double d, double v_x, double r) const
 {
@@ -357,24 +359,24 @@ void sim_node::timer_callback()
 		3. if 2Hz map pub
 	*/
 
-	double f, ffx_, d, piston_area = 1e-3;
+	double frx_, ffx_, d, piston_area = 1e-3;
 	double dt_=1e-3;
 	for (int i = 0; i < 25; i++)
 	{
 		global_idx++;
-		if (int(torques.size()) - mot_d_ticks - 1 < 0)
-			f = 0;
-		else
-			f = torques[int(torques.size()) - mot_d_ticks - 1] * constants.gr * constants.eff / constants.R_wheel;
-		if (brake_bool){
+		if (brake_press>0.0) {
 			std::cout << "asking to brake..." << std::endl;
-			piston_area = 3.14159*std::pow(constants.d_piston/2,2);
-			double pressure_input = 10*10000;
+			double piston_area = 3.14159*std::pow(constants.d_piston/2,2);
+			double pressure_input = brake_press*10000;
 			double radius_ratio_f =  (constants.R_disk_f/constants.R_wheel);
 			double radius_ratio_r =  (constants.R_disk_r/constants.R_wheel);
-			f = - pressure_input*piston_area*constants.mi_disk*constants.N_rear*radius_ratio_r;
+			frx_ = - pressure_input*piston_area*constants.mi_disk*constants.N_rear*radius_ratio_r;
 			ffx_ = - pressure_input*piston_area*constants.mi_disk*constants.N_front*radius_ratio_f;
-			std::cout << "frx and ffx are: " << f << " " << ffx_ << std::endl;
+		}
+		else {
+			if (int(torques.size()) - mot_d_ticks - 1 < 0) frx_ = 0.0;
+			else frx_ = torques[int(torques.size()) - mot_d_ticks - 1] * constants.gr * constants.eff / constants.R_wheel;
+			ffx_ = 0.0;
 		}
 		if (int(steering.size()) - st_d_ticks - 1 < 0)
 		{
@@ -384,13 +386,10 @@ void sim_node::timer_callback()
 		else
 			d = steering[int(steering.size()) - st_d_ticks - 1];
 
-		if (last_d + 0.0005 < d)
-			last_d = last_d + 0.0005;
-		else if (last_d - 0.0005 > d)
-			last_d = last_d - 0.0005;
+		if (last_d + 0.0005 < d) last_d = last_d + 0.0005;
+		else if (last_d - 0.0005 > d) last_d = last_d - 0.0005;
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
-		state.next(dt_, f, ffx_, last_d);
-
+		state.next(dt_, frx_, ffx_, last_d);
 		if (lap_change() && global_idx - idx_of_last_lap > 2500)
 		{
 			std::cout << "----- Lap: " << ++state.lap << " -----" << std::endl;
@@ -408,7 +407,7 @@ void sim_node::timer_callback()
 	if (1 or global_idx % 25 == 0)
 	{
 		// std::cout << state.t << "\t" << state.v_x << "\t" << state.r << "\t" << f << "\t" << d << std::endl;
-		log << int(f) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
+		log << int(frx_) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
 		log << state;
 		
 		pos.x = add_noise(state.x);
@@ -523,12 +522,11 @@ void sim_node::timer_callback()
 	}
 	*/
 }
-void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg)
-{
+void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg) {
 	// std::cout << ">>> COMMAND <<<" << std::endl;
 	torques.push_back(msg->motor_torque_target);
 	steering.push_back(msg->steering_angle_target);
-	brake_bool = (bool)msg->brake_pressure_target;
+	brake_press = (float)msg->brake_pressure_target;
 	std::ofstream log2;
 	log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
 	if(steering.size()>1)log2<<steering[steering.size()-1] - steering[steering.size()-2]<<std::endl;

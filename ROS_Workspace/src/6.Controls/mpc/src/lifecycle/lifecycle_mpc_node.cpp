@@ -43,6 +43,7 @@ namespace mpc {
 
     void LifecycleMpcHandler::declareParameters() {
         declare_parameter<bool>("simulation",false);
+        declare_parameter<bool>("regen",false);
         declare_parameter<std::string>("mission","autox");
         declare_parameter<float>("v_limit",5.0);
         declare_parameter<int>("total_laps",2);
@@ -51,7 +52,7 @@ namespace mpc {
         declare_parameter<float>("s_interval",0.15);
         declare_parameter<float>("distance_safe",0.9);
         declare_parameter<float>("emergency_forward",1.0);
-        declare_parameter<float>("F_init",300.0); //18Nm
+        declare_parameter<float>("F_init",350.0); //20Nm
         declare_parameter<float>("node_freq",40.0);
         declare_parameter<float>("s_space_max",0.5);
         declare_parameter<float>("s_space_min",0.1);
@@ -61,6 +62,7 @@ namespace mpc {
         global_int=-1;
         mpc_solver.mission_ = get_parameter("mission").as_string();
         mpc_solver.simulation_= get_parameter("simulation").as_bool();
+        mpc_solver.regen = get_parameter("regen").as_bool();
         mpc_solver.generateTrackConfig();
         mpc_solver.s_interval_ = get_parameter("s_interval").as_double();
         mpc_solver.distance_safe_ = get_parameter("distance_safe").as_double();
@@ -120,7 +122,7 @@ namespace mpc {
             mpc_msg.speed_actual = (float)(0.0);
             mpc_msg.motor_torque_target = (float)(0.0);
             mpc_msg.steering_angle_target = (float)(0.0);
-            mpc_msg.brake_pressure_target = (bool)(0);
+            mpc_msg.brake_pressure_target = (float)(0.0);
         }
         else {
             if(global_int==-1) mpc_solver.Initialize_all_local();
@@ -157,7 +159,6 @@ namespace mpc {
         data_logger << "--,iteration"<<global_int<<",--\n";
         data_logger << mpc_solver.emergency_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
 }
-
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
         std::cout << "mpika path callback" << std::endl;
