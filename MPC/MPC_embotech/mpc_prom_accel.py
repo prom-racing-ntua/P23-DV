@@ -23,6 +23,8 @@ from scipy.linalg import solve_banded
 from scipy.sparse import diags
 from matplotlib.lines import Line2D
 from Trackdrive import cones_blue, cones_orange_big, cones_yellow
+from mpc_class_simple import State, continuous_dynamics
+
 
 #global params
 
@@ -50,7 +52,7 @@ wing = 0.874
 start = -0.3-l_f-wing
 final = start+2*75
 length = final-start  
-factor_bef=0.52
+factor_bef = 0.52
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
@@ -96,39 +98,41 @@ def Dataloader(txt):
     return data
 
 
-def continuous_dynamics(x, u):
-    """Defines dynamics of the car, i.e. equality constraints.
-    parameters:
-    state x = [xPos,yPos,phi, vx, vy, r, F, delta, index]
-    input u = [dF,ddelta, dindex]
-    """
-    temp1=casadi.fmax((x[3]-umin)/(umax-umin),0)
-    l_a=casadi.fmin(temp1,1)
+# def continuous_dynamics(x, u):
+#     """Defines dynamics of the car, i.e. equality constraints.
+#     parameters:
+#     state x = [xPos,yPos,phi, vx, vy, r, F, delta, index]
+#     input u = [dF,ddelta, dindex]
+#     """
+#     temp1=casadi.fmax((x[3]-umin)/(umax-umin),0)
+#     l_a=casadi.fmin(temp1,1)
+#     # saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
+#     # sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
+#     saf,sar = getSasWithState(x) 
+#     Ffz,Frz = getFzWithState(x)
+#     Ffy = getFy(Ffz,saf)
+#     Fry = getFy(Frz,sar)
 
-    # saf=casadi.arctan((x[4]+l_f*x[5])/np.sqrt(x[3]**2+1)) - x[7]
-    # sar=casadi.arctan((x[4]-l_r*x[5])/np.sqrt(x[3]**2+1))
-    saf,sar = getSasWithState(x) 
-    Ffz,Frz = getFzWithState(x)
-    Ffy = getFy(Ffz,saf)
-    Fry = getFy(Frz,sar)
+#     #friction forces
+#     Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
+#     state_ = State(x,u)
+#     print("loaded mdoel with values")
+#     print("State is",state_)
 
-    #friction forces
-    Fdrag = 0.5*CdA*pair*(x[3])**2 + 0.03*(Frz+Ffz)
-
-    #blending with changing lambda
-    beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
-    # xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
-    # ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
-    xdot = x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])
-    ydot = x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])
-    phidot = x[5]
-    vxdot = (1-l_a)*((x[6] - Fdrag)/ m) + (l_a)*((x[6] - Fdrag + Ffy*casadi.sin(x[7]) + m*x[4]*x[5])/ m)
-    vydot = (1-l_a)*((l_r/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))) + (l_a)*(((-x[3]*x[5]) + (Fry + Ffy*casadi.cos(x[7])))/(1.0*m))
-    rdot = (1-l_a)*((1/(l_r+l_f))*(vxdot*casadi.tan(x[7])+x[3]*(u[1]/(casadi.cos(x[7]))**2))) + (l_a)*((Ffy*l_f*casadi.cos(x[7]) - Fry*l_r)/(1.0*Iz))
-    Fdot= u[0]
-    deltadot = u[1]
-    dindexdot = u[2]
-    return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
+#     #blending with changing lambda
+#     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))
+#     # xdot = (l_a)*(x[3]*casadi.cos(x[2]) - x[4]*casadi.sin(x[2])) + (1-l_a)*(x[3]*casadi.cos(x[2] + beta))
+#     # ydot = (l_a)*(x[3]*casadi.sin(x[2]) + x[4]*casadi.cos(x[2])) + (1-l_a)*(x[3]*casadi.sin(x[2] + beta))
+#     xdot = state_.vx*casadi.cos(state_.phi) - state_.vy*casadi.sin(state_.phi)
+#     ydot = state_.vx*casadi.sin(state_.phi) + state_.vy*casadi.cos(state_.phi)
+#     phidot = state_.r
+#     vxdot = (1-l_a)*((state_.F - Fdrag)/ m) + (l_a)*((state_.F - Fdrag + Ffy*casadi.sin(state_.delta) + m*state_.vy*state_.r)/ m)
+#     vydot = (1-l_a)*((l_r/(l_r+l_f))*(vxdot*casadi.tan(state_.delta)+state_.vx*(state_.dDelta/(casadi.cos(state_.delta))**2))) + (l_a)*(((-state_.vx*state_.r) + (Fry + Ffy*casadi.cos(state_.delta)))/(1.0*m))
+#     rdot = (1-l_a)*((1/(l_r+l_f))*(vxdot*casadi.tan(state_.delta)+state_.vx*(state_.dDelta/(casadi.cos(state_.delta))**2))) + (l_a)*((Ffy*l_f*casadi.cos(state_.delta) - Fry*l_r)/(1.0*Iz))
+#     Fdot= state_.dF
+#     deltadot = state_.dDelta
+#     dindexdot = state_.dS
+#     return casadi.vertcat(xdot,ydot,phidot,vxdot,vydot,rdot,Fdot,deltadot,dindexdot)
 
 err_array=[]
 def getEllipseRatioWithState(x):

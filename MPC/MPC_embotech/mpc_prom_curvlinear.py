@@ -294,19 +294,22 @@ def generate_pathplanner():
     # -----------------
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 10000    # Maximum number of iterations
+    codeoptions.maxit = 1000    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 
     #                             2 optimize for speed, 3 optimize for size & speed
     codeoptions.cleanup = False
     codeoptions.timing = 1
-    # codeoptions.parallel = 4
+    codeoptions.mip.mipgap = 0.8
+    codeoptions.mip.explore = 'bestFirst'
+    codeoptions.mip.branchon = 'mostAmbiguous'
+    codeoptions.parallel = 4
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
-    codeoptions.nlp.bfgs_init = 2.5*np.identity(model.nvar)
-    codeoptions.sqp_nlp.maxqps = 1      # maximum number of quadratic problems to be solved
-    codeoptions.sqp_nlp.reg_hessian = 5e-5 # increase this if exitflag=-8
+    # codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)
+    codeoptions.sqp_nlp.maxqps = 1   # maximum number of quadratic problems to be solved
+    codeoptions.sqp_nlp.reg_hessian = 1e-5 # increase this if exitflag=-8
     # change this to your server or leave uncommented for using the 
     # standard embotech server at https://forces.embotech.com 
     codeoptions.server = 'https://forces.embotech.com'

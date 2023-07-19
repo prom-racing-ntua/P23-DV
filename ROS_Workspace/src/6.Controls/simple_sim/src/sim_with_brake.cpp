@@ -270,7 +270,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	*/
 	if (discipline == 0 or discipline == 1)
 	{
-		fs.open("src/6.Controls/simple_sim/data/map.txt");
+		fs.open("src/6.Controls/simple_sim/data/map2.txt");
 		state.x = -5.5;
 	}
 	else if (discipline == 2)

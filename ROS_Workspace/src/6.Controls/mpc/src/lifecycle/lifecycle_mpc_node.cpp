@@ -45,7 +45,7 @@ namespace mpc {
         declare_parameter<bool>("simulation",false);
         declare_parameter<bool>("regen",false);
         declare_parameter<std::string>("mission","autox");
-        declare_parameter<float>("v_limit",5.0);
+        declare_parameter<float>("v_limit",6.0);
         declare_parameter<int>("total_laps",2);
         declare_parameter<float>("F_max",500.0);
         declare_parameter<float>("F_min",-500.0);
