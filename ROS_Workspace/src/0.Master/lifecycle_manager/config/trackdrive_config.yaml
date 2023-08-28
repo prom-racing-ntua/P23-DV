@@ -140,6 +140,7 @@
     max_speed: 10.0                         #EDIT BEFORE
     dt: 0.025
     safe_speed_to_break: 3.0
+    braking_distance: 5.0
 
     #PID
     kp: 1000

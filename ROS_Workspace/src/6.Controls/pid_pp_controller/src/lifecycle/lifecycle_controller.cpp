@@ -33,7 +33,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
         bool is_end = lap == total_laps;
         double ms = is_end ? 0 : max_speed;
         double v_init = lap == 0 ? 0 : this->v_x;
-        VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+        VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
         path_planning::ArcLengthSpline *spline_to_delete = this->spline;
         VelocityProfile *profile_to_delete = this->profile;
         this->has_run_waypoints = true;
@@ -61,7 +61,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = 3;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -86,7 +86,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 1;
             double ms = 0;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -120,7 +120,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = 3;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -147,7 +147,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -179,7 +179,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -206,7 +206,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -239,7 +239,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = max_speed;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -267,7 +267,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 0;
             double ms = 5;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -295,7 +295,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             bool is_end = 1;
             double ms = 0;
             double v_init = this->v_x;
-            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor);
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
             VelocityProfile *profile_to_delete = this->profile;
             this->has_run_waypoints = true;
@@ -342,7 +342,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     bool is_end = msg->lap_count == laps_to_do;
     double ms = is_end ? 0 : max_speed;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
 
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
@@ -567,6 +567,7 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<float>("max_speed", 15);
     declare_parameter<float>("dt", 0.025);
     declare_parameter<float>("safe_speed_to_break", 1);
+    declare_parameter<float>("braking_distance", 5);
 
     declare_parameter<int>("kp", 1000);
     declare_parameter<int>("ki", 1000);

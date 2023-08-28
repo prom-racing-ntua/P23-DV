@@ -54,7 +54,7 @@ private:
     double emergency_threshold;
     double safety_factor;
     double max_speed, spline_res_per_meter;
-    double safe_speed_to_break;
+    double safe_speed_to_break, braking_distance;
     double last_steering, last_torque;
     int laps_to_do;
     int prev_lap;

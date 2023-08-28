@@ -141,6 +141,7 @@
     max_speed: 10.0                         #EDIT BEFORE
     dt: 0.025
     safe_speed_to_break: 3.0
+    braking_distance: 30.0                  #EDIT BEFORE
 
     #PID
     kp: 1000
@@ -149,7 +150,7 @@
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 2                           #CHECK BEFORE
+    total_laps: 1                           #CHECK BEFORE
 
 /mpc:
   ros__parameters:

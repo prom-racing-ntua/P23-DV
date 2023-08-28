@@ -21,15 +21,16 @@ pid_pp_controller:
 
     #Pure Pursuit
     ld_min: 3.0                 
-    ld_max: 5.0
+    ld_max: 30.0
     v_min: 3.0
-    v_max: 10.0
+    v_max: 30.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
-    safety_factor: 0.75
+    safety_factor: 1.0
     max_speed: 77.0
     dt: 0.025
-    safe_speed_to_break: 3.0
+    safe_speed_to_break: 1.0
+    braking_distance : 70.0
 
     #PID
     kp: 2000  
@@ -38,4 +39,4 @@ pid_pp_controller:
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 2
+    total_laps: 1

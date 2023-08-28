@@ -254,7 +254,7 @@ void SplinePoint::set_target_speed(double v)
 }
 
 // class VelocityProfile TBD
-VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap, double _safety_factor)
+VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap, double _safety_factor, double braking_distance)
     : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0), unknown(is_first_lap), safety_factor(_safety_factor)
 {
     this->total_length = spline.getApproximateLength();
@@ -270,12 +270,12 @@ VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double 
         // std::cout<<spline_samples[i].position().x() <<" "<<spline_samples[i].position().y() <<" "<<spline_samples[i].s() <<" "<<spline_samples[i].phi() <<" "<<spline_samples[i].k() <<std::endl;
     }
     
-    solve_profile(resolution, initial_speed, is_end);
+    solve_profile(resolution, initial_speed, is_end, braking_distance);
     
     std::cout<<std::endl<<"------"<<std::endl;
     for (int i = 0; i < resolution; i++)
     {
-        std::cout<<spline_samples[i].position()<<", ";
+        std::cout<<spline_samples[i].target_speed()<<", ";
     }
     std::cout<<std::endl<<"------"<<std::endl;
     //exit(0);
@@ -368,7 +368,7 @@ Point VelocityProfile::get_last_projection()const
     return spline_samples[last_visited_index].position();
 }
 
-void VelocityProfile::solve_profile(int resolution, double initial_speed, bool is_end)
+void VelocityProfile::solve_profile(int resolution, double initial_speed, bool is_end, double braking_distance)
 {
     //std::cout<<'*';
     /* FIRST PASS */
@@ -382,6 +382,11 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     //log.open("k.txt", std::ios::app);
     for (int i = 0; i < resolution; i++)
     {
+        if(is_end && spline_samples[i].s() * total_length>=braking_distance)
+        {
+            spline_samples[i].set_target_speed(0);
+            continue;
+        }
         double k = std::abs(spline_samples[i].k());
         if(k!=0)
         {
@@ -494,5 +499,5 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
     }
 
-    if(spline_samples[0].target_speed()<0.5)spline_samples[0].set_target_speed(std::min(1.0,(0.5*(spline_samples[0].target_speed()+spline_samples[1].target_speed()))));//prevents initial target from beign 0
+    
 }

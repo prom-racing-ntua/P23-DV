@@ -46,6 +46,7 @@ namespace pid_pp
         laps_to_do = get_parameter("total_laps").as_int();
         discipline = get_parameter("discipline").as_string();
         midpoints = get_parameter("midpoints").as_string();
+        braking_distance = get_parameter("braking_distance").as_double();
 
         is_end = false;
 

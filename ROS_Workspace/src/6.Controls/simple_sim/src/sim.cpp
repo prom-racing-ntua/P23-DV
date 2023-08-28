@@ -347,7 +347,7 @@ double add_noise(double x, double perc = 0.001)
 
 void sim_node::timer_callback()
 {
-	if(state.lap>1 && state.v_x==0)exit(0);
+	if(state.lap>=1 && state.v_x==0)exit(0);
 	// std::cout << state.t << std::endl;
 	/*
 		1. state update 1kHz

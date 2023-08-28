@@ -138,6 +138,7 @@ pid_pp_controller:
     max_speed: 100.0
     dt: 0.025
     safe_speed_to_break: 3.0
+    braking_distance: 15.0  #includes entering finish zone
 
     #PID
     kp: 2000  
