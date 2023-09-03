@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Which solver should I generate (select number)?"
-echo "(1. Acceleration, 2. Skidpad, 3. Autocross, 4. Trackdrive)"
+echo "(1. Acceleration, 2. Skidpad, 3. Autocross, 4. Trackdrive, 5. Curv)"
 
 read missionNumber
 
@@ -21,6 +21,10 @@ case $missionNumber in
 
     4)
     mission="trackdrive"
+    ;;
+
+    5)
+    mission="curv"
     ;;
 
     *)

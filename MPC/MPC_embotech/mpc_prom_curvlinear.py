@@ -294,7 +294,7 @@ def generate_pathplanner():
     # -----------------
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 1000    # Maximum number of iterations
+    codeoptions.maxit = 10000    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 

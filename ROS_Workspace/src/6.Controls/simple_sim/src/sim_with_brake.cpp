@@ -233,7 +233,7 @@ std::ostream &operator<<(std::ostream &out, const State &a)
 }
 
 
-sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2054, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0)
+sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0)
 {
 
 	pub_pose = this->create_publisher<custom_msgs::msg::PoseMsg>("pose", 10);
@@ -365,9 +365,11 @@ void sim_node::timer_callback()
 	{
 		global_idx++;
 		if (brake_press>0.0) {
-			std::cout << "asking to brake..." << std::endl;
+			std::cout << "asking to brake with brake_press -> " << brake_press << std::endl;
+			std::cout << "d_piston, R_disk_f, R_disk_r, R_wheel are -> " << " " << constants.d_piston << " " << constants.R_disk_f << " " <<  constants.R_disk_r << " " << constants.R_wheel << std::endl;
+			std::cout << "mi_disk, N_rear, N_front are -> " << " " << constants.mi_disk << " " << constants.N_rear << " " <<  constants.N_front << std::endl;
 			double piston_area = 3.14159*std::pow(constants.d_piston/2,2);
-			double pressure_input = brake_press*10000;
+			double pressure_input = brake_press*100000;
 			double radius_ratio_f =  (constants.R_disk_f/constants.R_wheel);
 			double radius_ratio_r =  (constants.R_disk_r/constants.R_wheel);
 			frx_ = - pressure_input*piston_area*constants.mi_disk*constants.N_rear*radius_ratio_r;

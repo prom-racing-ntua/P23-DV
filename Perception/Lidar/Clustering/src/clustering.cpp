@@ -65,6 +65,8 @@ int main () {
           cluster_count++;
           // Find the four points with the minimum and maximum X and Z coordinates
           pcl::PointXYZ minX = cloud_cluster_temp->points[0], maxX = cloud_cluster_temp->points[0], minZ = cloud_cluster_temp->points[0], maxZ = cloud_cluster_temp->points[0];
+          outputFile << "--,cluster"<<cluster_count<<",--\n";
+          outputFile << centre.x << "," << centre.y << "," << centre.z << "\n";
           for (int i = 1; i < cloud_cluster_temp->points.size(); i++) {
               if (cloud_cluster_temp->points[i].x < minX.x) {
                   minX = cloud_cluster_temp->points[i];
@@ -78,8 +80,8 @@ int main () {
               if (cloud_cluster_temp->points[i].z > maxZ.z) {
                   maxZ = cloud_cluster_temp->points[i];
               }
+              // outputFile << cloud_cluster_temp->points[i].x << "," << cloud_cluster_temp->points[i].y << "," << cloud_cluster_temp->points[i].z << "\n";
           }
-          outputFile << "--,cluster"<<cluster_count<<",--\n";
 
           // outputFile << centre.x << "," << centre.y << "," << centre.z << "," << std::sqrt(std::pow(centre.x,2) + std::pow(centre.y,2) + std::pow(centre.z,2)) << "," << std::sqrt(std::pow(centre.x,2) + std::pow(centre.y,2)) <<"," << std::atan2(-centre.x,-centre.y) <<"\n";
           outputFile << centre.x << "," << centre.y << "," << centre.z << "\n";

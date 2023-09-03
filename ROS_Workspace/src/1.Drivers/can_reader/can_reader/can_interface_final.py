@@ -177,7 +177,6 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     can_interface = CanInterface()
     executor = SingleThreadedExecutor()
-
     try:
         rclpy.spin(can_interface, executor)
     except (KeyboardInterrupt, ExternalShutdownException):

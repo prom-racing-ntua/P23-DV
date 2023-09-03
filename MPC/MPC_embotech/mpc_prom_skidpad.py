@@ -47,7 +47,7 @@ dist_thres=2*l_f
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=13.0
+u_upper=14.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -706,6 +706,9 @@ def main():
     counter_all=0
     INDEX_MAX=INDEX_MAX1 
     ellipse_counter=0
+    vx_txt=[]
+    vy_txt=[]
+    error_txt = []
     # Simulation
     for k in range(sim_length):
         problem["xinit"] = x[:,k]
@@ -853,13 +856,19 @@ def main():
             print("vgika apo ellipsi")
         print("exw vgei apo ellipsi: ",ellipse_counter," times")
         print("ellipse data are: ",np.mean(ellipse_array),np.var(ellipse_array))
+        vx_txt.append(x[:,k][3])
+        vy_txt.append(x[:,k][4])
+        error_txt.append(err_1)
         # plot results of current simulation step
-        if(k%100==0):
-            file = open("Data/steering.txt", "w+")
-            file.write(str(steering_txt))
+        if(k%10==0):
+            file = open("Data/vx_skid.txt", "w+")
+            file.write(str(vx_txt))
             file.close()
-            file2 = open("Data/torques.txt", "w+")
-            file2.write(str(wheel_torques_txt))
+            file2 = open("Data/vy_skid.txt", "w+")
+            file2.write(str(vy_txt))
+            file2.close()
+            file2 = open("Data/error_skid.txt", "w+")
+            file2.write(str(error_txt))
             file2.close()
         if(k%20==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  

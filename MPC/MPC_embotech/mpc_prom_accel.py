@@ -25,7 +25,6 @@ from matplotlib.lines import Line2D
 from Trackdrive import cones_blue, cones_orange_big, cones_yellow
 from mpc_class_simple import State, continuous_dynamics
 
-
 #global params
 
 def arc_length_parameterization(x, y):
@@ -56,7 +55,7 @@ factor_bef = 0.52
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=18.0
+u_upper=17.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -158,6 +157,11 @@ def getSas(z):
     sar_temp=casadi.arctan((z[7]-l_r*z[8])/(z[6]+1e-3))
     return saf_temp,sar_temp
 
+def getSasWithState(x):
+    saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
+    sar_temp=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
+    return saf_temp,sar_temp
+
 def getFz(z):
     a_temp = (z[9] - 0.5*CdA*pair*(z[6])**2)/ m
     dw = (h_cog/lol)*(a_temp/g)*m*g
@@ -171,12 +175,6 @@ def getFzWithState(x):
     Ffz_temp=(l_r/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) - dw
     Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(x[3]**2) + dw
     return Ffz_temp,Frz_temp
-
-
-def getSasWithState(x):
-    saf_temp=casadi.arctan((x[4]+l_f*x[5])/(x[3]+1e-3)) - x[7]
-    sar_temp=casadi.arctan((x[4]-l_r*x[5])/(x[3]+1e-3))
-    return saf_temp,sar_temp
 
 def getEllipseParams(Fz):
     Fz0=1112.0554070627252
@@ -322,7 +320,8 @@ def generate_pathplanner():
 
     # We use an explicit RK4 integrator here to discretize continuous dynamics
     integrator_stepsize = dt_integration
-    model.eq = lambda z: forcespro.nlp.integrate(continuous_dynamics, z[num_ins:model.nvar], z[0:num_ins],
+    kappa_temp = 1e-5
+    model.eq = lambda z: forcespro.nlp.integrate(continuous_dynamics, z[num_ins:model.nvar], z[0:num_ins], kappa_temp,
                                                 integrator=forcespro.nlp.integrators.RK4,
                                                 stepsize=integrator_stepsize)
     
@@ -683,8 +682,9 @@ def main():
     # Create 2D points on ellipse which the car is supposed to follow
     start_pred = np.reshape(problem["x0"],(model.nvar,model.N))
     createPlot(x,u,start_pred,sim_length,model,reference_track1[:2,:],xinit,cones_yellow, cones_blue, cones_orange_big)
-    wheel_torques_txt=[]
-    steering_txt=[]
+    vx_txt=[]
+    vy_txt=[]
+    error_txt = []
     time_array=[]
     err_1=0.0
     err_2=0.0
@@ -795,15 +795,19 @@ def main():
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
         print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))
         print("i have used emergency manouvre: ",emergency_count," times")
-        wheel_torques_txt.append(x[:,k][6]*0.2)
-        steering_txt.append(x[:,k][7])
+        vx_txt.append(x[:,k][3])
+        vy_txt.append(x[:,k][4])
+        error_txt.append(err_1)
         # plot results of current simulation step
-        if(k%100==0):
-            file = open("Data/steering.txt", "w+")
-            file.write(str(steering_txt))
+        if(k%10==0):
+            file = open("Data/vx.txt", "w+")
+            file.write(str(vx_txt))
             file.close()
-            file2 = open("Data/torques.txt", "w+")
-            file2.write(str(wheel_torques_txt))
+            file2 = open("Data/vy.txt", "w+")
+            file2.write(str(vy_txt))
+            file2.close()
+            file2 = open("Data/error.txt", "w+")
+            file2.write(str(error_txt))
             file2.close()
         if(k%10==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  
@@ -818,10 +822,10 @@ def main():
                 plt.draw()
         print()
 
-    print("steering_txt is:", steering_txt)
-    print()
-    print("wheel_torques_txt is: ",wheel_torques_txt)
-    print()
+    # print("steering_txt is:", steering_txt)
+    # print()
+    # print("wheel_torques_txt is: ",wheel_torques_txt)
+    # print()
     print("error array is: ",err_array)
     print()
     print("time array is: ", time_array)

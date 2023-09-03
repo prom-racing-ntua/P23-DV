@@ -78,7 +78,7 @@ def getFzWithState(model_class):
     Frz_temp=(l_f/(l_f+l_r))*m*g + 0.25*pair*ClA*(model_class.vx**2) + dw
     return Ffz_temp,Frz_temp
 
-def continuous_dynamics(x, u):
+def continuous_dynamics(x, u, kappa_temp):
     """Defines dynamics of the car, i.e. equality constraints.
     parameters:
     state x = [xPos,yPos,phi, vx, vy, r, F, delta, index]
@@ -98,6 +98,7 @@ def continuous_dynamics(x, u):
     Fdrag = 0.5*CdA*pair*(state_.vx)**2 + 0.03*(Frz+Ffz)
     print("loaded mdoel with values")
     print("State is",state_)
+    print("kappa is: ",kappa_temp)
 
     #blending with changing lambda
     beta = casadi.arctan(l_r/(l_f + l_r) * casadi.tan(x[7]))

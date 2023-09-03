@@ -91,7 +91,7 @@ namespace lifecycle_manager_namespace
         if (future_result.get()->success) {
             RCLCPP_INFO(get_logger(), "Successfully resurrected node %s, change its status ASAP", nodeName.c_str());
         } else {
-            RCLCPP_INFO(get_logger(), "Couldn't resurrect  node %s", nodeName.c_str());
+            RCLCPP_INFO(get_logger(), "Couldn't resurrect node %s", nodeName.c_str());
         }
     }
 }

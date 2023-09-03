@@ -347,14 +347,14 @@ def generate_pathplanner():
     # -----------------
     # Set solver options
     codeoptions = forcespro.CodeOptions('FORCESNLPsolver')
-    codeoptions.maxit = 500    # Maximum number of iterations
+    codeoptions.maxit = 100    # Maximum number of iterations
     codeoptions.printlevel = 2  # Use printlevel = 2 to print progress (but 
     #                             not for timings)
     codeoptions.optlevel = 0    # 0 no optimization, 1 optimize for size, 
     #                             2 optimize for speed, 3 optimize for size & speed
     codeoptions.cleanup = False
     codeoptions.timing = 1
-    codeoptions.mip.mipgap = 0.5
+    codeoptions.mip.mipgap = 0.8
     codeoptions.mip.explore = 'depthFirst'
     codeoptions.mip.branchon = 'mostAmbiguous'
     codeoptions.parallel = 4
@@ -711,6 +711,9 @@ def main():
     err_1=0.0
     err_2=0.0
     ellipse_counter=0
+    vx_txt=[]
+    vy_txt=[]
+    error_txt = []
     # Simulation
     for k in range(sim_length):
         print("Im at iteration: ",k+1)
@@ -801,7 +804,7 @@ def main():
             temp[:, i] = output['x{0:02d}'.format(i+1)]
         pred_u = temp[0:num_ins, :]
         pred_x = temp[num_ins:model.nvar, :]
-        # Apply optimized input u of first st
+        # Apply optimized input u of first stage
         # u[:,k] = pred_u[:,0]
         u[:,k] = pred_u[:,2]
         x[:,k+1] = np.transpose(model.eq(np.concatenate((u[:,k],x[:,k]))))
@@ -816,15 +819,19 @@ def main():
         print("x_bef is: ",x[:,k]," ",np.shape(x), " ", np.shape(x[:,k]))
         print("publishing torque and steering cmd: ",(x[6,k+1])/(5*3.9/0.85)," ",np.rad2deg(x[7,k+1]))
         print("i have used emergency manouvre: ",emergency_count," times")
-        wheel_torques_txt.append(x[:,k][6]*0.2)
-        steering_txt.append(x[:,k][7])
+        vx_txt.append(x[:,k][3])
+        vy_txt.append(x[:,k][4])
+        error_txt.append(err_1)
         # plot results of current simulation step
-        if(k%100==0):
-            file = open("Data/steering.txt", "w+")
-            file.write(str(steering_txt))
+        if(k%10==0):
+            file = open("Data/vx_track.txt", "w+")
+            file.write(str(vx_txt))
             file.close()
-            file2 = open("Data/torques.txt", "w+")
-            file2.write(str(wheel_torques_txt))
+            file2 = open("Data/vy_track.txt", "w+")
+            file2.write(str(vy_txt))
+            file2.close()
+            file2 = open("Data/error_track.txt", "w+")
+            file2.write(str(error_txt))
             file2.close()
         if(k%20==0):
             updatePlots(x,u,pred_x,pred_u,model,k)  

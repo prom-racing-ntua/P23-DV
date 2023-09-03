@@ -350,5 +350,4 @@ int main(){
   slam::GraphSLAM loca = slam::GraphSLAM(0.01, 1, 2, 0.02);
   loca.read_measurements();
   loca.Visualize();
-
-  r
+}

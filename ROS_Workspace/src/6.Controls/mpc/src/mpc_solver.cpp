@@ -422,13 +422,13 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             if(critical_dist<0.1 and lap_lock==0) {
                 lap_lock=1;
             }
-            if(critical_dist > l_f) {
+            if(critical_dist > 5*l_f) {
                 lap_counter++;
                 lap_lock=0;
         }
         }
         if(mission_=="trackdrive") {
-            if(critical_dist<l_f and lap_lock==0) {
+            if(critical_dist<0.1 and lap_lock==0) {
                 lap_counter++;
                 lap_lock=1;
             }
@@ -443,7 +443,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         if(mission_=="skidpad" and lap_counter==5){
             finish_flag=1;
         }
-        if(mission_=="autox" and lap_counter==2){
+        if(mission_=="autox" and lap_counter==3){
             finish_flag=1;
         }
         if(mission_=="trackdrive" and lap_counter==11){

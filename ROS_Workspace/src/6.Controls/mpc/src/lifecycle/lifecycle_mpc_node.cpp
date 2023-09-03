@@ -20,7 +20,8 @@ namespace mpc {
 
     void LifecycleMpcHandler::setLogger() {
         data_logger.open(data_logger_txt);
-        data_logger << "emerg_counter,flag,torque,steering\n";
+        // data_logger << "emerg_counter,flag,torque,steering\n";
+        data_logger << "vx,vy,r\n";
     }
 
     void LifecycleMpcHandler::setClient() {
@@ -45,7 +46,7 @@ namespace mpc {
         declare_parameter<bool>("simulation",false);
         declare_parameter<bool>("regen",false);
         declare_parameter<std::string>("mission","autox");
-        declare_parameter<float>("v_limit",6.0);
+        declare_parameter<float>("v_limit",5.0);
         declare_parameter<int>("total_laps",2);
         declare_parameter<float>("F_max",500.0);
         declare_parameter<float>("F_min",-500.0);
@@ -156,8 +157,9 @@ namespace mpc {
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
-        data_logger << "--,iteration"<<global_int<<",--\n";
-        data_logger << mpc_solver.emergency_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
+        // data_logger << "--,iteration"<<global_int<<",--\n";
+        // data_logger << mpc_solver.emergency_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
+        data_logger << mpc_solver.vel_struct.velocity_x << "," << mpc_solver.vel_struct.velocity_y << "," << mpc_solver.dist_eucl <<"\n";
 }
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {

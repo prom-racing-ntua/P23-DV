@@ -106,7 +106,7 @@ void P23StatusNode::setServices() {
 
 // Callback function when receiving new mission message
 void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::SharedPtr msg) {
-    if (missionLocked and static_cast<p23::Mission>(msg->mission_selected) != p23::MISSION_UNLOCKED)
+    if (missionLocked and static_cast<p23::Mission>(msg->mission_selected) != p23::MISSION_UNLOCKED) //xx: giati vazoume 2 
     {
         RCLCPP_ERROR_STREAM(get_logger(), "Mission already locked, currently in DV_READY and " << p23::mission_list.at(currentMission) << ". Try to MISSION_UNLOCK");
         return;
@@ -277,7 +277,7 @@ bool P23StatusNode::changeDVStatus(p23::DV_Transitions requested_transition) {
         }
         // We need to be in DV_READY to transition to AS_DRIVING
         if (currentDvStatus != p23::DV_READY) {
-            RCLCPP_ERROR(get_logger(), "Cannot trnsition to AS_DRIVING. Current Driverless System State is not DV_READY");
+            RCLCPP_ERROR(get_logger(), "Cannot transition to AS_DRIVING. Current Driverless System State is not DV_READY");
             return 0;
         }
         transition_to = p23::DV_Status::DV_DRIVING;

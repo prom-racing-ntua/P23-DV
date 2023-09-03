@@ -7,4 +7,6 @@ make
 cd ..
 # pcl_viewer DataKsi2/pcd/cloud_cluster_init.pcd
 python3 projection.py 
+pcl_viewer DataKsi2/pcd/cloud_cluster_init.pcd
+pcl_viewer DataKsi2/pcd/cloud_cluster_box.pcd
 pcl_viewer DataKsi2/pcd/cloud_cluster_final.pcd

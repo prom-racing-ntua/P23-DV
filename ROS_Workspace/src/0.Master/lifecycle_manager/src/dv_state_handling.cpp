@@ -31,7 +31,7 @@ namespace lifecycle_manager_namespace{
                 3. Delete them from the map and the node list
 
             Configure Nodes (changeNodeState(Transition::TRANSITION_CONFIGURE))
-                1. Select the correct configuartion file based on the mission selected - DONE
+                1. Select the correct configuration file based on the mission selected - DONE
                 2. Send a changeNodeState transition call to every node remaining - DONE
         */      
         
