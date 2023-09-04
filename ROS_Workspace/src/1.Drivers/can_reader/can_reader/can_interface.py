@@ -202,7 +202,7 @@ class CommonUtilities:
 
 class CanInterface(Node):
     '''
-    ROS Node used for receiving/sending can msgs form/to the Can/USB module and passing them to ROS topics to be utilized by other nodes.
+    ROS Node used for receiving/sending can msgs from/to the Can/USB module and passing them to ROS topics to be utilized by other nodes.
 
     The node can be configured thorough the corresponding params.yaml file.
     '''
