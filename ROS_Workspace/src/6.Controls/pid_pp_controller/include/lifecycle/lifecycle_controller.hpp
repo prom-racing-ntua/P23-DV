@@ -67,6 +67,8 @@ private:
     double last_steering, last_torque;
     int laps_to_do;
     int prev_lap;
+    bool is_out_of_map;
+    int buffer_ticks;
     string discipline, midpoints;
     std::ifstream mids;
 

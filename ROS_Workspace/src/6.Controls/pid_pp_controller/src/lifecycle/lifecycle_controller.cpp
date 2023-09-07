@@ -1,7 +1,7 @@
 #include "lifecycle_controller.hpp"
 #include <iomanip>
 
-LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false)
+LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false), buffer_ticks(0)
 {
     parameter_load();
     RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
@@ -16,6 +16,7 @@ LifecyclePID_PP_Node::~LifecyclePID_PP_Node()
 
 void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 {
+    buffer_ticks = 0;
     if (discipline == "Trackdrive")
     {
         mids.open("src/6.Controls/pid_pp_controller/data/" + midpoints);
@@ -31,7 +32,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
         }
         path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
         bool is_end = lap == total_laps;
-        double ms = is_end ? 0 : max_speed;
+        double ms = max_speed;
         double v_init = lap == 0 ? 0 : this->v_x;
         VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
         path_planning::ArcLengthSpline *spline_to_delete = this->spline;
@@ -84,7 +85,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints2, path_planning::BoundaryCondition::Anchored);
             bool is_end = 1;
-            double ms = 0;
+            double ms = max_speed;
             double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
@@ -231,8 +232,8 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
             for (int i = 0; i < 5; i++)
             {
-                midpoints(i+40, 0) = i * 5;
-                midpoints(i+40, 1) = 0;
+                midpoints(i + 40, 0) = i * 5;
+                midpoints(i + 40, 1) = 0;
             }
 
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
@@ -265,7 +266,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
-            double ms = 5;
+            double ms = max_speed;
             double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
             path_planning::ArcLengthSpline *spline_to_delete = this->spline;
@@ -340,9 +341,13 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
     bool is_end = msg->lap_count == laps_to_do;
-    double ms = is_end ? 0 : max_speed;
+    double ms = msg->is_out_of_map ? 2 : max_speed;
+    this->is_out_of_map = msg->is_out_of_map;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
     VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
+    buffer_ticks = 0;
+    if (msg->is_out_of_map)
+        RCLCPP_INFO_STREAM(get_logger(), "Vehicle out of map. Attempting to reenter...");
 
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
@@ -459,7 +464,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
-    min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
+    min_radius = std::max(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
     double ld;
@@ -490,17 +495,18 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
 
-    if(last_steering!=5)heading_angle = std::min(last_steering + 0.25, std::max( last_steering - 0.25, heading_angle));
+    if (last_steering != 5)
+        heading_angle = std::min(last_steering + 0.25, std::max(last_steering - 0.25, heading_angle));
 
     last_steering = heading_angle;
 
     for_publish.steering_angle_target = heading_angle;
 
-    if(!switch_br && (force < 0 && v_x < safe_speed_to_break))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
+    if(!switch_br && (force < 0 && v_x < safe_speed_to_break && is_end))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
 
-    switch_br = force < 0 && v_x < safe_speed_to_break;
+    switch_br = force < 0 && v_x < safe_speed_to_break && is_end;
 
-    for_publish.brake_pressure_target = switch_br;
+    for_publish.brake_pressure_target = switch_br ? 10.0 : 0;
     if (switch_br)
         for_publish.motor_torque_target = 0;
     // std::cout<<"13.. ";
@@ -515,22 +521,24 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pub_target->publish(tg);
 
     /* EXTRA SAFETY CHECKS */
-    if(this->v_x > 1.5 * projection.first)
+    if(this->v_x > 1.5 * projection.first && buffer_ticks>10)
     {
         for_publish.motor_torque_target = 0;
         for_publish.brake_pressure_target = 1;
+        RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
     }
-    if(this->v_x > 2 * projection.first)
+    if(this->v_x > 2 * projection.first && buffer_ticks>10)
     {
         for_publish.steering_angle_target = 0;
         for_publish.motor_torque_target = 0;
         for_publish.brake_pressure_target = 1;
         pub_actuators->publish(for_publish);
+        RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
         exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preffered
     }
 
     pub_actuators->publish(for_publish);
-    std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << (is_end && v_x < safe_speed_to_break) ? 1 : 0;
+    std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << switch_br ? 1 : 0;
     std::cout << " , ld = " << std::fixed << std::setprecision(4) << ld << std::endl;
 
     rclcpp::Duration total_time = this->now() - starting_time;

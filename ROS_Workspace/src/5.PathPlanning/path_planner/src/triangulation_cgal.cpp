@@ -122,7 +122,7 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
 
     std::pair<std::vector<my_edge>, int> best_best_path;
 
-    bool out_of_convex = 0;
+    out_of_convex = 0;
 
     if (triangulation_object.is_infinite(starting_face))
     {

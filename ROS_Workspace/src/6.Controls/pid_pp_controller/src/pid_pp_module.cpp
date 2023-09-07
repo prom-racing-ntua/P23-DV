@@ -337,7 +337,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     int sel_idx=0;
     double lr = model->wb * model->wd;
     Point closest_p, trans, rear = position - Point(-lr * std::cos(theta), -lr * std::sin(theta));
-    for (int i = last_visited_index; i < total_length * samples_per_meter; i++)
+    for (int i = std::max(0, last_visited_index - 1); i < total_length * samples_per_meter; i++)
     //for(int i = total_length * samples_per_meter-1; i>=last_visited_index; i--)
     //for(int i = total_length * samples_per_meter-1; i>=0; i--)
     {
@@ -356,6 +356,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     }
     if (closest_d < DBL_MAX)
         return closest_p;
+    
     Point a(0, 0);
     std::cout<<"??"<<std::endl;
     a.error=1;

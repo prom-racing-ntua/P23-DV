@@ -153,6 +153,8 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
             last_position = current_position;
         }
     }
+
+    for_pub.is_out_of_map = waymaker.out_of_convex;
     for_pub.initial_v_x = msg->pose.velocity_state.global_index==0?-1: msg->pose.velocity_state.velocity_x;
     for_pub.lap_count = msg->lap_count;
     pub_waypoints->publish(for_pub);

@@ -99,6 +99,7 @@ public:
     std::vector<Point> get_last_path() const;
     std::vector<Point> get_triangulation() const;
     int get_batch_number()const;
+    bool out_of_convex;
     // sends message to stdout/stderr/log for debug purposes
     ~Triangulation();
 };

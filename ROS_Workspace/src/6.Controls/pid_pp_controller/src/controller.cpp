@@ -44,7 +44,7 @@ void PID_PP_Node::parameter_load()
     declare_parameter<string>("midpoints", "");
 }
 
-PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), last_steering(5), last_torque(0)
+PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), last_steering(5), last_torque(0), buffer_ticks(0)
 {
     // PARAMETER LOADING
     parameter_load();
@@ -129,6 +129,7 @@ PID_PP_Node::~PID_PP_Node()
 }
 void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 {
+    buffer_ticks = 0;
     if (discipline == "Trackdrive")
     {
         mids.open("src/6.Controls/pid_pp_controller/data/" + midpoints);
@@ -377,7 +378,7 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
 
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-            bool is_end = 0;
+            bool is_end = 1;
             double ms = max_speed;
             double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
@@ -427,6 +428,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
 {
     std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
+    if (is_end)
+        return;
     rclcpp::Time starting_time = this->now();
     // Object variables should only be updated in the end
     path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
@@ -456,10 +459,11 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
     bool is_end = msg->lap_count == laps_to_do;
-    double ms = max_speed;
+    double ms = msg->is_out_of_map ? 2 : max_speed;
+    this->is_out_of_map = msg->is_out_of_map;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
     VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
-
+    this->buffer_ticks = is_out_of_map ? -70 : 0;
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
         (a) The new objects can be constructed locally and the modification required is only the copying of the pointer address
@@ -491,7 +495,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     std::cout << "Entered Pose Callback" << std::endl;
     // std::cout << "Pos: " << msg->position.x << ", " << msg->position.y << ". theta: " << msg->theta << ". v_o : " << msg->velocity_state.velocity_x << std::endl;
     //  std::cout<<"1.. ";
-
+    buffer_ticks++;
     rclcpp::Time starting_time = this->now();
 
     // std::cout<<"2.. ";
@@ -591,7 +595,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     {
         ld = pp_controller.lookahead(v_x, false);
     }
-    else
+    else if (!is_end)
     {
         std::cout << "emergency manouevre" << std::endl;
         for_publish.motor_torque_target *= 0.25;
@@ -604,8 +608,12 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     double heading_angle;
     if (!tp.error)
         heading_angle = pp_controller(tp, theta, min_radius);
-    else
+    else if(!is_end)
+    {
         heading_angle = 0;
+        std::cout << "tp error" << std::endl;
+    }
+    else heading_angle = 0;
     // std::cout<<"12.. ";
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
@@ -631,6 +639,23 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     tg.x = act_target.x();
     tg.y = act_target.y();
     pub_target->publish(tg);
+
+    // /* EXTRA SAFETY CHECKS */
+    // if (this->v_x > 1.5 * projection.first && this->v_x > projection.first + 1 && !is_end && buffer_ticks > 10)
+    // {
+    //     for_publish.motor_torque_target = 0;
+    //     for_publish.brake_pressure_target = 1;
+    //     std::cout << "50% more." << std::endl;
+    // }
+    // if (this->v_x > 2 * projection.first && this->v_x > projection.first + 1 && !is_end && buffer_ticks > 10)
+    // {
+    //     for_publish.steering_angle_target = 0;
+    //     for_publish.motor_torque_target = 0;
+    //     for_publish.brake_pressure_target = 1;
+    //     pub_actuators->publish(for_publish);
+    //     std::cout << "Controls aborting" << std::endl;
+    //     exit(1); // Initiates the ABS. If there is a safer method than exit, it should be preffered
+    // }
 
     pub_actuators->publish(for_publish);
     std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << switch_br ? 1 : 0;

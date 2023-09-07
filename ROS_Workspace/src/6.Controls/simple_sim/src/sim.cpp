@@ -187,7 +187,8 @@ void State::check_ellipses(std::ostream &out) const
 	const double my_max_full = 0.66 * (2.46810824 - 0.21654031 * dFz_full);
 	const double fx = a_x * constants.m;
 	const double fy = a_y * constants.m;
-	out << (fx / mx_max_full) * (fx / mx_max_full) << " " << (fy / my_max_full) * (fy / my_max_full) << " " << Fz * Fz << std::endl;
+	//out << (fx / mx_max_full) * (fx / mx_max_full) << " " << (fy / my_max_full) * (fy / my_max_full) << " " << Fz * Fz << std::endl;
+	out<<fx<<"\t"<<mx_max_full<<"\t"<<fy<<"\t"<<my_max_full<<"\t"<<Fz<<std::endl;
 	// Rear
 	const double dFz = (frz - Fz0) / Fz0;
 	const double mx_max = 0.66 * (2.21891927 - 1.36151651e-07 * dFz);
@@ -399,6 +400,11 @@ void sim_node::timer_callback()
 		log << int(f) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
 		log << state;
 		
+		std::ofstream log2;
+		log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
+		state.check_ellipses(log2);
+		log2.close();
+
 		pos.x = add_noise(state.x);
 		pos.y = add_noise(state.y, 0.05);
 		msg.position = pos;
@@ -516,10 +522,7 @@ void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::Shared
 	// std::cout << ">>> COMMAND <<<" << std::endl;
 	torques.push_back(msg->motor_torque_target);
 	steering.push_back(msg->steering_angle_target);
-	std::ofstream log2;
-	log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
-	if(steering.size()>1)log2<<steering[steering.size()-1] - steering[steering.size()-2]<<std::endl;
-	log2.close();
+	
 	// td::cout<<">>> "<<msg->steering_angle_target<<" "<<steering[steering.size()-1]<<std::endl;
 }
 
