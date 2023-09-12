@@ -1,6 +1,6 @@
 pid_pp_controller:
   ros__parameters:
-    discipline: "Trackdrive"
+    discipline: "Autocross"
     midpoints: "trackdrive_midpoints.txt"
     #model
     mass: 193.5
@@ -27,7 +27,7 @@ pid_pp_controller:
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.5
-    max_speed: 5.0
+    max_speed: 50.0
     dt: 0.025
     safe_speed_to_break: 3.0
     braking_distance : 2.0
@@ -40,3 +40,4 @@ pid_pp_controller:
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
     total_laps: 2
+    

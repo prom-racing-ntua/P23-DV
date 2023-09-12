@@ -23,6 +23,12 @@
 #include "custom_msgs/msg/waypoints_msg.hpp"
 #include "custom_msgs/msg/tx_control_command.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
+#include "custom_msgs/msg/tx_system_state.hpp"
+#include "custom_msgs/msg/rx_vehicle_sensors.hpp"
+#include "custom_msgs/msg/rx_steering_angle.hpp"
+#include "custom_msgs/msg/rx_wheel_speed.hpp"
+#include "custom_msgs/msg/autonomous_status.hpp"
+#include "custom_msgs/msg/mission_selection.hpp"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
@@ -90,6 +96,14 @@ class sim_node: public rclcpp::Node
     rclcpp::Publisher<custom_msgs::msg::PoseMsg>::SharedPtr pub_pose;
     rclcpp::Publisher<custom_msgs::msg::LocalMapMsg>::SharedPtr pub_map;
     rclcpp::Publisher<custom_msgs::msg::WaypointsMsg>::SharedPtr pub_way;
+    rclcpp::Publisher<custom_msgs::msg::VelEstimation>::SharedPtr pub_vel;
+    rclcpp::Publisher<custom_msgs::msg::TxSystemState>::SharedPtr pub_syst;
+    rclcpp::Publisher<custom_msgs::msg::RxVehicleSensors>::SharedPtr pub_sens;
+    rclcpp::Publisher<custom_msgs::msg::RxSteeringAngle>::SharedPtr pub_steer;
+    rclcpp::Publisher<custom_msgs::msg::RxWheelSpeed>::SharedPtr pub_wheel;
+    rclcpp::Publisher<custom_msgs::msg::AutonomousStatus>::SharedPtr pub_aut;
+    rclcpp::Publisher<custom_msgs::msg::MissionSelection>::SharedPtr pub_miss;
+
     rclcpp::Subscription<custom_msgs::msg::TxControlCommand>::SharedPtr sub_comm;
 
     State state;
@@ -115,7 +129,7 @@ class sim_node: public rclcpp::Node
     int idx_of_last_lap;
     int sent;
     int discipline;
-    
+    int is_end;
 
 };
 }

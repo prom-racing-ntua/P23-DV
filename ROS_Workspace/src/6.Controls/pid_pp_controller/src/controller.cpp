@@ -111,7 +111,7 @@ PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(
     // SUB/PUB CREATION
     sub_waypoints = this->create_subscription<custom_msgs::msg::WaypointsMsg>("waypoints", 10, std::bind(&PID_PP_Node::waypoints_callback, this, _1), sub_opt);
     sub_pose = this->create_subscription<custom_msgs::msg::PoseMsg>("pose", 10, std::bind(&PID_PP_Node::pose_callback, this, _1), sub_opt);
-    pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
+    pub_actuators = this->create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
     pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
     std::cout << "Object created" << std::endl;
 

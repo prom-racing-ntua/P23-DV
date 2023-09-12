@@ -14,7 +14,7 @@ NODE = None
 GUI = None
 
 class Data:
-    def __init__(self):
+    def __init__(self) -> None:
         self.actual_speed = 0
         self.target_speed = 0
         self.accel_x = 0
@@ -38,12 +38,12 @@ class Data:
         self.ins_mode = 0
 
 class TelemetryNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("telemetry_data")
         
         self.sub_velest = self.create_subscription(VelEstimation, '/velocity_estimation', self.velocity_callback, 10)
         
-        self.sub_controls = self.create_subscription(TxControlCommand, '/control_command', self.controls_callback, 10)
+        self.sub_controls = self.create_subscription(TxControlCommand, '/control_commands', self.controls_callback, 10)
         
         self.sub_syst = self.create_subscription(TxSystemState, '/system_state', self.system_callback, 10)
         
@@ -62,10 +62,10 @@ class TelemetryNode(Node):
         timer_period = 0.1
         self.time = self.create_timer(timer_period, self.update_all)
         
-    def update_all(self):
+    def update_all(self) -> None:
         #GUI.state.change_all(self.data.dv_status, self.data.as_status, self.data.mission)
         global GUI
-        start = time.time()
+        # start = time.time()
         GUI.velocity.set_target(self.data.target_speed)
         GUI.velocity.set_actual(self.data.actual_speed)
         
@@ -83,24 +83,24 @@ class TelemetryNode(Node):
         GUI.brake.set_target(self.data.target_brake)
         GUI.brake.set_both(self.data.actual_brake_f, self.data.actual_brake_r)
         
-        GUI.error.update(self.data.errors)
-        end = time.time()
-        print(end-start)
+        GUI.error.update(self.data.errors, self.data.ins_mode)
+        # end = time.time()
+        # print(end-start)
     
-    def velocity_callback(self, msg):
+    def velocity_callback(self, msg) -> None:
         self.data.actual_speed = msg.velocity_x
         self.data.vy = msg.velocity_y
         self.data.yaw = msg.yaw_rate
         self.data.accel_x = msg.acceleration_x
         self.data.accel_y = msg.acceleration_y
         
-    def controls_callback(self, msg):
+    def controls_callback(self, msg) -> None:
         self.data.target_speed = msg.speed_target / 3.6
         self.data.target_torque = msg.motor_torque_target
         self.data.target_steer = msg.steering_angle_target
         self.data.target_brake = msg.brake_pressure_target
         
-    def system_callback(self, msg):
+    def system_callback(self, msg) -> None:
         self.data.dv_status = msg.dv_status.id
         self.data.errors =  [msg.camera_inference_error, 
                             msg.velocity_estimation_error, 
@@ -111,30 +111,30 @@ class TelemetryNode(Node):
                             msg.camera_left_error, 
                             msg.camera_right_error,
                             msg.vn_200_error, 
-                            msg.vn_400_error]
+                            msg.vn_300_error]
         self.data.ins_mode = msg.ins_mode
         self.data.lap_count = msg.lap_counter
         
-    def sensor_callback(self, msg):
+    def sensor_callback(self, msg) -> None:
         self.data.actual_torque = msg.motor_torque_actual
         self.data.actual_brake_f = msg.brake_pressure_front
         self.data.actual_brake_r = msg.brake_pressure_rear
         
-    def steering_callback(self, msg):
+    def steering_callback(self, msg) -> None:
         self.data.actual_steer = msg.steering_angle
         
-    def wheel_callback(self, msg):
+    def wheel_callback(self, msg) -> None:
         self.data.yaw_i = [msg.front_left, msg.front_right, msg.rear_left, msg.rear_right]
         
-    def as_callback(self, msg):
+    def as_callback(self, msg) -> None:
         self.data.as_status = msg.id
         
-    def mission_callback(self, msg):
-        self.data.mission = msg.id
+    def mission_callback(self, msg) -> None:
+        self.data.mission = msg.mission_selected
         
         
         
-def main(args=None):
+def main(args=None) -> None:
     
     # GUI = TelemetryApp()
     

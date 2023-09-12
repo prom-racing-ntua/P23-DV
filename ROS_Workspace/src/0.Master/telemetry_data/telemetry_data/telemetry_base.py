@@ -18,7 +18,7 @@ from math import pi
 
 
 class TelemetryApp(ctk.CTk):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         
         self.title("Telemetry - Data")
@@ -60,7 +60,7 @@ class TelemetryApp(ctk.CTk):
         self.ell_rr.grid(row = 4, column = 2, sticky = "news", padx = 3, pady = 3)
        
 class VelocityFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         self.configure(bg_color = "transparent")
         self.configure(fg_color = "gray20")
@@ -87,18 +87,26 @@ class VelocityFrame(ctk.CTkFrame):
         self.target_l = ctk.CTkLabel(self, text = "Target", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 10)
         self.target_l.grid(row = 3, column = 1, padx = 5, pady = 5)
         
-    def set_target(self, target):
-        self.target_v.configure(text = "%.2f m/s"%target)
+        self.target = 0
+        self.actual = 0
         
-    def set_actual(self, speed):
-        self.actual_v.configure(text = "%.2f m/s"%speed)
-        self.speedbar.set(speed / 10)
-        if speed>10: 
-            self.actual_v.configure(text_color = "red")
-            self.speedbar.configure(progress_color = "red")
+        
+    def set_target(self, target) -> None:
+        if target!=self.target:
+            self.target = target
+            self.target_v.configure(text = "%.2f m/s"%target)
+        
+    def set_actual(self, speed) -> None:
+        if speed != self.actual:
+            self.actual = speed
+            self.actual_v.configure(text = "%.2f m/s"%speed)
+            self.speedbar.set(speed / 10)
+            if speed>10: 
+                self.actual_v.configure(text_color = "red")
+                self.speedbar.configure(progress_color = "red")
 
 class AccelFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         
         self.configure(bg_color = "transparent")
@@ -142,64 +150,71 @@ class AccelFrame(ctk.CTkFrame):
         coord0 = 3*a/8, 3*a/8, 5*a/8, 5*a/8
         self.l0 = self.canvas.create_oval(coord0, fill = "red")
         
-    def update_ax(self, a_x):
-        ag = a_x / 9.81
+        self.a_x = 0
+        self.a_y = 0
         
-        self.canvas.itemconfigure(self.l1_n, fill = "gray30")
-        self.canvas.itemconfigure(self.l2_n, fill = "gray30")
-        self.canvas.itemconfigure(self.l3_n, fill = "gray30")
-        self.canvas.itemconfigure(self.l1_s, fill = "gray30")
-        self.canvas.itemconfigure(self.l2_s, fill = "gray30")
-        self.canvas.itemconfigure(self.l3_s, fill = "gray30")
+    def update_ax(self, a_x) -> None:
+        if a_x != self.a_x:
+            self.a_x = a_x
+            ag = a_x / 9.81
+            
+            self.canvas.itemconfigure(self.l1_n, fill = "gray30")
+            self.canvas.itemconfigure(self.l2_n, fill = "gray30")
+            self.canvas.itemconfigure(self.l3_n, fill = "gray30")
+            self.canvas.itemconfigure(self.l1_s, fill = "gray30")
+            self.canvas.itemconfigure(self.l2_s, fill = "gray30")
+            self.canvas.itemconfigure(self.l3_s, fill = "gray30")
+            
+            if ag>0:
+                self.ax.configure(text = "+%.2f g"%ag)
+                if a_x>0.25:
+                    self.canvas.itemconfigure(self.l1_n, fill = "red2")
+                if a_x>1:
+                    self.canvas.itemconfigure(self.l2_n, fill = "red3")
+                if a_x>2:
+                    self.canvas.itemconfigure(self.l3_n, fill = "red4")
+                    
+            else:
+                self.ax.configure(text = "%.2f g"%ag)
+                if a_x<-0.25:
+                    self.canvas.itemconfigure(self.l1_s, fill = "red2")
+                if a_x<-1:
+                    self.canvas.itemconfigure(self.l2_s, fill = "red3")
+                if a_x<-2:
+                    self.canvas.itemconfigure(self.l3_s, fill = "red4")
         
-        if ag>0:
-            self.ax.configure(text = "+%.2f g"%ag)
-            if a_x>0.25:
-                self.canvas.itemconfigure(self.l1_n, fill = "red2")
-            if a_x>1:
-                self.canvas.itemconfigure(self.l2_n, fill = "red3")
-            if a_x>2:
-                self.canvas.itemconfigure(self.l3_n, fill = "red4")
-                
-        else:
-            self.ax.configure(text = "%.2f g"%ag)
-            if a_x<-0.25:
-                self.canvas.itemconfigure(self.l1_s, fill = "red2")
-            if a_x<-1:
-                self.canvas.itemconfigure(self.l2_s, fill = "red3")
-            if a_x<-2:
-                self.canvas.itemconfigure(self.l3_s, fill = "red4")
-        
-    def update_ay(self, a_y):
-        ag = a_y / 9.81
-        
-        self.canvas.itemconfigure(self.l1_e, fill = "gray30")
-        self.canvas.itemconfigure(self.l2_e, fill = "gray30")
-        self.canvas.itemconfigure(self.l3_e, fill = "gray30")
-        self.canvas.itemconfigure(self.l1_w, fill = "gray30")
-        self.canvas.itemconfigure(self.l2_w, fill = "gray30")
-        self.canvas.itemconfigure(self.l3_w, fill = "gray30")
-        
-        if ag>0:
-            self.ay.configure(text = "+%.2f g"%ag)
-            if a_y>0.25:
-                self.canvas.itemconfigure(self.l1_e, fill = "red2")
-            if a_y>1:
-                self.canvas.itemconfigure(self.l2_e, fill = "red3")
-            if a_y>2:
-                self.canvas.itemconfigure(self.l3_e, fill = "red4")
-                
-        else:
-            self.ay.configure(text = "%.2f g"%ag)
-            if a_y<-0.25:
-                self.canvas.itemconfigure(self.l1_w, fill = "red2")
-            if a_y<-1:
-                self.canvas.itemconfigure(self.l2_w, fill = "red3")
-            if a_y<-2:
-                self.canvas.itemconfigure(self.l3_w, fill = "red4")
+    def update_ay(self, a_y) -> None:
+        if a_y!=self.a_y:
+            self.a_y = a_y
+            ag = a_y / 9.81
+            
+            self.canvas.itemconfigure(self.l1_e, fill = "gray30")
+            self.canvas.itemconfigure(self.l2_e, fill = "gray30")
+            self.canvas.itemconfigure(self.l3_e, fill = "gray30")
+            self.canvas.itemconfigure(self.l1_w, fill = "gray30")
+            self.canvas.itemconfigure(self.l2_w, fill = "gray30")
+            self.canvas.itemconfigure(self.l3_w, fill = "gray30")
+            
+            if ag>0:
+                self.ay.configure(text = "+%.2f g"%ag)
+                if a_y>0.25:
+                    self.canvas.itemconfigure(self.l1_e, fill = "red2")
+                if a_y>1:
+                    self.canvas.itemconfigure(self.l2_e, fill = "red3")
+                if a_y>2:
+                    self.canvas.itemconfigure(self.l3_e, fill = "red4")
+                    
+            else:
+                self.ay.configure(text = "%.2f g"%ag)
+                if a_y<-0.25:
+                    self.canvas.itemconfigure(self.l1_w, fill = "red2")
+                if a_y<-1:
+                    self.canvas.itemconfigure(self.l2_w, fill = "red3")
+                if a_y<-2:
+                    self.canvas.itemconfigure(self.l3_w, fill = "red4")
 
 class LapFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         
         self.configure(bg_color = "transparent")
@@ -222,22 +237,23 @@ class LapFrame(ctk.CTkFrame):
         self.total = ctk.CTkLabel(self, text = "/0", text_color = "white", font = ("CTkFont", 25), fg_color = "transparent", bg_color="transparent", corner_radius = 10)
         self.total.grid(row = 1, column = 1, columnspan = 1, padx = 5, pady = 5, sticky = "w")
         
-    def set_max(self, lap_count):
+    def set_max(self, lap_count) -> None:
         self.lap_count = lap_count - 1
         self.total.configure(text = "/"+str(lap_count - 1))
         
-    def set_lap(self, lap):
-        self.lap = lap
-        self.count.configure(text = str(lap))
-        if lap==self.lap_count:
-            self.count.configure(text_color = "green4")
-        elif lap==self.lap_count+1:
-            self.count.configure(text_color = "navy")
-        elif lap>self.lap_count+1:
-            self.count.configure(text_color = "red")
+    def set_lap(self, lap) -> None:
+        if self.lap != lap:
+            self.lap = lap
+            self.count.configure(text = str(lap))
+            if lap==self.lap_count:
+                self.count.configure(text_color = "green4")
+            elif lap==self.lap_count+1:
+                self.count.configure(text_color = "navy")
+            elif lap>self.lap_count+1:
+                self.count.configure(text_color = "red")
     
 class TorqueFrame(ctk.CTkFrame):
-    def __init__(self, master, mn, mx):
+    def __init__(self, master, mn, mx) -> None:
         super().__init__(master)
         
         self.mn = mn
@@ -271,20 +287,27 @@ class TorqueFrame(ctk.CTkFrame):
         self.target_l = ctk.CTkLabel(self, text = "Target", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 10)
         self.target_l.grid(row = 3, column = 1, padx = 5, pady = 5)
         
-    def set_target(self, target):
-        self.target_v.configure(text = "%.2f Nm"%target)
+        self.target = 0
+        self.actual = 0
         
-    def set_actual(self, trq):
-        self.actual_v.configure(text = "%.2f Nm"%trq)
-        if trq>0:
-            self.bar_acc.set(trq/self.mx)
-            self.bar_dec.set(1)
-        else:
-            self.bar_dec.set(1-trq/self.mn)
-            self.bar_acc.set(0)
+    def set_target(self, target) -> None:
+        if target!=self.target:
+            self.target = target
+            self.target_v.configure(text = "%.2f Nm"%target)
+        
+    def set_actual(self, trq) -> None:
+        if trq!=self.actual:
+            self.actual = trq
+            self.actual_v.configure(text = "%.2f Nm"%trq)
+            if trq>0:
+                self.bar_acc.set(trq/self.mx)
+                self.bar_dec.set(1)
+            else:
+                self.bar_dec.set(1-trq/self.mn)
+                self.bar_acc.set(0)
             
 class SteerFrame(ctk.CTkFrame):
-    def __init__(self, master, mn, mx):
+    def __init__(self, master, mn, mx) -> None:
         super().__init__(master)
         
         self.mn = mn
@@ -317,22 +340,29 @@ class SteerFrame(ctk.CTkFrame):
         self.target_l = ctk.CTkLabel(self, text = "Target", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 5)
         self.target_l.grid(column = 1, row = 2, padx = 5, pady = 5)
         
-    def set_target(self, target):
-        target = target * 180 / pi
-        self.target_v.configure(text = "%.2f°"%target)
+        self.target = 0
+        self.actual = 0
         
-    def set_actual(self, steer):
-        steer = steer * 180 / pi
-        self.actual_v.configure(text = "%.2f°"%steer)
-        if steer>0:
-            self.bar_dec.set(steer/self.mx)
-            self.bar_acc.set(1)
-        else:
-            self.bar_acc.set(1-steer/self.mn)
-            self.bar_dec.set(0)            
+    def set_target(self, target) -> None:
+        if target!=self.target:
+            self.target = target
+            target = target * 180 / pi
+            self.target_v.configure(text = "%.2f°"%target)
+        
+    def set_actual(self, steer) -> None:
+        if steer!=self.actual:
+            self.actual = steer
+            steer = steer * 180 / pi
+            self.actual_v.configure(text = "%.2f°"%steer)
+            if steer>0:
+                self.bar_dec.set(steer/self.mx)
+                self.bar_acc.set(1)
+            else:
+                self.bar_acc.set(1-steer/self.mn)
+                self.bar_dec.set(0)            
         
 class BrakeFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         self.configure(bg_color = "transparent")
         self.configure(fg_color = "gray20")
@@ -347,7 +377,7 @@ class BrakeFrame(ctk.CTkFrame):
         self.grid_rowconfigure(3, weight = 2, uniform = "c")
         
         self.last_target = 20
-        self.target = 20
+        self.target = 0
         self.target_l = ctk.CTkLabel(self, text = "Target", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 5)
         self.target_l.grid(row = 0, column = 0, padx = 0, pady = 5, rowspan = 2)
         
@@ -374,32 +404,41 @@ class BrakeFrame(ctk.CTkFrame):
         self.bar_rear.grid(row = 2, column = 2, rowspan = 2, sticky = "ns", pady = 5)
         self.bar_rear.set(0)
         
-    def set_target(self, t):
-        self.target = t
-        if t > 0:
-            self.last_target = t
-        self.target_v.configure(text = "%.1f"%t)
-        if abs(t)>0.1:
-            self.bar_front.configure(fg_color = "gray30")
-            self.bar_rear.configure(fg_color = "gray30")
-        else:
-            self.bar_front.configure(fg_color = "gray10")
-            self.bar_rear.configure(fg_color = "gray10")
+        self.target = 0
+        self.actual_f = 0
+        self.actual_r = 0
         
-    def set_front(self, p):
-        self.actual_vf.configure(text = "%.1f"%p)
-        self.bar_front.set(p / self.last_target)
+    def set_target(self, t) -> None:
+        if t!=self.target:
+            self.target = t
+            if t > 0:
+                self.last_target = t
+            self.target_v.configure(text = "%.1f"%t)
+            if abs(t)>0.1:
+                self.bar_front.configure(fg_color = "gray30")
+                self.bar_rear.configure(fg_color = "gray30")
+            else:
+                self.bar_front.configure(fg_color = "gray10")
+                self.bar_rear.configure(fg_color = "gray10")
         
-    def set_rear(self, p):
-        self.actual_vr.configure(text = "%.1f"%p)
-        self.bar_rear.set(p / self.last_target)
+    def set_front(self, p) -> None:
+        if p!=self.actual_f:
+            self.actual_f = p
+            self.actual_vf.configure(text = "%.1f"%p)
+            self.bar_front.set(p / self.last_target)
         
-    def set_both(self, f, r):
+    def set_rear(self, p) -> None:
+        if p!=self.actual_r:
+            self.actual_r = p
+            self.actual_vr.configure(text = "%.1f"%p)
+            self.bar_rear.set(p / self.last_target)
+        
+    def set_both(self, f, r) -> None:
         self.set_front(f)
         self.set_rear(r)
         
 class ErrorFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         self.configure(bg_color = "transparent")
         self.configure(fg_color = "gray20")
@@ -415,6 +454,9 @@ class ErrorFrame(ctk.CTkFrame):
         self.grid_rowconfigure(5, weight = 1, uniform = "c")
         self.grid_rowconfigure(6, weight = 1, uniform = "c")
         self.grid_rowconfigure(7, weight = 1, uniform = "c")
+        self.grid_rowconfigure(8, weight = 1, uniform = "c")
+        self.grid_rowconfigure(9, weight = 1, uniform = "c")
+        self.grid_rowconfigure(10, weight = 1, uniform = "c")
         
         self.inference = ctk.CTkLabel(self, text = "Inference", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
         self.inference.grid(row = 0, column = 0, sticky = "news", padx = 10)
@@ -440,6 +482,15 @@ class ErrorFrame(ctk.CTkFrame):
         self.cam_r = ctk.CTkLabel(self, text = "Cam Right", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
         self.cam_r.grid(row = 7, column = 0, sticky = "news", padx = 10)
         
+        self.vn_200 = ctk.CTkLabel(self, text = "VN-200", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
+        self.vn_200.grid(row = 8, column = 0, sticky = "news", padx = 10)
+        
+        self.vn_300 = ctk.CTkLabel(self, text = "VN-300", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
+        self.vn_300.grid(row = 9, column = 0, sticky = "news", padx = 10)
+        
+        self.ins_mode = ctk.CTkLabel(self, text = "INS Mode", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
+        self.ins_mode.grid(row = 10, column = 0, sticky = "news", padx = 10)
+        
         
         self.inference_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
         self.inference_status.grid(row = 0, column = 1, padx = 10, pady = 5)
@@ -464,31 +515,73 @@ class ErrorFrame(ctk.CTkFrame):
         
         self.cam_r_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
         self.cam_r_status.grid(row = 7, column = 1, padx = 10, pady = 5)
+        
+        self.vn_200_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.vn_200_status.grid(row = 8, column = 1, padx = 10, pady = 5)
+        
+        self.vn_300_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.vn_300_status.grid(row = 9, column = 1, padx = 10, pady = 5)
+        
+        self.ins_mode_status = ctk.CTkLabel(self, text = "0", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.ins_mode_status.grid(row = 10, column = 1, padx = 5, pady = 5)
+        
+        self.errors = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.ins = 0
        
-    def update(self, status):
-        self.inference.configure(text_color = self.color_l(status[0]))
-        self.inference_status.configure(fg_color = self.color(status[0]))
+    def update(self, status, ins_mode) -> None:
+        if status[0] != self.errors[0]:
+            self.errors[0] = status[0]
+            self.inference.configure(text_color = self.color_l(status[0]))
+            self.inference_status.configure(fg_color = self.color(status[0]))
         
-        self.vel_est.configure(text_color = self.color_l(status[1]))
-        self.vel_est_status.configure(fg_color = self.color(status[1]))
+        if status[1] != self.errors[1]:
+            self.errors[1] = status[1]    
+            self.vel_est.configure(text_color = self.color_l(status[1]))
+            self.vel_est_status.configure(fg_color = self.color(status[1]))
         
-        self.slam.configure(text_color = self.color_l(status[2]))
-        self.slam_status.configure(fg_color = self.color(status[2]))
+        if status[2] != self.errors[2]:
+            self.errors[2] = status[2]      
+            self.slam.configure(text_color = self.color_l(status[2]))
+            self.slam_status.configure(fg_color = self.color(status[2]))
         
-        self.mpc.configure(text_color = self.color_l(status[3]))
-        self.mpc_status.configure(fg_color = self.color(status[3]))
+        if status[3] != self.errors[3]:
+            self.errors[3] = status[3]  
+            self.mpc.configure(text_color = self.color_l(status[3]))
+            self.mpc_status.configure(fg_color = self.color(status[3]))
         
-        self.pidpp.configure(text_color = self.color_l(status[4]))
-        self.pidpp_status.configure(fg_color = self.color(status[4]))
+        if status[4] != self.errors[4]:
+            self.errors[4] = status[4]  
+            self.pidpp.configure(text_color = self.color_l(status[4]))
+            self.pidpp_status.configure(fg_color = self.color(status[4]))
         
-        self.pathp.configure(text_color = self.color_l(status[5]))
-        self.pathp_status.configure(fg_color = self.color(status[5]))
+        if status[5] != self.errors[5]:
+            self.errors[5] = status[5]  
+            self.pathp.configure(text_color = self.color_l(status[5]))
+            self.pathp_status.configure(fg_color = self.color(status[5]))
         
-        self.cam_l.configure(text_color = self.color_l(status[6]))
-        self.cam_l_status.configure(fg_color = self.color(status[6]))
+        if status[6] != self.errors[6]:
+            self.errors[6] = status[6]  
+            self.cam_l.configure(text_color = self.color_l(status[6]))
+            self.cam_l_status.configure(fg_color = self.color(status[6]))
         
-        self.cam_r.configure(text_color = self.color_l(status[7]))
-        self.cam_r_status.configure(fg_color = self.color(status[7]))
+        if status[7] != self.errors[7]:
+            self.errors[7] = status[7]  
+            self.cam_r.configure(text_color = self.color_l(status[7]))
+            self.cam_r_status.configure(fg_color = self.color(status[7]))
+        
+        if status[8] != self.errors[8]:
+            self.errors[8] = status[8]  
+            self.vn_200.configure(text_color = self.color_l(status[8]))
+            self.vn_200_status.configure(fg_color = self.color(status[6]))
+        
+        if status[9] != self.errors[9]:
+            self.errors[9] = status[9]  
+            self.vn_300.configure(text_color = self.color_l(status[9]))
+            self.vn_300_status.configure(fg_color = self.color(status[7]))
+            
+        if self.ins!=ins_mode:
+            self.ins = ins_mode
+            self.ins_mode_status.configure(text = str(ins_mode))
         
     def color(self, status) -> str:
         if status==0: return "green4"
@@ -499,7 +592,7 @@ class ErrorFrame(ctk.CTkFrame):
         else: return "red3"
 
 class EllipseFrame(ctk.CTkFrame):
-    def __init__(self, master, left, title):
+    def __init__(self, master, left, title) -> None:
         super().__init__(master)
         
         self.configure(bg_color = "transparent")
@@ -532,30 +625,40 @@ class EllipseFrame(ctk.CTkFrame):
         self.ell = self.canvas.create_oval(0, 0, 0, 0, outline = "red", width  =2, fill = "")
         self.point = self.canvas.create_oval(0, 0, 0, 0, outline = "black", width  =1, fill = "blue")
         
-    def update(self, fx, fy, mx, my, fz):
-        e = (self.fymax - my*fz)*(self.a/(2*self.fymax))
-        d = (self.fxmax - mx*fz)*(self.a/(2*self.fxmax))
-        c = (self.fxmax + mx*fz)*(self.a/(2*self.fxmax))
-        f = (self.fymax + my*fz)*(self.a/(2*self.fymax))
+        self.mx, self.my, self.fx, self.fy, self.fz = 0, 0, 0, 0, 0
+        self.slip = False
+                
+    def update(self, fx, fy, mx, my, fz) -> None:
+        if self.fz!=fz or self.my!=my or self.mx!=mx:
+            self.fz, self.my, self.mx = fz, my, mx
+            e = (self.fymax - my*fz)*(self.a/(2*self.fymax))
+            d = (self.fxmax - mx*fz)*(self.a/(2*self.fxmax))
+            c = (self.fxmax + mx*fz)*(self.a/(2*self.fxmax))
+            f = (self.fymax + my*fz)*(self.a/(2*self.fymax))
+            
+            coords = d,e,c,f
+            
+            #self.canvas.itemconfig(self.ell, __x0 = d, __y0 = e, __x1 = c, __y1 = f)
+            self.canvas.coords(self.ell, d, e, c, f)
         
-        coords = d,e,c,f
-        
-        #self.canvas.itemconfig(self.ell, __x0 = d, __y0 = e, __x1 = c, __y1 = f)
-        self.canvas.coords(self.ell, d, e, c, f)
-        
-        x = (self.fxmax + fx)*(self.a/(2*self.fxmax))
-        y = (self.fymax - fy)*(self.a/(2*self.fymax))
-        
-        #self.canvas.itemconfig(self.point, __x0 = x-1, __y0 = y-1, __x1 = x+1, __y1 = y+1)
-        self.canvas.coords(self.point, x-3, y-3, x+3, y+3)
-        
-        if (fx/mx)**2 + (fy/my)**2 > fz**2:
+        if fx!=self.fx or fy!=self.fy:
+            self.fx, self.fy = fx, fy
+            x = (self.fxmax + fx)*(self.a/(2*self.fxmax))
+            y = (self.fymax - fy)*(self.a/(2*self.fymax))
+            
+            #self.canvas.itemconfig(self.point, __x0 = x-1, __y0 = y-1, __x1 = x+1, __y1 = y+1)
+            self.canvas.coords(self.point, x-3, y-3, x+3, y+3)
+            
+        slip = (fx/mx)**2 + (fy/my)**2 > fz**2
+        if slip and not self.slip:
+            self.slip = True
             self.status.configure(fg_color = "red")
-        else:
+        elif not slip and self.slip:
+            self.slip = False
             self.status.configure(fg_color = "gray30")
 
 class StateFrame(ctk.CTkFrame):
-    def __init__(self, master):
+    def __init__(self, master) -> None:
         super().__init__(master)
         
         self.configure(bg_color = "transparent")
@@ -583,7 +686,13 @@ class StateFrame(ctk.CTkFrame):
         self.miss_v = ctk.CTkLabel(self, text = "UNLOCKED", text_color = "white", font = ("CTkFont", 20))
         self.miss_v.grid(row = 1, column = 2, sticky = "nswe", padx = 5, pady = 5)
         
-    def change_dv(self, state):
+        self.dv, self.aut, self.miss = 0, 0, 0
+        
+    def change_dv(self, state) -> None:
+        if state==self.dv:
+            return
+        self.dv = state
+        
         if state==0:
             self.dv_v.configure(text = "STARTUP", text_color = "white")
         elif state==1:
@@ -601,7 +710,11 @@ class StateFrame(ctk.CTkFrame):
         else:
             self.dv_v.configure(text = "invalid", text_color = "red")
             
-    def change_as(self, state):
+    def change_as(self, state) -> None:
+        if state==self.aut:
+            return
+        self.aut = state
+        
         if state==1:
             self.aut_v.configure(text = "OFF", text_color = "white")
         elif state==2:
@@ -615,7 +728,11 @@ class StateFrame(ctk.CTkFrame):
         else:
             self.aut_v.configure(text = "invalid", text_color = "red")
             
-    def change_miss(self, state):
+    def change_miss(self, state) -> None:
+        if state==self.miss:
+            return
+        self.miss = state
+        
         if state==0:
             self.miss_v.configure(text = "UNLOCKED", text_color = "white")
         elif state==1:
@@ -635,7 +752,7 @@ class StateFrame(ctk.CTkFrame):
         else:
             self.miss_v.configure(text = "invalid", text_color = "red")
 
-    def change_all(self, dv, AS, miss):
+    def change_all(self, dv, AS, miss) -> None:
         self.change_dv(dv)
         self.change_as(AS)
         self.change_miss(miss)
