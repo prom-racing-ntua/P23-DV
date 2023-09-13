@@ -13,7 +13,6 @@ from std_msgs.msg import Header
 from custom_msgs.msg import NodeSync
 from custom_msgs.srv import GetFrequencies
 
-
 class SaltasNode(Node):
     '''P23 Master Node (me to kalytero onoma)'''
     def __init__(self) -> None:
@@ -92,8 +91,6 @@ def calcClockFrequency(velocity_freq, perception_freq):
 
 def main(args=None):
     rclpy.init(args=args)
-
-
     time.sleep(3)
     # Spin Master Node
     p23_master_node = SaltasNode()
