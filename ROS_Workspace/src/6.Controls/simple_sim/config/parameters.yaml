@@ -1,3 +1,7 @@
 simple_sim:
   ros__parameters:
-    discipline: "Autocross"
+    discipline: "Acceleration"
+
+sim_with_brake:
+  ros__parameters:
+    discipline: "Acceleration"

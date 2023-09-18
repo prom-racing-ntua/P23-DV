@@ -34,8 +34,8 @@ class TelemetryApp(ctk.CTk):
         for j in range(1,5):
             self.grid_rowconfigure(j, weight = 3, uniform = "c")
             
-        #self.state = StateFrame(self)
-        #self.state.grid(row = 0, column = 0, sticky = "news", padx = 3, pady = 3, columnspan = 3)
+        self.state_ = StateFrame(self)
+        self.state_.grid(row = 0, column = 0, sticky = "news", padx = 3, pady = 3, columnspan = 3)
         self.velocity = VelocityFrame(self)
         self.velocity.grid(row = 1, column = 0, sticky = "news", padx = 3, pady = 3)
         self.accel = AccelFrame(self)
@@ -56,7 +56,7 @@ class TelemetryApp(ctk.CTk):
         self.ell_fr.grid(row = 3, column = 2, sticky = "news", padx = 3, pady = 3)
         self.ell_rl = EllipseFrame(self, 1, "RL")
         self.ell_rl.grid(row = 4, column = 1, sticky = "news", padx = 3, pady = 3)
-        self.ell_rr = EllipseFrame(self, 1, "RR")
+        self.ell_rr = EllipseFrame(self, 0, "RR")
         self.ell_rr.grid(row = 4, column = 2, sticky = "news", padx = 3, pady = 3)
        
 class VelocityFrame(ctk.CTkFrame):
@@ -70,8 +70,8 @@ class VelocityFrame(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight = 1, uniform = "c")
         self.grid_rowconfigure(3, weight = 1, uniform = "c")
         
-        self.grid_columnconfigure(0, weight = 1)
-        self.grid_columnconfigure(1, weight = 2)
+        self.grid_columnconfigure(0, weight = 1, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 2, uniform = 'c')
                 
         self.speedbar = ctk.CTkProgressBar(self, width = 30, height = 120, corner_radius = 0, border_width = 1, border_color = 'black', fg_color = "gray39", progress_color = "SeaGreen3", orientation = "vertical")
         self.speedbar.grid(row = 0, column = 0, rowspan = 4, sticky = "ns", pady = 10)
@@ -112,11 +112,11 @@ class AccelFrame(ctk.CTkFrame):
         self.configure(bg_color = "transparent")
         self.configure(fg_color = "gray20")
         
-        self.grid_rowconfigure(0, weight = 1)
-        self.grid_rowconfigure(1, weight = 3)
+        self.grid_rowconfigure(0, weight = 1, uniform = 'c')
+        self.grid_rowconfigure(1, weight = 3, uniform = 'c')
         
-        self.grid_columnconfigure(0, weight = 3)
-        self.grid_columnconfigure(1, weight = 1)
+        self.grid_columnconfigure(0, weight = 3, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 2, uniform = 'c')
         
         a = 110
         
@@ -220,11 +220,11 @@ class LapFrame(ctk.CTkFrame):
         self.configure(bg_color = "transparent")
         self.configure(fg_color = "gray20")
         
-        self.grid_rowconfigure(0, weight = 1)
-        self.grid_rowconfigure(1, weight = 3)
+        self.grid_rowconfigure(0, weight = 1, uniform = 'c')
+        self.grid_rowconfigure(1, weight = 1, uniform = 'c')
         
-        self.grid_columnconfigure(0, weight = 1)
-        self.grid_columnconfigure(1, weight = 1)
+        self.grid_columnconfigure(0, weight = 1, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 1, uniform = 'c')
         
         self.lab = ctk.CTkLabel(self, text = "LAP", text_color = "white", font = ("CTkFont", 20), fg_color = "gray30", bg_color="transparent", corner_radius = 10)
         self.lab.grid(row = 0, column = 0, columnspan = 2, padx = 20, pady = 20, sticky = "s")
@@ -267,8 +267,8 @@ class TorqueFrame(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight = 1, uniform = "c")
         self.grid_rowconfigure(3, weight = 1, uniform = "c")
         
-        self.grid_columnconfigure(0, weight = 1)
-        self.grid_columnconfigure(1, weight = 2)
+        self.grid_columnconfigure(0, weight = 1, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 2, uniform = 'c')
                 
         self.bar_acc = ctk.CTkProgressBar(self, width = 20, height = 60, corner_radius = 0, border_width = 1, border_color = 'gray40', fg_color = "gray40", progress_color = "green2", orientation = "vertical")
         self.bar_acc.grid(row = 0, column = 0, rowspan = 2, sticky = "ns", pady = (10,0))
@@ -525,8 +525,8 @@ class ErrorFrame(ctk.CTkFrame):
         self.ins_mode_status = ctk.CTkLabel(self, text = "0", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
         self.ins_mode_status.grid(row = 10, column = 1, padx = 5, pady = 5)
         
-        self.errors = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.ins = 0
+        self.errors = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.ins = -1
        
     def update(self, status, ins_mode) -> None:
         if status[0] != self.errors[0]:
@@ -600,11 +600,11 @@ class EllipseFrame(ctk.CTkFrame):
         
         self.ell_col = 1 - left #if left=1 ell_col=0
         
-        self.grid_rowconfigure(0, weight = 1)
-        self.grid_rowconfigure(1, weight = 3)
+        self.grid_rowconfigure(0, weight = 1, uniform = 'c')
+        self.grid_rowconfigure(1, weight = 3, uniform = 'c')
         
-        self.grid_columnconfigure(self.ell_col, weight = 3)
-        self.grid_columnconfigure(1 - self.ell_col, weight = 1)
+        self.grid_columnconfigure(self.ell_col, weight = 3, uniform = 'c')
+        self.grid_columnconfigure(1 - self.ell_col, weight = 1, uniform = 'c')
         
         self.a = 120
         
@@ -628,7 +628,7 @@ class EllipseFrame(ctk.CTkFrame):
         self.mx, self.my, self.fx, self.fy, self.fz = 0, 0, 0, 0, 0
         self.slip = False
                 
-    def update(self, fx, fy, mx, my, fz) -> None:
+    def update(self, fx, fy, fz, mx, my) -> None:
         if self.fz!=fz or self.my!=my or self.mx!=mx:
             self.fz, self.my, self.mx = fz, my, mx
             e = (self.fymax - my*fz)*(self.a/(2*self.fymax))
@@ -637,7 +637,7 @@ class EllipseFrame(ctk.CTkFrame):
             f = (self.fymax + my*fz)*(self.a/(2*self.fymax))
             
             coords = d,e,c,f
-            
+            #print(mx, my, fz)
             #self.canvas.itemconfig(self.ell, __x0 = d, __y0 = e, __x1 = c, __y1 = f)
             self.canvas.coords(self.ell, d, e, c, f)
         

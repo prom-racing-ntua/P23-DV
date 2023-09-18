@@ -119,7 +119,7 @@ double State::calc_a_x(double frx, double ffx, double f_drag, double f_roll, dou
 {
 	// std::cout<<frx<<" "<<f_drag<<" "<<d<<" "<<std::sin(d)<<" "<<ffy * std::sin(d)<<" "<<v_y<<" "<<r<<std::endl;
 	double ax_print = (frx + ffx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;
-	std::cout << "frx, ffx and ax are: " << frx << " " << ffx << " " << ax_print << std::endl;
+	//std::cout << "frx, ffx and ax are: " << frx << " " << ffx << " " << ax_print << std::endl;
 	return (frx + ffx - f_drag - f_roll - ffy * std::sin(d)) / constants.m + v_y * r;	
 }
 double State::calc_a_y(double fry, double ffx, double ffy, double d, double v_x, double r) const
@@ -233,93 +233,136 @@ std::ostream &operator<<(std::ostream &out, const State &a)
 }
 
 
-sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0)
+sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0), is_end(0)
 {
 
-	pub_pose = this->create_publisher<custom_msgs::msg::PoseMsg>("pose", 10);
-	timer_ = this->create_wall_timer(25ms, std::bind(&sim_node::timer_callback, this)); // 1kHz
+    pub_pose = this->create_publisher<custom_msgs::msg::PoseMsg>("/pose", 10);
+    timer_ = this->create_wall_timer(25ms, std::bind(&sim_node::timer_callback, this)); // 1kHz
 
-	pub_map = this->create_publisher<custom_msgs::msg::LocalMapMsg>("local_map", 10);
+    pub_map = this->create_publisher<custom_msgs::msg::LocalMapMsg>("/local_map", 10);
 
-	pub_way = this->create_publisher<custom_msgs::msg::WaypointsMsg>("waypoints", 10);
+    pub_way = this->create_publisher<custom_msgs::msg::WaypointsMsg>("/waypoints", 10);
 
-	sub_comm = this->create_subscription<custom_msgs::msg::TxControlCommand>("control_command", 10, std::bind(&sim_node::command_callback, this, _1));
+    pub_vel = this->create_publisher<custom_msgs::msg::VelEstimation>("/velocity_estimation", 10);
 
-	state.init(constants, 0);
+    pub_syst = this->create_publisher<custom_msgs::msg::TxSystemState>("/system_state", 10);
 
-	std::ifstream fs;
+    pub_sens = this->create_publisher<custom_msgs::msg::RxVehicleSensors>("/sensor_data", 10);
 
-	declare_parameter<string>("discipline", "Autocross");
-	string d = get_parameter("discipline").as_string();
-	if (d == "Autocross")
-		discipline = 0;
-	else if (d == "Trackdrive")
-		discipline = 1;
-	else if (d == "Acceleration")
-		discipline = 2;
-	else if (d == "Skidpad")
-		discipline = 3;
-	else
-		discipline = 0;
+    pub_steer = this->create_publisher<custom_msgs::msg::RxSteeringAngle>("/steering_angle", 10);
 
-	/*
-		Format:
-			count
-			x y color
-			...
-	*/
-	if (discipline == 0 or discipline == 1)
-	{
-		fs.open("src/6.Controls/simple_sim/data/map2.txt");
-		state.x = -5.5;
-	}
-	else if (discipline == 2)
-	{
-		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
-		state.x = -1;
-	}
-	else if (discipline == 3)
-	{
-		fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
-		state.x = -16;
-	}
-		
-	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
-	int count;
-	fs >> count;
-	double x, y;
-	int c;
-	unseen_cones.reserve(count);
-	for (int i = 0; i < count; i++)
-	{
-		fs >> x >> y >> c;
-		if(discipline == 0)unseen_cones.push_back(Cone(x, y, c));
-		else seen_cones.push_back(Cone(x, y, c));
-	}
-	fs.close();
+    pub_wheel = this->create_publisher<custom_msgs::msg::RxWheelSpeed>("/wheel_encoders", 10);
 
-	for (Cone cone : unseen_cones)
-	{
-		if (cone.color == 0)
-			std::cout << '(' << cone.x << "," << cone.y << "),";
-	}
-	std::cout << std::endl;
-	for (Cone cone : unseen_cones)
-	{
-		if (cone.color == 1)
-			std::cout << '(' << cone.x << "," << cone.y << "),";
-	}
-	std::cout << std::endl;
+    pub_aut = this->create_publisher<custom_msgs::msg::AutonomousStatus>("/autonomous_status", 10);
 
-	log.open("src/6.Controls/simple_sim/data/log.txt");
-	log << state;
-	st_d_ticks = 2;
-	mot_d_ticks = 2;
+    pub_miss = this->create_publisher<custom_msgs::msg::MissionSelection>("/mission_selection", 10);
 
-	std::ofstream log2;
-	log2.open("src/6.Controls/simple_sim/data/log2.txt");
-	// state.check_ellipses(log2);
-	log2.close();
+    sub_comm = this->create_subscription<custom_msgs::msg::TxControlCommand>("/control_commands", 10, std::bind(&sim_node::command_callback, this, _1));
+
+    state.init(constants, 0);
+
+    std::ifstream fs;
+
+    auto as = custom_msgs::msg::AutonomousStatus();
+    as.id = 3;
+    pub_aut->publish(as);
+
+    declare_parameter<string>("discipline", "Autocross");
+    string d = get_parameter("discipline").as_string();
+    std::cout<<d<<std::endl;
+    auto mission = custom_msgs::msg::MissionSelection();
+
+    if (d == "Autocross")
+    {
+        discipline = 0;
+        mission.mission_selected = 3;
+    }
+    else if (d == "Trackdrive")
+    {
+        discipline = 1;
+        mission.mission_selected = 4;
+    }
+    else if (d == "Acceleration")
+    {
+        discipline = 2;
+        mission.mission_selected = 1;
+    }
+    else if (d == "Skidpad")
+    {
+        discipline = 3;
+        mission.mission_selected = 2;
+    }
+    else if (d == "EBS Test")
+    {
+        discipline = 4;
+        mission.mission_selected = 5;
+    }
+    else
+    {
+        discipline = 0;
+        mission.mission_selected = 0;
+    }
+
+    pub_miss->publish(mission);
+
+    /*
+        Format:
+            count
+            x y color
+            ...
+    */
+    if (discipline == 0 or discipline == 1)
+    {
+        fs.open("src/6.Controls/simple_sim/data/map.txt");
+        state.x = -5.5;
+    }
+    else if (discipline == 2)
+    {
+        fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
+        state.x = -1;
+    }
+    else if (discipline == 3)
+    {
+        fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
+        state.x = -16;
+    }
+
+    std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
+    int count;
+    fs >> count;
+    double x, y;
+    int c;
+    unseen_cones.reserve(count);
+    for (int i = 0; i < count; i++)
+    {
+        fs >> x >> y >> c;
+        if(discipline == 0)unseen_cones.push_back(Cone(x, y, c));
+        else seen_cones.push_back(Cone(x, y, c));
+    }
+    fs.close();
+
+    for (Cone cone : unseen_cones)
+    {
+        if (cone.color == 0)
+            std::cout << '(' << cone.x << "," << cone.y << "),";
+    }
+    std::cout << std::endl;
+    for (Cone cone : unseen_cones)
+    {
+        if (cone.color == 1)
+            std::cout << '(' << cone.x << "," << cone.y << "),";
+    }
+    std::cout << std::endl;
+
+    log.open("src/6.Controls/simple_sim/data/log.txt");
+    log << state;
+    st_d_ticks = 2;
+    mot_d_ticks = 2;
+
+    std::ofstream log2;
+    log2.open("src/6.Controls/simple_sim/data/log2.txt");
+    // state.check_ellipses(log2);
+    log2.close();
 }
 
 bool sim_node::lap_change() const
@@ -351,7 +394,14 @@ double add_noise(double x, double perc = 0.001)
 
 void sim_node::timer_callback()
 {
-	if(state.lap>1 && state.v_x==0)exit(0);
+    if(state.lap>=1 && state.v_x==0)
+    {
+        if(is_end==0)is_end = 1;
+        if(is_end == 2)exit(0);
+        auto autm = custom_msgs::msg::AutonomousStatus();
+        autm.id = 4;
+        pub_aut->publish(autm);
+    }
 	// std::cout << state.t << std::endl;
 	/*
 		1. state update 1kHz
@@ -365,9 +415,9 @@ void sim_node::timer_callback()
 	{
 		global_idx++;
 		if (brake_press>0.0) {
-			std::cout << "asking to brake with brake_press -> " << brake_press << std::endl;
-			std::cout << "d_piston, R_disk_f, R_disk_r, R_wheel are -> " << " " << constants.d_piston << " " << constants.R_disk_f << " " <<  constants.R_disk_r << " " << constants.R_wheel << std::endl;
-			std::cout << "mi_disk, N_rear, N_front are -> " << " " << constants.mi_disk << " " << constants.N_rear << " " <<  constants.N_front << std::endl;
+			//std::cout << "asking to brake with brake_press -> " << brake_press << std::endl;
+			//std::cout << "d_piston, R_disk_f, R_disk_r, R_wheel are -> " << " " << constants.d_piston << " " << constants.R_disk_f << " " <<  constants.R_disk_r << " " << constants.R_wheel << std::endl;
+			//std::cout << "mi_disk, N_rear, N_front are -> " << " " << constants.mi_disk << " " << constants.N_rear << " " <<  constants.N_front << std::endl;
 			double piston_area = 3.14159*std::pow(constants.d_piston/2,2);
 			double pressure_input = brake_press*100000;
 			double radius_ratio_f =  (constants.R_disk_f/constants.R_wheel);
@@ -398,36 +448,90 @@ void sim_node::timer_callback()
 			idx_of_last_lap = global_idx;
 		}
 	}
-	auto msg = custom_msgs::msg::PoseMsg();
-	auto pos = custom_msgs::msg::Point2Struct();
-	auto vel = custom_msgs::msg::VelEstimation();
-	auto msg2 = custom_msgs::msg::LocalMapMsg();
-	auto s = custom_msgs::msg::ConeStruct();
-	auto o = custom_msgs::msg::Point2Struct();
+    auto msg = custom_msgs::msg::PoseMsg();
+    auto pos = custom_msgs::msg::Point2Struct();
+    auto vel = custom_msgs::msg::VelEstimation();
+    auto msg2 = custom_msgs::msg::LocalMapMsg();
+    auto s = custom_msgs::msg::ConeStruct();
+    auto o = custom_msgs::msg::Point2Struct();
+    auto sys = custom_msgs::msg::TxSystemState();
+    auto dv = custom_msgs::msg::DriverlessStatus();
+    auto sens = custom_msgs::msg::RxVehicleSensors();
+    auto steer = custom_msgs::msg::RxSteeringAngle();
+    auto wheel = custom_msgs::msg::RxWheelSpeed();
 
 	// PUB POSE
-	if (1 or global_idx % 25 == 0)
-	{
-		// std::cout << state.t << "\t" << state.v_x << "\t" << state.r << "\t" << f << "\t" << d << std::endl;
-		log << int(frx_) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
-		log << state;
-		
-		pos.x = add_noise(state.x);
-		pos.y = add_noise(state.y, 0.05);
-		msg.position = pos;
-		msg.theta = add_noise(state.theta, 0.01);
-		vel.global_index = global_idx;
+    if (1 or global_idx % 25 == 0) //40Hz
+    {
+        /* LOGS */
+        log << int(frx_) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
+        log << state;
 
-		vel.velocity_x = add_noise(state.v_x, 0.01);
+        // std::ofstream log2;
+        // log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);
+        // //state.check_ellipses(log2);
+        // log2<<
+        // log2.close();
 
-		vel.velocity_y = add_noise(state.v_y, 0.01);
-		vel.yaw_rate = add_noise(state.r, 1e-4);
-		vel.acceleration_x = add_noise(state.a_x, 1e-4);
-		vel.acceleration_y = add_noise(state.a_y, 1e-4);
-		msg.velocity_state = vel;
-		msg.lap_count = state.lap;
-		pub_pose->publish(msg);
-	}
+        /* VEL_EST AND POSE*/
+        pos.x = add_noise(state.x);
+        pos.y = add_noise(state.y, 0.05);
+        msg.position = pos;
+        msg.theta = add_noise(state.theta, 0.01);
+        vel.global_index = global_idx;
+
+        vel.velocity_x = add_noise(state.v_x, 0.01);
+
+        vel.velocity_y = add_noise(state.v_y, 0.01);
+        vel.yaw_rate = add_noise(state.r, 1e-4);
+        vel.acceleration_x = add_noise(state.a_x, 1e-4);
+        vel.acceleration_y = add_noise(state.a_y, 1e-4);
+        msg.velocity_state = vel;
+        msg.lap_count = state.lap;
+        pub_pose->publish(msg);
+        pub_vel->publish(vel);
+
+        /* SYSTEM */
+        dv.id = 4;
+        if(is_end==1)
+        {
+            dv.id = 5;
+            is_end = 2;
+        }
+        sys.dv_status = dv;
+        sys.vn_200_error = 0;
+        sys.vn_300_error = 0;
+        sys.camera_right_error = 0;
+        sys.camera_left_error = 0;
+        sys.clock_error = 0;
+        sys.camera_inference_error = 0;
+        sys.velocity_estimation_error = 0;
+        sys.slam_error = 0;
+        sys.mpc_controls_error = 0;
+        sys.path_planning_error = 0;
+        sys.pi_pp_controls_error = 0;
+        sys.ins_mode = 2;
+        sys.lap_counter = state.lap;
+        sys.cones_count_actual = uint8_t(seen_cones.size());
+        sys.cones_count_all = uint16_t(seen_cones.size());
+
+        pub_syst->publish(sys);
+
+        /* SENSOR DATA */
+        sens.motor_torque_actual = int16_t(frx_ * constants.R_wheel / (constants.eff * constants.gr));
+        sens.brake_pressure_front = 0;
+        sens.brake_pressure_rear = 0;
+
+        pub_sens->publish(sens);
+
+        /* STEERING */
+        steer.steering_angle = double(last_d);
+
+        pub_steer->publish(steer);
+
+        /* WHEELS TBD*/
+
+    }
 
 	if (global_idx % 250 == 0)
 	{

@@ -60,14 +60,14 @@ void P23StatusNode::checkVectornav() {
         if (result->sensor_connected)
         {
             // If in mission inspection set ins mode to 2
-            if (currentMission == p23::INSPECTION) {
+            if (currentMission == p23::INSPECTION or 1) {
                 insMode = 2;
             }
             // Check if we received the same mode as before
             else if (insMode != result->ins_mode)
             {
-                insMode = result->ins_mode;
-                // insMode = 2;
+                // insMode = result->ins_mode;
+                insMode = 2;
                 // RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
             }
 
