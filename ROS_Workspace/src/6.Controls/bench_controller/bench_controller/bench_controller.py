@@ -62,29 +62,41 @@ class BenchController(Node):
         elif msg.data == keyboard.Key.up.value.vk:
             self.logger.info('Increasing motor torque')
             self._torque_command += self.torque_step
-            if(self._torque_command>self.max_torque): self._torque_command=self.max_torque
+            if(self._torque_command>self.max_torque): 
+                self._torque_command=self.max_torque
+                self.logger.warn("Trying to exceed maximum torque set at {} Nm.".format(self.max_torque))
         elif msg.data == keyboard.Key.down.value.vk:
             self.logger.info('Decreasing motor torque')
             self._torque_command -= self.torque_step
-            if(self._torque_command<self.min_torque): self._torque_command=self.min_torque
+            if(self._torque_command<self.min_torque): 
+                self._torque_command=self.min_torque
+                self.logger.warn("Trying to exceed minimum torque set at {} Nm.".format(self.min_torque))
         #steering handling
         elif msg.data == keyboard.Key.left.value.vk:
             self.logger.info('Steering left')
             self._steering_command -= self.steering_step
-            if(self._steering_command<self.min_steering): self._steering_command=self.min_steering
+            if(self._steering_command<self.min_steering): 
+                self._steering_command=self.min_steering
+                self.logger.warn("Trying to exceed maximum steering rack displ. set at {} mm.".format(self.min_steering))
         elif msg.data == keyboard.Key.right.value.vk:
             self.logger.info('Steering right')
             self._steering_command += self.steering_step
-            if(self._steering_command>self.max_steering): self._steering_command=self.max_steering
+            if(self._steering_command>self.max_steering): 
+                self._steering_command=self.max_steering
+                self.logger.warn("Trying to exceed minimum steering rack displ. set at {} mm.".format(self.max_steering))
         #pressure handling
         elif msg.data == keyboard.Key.shift_l.value.vk:
             self.logger.info('Decreasing Brake Pressure')
             self._brake_command -= self.press_step
-            if(self._brake_command<self.min_press): self._brake_command=self.min_press
+            if(self._brake_command<self.min_press): 
+                self._brake_command=self.min_press
+                self.logger.warn("Trying to exceed minimum brake pressure set at {} bar.".format(self.min_press))
         elif msg.data == keyboard.Key.shift_r.value.vk:
             self.logger.info('Increasing Brake Pressure')
             self._brake_command += self.press_step
-            if(self._brake_command>self.max_press): self._brake_command=self.max_press
+            if(self._brake_command>self.max_press): 
+                self._brake_command=self.max_press
+                self.logger.warn("Trying to exceed maximum brake pressure set at {} bar.".format(self.max_press))
         #other key pressed
         else:
             self.logger.debug('Key ignored: {}'.format(msg.data))

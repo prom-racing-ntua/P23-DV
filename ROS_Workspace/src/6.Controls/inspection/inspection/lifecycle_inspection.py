@@ -90,7 +90,7 @@ class InspectionMission(Node):
     def send_commands(self) -> None:
         if self.mission_finished:
             msg = TxControlCommand()
-            msg.brake_pressure_target = True
+            msg.brake_pressure_target = 5.0 #value at finish
             self._command_publisher.publish(msg)  
             return
 

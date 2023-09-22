@@ -10,6 +10,7 @@ scriptFolder="/home/prom/P23-DV/scripts"
 
 # 3. Launch ROS2 Nodes
 cd $scriptFolder
+source setAliases.sh
 ./launchP23nodes.sh
 sleep 5
 ./launchP23base.sh

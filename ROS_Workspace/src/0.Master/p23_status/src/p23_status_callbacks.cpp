@@ -59,8 +59,9 @@ void P23StatusNode::checkVectornav() {
         nodeStatusMap["vn_300"] = !result->sensor_connected;
         if (result->sensor_connected)
         {
+            //insMode = 2; //HARD CODED FOR LAB
             // If in mission inspection set ins mode to 2
-            if (currentMission == p23::INSPECTION) {
+            if (currentMission == p23::INSPECTION or 1) {
                 insMode = 2;
             }
             // Check if we received the same mode as before
