@@ -186,6 +186,7 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
         best_score = np.inf
         
         _, rot, trans = cv2.solvePnP(real_coords, cone_keypoints_numpy, cameraMatrix, distCoeffs, cv2.SOLVEPNP_IPPE)
+        best_trans = trans
         reproj = cv2.projectPoints(real_coords, rot, trans, cameraMatrix, distCoeffs)[0].reshape(7,2)
         score = np.abs(cone_keypoints_numpy-reproj).mean()
         if score < best_score:
@@ -206,7 +207,7 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
                     best_score = score
 
         if best_score < thresh:  
-            rt.append(rt_converter(camera, trans))
+            rt.append(rt_converter(camera, best_trans))
             reduced_classes.append(classes[j])
 
     return rt, reduced_classes
