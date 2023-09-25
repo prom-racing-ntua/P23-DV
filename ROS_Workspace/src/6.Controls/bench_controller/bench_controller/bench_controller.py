@@ -7,32 +7,32 @@ import time
 from custom_msgs.msg import *
 
 
-STEERING_STEP = 1.0   #[mm]
-PRESS_STEP = 1.0    #[bar]
-TORQUE_STEP = 1.0       # [N*m]
+# STEERING_STEP = 1.0   #[mm]
+# PRESS_STEP = 1.0    #[bar]
+# TORQUE_STEP = 1.0       # [N*m]
 
-COMMAND_FREQUENCY = 10  # [Hz]
-MAX_TORQUE = 5.0    # [N*m]
-MIN_TORQUE = 0.0  #[N*m]
-MAX_STEERING = 24.0     # [mm]
-MIN_STEERING = -24.0
-MAX_PRESS = 20.0    #[bar]
-MIN_PRESS = 0.0    #[bar]
+# COMMAND_FREQUENCY = 10  # [Hz]
+# MAX_TORQUE = 5.0    # [N*m]
+# MIN_TORQUE = 0.0  #[N*m]
+# MAX_STEERING = 24.0     # [mm]
+# MIN_STEERING = -24.0
+# MAX_PRESS = 20.0    #[bar]
+# MIN_PRESS = 0.0    #[bar]
 
 class BenchController(Node):
     def __init__(self,name=None) -> None:
         super().__init__('bench_controller')
         self.node = rclpy.create_node(name or type(self).__name__)
         self.load_from_config()
-        self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
         
         self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
         self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
         self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
-        #used for sure
-        self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', qos_profile=10)
-        #to be used (especially for the subscribers for datalogging..)
+        #set publishers
+        self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', qos_profile=10) #used for sure
         self._state_publisher = self.create_publisher(TxSystemState ,'/system_state', 10) 
+        #set subscribers (to be used for datalogging and warning msgs)
+        self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
         self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
         self.timer = self.create_timer(1/self.publish_frequency, self.timer_callback)   

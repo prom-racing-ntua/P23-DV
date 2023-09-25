@@ -7,7 +7,7 @@ namespace mpc {
     }
 
     MpcSolver::~MpcSolver(){
-        std::cout << "mpc solver destroyed" << std::endl;
+        std::cout << "mpc solver destroyed" << std::endl; 
     }
 
 double MpcSolver::getFy(double Fz,double sa) {

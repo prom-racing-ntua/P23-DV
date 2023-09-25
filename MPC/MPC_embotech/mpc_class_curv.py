@@ -581,7 +581,6 @@ def createPlot(x,u,start_pred,sim_length,model,path_points,xinit,cones_yellow,co
     plt.plot([0, sim_length-1], np.rad2deg(np.transpose([model.lb[9], model.lb[9]])), 'r:')
     ax_delta.plot(np.rad2deg(u[1,0]),'b-')
     ax_delta.plot(np.rad2deg(start_pred[1,:]),'g-')
-
     plt.tight_layout()
 
     # Make plot fullscreen. Comment out if platform dependent errors occur.

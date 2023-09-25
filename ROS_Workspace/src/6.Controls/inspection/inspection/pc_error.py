@@ -11,7 +11,6 @@ class SendError(Node):
         super().__init__('test_on_error')
         self._pub = self.create_publisher(TxSystemState, '/system_state', 10)
 
-
 def main(args=None) -> None:
     rclpy.init(args=args)
 

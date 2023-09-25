@@ -1,14 +1,15 @@
 import rclpy
+from rclpy.node import Node
 from rclpy.lifecycle import Node
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy._rclpy_pybind11 import InvalidHandle
-
+from pynput import keyboard
+import time
 from custom_msgs.msg import *
 from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
-
 
 COMMAND_FREQUENCY = 40          # [Hz]
 
@@ -17,14 +18,21 @@ MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
 
-
 class InspectionMission(Node):
-    def __init__(self) -> None:
+    def __init__(self,name=None) -> None:
         super().__init__('inspection')
+        self.node = rclpy.create_node(name or type(self).__name__)
         self.mission_finished = False
         self._steering_angle = 0.0
         self._actual_torque = 0.0
-        self.get_logger().warn(f"\n-- Inspection Node Created")
+        #changes
+        self.mode = self.declare_parameter('mode','bench').value
+        self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
+        self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
+        self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
+        self.mode = self.declare_parameter('mode','bench').value
+        #changes
+        self.get_logger().warn(f"\n-- Inspection Node Created in mode",self.mode)
 
     def on_configure(self, state:State) -> TransitionCallbackReturn:
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
@@ -106,7 +114,6 @@ class InspectionMission(Node):
         self._command_publisher.publish(msg)       
         
         if time > MISSION_DURATION:
-            # Mission Finished, should call p23_status service (not implemented yet)
             self.mission_finished = True
 
             finished_cli = self.create_client(SetTotalLaps, "/p23_status/set_total_laps")
@@ -137,8 +144,6 @@ class InspectionMission(Node):
         else:
             self.get_logger().error("Client call failed")
         return
-
-
 
 def main(args=None) -> None:
     rclpy.init(args=args)

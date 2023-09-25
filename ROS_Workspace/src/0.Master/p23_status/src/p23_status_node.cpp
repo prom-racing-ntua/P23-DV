@@ -1,14 +1,6 @@
 #include <rmw/qos_profiles.h>
 #include "p23_status_node.hpp"
 
-/*
-    TODO List:
-    1. Write a callback to receive SLAM message and update current Laps e.t.c. This means that SLAM must be complete first
-
-    General Notes:
-    - What happens if lifecycle is in the ON_MISSION_LOCKED transition and before it ends we receive a MISSION_UNLOCKED (we receive it only once)?
-    - How to do the stopping manuever when mission finished and then shut down the nodes?
-*/
 
 namespace p23_status_namespace
 {
@@ -156,7 +148,7 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
         // The PC will shutdown so no one cares what happens here...
         std::system("shutdown -h 30 sec");
         pcToBeShutdown = true;
-        // TODO: Command to cancel is "shutdown -c. Create a flag that sets shutdown and cancels it if we change mission"
+        // TODO: Command to cancel is "shutdown -c". Create a flag that sets shutdown and cancels it if we change mission"
         return;
     default:
         RCLCPP_ERROR_STREAM(get_logger(), "Invalid mission received " << currentMission);
