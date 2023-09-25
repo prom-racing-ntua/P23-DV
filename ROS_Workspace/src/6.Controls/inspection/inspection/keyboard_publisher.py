@@ -13,11 +13,10 @@ class KeystrokeListen:
         self.pub_code = self.node.create_publisher(std_msgs.msg.UInt32, 'key_pressed',qos_profile=10)
         if self.exit_on_esc:
             self.logger.info('To end this node, press the escape key')
-
     def spin(self):
         with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
             while rclpy.ok() and listener.running:
-                rclpy.spin_once(self.node, timeout_sec=0.1)
+                rclpy.spin_once(self.node, timeout_sec=1.0)
 
     @property
     def logger(self):

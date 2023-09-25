@@ -92,6 +92,7 @@ class CanInterface(Node):
         '''
         Callback for all subscribers calling the to_CanMsg method of the Message class
         '''
+        # self.get_logger().info("started uni callback")
         start_time = self.get_clock().now()
 
         try:
@@ -104,11 +105,11 @@ class CanInterface(Node):
         out_bytes = temp_msg.to_CanMsg()
 
         # Write message to terminal and serial port
-        # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
+        self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
         self._serial_port.write(out_bytes)
 
         # Print the total processing time
-        # self.get_logger().info(f"Time to process message: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
+        # self.get_logger().info(f"Time to process message inside uni callback: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
         return
 
 
@@ -117,12 +118,13 @@ class CanInterface(Node):
         '''
         Checks for new messages finds their id and passes the data to the corresponding parser function
         '''
-
+        # self.get_logger().info("Started reading from serial")
         # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 
         # to receive the latests ones. 
         # The current limit is defined by the time delay we want to allow the messages to have (assuming an average 
         # message size of 11 bytes). So the number multiplied by 11*read_frequency is the allowed time delay.
         # Generally we don't want this to happen so if it occurs we should adjust the read speed accordingly.
+        
         if self._serial_port.in_waiting > (11*self.get_parameter("read_frequency").value*0.2):
             self._serial_port.reset_input_buffer()
             self.get_logger().warn("Input buffer overflow. Flushing buffer.")
@@ -138,7 +140,7 @@ class CanInterface(Node):
                 self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
                 return
 
-            # self.get_logger().info(f"Received message: {serial_msg}")
+            self.get_logger().info(f"Received message: {serial_msg}")
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
 
@@ -168,7 +170,10 @@ class CanInterface(Node):
             temp_msg.ros_publisher.publish(ros_msg)
             
             # Print the total processing time
-            # self.get_logger().info(f"Time to process message: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
+            self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
+        # self.get_logger().info("Finished reading from serial")
+        else:
+            self.get_logger().info("Receiving empty stream")
         return
 
 

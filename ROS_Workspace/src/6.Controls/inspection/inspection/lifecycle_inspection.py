@@ -6,13 +6,13 @@ from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy._rclpy_pybind11 import InvalidHandle
 from pynput import keyboard
+from std_msgs.msg import String, UInt32
 import time
 from custom_msgs.msg import *
 from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
 
 COMMAND_FREQUENCY = 40          # [Hz]
-
 TORQUE_COMMAND = 4.0            # [N*m]
 MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
@@ -22,17 +22,10 @@ class InspectionMission(Node):
     def __init__(self,name=None) -> None:
         super().__init__('inspection')
         self.node = rclpy.create_node(name or type(self).__name__)
-        self.mission_finished = False
-        self._steering_angle = 0.0
-        self._actual_torque = 0.0
         #changes
         self.mode = self.declare_parameter('mode','bench').value
-        self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
-        self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
-        self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
-        self.mode = self.declare_parameter('mode','bench').value
         #changes
-        self.get_logger().warn(f"\n-- Inspection Node Created in mode",self.mode)
+        self.get_logger().warn("Inspection node created at mode {} ".format(self.mode))
 
     def on_configure(self, state:State) -> TransitionCallbackReturn:
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
@@ -41,10 +34,21 @@ class InspectionMission(Node):
         self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
 
-        self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+        if(self.mode=="inspection"):
+            self.mission_finished = False
+            self._steering_angle = 0.0
+            self._actual_torque = 0.0
+            self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+        else:
+            self.load_from_config()
+            self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
+            self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
+            self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
+            self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
+            self._command_timer = self.create_timer(1/self.publish_frequency, self.timer_callback)  
         self._command_timer.cancel()
 
-        self.get_logger().warn(f"\n-- Inspection Configured!")
+        self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state:State) -> TransitionCallbackReturn:
@@ -94,7 +98,85 @@ class InspectionMission(Node):
 
         self.get_logger().info(f"\n-- Inspection Shutdown!")
         return TransitionCallbackReturn.SUCCESS
+    
+    #for mode bench
+    def load_from_config(self) -> None:
+        self.max_torque = self.declare_parameter('max_torque', 10.0).value
+        self.min_torque = self.declare_parameter('min_torque', 0.0).value
+        self.torque_step = self.declare_parameter('torque_step', 1.0).value
+        self.max_steering = self.declare_parameter('max_steering', 24.0).value
+        self.min_steering = self.declare_parameter('min_steering', -24.0).value
+        self.steering_step = self.declare_parameter('steering_step', 1.0).value
+        self.max_press = self.declare_parameter('max_press', 20.0).value
+        self.min_press = self.declare_parameter('min_press', 0.0).value
+        self.press_step = self.declare_parameter('press_step', 1.0).value
+        self.publish_frequency = self.declare_parameter('publish_frequency',40.0).value  
+        
+    def timer_callback(self):
+        msg = TxControlCommand()
+        msg.brake_pressure_target = self._brake_command
+        msg.steering_angle_target = self._steering_command
+        msg.motor_torque_target = self._torque_command
+        msg.speed_actual = 0
+        msg.speed_target = 0
+        self.get_logger().info(f'Brake pressure is {msg.brake_pressure_target} bar')
+        self.get_logger().info(f'Steering Angle is {msg.steering_angle_target} rad')
+        self.get_logger().info(f'Motor Torque {msg.motor_torque_target} Nm')
+        self._command_publisher.publish(msg)
+    
+    def on_code(self, msg):
+        if msg.data == keyboard.Key.f1.value.vk:
+            self.logger.info("\n".join([
+                'Use the arrow keys to change speed.',
+                '[F1] = Show this help',
+                '[Up]/[Down] = Increase and decrease motor torque',
+                '[Left]/[Right] = Steering',
+                '[ShiftL]/[ShiftR] = Decrease and increase brake pressure'
+            ]))
+        #torque_handling
+        elif msg.data == keyboard.Key.up.value.vk:
+            self.get_logger().info('Increasing motor torque')
+            self._torque_command += self.torque_step
+            if(self._torque_command>self.max_torque): 
+                self._torque_command=self.max_torque
+                self.get_logger().warn("Trying to exceed maximum torque set at {} Nm.".format(self.max_torque))
+        elif msg.data == keyboard.Key.down.value.vk:
+            self.get_logger().info('Decreasing motor torque')
+            self._torque_command -= self.torque_step
+            if(self._torque_command<self.min_torque): 
+                self._torque_command=self.min_torque
+                self.get_logger().warn("Trying to exceed minimum torque set at {} Nm.".format(self.min_torque))
+        #steering handling
+        elif msg.data == keyboard.Key.left.value.vk:
+            self.get_logger().info('Steering left')
+            self._steering_command -= self.steering_step
+            if(self._steering_command<self.min_steering): 
+                self._steering_command=self.min_steering
+                self.get_logger().warn("Trying to exceed maximum steering rack displ. set at {} mm.".format(self.min_steering))
+        elif msg.data == keyboard.Key.right.value.vk:
+            self.get_logger().info('Steering right')
+            self._steering_command += self.steering_step
+            if(self._steering_command>self.max_steering): 
+                self._steering_command=self.max_steering
+                self.get_logger().warn("Trying to exceed minimum steering rack displ. set at {} mm.".format(self.max_steering))
+        #pressure handling
+        elif msg.data == keyboard.Key.shift_l.value.vk:
+            self.get_logger().info('Decreasing Brake Pressure')
+            self._brake_command -= self.press_step
+            if(self._brake_command<self.min_press): 
+                self._brake_command=self.min_press
+                self.get_logger().warn("Trying to exceed minimum brake pressure set at {} bar.".format(self.min_press))
+        elif msg.data == keyboard.Key.shift_r.value.vk:
+            self.get_logger().info('Increasing Brake Pressure')
+            self._brake_command += self.press_step
+            if(self._brake_command>self.max_press): 
+                self._brake_command=self.max_press
+                self.get_logger().warn("Trying to exceed maximum brake pressure set at {} bar.".format(self.max_press))
+        #other key pressed
+        else:
+            self.get_logger().debug('Key ignored: {}'.format(msg.data))
 
+    #for mode inspection   
     def send_commands(self) -> None:
         if self.mission_finished:
             msg = TxControlCommand()
