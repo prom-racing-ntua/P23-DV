@@ -161,13 +161,13 @@ extern solver_int32_default (FORCESNLPsolver_float *x, FORCESNLPsolver_float *y,
 FORCESNLPsolver_extfunc pt2function_FORCESNLPsolver = &;
 
 
-/* Some memory for mex-function */
+/* Some memory for MEX function */
 static FORCESNLPsolver_params params;
 static FORCESNLPsolver_output output;
 static FORCESNLPsolver_info info;
 static FORCESNLPsolver_mem * mem;
 
-/* THE mex-function */
+/* Main MEX function */
 void mexFunction( solver_int32_default nlhs, mxArray *plhs[], solver_int32_default nrhs, const mxArray *prhs[] )  
 {
 	/* file pointer for printing */

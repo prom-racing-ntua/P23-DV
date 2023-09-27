@@ -1,5 +1,5 @@
 /* This template is used when statically linking a solver and its external
- * evaluation functions (for nonlinearties). It simply exports a function that
+ * evaluation functions (for nonlinearities). It simply exports a function that
  * is essentially a closure around the solver function, with the last argument
  * (the pointer to the external evaluation function) fixed.
  *
@@ -10,7 +10,11 @@
  *  - FORCESNLPsolver_interface
  *
  * Compare also the MEX interface, which exists for a similar purpose in the
- * MATLAB client. */
+ * MATLAB client.
+ * 
+ * This file is part of the FORCESPRO client, and carries the same license.
+ * (C) embotech AG, Zurich, Switzerland, 2013-2023. All rights reserved.
+ */
 
 #define CONCAT(x, y) x ## y
 #define CONCATENATE(x, y) CONCAT(x, y)

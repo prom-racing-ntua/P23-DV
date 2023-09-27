@@ -637,6 +637,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         else {
             std::cout << "Checking if im also out of track..." << std::endl;
         }
+
         return exitflag;
     }
 } //namespace mpc

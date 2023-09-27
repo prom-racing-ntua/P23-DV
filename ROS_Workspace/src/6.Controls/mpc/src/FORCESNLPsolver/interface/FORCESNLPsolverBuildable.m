@@ -50,7 +50,7 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
             end
         end
         
-        function [output,exitflag,info] = forcesInitOutputsMatlab()
+        function [output, exitflag, info] = forcesInitOutputsMatlab()
             infos_it = coder.nullcopy(zeros(1, 1));
             infos_res_eq = coder.nullcopy(zeros(1, 1));
             infos_rsnorm = coder.nullcopy(zeros(1, 1));
@@ -140,7 +140,7 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
             [output,exitflag,info] = FORCESNLPsolverBuildable.forcesCall(params.xinit, params.x0, params.all_parameters, params.reinitialize, params.num_of_threads);
         end
 
-        function [output,exitflag,info] = forcesCall(xinit, x0, all_parameters, reinitialize, num_of_threads)
+        function [output, exitflag, info] = forcesCall(xinit, x0, all_parameters, reinitialize, num_of_threads)
             solvername = 'FORCESNLPsolver';
 
             
@@ -220,7 +220,7 @@ classdef FORCESNLPsolverBuildable < coder.ExternalDependency
     end
 
     methods (Static, Access = private)
-        function [output,exitflag,info] = forcesInitOutputsC()
+        function [output, exitflag, info] = forcesInitOutputsC()
             infos_it = coder.nullcopy(int32(zeros(1, 1)));
             infos_res_eq = coder.nullcopy(double(zeros(1, 1)));
             infos_rsnorm = coder.nullcopy(double(zeros(1, 1)));

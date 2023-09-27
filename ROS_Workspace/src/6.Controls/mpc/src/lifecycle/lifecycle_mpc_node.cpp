@@ -15,7 +15,7 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::setPublishers() {
-        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_command", 10);
+        mpc_publisher_ = create_publisher<custom_msgs::msg::TxControlCommand>("control_commands", 10);
     }
 
     void LifecycleMpcHandler::setLogger() {
@@ -153,6 +153,8 @@ namespace mpc {
         std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
         RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
         RCLCPP_INFO(this->get_logger(), "Publishing target speed: %1i" " and actual speed: %1i" "",mpc_msg.speed_target, mpc_msg.speed_actual);
+        if(mpc_solver.exitflag!=1) RCLCPP_INFO(this->get_logger(), "Issue with solver");
+        else RCLCPP_INFO(this->get_logger(),"Solver all good");
         mpc_publisher_->publish(mpc_msg);
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;

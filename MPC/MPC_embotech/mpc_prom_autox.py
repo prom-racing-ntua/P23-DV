@@ -359,6 +359,7 @@ def generate_pathplanner():
     codeoptions.mip.explore = 'depthFirst'
     codeoptions.mip.branchon = 'mostAmbiguous'
     codeoptions.parallel = 4
+    # codeoptions.server = 'https://forces-6-2-0.embotech.com'
     codeoptions.nlp.hessian_approximation = 'bfgs'
     codeoptions.solvemethod = 'SQP_NLP' # choose the solver method Sequential #Quadratic Programming
     # codeoptions.nlp.bfgs_init = 3.0*np.identity(model.nvar)

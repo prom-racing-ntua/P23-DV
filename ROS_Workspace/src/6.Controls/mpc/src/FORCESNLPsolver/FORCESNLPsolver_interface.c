@@ -8,7 +8,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 #include "include/FORCESNLPsolver.h"
 
 #ifndef NULL
@@ -50,8 +50,8 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
                                  FORCESNLPsolver_float *nabla_h,  /* Jacobian of inequality constraints (column major)   */
                                  FORCESNLPsolver_float *hess,     /* Hessian (column major)                              */
                                  solver_int32_default stage,     /* stage number (0 indexed)                           */
-								 solver_int32_default iteration, /* iteration number of solver                         */
-								 solver_int32_default threadID   /* Id of caller thread                                */)
+                                 solver_int32_default iteration, /* iteration number of solver                         */
+                                 solver_int32_default threadID   /* Id of caller thread                                */)
 {
     /* AD tool input and output arrays */
     const FORCESNLPsolver_callback_float *in[4];
@@ -64,12 +64,12 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 	
     /* temporary storage for AD tool sparse output */
     FORCESNLPsolver_callback_float this_f = (FORCESNLPsolver_callback_float) 0.0;
-    FORCESNLPsolver_float nabla_f_sparse[12];
+    FORCESNLPsolver_float nabla_f_sparse[11];
     FORCESNLPsolver_float h_sparse[3];
-    FORCESNLPsolver_float nabla_h_sparse[10];
+    FORCESNLPsolver_float nabla_h_sparse[9];
     FORCESNLPsolver_float c_sparse[9];
     FORCESNLPsolver_float nabla_c_sparse[53];
-            
+    
     
     /* pointers to row and column info for 
      * column compressed format used by AD tool */
@@ -86,64 +86,78 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 	{
 		
 		
-		if( &this_f )
-		{
-			out[0] = &this_f;
-			FORCESNLPsolver_objective_0(in, out, NULL, w, 0);
-		}
 		
-		if( nabla_f )
+		out[0] = &this_f;
+		
+		FORCESNLPsolver_objective_0(in, out, NULL, w, 0);
+		
+		if( nabla_f != NULL )
 		{
+				
 			out[0] = nabla_f_sparse;
+				
 			FORCESNLPsolver_dobjective_0(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_dobjective_0_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_dobjective_0_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_dobjective_0_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_dobjective_0_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f);
 		}
 		
-		if( c )
+		if( c != NULL )
 		{
+				
 			out[0] = c_sparse;
+				
 			FORCESNLPsolver_dynamics_0(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_dynamics_0_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_dynamics_0_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_dynamics_0_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_dynamics_0_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, c_sparse, c);
 		}
 		
-		if( nabla_c )
+		if( nabla_c != NULL )
 		{
+				
 			out[0] = nabla_c_sparse;
+				
 			FORCESNLPsolver_ddynamics_0(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_ddynamics_0_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_ddynamics_0_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_ddynamics_0_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_ddynamics_0_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_c_sparse, nabla_c);
 		}
 		
-		if( h )
+		if( h != NULL )
 		{
+				
 			out[0] = h_sparse;
+				
 			FORCESNLPsolver_inequalities_0(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_inequalities_0_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_inequalities_0_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_inequalities_0_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_inequalities_0_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, h_sparse, h);
 		}
 		
-		if( nabla_h )
+		if( nabla_h != NULL )
 		{
+				
 			out[0] = nabla_h_sparse;
+				
 			FORCESNLPsolver_dinequalities_0(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_dinequalities_0_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_dinequalities_0_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_dinequalities_0_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_dinequalities_0_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_h_sparse, nabla_h);
 		}
 	}
@@ -151,42 +165,50 @@ extern solver_int32_default FORCESNLPsolver_adtool2forces(FORCESNLPsolver_float 
 	{
 		
 		
-		if( &this_f )
-		{
-			out[0] = &this_f;
-			FORCESNLPsolver_objective_1(in, out, NULL, w, 0);
-		}
 		
-		if( nabla_f )
+		out[0] = &this_f;
+		
+		FORCESNLPsolver_objective_1(in, out, NULL, w, 0);
+		
+		if( nabla_f != NULL )
 		{
+				
 			out[0] = nabla_f_sparse;
+				
 			FORCESNLPsolver_dobjective_1(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_dobjective_1_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_dobjective_1_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_dobjective_1_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_dobjective_1_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f);
 		}
 		
-		if( h )
+		if( h != NULL )
 		{
+				
 			out[0] = h_sparse;
+				
 			FORCESNLPsolver_inequalities_1(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_inequalities_1_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_inequalities_1_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_inequalities_1_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_inequalities_1_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, h_sparse, h);
 		}
 		
-		if( nabla_h )
+		if( nabla_h != NULL )
 		{
+				
 			out[0] = nabla_h_sparse;
+				
 			FORCESNLPsolver_dinequalities_1(in, out, NULL, w, 0);
 			nrow = FORCESNLPsolver_dinequalities_1_sparsity_out(0)[0];
 			ncol = FORCESNLPsolver_dinequalities_1_sparsity_out(0)[1];
 			colind = FORCESNLPsolver_dinequalities_1_sparsity_out(0) + 2;
 			row = FORCESNLPsolver_dinequalities_1_sparsity_out(0) + 2 + (ncol + 1);
+				
 			FORCESNLPsolver_sparse2fullcopy(nrow, ncol, colind, row, nabla_h_sparse, nabla_h);
 		}
 	}
