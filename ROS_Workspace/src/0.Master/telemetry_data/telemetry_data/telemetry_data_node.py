@@ -284,7 +284,7 @@ class TelemetryNode(Node):
         self.data.actual_brake_r = msg.brake_pressure_rear
 
     def steering_callback(self, msg) -> None:
-        self.data.actual_steer = msg.steering_angle
+        self.data.actual_steer = msg.steering_angle * 180 / 3.14159
 
     def wheel_callback(self, msg) -> None:
         self.data.yaw_i.set(msg.front_left, msg.front_right, msg.rear_left, msg.rear_right)

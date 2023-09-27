@@ -117,7 +117,9 @@ PID_PP_Node::PID_PP_Node() : Node("PID_PP_controller"), profile(nullptr), model(
 
     log.open("src/6.Controls/simple_sim/data/target_log.txt");
     // mids.open("src/6.Controls/pid_pp_controller/data/" + midpoints);
-
+    timestamp_log = fopen("timestamp_logs/controller.txt", "w+");
+    std::ifstream lg;
+    lg.open("timestamp_logs/run_idx.txt");
     std::cout << "Total laps: " << laps_to_do << std::endl;
 }
 
@@ -125,6 +127,7 @@ PID_PP_Node::~PID_PP_Node()
 {
     delete profile;
     delete spline;
+    fclose(timestamp_log);
     std::cout << "Object destroyed" << std::endl;
 }
 void PID_PP_Node::known_map_substitute(int lap, int total_laps)
@@ -423,14 +426,42 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete profile_to_delete;
         }
     }
+    else if (discipline == "EBS_Test")
+    {
+        if (lap == 0)
+        {
+            path_planning::PointsArray midpoints(20, 2);
+            for (int i = 0; i < 20; i++)
+            {
+                midpoints(i, 0) = i * 5;
+                midpoints(i, 1) = 0;
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 1;
+            double ms = max_speed;
+            double v_init = 3;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+    }
+    else std::cout<<"Invalid discipline"<<std::endl;
 }
 
 void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
 {
     std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
-    if (is_end)
-        return;
     rclcpp::Time starting_time = this->now();
+
     // Object variables should only be updated in the end
     path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
     if (msg->count >= 3)
@@ -458,10 +489,21 @@ void PID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::Share
         return;
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-    bool is_end = msg->lap_count == laps_to_do;
+    if(msg->lap_count == laps_to_do && !is_end)
+    {
+        is_end = true;
+        last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
+    }
+    else if(is_end)
+    {
+        braking_distance -= Point::distance(last_position, Point(msg->waypoints[0].x, msg->waypoints[0].y));
+        last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
+    }
+    //bool is_end = msg->lap_count == laps_to_do;
     double ms = msg->is_out_of_map ? 2 : max_speed;
     this->is_out_of_map = msg->is_out_of_map;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
+
     VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
     this->buffer_ticks = is_out_of_map ? -70 : 0;
     /*
@@ -640,22 +682,22 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     tg.y = act_target.y();
     pub_target->publish(tg);
 
-    // /* EXTRA SAFETY CHECKS */
-    // if (this->v_x > 1.5 * projection.first && this->v_x > projection.first + 1 && !is_end && buffer_ticks > 10)
-    // {
-    //     for_publish.motor_torque_target = 0;
-    //     for_publish.brake_pressure_target = 1;
-    //     std::cout << "50% more." << std::endl;
-    // }
-    // if (this->v_x > 2 * projection.first && this->v_x > projection.first + 1 && !is_end && buffer_ticks > 10)
-    // {
-    //     for_publish.steering_angle_target = 0;
-    //     for_publish.motor_torque_target = 0;
-    //     for_publish.brake_pressure_target = 1;
-    //     pub_actuators->publish(for_publish);
-    //     std::cout << "Controls aborting" << std::endl;
-    //     exit(1); // Initiates the ABS. If there is a safer method than exit, it should be preffered
-    // }
+     /* EXTRA SAFETY CHECKS */
+     if (this->v_x > 1.5 * max_speed && this->v_x > max_speed + 1 && !is_end && buffer_ticks > 10)
+     {
+         for_publish.motor_torque_target = 0;
+         for_publish.brake_pressure_target = 1;
+         std::cout << "50% more." << std::endl;
+     }
+     if (this->v_x > 2 * max_speed && this->v_x > max_speed + 1 && !is_end && buffer_ticks > 10)
+     {
+         for_publish.steering_angle_target = 0;
+         for_publish.motor_torque_target = 0;
+         for_publish.brake_pressure_target = 1;
+         pub_actuators->publish(for_publish);
+         std::cout << "Controls aborting" << std::endl;
+         exit(1); // Initiates the ABS. If there is a safer method than exit, it should be preferred
+     }
 
     pub_actuators->publish(for_publish);
     std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << switch_br ? 1 : 0;

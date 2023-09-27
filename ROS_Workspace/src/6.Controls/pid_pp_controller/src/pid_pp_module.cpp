@@ -322,7 +322,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         {
             min_error = error;
             min_error_index = i;
-            if(error < 0.01)break;
+            if(error <= 0.05 * 0.05)break;
         }
     }
     if (min_error_index == -1)
@@ -351,7 +351,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
             closest_d = std::abs(ld - dist);
             closest_p = trans;
             sel_idx = i;
-            if(closest_d<0.1)break;
+            if(closest_d<=0.05)break;
         }
     }
     if (closest_d < DBL_MAX)

@@ -521,20 +521,20 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pub_target->publish(tg);
 
     /* EXTRA SAFETY CHECKS */
-    if(this->v_x > 1.5 * projection.first && buffer_ticks>10)
+    if(this->v_x > 1.5 * max_speed && buffer_ticks>10)
     {
         for_publish.motor_torque_target = 0;
         for_publish.brake_pressure_target = 1;
         RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
     }
-    if(this->v_x > 2 * projection.first && buffer_ticks>10)
+    if(this->v_x > 2 * max_speed && buffer_ticks>10)
     {
         for_publish.steering_angle_target = 0;
         for_publish.motor_torque_target = 0;
         for_publish.brake_pressure_target = 1;
         pub_actuators->publish(for_publish);
         RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
-        exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preffered
+        exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
     }
 
     pub_actuators->publish(for_publish);

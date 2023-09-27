@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <cstdio>
 
 #include "custom_msgs/msg/point2_struct.hpp"
 #include "custom_msgs/msg/pose_msg.hpp"
@@ -56,6 +57,7 @@ private:
     double max_speed, spline_res_per_meter;
     double safe_speed_to_break, braking_distance;
     double last_steering, last_torque;
+    Point last_position; // used to implement braking distance
     int laps_to_do;
     int prev_lap;
     int buffer_ticks; //for checking 50% and 100%
@@ -64,7 +66,7 @@ private:
     bool is_out_of_map;
     bool is_end;
     std::ofstream log;
-
+    FILE *timestamp_log;
 
     //Multithreading shit -- Ntroph :(
     pthread_spinlock_t global_lock_;

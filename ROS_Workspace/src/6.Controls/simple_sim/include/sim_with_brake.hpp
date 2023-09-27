@@ -128,8 +128,10 @@ class sim_node: public rclcpp::Node
     long long int global_idx;
     double steering_dead_time;
     double motor_dead_time;
+    double brake_dead_time;
     int st_d_ticks;
     int mot_d_ticks;
+    int br_d_ticks;
     double last_d;
     int idx_of_last_lap;
     int sent;

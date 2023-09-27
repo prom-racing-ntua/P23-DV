@@ -289,7 +289,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 		discipline = 3;
 		mission.mission_selected = 2;
 	}
-	else if (d == "EBS Test")
+	else if (d == "EBS_Test")
 	{
 		discipline = 4;
 		mission.mission_selected = 5;
@@ -313,7 +313,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 		fs.open("src/6.Controls/simple_sim/data/map.txt");
 		state.x = -5.5;
 	}
-	else if (discipline == 2)
+	else if (discipline == 2 or discipline == 4)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
 		state.x = -1;
@@ -360,6 +360,10 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	log2.open("src/6.Controls/simple_sim/data/log2.txt");
 	// state.check_ellipses(log2);
 	log2.close();
+
+    std::ifstream lg;
+    lg.open("timestamp_logs/run_idx.txt");
+
 }
 
 bool sim_node::lap_change() const
@@ -378,6 +382,7 @@ bool sim_node::lap_change() const
 	{
 		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) /*or ( x >= 10 && x <= 11 && y >= -3 && y <= 3)*/;
 	}
+    return 0;
 }
 
 double add_noise(double x, double perc = 0.001)
@@ -482,7 +487,7 @@ void sim_node::timer_callback()
 		dv.id = 4;
 		if(is_end==1)
 		{
-			dv.id = 5;
+			dv.id = 6;
 			is_end = 2;
 		}
 		sys.dv_status = dv;
@@ -520,7 +525,7 @@ void sim_node::timer_callback()
 
 	}
 
-	if (global_idx % 250 == 0)
+	if (global_idx % 100 == 0)
 	{
 		std::cout << "Lap: "<< state.lap<< "\t\t" << state.t << "\t\t" << state.v_x << std::endl;
 		// std::cout << '*' << std::endl;

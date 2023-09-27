@@ -268,7 +268,7 @@ class TorqueFrame(ctk.CTkFrame):
         self.grid_rowconfigure(3, weight = 1, uniform = "c")
         
         self.grid_columnconfigure(0, weight = 1, uniform = 'c')
-        self.grid_columnconfigure(1, weight = 2, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 4, uniform = 'c')
                 
         self.bar_acc = ctk.CTkProgressBar(self, width = 20, height = 60, corner_radius = 0, border_width = 1, border_color = 'gray40', fg_color = "gray40", progress_color = "green2", orientation = "vertical")
         self.bar_acc.grid(row = 0, column = 0, rowspan = 2, sticky = "ns", pady = (10,0))

@@ -292,7 +292,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
         discipline = 3;
         mission.mission_selected = 2;
     }
-    else if (d == "EBS Test")
+    else if (d == "EBS_Test")
     {
         discipline = 4;
         mission.mission_selected = 5;
@@ -316,7 +316,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
         fs.open("src/6.Controls/simple_sim/data/map.txt");
         state.x = -5.5;
     }
-    else if (discipline == 2)
+    else if (discipline == 2 or discipline == 4)
     {
         fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
         state.x = -1;
@@ -337,6 +337,12 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
     {
         fs >> x >> y >> c;
         if(discipline == 0)unseen_cones.push_back(Cone(x, y, c));
+        else if(discipline == 4)
+        {
+            if(x<=20)seen_cones.push_back(Cone(x, y, c));
+            else if(x>20 && x<=30)seen_cones.push_back(Cone(x, y, 2));
+            else if(x>30 && x<=40)seen_cones.push_back(Cone(x, y, 3));
+        }
         else seen_cones.push_back(Cone(x, y, c));
     }
     fs.close();
@@ -381,6 +387,7 @@ bool sim_node::lap_change() const
 	{
 		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) or ( x >= 10 && x <= 11 && y >= -3 && y <= 3);
 	}
+    return 0;
 }
 
 double add_noise(double x, double perc = 0.001)
@@ -495,7 +502,7 @@ void sim_node::timer_callback()
         dv.id = 4;
         if(is_end==1)
         {
-            dv.id = 5;
+            dv.id = 6;
             is_end = 2;
         }
         sys.dv_status = dv;
@@ -519,13 +526,13 @@ void sim_node::timer_callback()
 
         /* SENSOR DATA */
         sens.motor_torque_actual = int16_t(frx_ * constants.R_wheel / (constants.eff * constants.gr));
-        sens.brake_pressure_front = 0;
-        sens.brake_pressure_rear = 0;
+        sens.brake_pressure_front = brake_press;
+        sens.brake_pressure_rear = brake_press;
 
         pub_sens->publish(sens);
 
         /* STEERING */
-        steer.steering_angle = double(last_d);
+        steer.steering_angle = double(last_d) * 3.14159 / 180;
 
         pub_steer->publish(steer);
 
