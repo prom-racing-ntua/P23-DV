@@ -87,6 +87,12 @@ class AcquisitionLifecycleNode(Node):
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
+        #Timestamp logging
+        run_idx_file = open("timestamp_logs/run_idx.txt", "r")
+        run_idx = str(int(run_idx_file.read()))
+        run_idx_file.close()
+        self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/acquisition_log.txt")
+
         self.get_logger().warn(f"\n-- Acquisition Configured!")
         return TransitionCallbackReturn.SUCCESS
 
@@ -103,6 +109,9 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.get_logger().warn(f"\n-- Acquisition Deactivated!")
         return super().on_deactivate(state)
     
@@ -112,6 +121,9 @@ class AcquisitionLifecycleNode(Node):
 
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
         
         self.get_logger().warn(f"\n-- Acquisition Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
@@ -124,6 +136,9 @@ class AcquisitionLifecycleNode(Node):
 
         self.destroy_subscription(self.subscription)
         self.destroy_publisher(self.publisher_)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
         
         self.camera.cleanupCamera()
         del self.camera, self.bridge
@@ -138,6 +153,7 @@ class AcquisitionLifecycleNode(Node):
         
         trigger = msg.exec_perception
         if (trigger):
+            start_time = self.get_clock().now().nanoseconds / 10**6
             global_index = msg.global_index            
             self.camera.TriggerCamera()
             numpyImage = self.camera.AcquireImage()
@@ -147,7 +163,21 @@ class AcquisitionLifecycleNode(Node):
             imageMessage.global_index = global_index
             imageMessage.image = self.bridge.cv2_to_imgmsg(numpyImage, encoding="passthrough")
             imageMessage.camera_orientation = self.camera.orientation
+
+            pub_time_1 = self.get_clock().now().nanoseconds / 10**6
             self.publisher_.publish(imageMessage)
+            pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+            #Timestamp logging
+            self.timestamp_log.write("{timestamp:0.8f}\t0\t{index:d}\n".format(
+                timestamp = start_time,
+                index = self.global_index
+            ))
+            self.timestamp_log.write("{timestamp:0.8f}\t1\t{index:d}\n".format(
+                timestamp = (pub_time_1 + pub_time_2) / 2,
+                index = self.global_index
+            ))
+            # self.timestamp_log.flush()
         else:
             pass
 

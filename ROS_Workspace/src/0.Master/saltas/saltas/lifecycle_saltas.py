@@ -54,6 +54,12 @@ class SaltasNode(Node):
         self.get_logger().info(f'Velocity Estimation Frequency {self.velocity_estimation_frequency} Hz')
         self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
         self.get_logger().warn(f'\n-- Saltas Configured!')
+
+        #Timestamp logging
+        run_idx_file = open("timestamp_logs/run_idx.txt", "r")
+        run_idx = str(int(run_idx_file.read()))
+        run_idx_file.close()
+        self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/saltas_log.txt")
     
         return TransitionCallbackReturn.SUCCESS
     
@@ -69,6 +75,9 @@ class SaltasNode(Node):
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().warn(f'\n-- Saltas Deactivated!')
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.saltas_clock.cancel()
         return TransitionCallbackReturn.SUCCESS
     
@@ -78,6 +87,9 @@ class SaltasNode(Node):
 
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
 
         self.get_logger().warn(f'\n-- Saltas Un-Configured!')
         return TransitionCallbackReturn.SUCCESS
@@ -91,6 +103,9 @@ class SaltasNode(Node):
         
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
 
         self.get_logger().info(f'\n-- Saltas Shutdown!')
         return TransitionCallbackReturn.SUCCESS
@@ -118,7 +133,17 @@ class SaltasNode(Node):
         if (self.send_index%self.send_perception == 0):
             # Send perception execution msg
             msg.exec_perception = True
+
+        pub_time_1 = self.get_clock().now().nanoseconds / 10**6
         self.clock_publisher.publish(msg)
+        pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+        #Timestamp logging
+        self.timestamp_log.write("{timestamp:0.8f}\t1\t{index:d}\n".format(
+            timestamp = (pub_time_1 + pub_time_2) / 2,
+            index = self.global_index
+        ))
+        # self.timestamp_log.flush()
 
         self.global_index += 1
         self.send_index += 1

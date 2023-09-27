@@ -4,6 +4,7 @@
 #include <chrono>
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
+#include <cstdio>
 
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
@@ -53,6 +54,9 @@ namespace ns_vel_est
         std::array<bool, SensorSize> updated_sensors_;
         ObservationVector measurement_vector_;
         InputVector input_vector_;
+
+        FILE *timestamp_log, *run_idx_file;
+        double pub_time_1, pub_time_2;
 
         Eigen::Matrix<double, 3, 3> vn_200_rotation_matrix_;
         Eigen::Matrix<double, 3, 3> vn_300_rotation_matrix_;

@@ -21,6 +21,8 @@ Path_Planner_Node::Path_Planner_Node():Node("path_planning"), waymaker(), total_
     sub_mapper = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&Path_Planner_Node::mapping_callback, this, _1));
     //sub_odometry = this->create_subscription<custom_msgs::msg::PoseMsg>("Pose",10,std::bind(&Path_Planner_Node::pose_callback, this, _1));
     pub_waypoints = this->create_publisher<custom_msgs::msg::WaypointsMsg>("waypoints", 10);
+
+    timestamp_log = fopen("path_planner.txt", "w+");
 }
 
 void Path_Planner_Node::parameter_load() {
@@ -157,9 +159,13 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
     for_pub.is_out_of_map = waymaker.out_of_convex;
     for_pub.initial_v_x = msg->pose.velocity_state.global_index==0?-1: msg->pose.velocity_state.velocity_x;
     for_pub.lap_count = msg->lap_count;
+    for_pub.chain_index = (waymaker.get_batch_number());
     pub_waypoints->publish(for_pub);
+    rclcpp::Time ending_time = this->now();
     std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
     rclcpp::Duration total_time = this->now() - starting_time;
+    fprintf(timestamp_log, "%f\t%d\n", ending_time.seconds(), waymaker.get_batch_number());
+
     total_execution_time += total_time.nanoseconds() / 1000000.0;
     std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
@@ -167,6 +173,7 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
 Path_Planner_Node::~Path_Planner_Node() {
     std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
     std::cout << "Max angle: "<<average_angle <<std::endl;
+    fclose(timestamp_log);
 }
 
 float Path_Planner_Node::get_length(std::vector<Point> path)const

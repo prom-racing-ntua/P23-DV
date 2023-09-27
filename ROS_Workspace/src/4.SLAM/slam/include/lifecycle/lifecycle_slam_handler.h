@@ -4,6 +4,7 @@
 #include <string>
 #include <limits>
 #include <chrono>
+#include <cstdio>
 #include <functional>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
@@ -54,6 +55,8 @@ namespace ns_slam
         std::ofstream velocity_log_;
         std::ofstream perception_log_;
         std::ofstream map_log_;
+        FILE *perception_timestamp_log, *odometry_timestamp_log, *optim_timestamp_log, *run_idx_file;
+        double pub_time_1, pub_time_2;
 
         // Lap counter variables
         int completed_laps_;

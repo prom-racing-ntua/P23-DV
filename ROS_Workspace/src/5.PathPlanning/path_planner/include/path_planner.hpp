@@ -4,6 +4,9 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <iostream>
+#include <cstdio>
+
 //#include <algorithm>
 
 #include "custom_msgs/msg/cone_struct.hpp"
@@ -39,4 +42,6 @@ class Path_Planner_Node: public rclcpp::Node
         float get_length(std::vector<Point> path)const;
         float get_angle_avg(std::vector<Point> path)const;
         //Point last_direction;
+
+        FILE *timestamp_log;
 };

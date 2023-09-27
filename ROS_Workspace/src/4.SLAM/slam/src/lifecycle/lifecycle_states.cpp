@@ -34,6 +34,30 @@ namespace ns_slam
             perception_log_.open(share_dir_ + "/../../../../testingLogs/perceptionLog_" + std::to_string(init_time) + ".txt");
         }
 
+        // Timestamp logging
+        run_idx_file = fopen("timestamp_logs/run_idx.txt", "r");
+        int run_idx;
+        fscanf(run_idx_file, "%d", &run_idx);
+        fclose(run_idx_file);
+        std::string loc = "timestamp_logs/run_" + std::to_string(run_idx);
+
+        char ext1[] = "/slam_perception_log.txt";
+        char f1[loc.length() + strlen(ext1) + 1];
+        snprintf(f1, sizeof(f1), "%s%s", loc, ext1);
+
+        char ext2[] = "/slam_odometry_log.txt";
+        char f2[loc.length() + strlen(ext2) + 1];
+        snprintf(f2, sizeof(f2), "%s%s", loc, ext2);
+
+        char ext3[] = "/slam_optim_log.txt";
+        char f3[loc.length() + strlen(ext3) + 1];
+        snprintf(f3, sizeof(f3), "%s%s", loc, ext3);
+
+        this->perception_timestamp_log = fopen(f1, "w");
+        this->odometry_timestamp_log = fopen(f2, "w");
+        this->optim_timestamp_log = fopen(f3, "w");
+
+
         // If in localization mode load the track map
         map_ready_ = true;
         if (!is_mapping_)
@@ -133,6 +157,9 @@ namespace ns_slam
             velocity_log_.close();
             perception_log_.close();
         }
+        fclose(odometry_timestamp_log);
+        fclose(perception_timestamp_log);
+        fclose(optim_timestamp_log);
 
         if (is_mapping_) map_log_.close();
 

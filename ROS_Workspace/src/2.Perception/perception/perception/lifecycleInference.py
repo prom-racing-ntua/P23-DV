@@ -53,6 +53,12 @@ class InferenceLifecycleNode(Node):
             10
         )
 
+        #Timestamp logging
+        run_idx_file = open("timestamp_logs/run_idx.txt", "r")
+        run_idx = str(int(run_idx_file.read()))
+        run_idx_file.close()
+        self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/inference_log.txt")
+
         self.get_logger().warn("\n-- Inference Configured!")
         return TransitionCallbackReturn.SUCCESS
     
@@ -67,6 +73,9 @@ class InferenceLifecycleNode(Node):
         # Stop Publishing
         self.publishing = False
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.get_logger().warn("\n-- Inference Deactivated!")
         return super().on_deactivate(state)
     
@@ -75,6 +84,9 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
         del self.yoloModel, self.smallModel
         self.destroy_publisher(self.publisher_)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
 
         self.get_logger().warn("\n-- Inference Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
@@ -89,10 +101,14 @@ class InferenceLifecycleNode(Node):
         del self.yoloModel, self.smallModel
         self.destroy_publisher(self.publisher_)
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.get_logger().info("\n-- Inference Shutdown!")
         return TransitionCallbackReturn.SUCCESS
 
     def listener_callback(self, msg):
+        start_time = self.get_clock().now().nanoseconds / 10**6
         if not self.publishing:
             return
         try:
@@ -128,7 +144,21 @@ class InferenceLifecycleNode(Node):
                 perception2slam_msg.class_list = [int(a) for a in classesList]
                 perception2slam_msg.theta_list = list(thetaList)
                 perception2slam_msg.range_list = list(rangeList)
+
+                pub_time_1 = self.get_clock().now().nanoseconds / 10**6
                 self.publisher_.publish(perception2slam_msg)
+                pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+                #Timestamp logging
+                self.timestamp_log.write("{timestamp:0.8f}\t0\t{index:d}\n".format(
+                    timestamp = start_time,
+                    index = self.global_index
+                ))
+                self.timestamp_log.write("{timestamp:0.8f}\t1\t{index:d}\n".format(
+                    timestamp = (pub_time_1 + pub_time_2) / 2,
+                    index = self.global_index
+                ))
+                # self.timestamp_log.flush()
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
