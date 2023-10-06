@@ -60,7 +60,15 @@ void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimatio
     pose_msg.theta = current_pose[2];
     pose_msg.velocity_state = *msg;
     pose_msg.lap_count = completed_laps_;
+
+    pub_time_1 = this->now().nanoseconds()/1e6;
     pose_publisher_->publish(pose_msg);
+    pub_time_2 = this->now().nanoseconds()/1e6;
+
+    // timestamp logging
+    odometry_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->global_index);
+    odometry_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->global_index);
+
 
     // Keep odometry log
     if (is_logging_)
@@ -140,6 +148,9 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
     }
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
+
+    // timestamp logging
+    perception_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->global_index);
     // RCLCPP_INFO_STREAM(get_logger(), "\n-- Perception Callback --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
@@ -193,7 +204,13 @@ void LifecycleSlamHandler::optimizationCallback() {
     map_msg.lap_count = completed_laps_;
     map_msg.cones_count_all = slam_object_.getConeCount();
 
+    pub_time_1 = this->now().nanoseconds()/1e6;
     map_publisher_->publish(map_msg);
+    pub_time_2 = this->now().nanoseconds()/1e6;
+
+    // timestamp logging
+    optim_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, int(last_vel_msg_.global_index));
+    optim_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, int(last_vel_msg_.global_index));
 
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };

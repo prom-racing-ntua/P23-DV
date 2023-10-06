@@ -3,7 +3,9 @@
 
 #include <chrono>
 #include <functional>
+#include <filesystem>
 #include <rclcpp/rclcpp.hpp>
+#include <cstdio>
 
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
@@ -25,6 +27,20 @@
 
 namespace ns_vel_est
 {
+    class Logger
+    {
+    private:
+        FILE *file;
+        int run_idx;
+        std::string name;
+    public:
+        Logger();
+        void init(std::string name);
+        ~Logger();
+        std::string check()const;
+        void log(double timestamp, int type, int index);
+    };
+
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecycleVelocityEstimationHandler: public rclcpp_lifecycle::LifecycleNode {
@@ -53,6 +69,9 @@ namespace ns_vel_est
         std::array<bool, SensorSize> updated_sensors_;
         ObservationVector measurement_vector_;
         InputVector input_vector_;
+
+        Logger timestamp_log;
+        double pub_time_1, pub_time_2;
 
         Eigen::Matrix<double, 3, 3> vn_200_rotation_matrix_;
         Eigen::Matrix<double, 3, 3> vn_300_rotation_matrix_;

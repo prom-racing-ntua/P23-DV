@@ -4,6 +4,49 @@
 
 namespace ns_vel_est
 {
+    Logger::Logger()
+    {
+        this->name = "";
+        this->file = nullptr;
+        this->run_idx = -1;
+    }
+    void Logger::init(std::string name)
+    {
+        this->name = name;
+        auto dirIter = std::filesystem::directory_iterator("timestamp_logs");
+
+        this->run_idx = std::count_if(
+                begin(dirIter),
+                end(dirIter),
+                [](auto& entry) { return is_regular_file(entry.path()); }
+        );
+
+        char f1[30 + name.length()];
+        snprintf(f1, sizeof(f1), "timestamp_logs/run_%d/%s_log.txt", this->run_idx, name.c_str());
+        this->file = fopen(f1, "w");
+    }
+    Logger::~Logger()
+    {
+        fclose(file);
+    }
+    std::string Logger::check()const
+    {
+        if(file==nullptr)
+        {
+            return "Couldn't open logger " + name;
+        }
+        else
+        {
+            return "File " + name + " opened successfully";
+        }
+    }
+    void Logger::log(double timestamp, int type, int index)
+    {
+        if(file == nullptr)return;
+
+        fprintf(file, "%f\t%d\t%d", timestamp, type, index);
+    }
+
     ns_vel_est::CallbackReturn 
         LifecycleVelocityEstimationHandler::on_configure(const rclcpp_lifecycle::State &state)
     {        
@@ -25,6 +68,10 @@ namespace ns_vel_est
             get_parameter("vectornav-vn-300.pitch").as_double());
 
         setSubscribers();
+
+        // Timestamp logging
+        timestamp_log.init("velocity");
+        RCLCPP_INFO_STREAM(get_logger(), timestamp_log.check());
 
         pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Configured!");
@@ -63,6 +110,7 @@ namespace ns_vel_est
         /* VelEst class and Publisher cleanup */
         estimator_.reset();
         pub_.reset();
+
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Un-Configured!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }

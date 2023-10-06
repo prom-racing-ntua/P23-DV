@@ -1,5 +1,6 @@
 import serial
 import atexit
+import os
 
 import rclpy
 from rclpy.node import Node
@@ -8,6 +9,57 @@ from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from custom_msgs.msg import *
 from .Messages import *
 
+def create_new_run_log() -> str:
+    current_runs = len(os.listdir("timestamp_logs"))
+    if(current_runs!=0):
+        if(len(os.listdir("timestamp_logs/run_{:d}".format(current_runs-1)))==0):
+            return "New dir exists."
+    try:
+        os.mkdir("timestamp_logs/run_{:d}".format(current_runs))
+    except FileExistsError:
+        return "New dir exists."
+    except Exception as e:
+        return "Error while creating new run dir:{:s}".format(repr(e))
+    else:
+        return "New run dir created successfully."
+class Logger:
+    def __init__(self, name):
+        self.ok = True
+        self.name = name
+        try:
+            self.run_idx = len(os.listdir("timestamp_logs")) - 1
+            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+        except Exception as e:
+            self.ok = False
+            self.error = e
+        else:
+            self.error = None
+
+    def __del__(self):
+        if self.ok:
+            self.file.close()
+
+    def check(self):
+        if self.ok:
+            return "Logger {:s} opened successfully".format(self.name)
+        else:
+            return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
+
+    def __call__(self, timestamp, type, index):
+        if not self.ok:
+            return
+
+        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
+
+    def __call__(self, timestamp, type, index, data):
+        if not self.ok:
+            return
+
+        string = ""
+        if data is not None:
+            for i in data:
+                string = "{:s}\t{:.3f}".format(string, i)
+        self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, type, index, string))
 
 class CanInterface(Node):
     def __init__(self) -> None:
@@ -54,6 +106,35 @@ class CanInterface(Node):
         ActuatorCommandsMsg.ros_subscriber = self.create_subscription(TxControlCommand, '/control_commands', self.universal_callback, 10)
         KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, '/velocity_estimation', self.universal_callback, 10)
         SystemHealthMsg.ros_subscriber = self.create_subscription(TxSystemState, '/system_state', self.universal_callback, 10)
+
+        self.get_logger().info(create_new_run_log())
+
+        self.sensor_timestamp_log = Logger("canbus_sensor")
+        self.get_logger().info(self.sensor_timestamp_log.check())
+        self.wheel_timestamp_log = Logger("canbus_wheel")
+        self.get_logger().info(self.wheel_timestamp_log.check())
+        self.steer_timestamp_log = Logger("canbus_steering")
+        self.get_logger().info(self.steer_timestamp_log.check())
+        self.controls_timestamp_log = Logger("canbus_controls")
+        self.get_logger().info(self.controls_timestamp_log.check())
+        self.velocity_timestamp_log = Logger("canbus_velocity")
+        self.get_logger().info(self.velocity_timestamp_log.check())
+
+        # Define Incoming Message Logger
+        self._in_msgs_logger = {
+            MissionMsg.can_id               : None,
+            SensorVariablesMsg.can_id       : self.sensor_timestamp_log,
+            WheelEncodersMsg.can_id         : self.wheel_timestamp_log,
+            SteeringAngleMsg.can_id         : self.steer_timestamp_log,
+            AsStatusMsg.can_id              : None
+        }
+
+        # Define Outgoing Message Logger
+        self._out_msgs_logger = {
+            ActuatorCommandsMsg.msg_type    : self.controls_timestamp_log,
+            KinematicVariablesMsg.msg_type  : self.velocity_timestamp_log,
+            SystemHealthMsg.msg_type        : None
+        }
 
 
         ## --- For P22 --- ##
@@ -106,7 +187,14 @@ class CanInterface(Node):
 
         # Write message to terminal and serial port
         self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
+        end_time_1 = self.get_clock().now().nanoseconds/10**6
         self._serial_port.write(out_bytes)
+        end_time_2 = self.get_clock().now().nanoseconds/10**6
+
+        logger = self._out_msgs_logger[type(msg)]
+        if logger is not None:
+            logger( start_time.nanoseconds/10**6    , 0, msg.global_index, temp_msg.data())
+            logger( (end_time_1 + end_time_2) / 2   , 1, msg.global_index, temp_msg.data())
 
         # Print the total processing time
         # self.get_logger().info(f"Time to process message inside uni callback: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
@@ -167,13 +255,20 @@ class CanInterface(Node):
             
             # Create the message object according to its type
             ros_msg = temp_msg.to_ROS()
+            pub_time_1 = self.get_clock().now().nanoseconds/10**6
             temp_msg.ros_publisher.publish(ros_msg)
-            
+            pub_time_2 = self.get_clock().now().nanoseconds/10**6
+
+            logger = self._in_msgs_logger[msg_id]
+            if logger is not None:
+                logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
+                logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
+
             # Print the total processing time
             self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
         # self.get_logger().info("Finished reading from serial")
-        else:
-            self.get_logger().info("Receiving empty stream")
+        # else:
+        #      self.get_logger().info("Receiving empty stream")
         return
 
 

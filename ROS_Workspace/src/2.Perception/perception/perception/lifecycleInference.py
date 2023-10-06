@@ -16,6 +16,36 @@ from ament_index_python.packages import get_package_share_directory
 # Homemade Libraries
 from .libraries.pipelineFunctions import *
 
+
+class Logger:
+    def __init__(self, name):
+        self.ok = True
+        self.name = name
+        try:
+            self.run_idx = len(os.listdir("timestamp_logs")) - 1
+            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+        except Exception as e:
+            self.ok = False
+            self.error = e
+        else:
+            self.error = None
+
+    def __del__(self):
+        if self.ok:
+            self.file.close()
+
+    def check(self):
+        if self.ok:
+            return "Logger {:s} opened successfully".format(self.name)
+        else:
+            return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
+
+    def __call__(self, timestamp, type, index):
+        if not self.ok:
+            return
+
+        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
+
 class InferenceLifecycleNode(Node):
     def __init__(self, yoloModel, smallKeypointsModel):
         super().__init__('inference')
@@ -52,6 +82,12 @@ class InferenceLifecycleNode(Node):
             self.listener_callback,
             10
         )
+
+        #Timestamp logging
+        self.timestamp_log_right = Logger("inference_right")
+        self.timestamp_log_left = Logger("inference_left")
+        self.get_logger().info(self.timestamp_log_right.check())
+        self.get_logger().info(self.timestamp_log_left.check())
 
         self.get_logger().warn("\n-- Inference Configured!")
         return TransitionCallbackReturn.SUCCESS
@@ -93,6 +129,7 @@ class InferenceLifecycleNode(Node):
         return TransitionCallbackReturn.SUCCESS
 
     def listener_callback(self, msg):
+        start_time = self.get_clock().now().nanoseconds / 10**6
         if not self.publishing:
             return
         try:
@@ -128,7 +165,20 @@ class InferenceLifecycleNode(Node):
                 perception2slam_msg.class_list = [int(a) for a in classesList]
                 perception2slam_msg.theta_list = list(thetaList)
                 perception2slam_msg.range_list = list(rangeList)
+
+                pub_time_1 = self.get_clock().now().nanoseconds / 10**6
                 self.publisher_.publish(perception2slam_msg)
+                pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+                #Timestamp logging
+                if cameraOrientation=="right" or cameraOrientation=="Right":
+                    self.timestamp_log_right(start_time, 0, self.global_index)
+                    self.timestamp_log_right((pub_time_1 + pub_time_2) / 2, 1, self.global_index)
+                elif cameraOrientation=="left" or cameraOrientation=="Left":
+                    self.timestamp_log_left(start_time, 0, self.global_index)
+                    self.timestamp_log_left((pub_time_1 + pub_time_2) / 2, 1, self.global_index)
+                else:
+                    self.get_logger().info("Logger error: unknown camera orientation: {:s}".format(cameraOrientation))
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms

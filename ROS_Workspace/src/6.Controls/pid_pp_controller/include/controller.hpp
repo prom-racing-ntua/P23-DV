@@ -60,7 +60,6 @@ private:
     Point last_position; // used to implement braking distance
     int laps_to_do;
     int prev_lap;
-    int buffer_ticks; //for checking 50% and 100%
     string discipline, midpoints;
     std::ifstream mids;
     bool is_out_of_map;

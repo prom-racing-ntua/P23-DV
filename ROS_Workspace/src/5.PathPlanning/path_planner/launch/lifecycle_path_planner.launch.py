@@ -1,0 +1,21 @@
+import os
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+    ld = LaunchDescription()
+
+    path_planning_dir = get_package_share_directory("path_planner")
+    path_planning_node = Node(
+        package="path_planner",
+        name="path_planning",
+        executable="l_pth",
+        output="screen",
+        emulate_tty=True,
+        parameters=[os.path.join(path_planning_dir, "config", "parameters.yaml")]
+    )
+
+    ld.add_action(path_planning_node)
+    return ld

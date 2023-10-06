@@ -119,6 +119,8 @@ class sim_node: public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     bool lap_change()const;
 
+    float perception_range;
+
     std::ofstream log;
     long long int global_idx;
     double steering_dead_time;

@@ -75,7 +75,9 @@ namespace ns_vel_est
             }
         }
 
+        pub_time_1 = this->now().nanoseconds()/1e6;
         pub_->publish(msg);
+        pub_time_2 = this->now().nanoseconds()/1e6;
     }
 
     void LifecycleVelocityEstimationHandler::getNodeFrequency() {
@@ -144,6 +146,10 @@ namespace ns_vel_est
         if (!dead_reck) { estimator_.update(); }
         // Publish the new estimated state.
         publishResults();
+
+        // Timestamp Logging
+        timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->global_index);
+        timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->global_index);
 
         rclcpp::Duration total_time{ this->now() - starting_time };
         // RCLCPP_INFO_STREAM(get_logger(), "\n-- Execution Completed --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");

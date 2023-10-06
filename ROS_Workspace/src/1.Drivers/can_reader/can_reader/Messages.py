@@ -209,6 +209,11 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
     byte_size = 8
     msg_type = TxControlCommand
 
+    def data(self) -> tuple:
+        return [float(self._ros_msg.steering_angle_target),
+                float(self._ros_msg.motor_torque_target),
+                float(self._ros_msg.brake_pressure_target)]
+
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
@@ -242,6 +247,9 @@ class KinematicVariablesMsg(CanInterfaceMessage):
     can_id = 0x02
     byte_size = 7
     msg_type = VelEstimation
+
+    def data(self):
+        return []
 
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
@@ -418,6 +426,9 @@ class SensorVariablesMsg(CanInterfaceMessage):
     byte_size = 4
     msg_type = RxVehicleSensors
 
+    def data(self):
+        return self._data
+
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         
@@ -429,6 +440,8 @@ class SensorVariablesMsg(CanInterfaceMessage):
         msg.brake_pressure_front = float(int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False))
         msg.brake_pressure_rear = float(int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False))
 
+        self._data = [motor_torque, msg.brake_pressure_front, msg.brake_pressure_rear]
+
         return msg
 
 
@@ -437,6 +450,8 @@ class WheelEncodersMsg(CanInterfaceMessage):
     byte_size = 8
     msg_type = RxWheelSpeed
 
+    def data(self):
+        return self._data
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
 
@@ -444,6 +459,8 @@ class WheelEncodersMsg(CanInterfaceMessage):
         msg.front_right = int.from_bytes(self._can_msg[2:4], byteorder='big', signed=False)
         msg.rear_left = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=False)
         msg.rear_right = int.from_bytes(self._can_msg[6:8], byteorder='big', signed=False)
+
+        self._data = [msg.front_left, msg.front_right, msg.rear_left, msg.rear_right]
 
         return msg
 
@@ -453,6 +470,8 @@ class SteeringAngleMsg(CanInterfaceMessage):
     byte_size = 2
     msg_type = RxSteeringAngle
 
+    def data(self):
+        self._data
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
@@ -461,6 +480,8 @@ class SteeringAngleMsg(CanInterfaceMessage):
             msg.steering_angle = rackDisplacement2rad(temp)
         except ValueError:
             msg.steering_angle = rackDisplacement2rad(24 * temp/abs(temp))
+        self._data = msg.steering_angle
+
         return msg
 
 

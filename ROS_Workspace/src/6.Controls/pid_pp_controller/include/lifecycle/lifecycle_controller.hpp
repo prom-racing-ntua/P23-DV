@@ -5,6 +5,8 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <cstdio>
+#include <filesystem>
 #include <string>
 
 #include "custom_msgs/msg/point2_struct.hpp"
@@ -21,6 +23,20 @@ using namespace pid_pp;
 using std::placeholders::_1;
 
 namespace pid_pp{
+class Logger
+{
+private:
+    FILE *file;
+    int run_idx;
+    std::string name;
+public:
+    Logger();
+    void init(std::string name);
+    ~Logger();
+    std::string check()const;
+    void log(double timestamp, int type, int index);
+};
+
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 class LifecyclePID_PP_Node : public rclcpp_lifecycle::LifecycleNode
@@ -65,16 +81,19 @@ private:
     double max_speed, spline_res_per_meter;
     double safe_speed_to_break, braking_distance;
     double last_steering, last_torque;
+    Point last_position; // used to implement braking distance
     int laps_to_do;
     int prev_lap;
-    bool is_out_of_map;
-    int buffer_ticks;
     string discipline, midpoints;
     std::ifstream mids;
+    bool is_out_of_map;
+    std::ofstream log;
 
     bool is_end;
     bool switch_br;
-    std::ofstream log;
+
+    Logger waypoints_timestamp_log, pose_timestamp_log;
+    double pub_time_1, pub_time_2;
 
     //Multithreading shit -- Ntroph :(
     rclcpp::CallbackGroup::SharedPtr mutexCallbackGroup;

@@ -11,7 +11,7 @@ def generate_launch_description():
     pid__pp_node = Node(
         package="pid_pp_controller",
         name="pure_pursuit",
-        executable="lifecycle_pid_pp_controller",
+        executable="l_pid",
         output="screen",
         emulate_tty=True,
         parameters=[os.path.join(pid_pp_con_dir, "config", "parameters.yaml")]

@@ -53,6 +53,17 @@ namespace path_planner
         return selected;
     }
 
+    std::pair<int, int> count_cones_by_color(const std::vector<Cone> &local_map)
+    {
+        int counter[] = {0, 0, 0, 0};
+
+        for (Cone cone : local_map)
+        {
+            counter[cone.color]++;
+        }
+        return std::make_pair(counter[0], counter[1]);
+    }
+
     void LifecyclePathPlanner::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg)
     {
         rclcpp::Time starting_time = this->now();
@@ -74,7 +85,18 @@ namespace path_planner
         Point current_direction(current_position.x() + std::cos(theta), current_position.y() + std::sin(theta));
         local_map = select_cones_by_dist_and_angle(full_map, current_position, current_direction, selection_radius_small, selection_radius_big, selection_angle);
         if (local_map.size() < 3)
+        {
+            RCLCPP_INFO_STREAM(get_logger(), "Too few cones...");
             return;
+        }
+
+        std::pair<int, int> b_y_count = count_cones_by_color(local_map);
+        if(b_y_count.first < 1 || b_y_count.second < 1)
+        {
+            RCLCPP_INFO_STREAM(get_logger(), "Too few cones...");
+            return;
+        }
+
         // std::cout<<"("<<current_direction.x()<<","<<current_direction.y()<<")"<<std::endl;
         std::pair<std::vector<Point>, int> batch_output = waymaker.new_batch(local_map, current_position, Direction_2(Segment_2(current_position, current_direction)));
         std::vector<Point> waypoints(batch_output.first);
@@ -142,24 +164,39 @@ namespace path_planner
                 std::cout << "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
                 return;
             }
-            else
-            {
-                last_path = for_pub;
-                last_length = this->get_length(waypoints);
-                last_position = current_position;
-            }
         }
         if(batch_output.second > 90)
         {
-            exit(1); //Initiates ABS. If there is a safer method, it should be prefered.
+            if(last_length - std::sqrt(CGAL::squared_distance(current_position, Point(last_path.waypoints[0].x, last_path.waypoints[0].y))) > 4)
+            {
+                RCLCPP_INFO_STREAM(get_logger(), "Path is faulty but last path is viable...");
+                return ;
+            }
+            else
+            {
+                RCLCPP_WARN(get_logger(), "Best path is faulty. Aborting...");
+                exit(1); //Initiates ABS. If there is a safer method, it should be prefered.
+            }
+        }
+        else
+        {
+            last_path = for_pub;
+            last_length = this->get_length(waypoints);
+            last_position = current_position;
         }
 
         for_pub.is_out_of_map = waymaker.out_of_convex;
         for_pub.initial_v_x = msg->pose.velocity_state.global_index == 0 ? -1 : msg->pose.velocity_state.velocity_x;
         for_pub.lap_count = msg->lap_count;
-
+        for_pub.global_index = msg->pose.velocity_state.global_index;
+        pub_time_1 = this->now().nanoseconds()/1e6;
         pub_waypoints->publish(for_pub);
-        
+        pub_time_2 = this->now().nanoseconds()/1e6;
+
+        // Timestamp Logging
+        timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->pose.velocity_state.global_index);
+        timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->pose.velocity_state.global_index);
+
         std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;

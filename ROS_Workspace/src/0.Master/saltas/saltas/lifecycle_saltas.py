@@ -16,6 +16,49 @@ from std_msgs.msg import Header
 from custom_msgs.msg import NodeSync
 from custom_msgs.srv import GetFrequencies
 
+def create_new_run_log() -> str:
+    current_runs = len(os.listdir("timestamp_logs"))
+    if(current_runs!=0):
+        if(len(os.listdir("timestamp_logs/run_{:d}".format(current_runs-1)))==0):
+            return "New dir exists."
+    try:
+        os.mkdir("timestamp_logs/run_{:d}".format(current_runs))
+    except FileExistsError:
+        return "New dir exists."
+    except Exception as e:
+        return "Error while creating new run dir:{:s}".format(repr(e))
+    else:
+        return "New run dir created successfully."
+
+class Logger:
+    def __init__(self, name):
+        self.ok = True
+        self.name = name
+        try:
+            self.run_idx = len(os.listdir("timestamp_logs")) - 1
+            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+        except Exception as e:
+            self.ok = False
+            self.error = e
+        else:
+            self.error = None
+
+    def __del__(self):
+        if self.ok:
+            self.file.close()
+
+    def check(self):
+        if self.ok:
+            return "Logger {:s} opened successfully".format(self.name)
+        else:
+            return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
+
+    def __call__(self, timestamp, type, index):
+        if not self.ok:
+            return
+
+        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
+
 class SaltasNode(Node):
     '''P23 Master Node (me to kalytero onoma)'''
     def __init__(self) -> None:
@@ -53,8 +96,13 @@ class SaltasNode(Node):
         self.frequency_service = self.create_service(GetFrequencies, 'get_frequencies', self.frequency_srv_callback)
         self.get_logger().info(f'Velocity Estimation Frequency {self.velocity_estimation_frequency} Hz')
         self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
+
+        #Timestamp logging
+        self.get_logger().info(create_new_run_log())
+        self.timestamp_log = Logger("saltas")
+        self.get_logger().info(self.timestamp_log.check())
+
         self.get_logger().warn(f'\n-- Saltas Configured!')
-    
         return TransitionCallbackReturn.SUCCESS
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:
@@ -118,7 +166,13 @@ class SaltasNode(Node):
         if (self.send_index%self.send_perception == 0):
             # Send perception execution msg
             msg.exec_perception = True
+
+        pub_time_1 = self.get_clock().now().nanoseconds / 10**6
         self.clock_publisher.publish(msg)
+        pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+        #Timestamp logging
+        self.timestamp_log((pub_time_1 + pub_time_2) / 2, 1, self.global_index)
 
         self.global_index += 1
         self.send_index += 1

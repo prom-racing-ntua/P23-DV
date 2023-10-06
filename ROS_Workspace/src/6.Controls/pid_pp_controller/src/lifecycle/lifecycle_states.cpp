@@ -3,6 +3,51 @@
 
 namespace pid_pp
 {
+    Logger::Logger()
+    {
+        this->name = "";
+        this->file = nullptr;
+        this->run_idx = -1;
+    }
+    void Logger::init(std::string name)
+    {
+        this->name = name;
+        auto dirIter = std::filesystem::directory_iterator("timestamp_logs");
+
+        this->run_idx = std::count_if(
+                begin(dirIter),
+                end(dirIter),
+                [](auto& entry) { return is_regular_file(entry.path()); }
+        );
+
+        char f1[30 + name.length()];
+        snprintf(f1, sizeof(f1), "timestamp_logs/run_%d/%s_log.txt", this->run_idx, name.c_str());
+        this->file = fopen(f1, "w");
+    }
+    Logger::~Logger()
+    {
+        if(file!=nullptr)
+        {
+            fclose(file);
+        }
+    }
+    std::string Logger::check()const
+    {
+        if(file==nullptr)
+        {
+            return "Couldn't open logger " + name;
+        }
+        else
+        {
+            return "File " + name + " opened successfully";
+        }
+    }
+    void Logger::log(double timestamp, int type, int index)
+    {
+        if(file == nullptr)return;
+        fprintf(file, "%f\t%d\t%d\n", timestamp, type, index);
+    }
+
     pid_pp::CallbackReturn
     LifecyclePID_PP_Node::on_configure(const rclcpp_lifecycle::State &state)
     {
@@ -74,6 +119,11 @@ namespace pid_pp
             auto future_result = total_laps_cli->async_send_request(request, response_received_callback);
         }
 
+        waypoints_timestamp_log.init("pid_pp_waypoints");
+        RCLCPP_INFO_STREAM(get_logger(),waypoints_timestamp_log.check());
+        pose_timestamp_log.init("pid_pp_pose");
+        RCLCPP_INFO_STREAM(get_logger(),pose_timestamp_log.check());
+        RCLCPP_INFO_STREAM(get_logger(), "Laps to do: "<<laps_to_do);
         RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Configured!");
         return pid_pp::CallbackReturn::SUCCESS;
     }

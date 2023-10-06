@@ -1,7 +1,9 @@
 simple_sim:
   ros__parameters:
-    discipline: "Autocross"
+    discipline: "Skidpad"
+    perception_range: 11.0
 
 sim_with_brake:
   ros__parameters:
-    discipline: "Autocross"
+    discipline: "Skidpad"
+    perception_range: 11.0

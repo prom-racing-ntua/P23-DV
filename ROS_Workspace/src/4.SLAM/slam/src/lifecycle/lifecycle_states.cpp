@@ -3,6 +3,50 @@
 
 namespace ns_slam
 {
+    Logger::Logger()
+    {
+        this->name = "";
+        this->file = nullptr;
+        this->run_idx = -1;
+    }
+    void Logger::init(std::string name)
+    {
+        this->name = name;
+        auto dirIter = std::filesystem::directory_iterator("timestamp_logs");
+
+        this->run_idx = std::count_if(
+                begin(dirIter),
+                end(dirIter),
+                [](auto& entry) { return is_regular_file(entry.path()); }
+        );
+
+        char f1[30 + name.length()];
+        snprintf(f1, sizeof(f1), "timestamp_logs/run_%d/%s_log.txt", this->run_idx, name.c_str());
+        this->file = fopen(f1, "w");
+    }
+    Logger::~Logger()
+    {
+        fclose(file);
+    }
+    std::string Logger::check()const
+    {
+        if(file==nullptr)
+        {
+            return "Couldn't open logger " + name;
+        }
+        else
+        {
+            return "File " + name + " opened successfully";
+        }
+    }
+    void Logger::log(double timestamp, int type, int index)
+    {
+        if(file == nullptr)return;
+
+        fprintf(file, "%f\t%d\t%d", timestamp, type, index);
+    }
+
+
     ns_slam::CallbackReturn
         LifecycleSlamHandler::on_configure(const rclcpp_lifecycle::State & state)
     {   
@@ -33,6 +77,14 @@ namespace ns_slam
             velocity_log_.open(share_dir_ + "/../../../../testingLogs/velocityLog_" + std::to_string(init_time) + ".txt");
             perception_log_.open(share_dir_ + "/../../../../testingLogs/perceptionLog_" + std::to_string(init_time) + ".txt");
         }
+
+        // Timestamp logging
+        perception_timestamp_log.init("slam_perception");
+        RCLCPP_INFO_STREAM(get_logger(), perception_timestamp_log.check());
+        odometry_timestamp_log.init("slam_odometry");
+        RCLCPP_INFO_STREAM(get_logger(), odometry_timestamp_log.check());
+        optim_timestamp_log.init("slam_optim");
+        RCLCPP_INFO_STREAM(get_logger(), optim_timestamp_log.check());
 
         // If in localization mode load the track map
         map_ready_ = true;

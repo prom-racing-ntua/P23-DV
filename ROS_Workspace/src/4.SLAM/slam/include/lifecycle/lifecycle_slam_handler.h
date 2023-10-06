@@ -4,6 +4,8 @@
 #include <string>
 #include <limits>
 #include <chrono>
+#include <cstdio>
+#include <filesystem>
 #include <functional>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
@@ -23,6 +25,20 @@
 namespace ns_slam
 {
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+    class Logger
+    {
+    private:
+        FILE *file;
+        int run_idx;
+        std::string name;
+    public:
+        Logger();
+        void init(std::string name);
+        ~Logger();
+        std::string check()const;
+        void log(double timestamp, int type, int index);
+    };
 
     class LifecycleSlamHandler : public rclcpp_lifecycle::LifecycleNode {
     private:
@@ -54,6 +70,8 @@ namespace ns_slam
         std::ofstream velocity_log_;
         std::ofstream perception_log_;
         std::ofstream map_log_;
+        Logger perception_timestamp_log, odometry_timestamp_log, optim_timestamp_log;
+        double pub_time_1, pub_time_2;
 
         // Lap counter variables
         int completed_laps_;

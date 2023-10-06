@@ -267,6 +267,9 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
     as.id = 3;
     pub_aut->publish(as);
 
+	declare_parameter<float>("perception_range", 10);
+	perception_range = get_parameter("perception_range").as_double();
+
     declare_parameter<string>("discipline", "Autocross");
     string d = get_parameter("discipline").as_string();
     std::cout<<d<<std::endl;
@@ -548,7 +551,7 @@ void sim_node::timer_callback()
 		for (int i = 0; i < unseen_cones.size(); i++)
 		{
 			double dsq = std::pow(state.x - unseen_cones[i].x, 2) + std::pow(state.y - unseen_cones[i].y, 2);
-			if (dsq < 9 * 9 && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
+			if (dsq < perception_range * perception_range && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);

@@ -26,6 +26,36 @@ from .libraries.cameraClass import Camera
 def getEpoch():
     return float(time.time())
 
+class Logger:
+    def __init__(self, name):
+        self.ok = True
+        self.name = name
+        try:
+            self.run_idx = len(os.listdir("timestamp_logs")) - 1
+            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+        except Exception as e:
+            self.ok = False
+            self.error = e
+        else:
+            self.error = None
+
+    def __del__(self):
+        if self.ok:
+            self.file.close()
+
+    def check(self):
+        if self.ok:
+            return "Logger {:s} opened successfully".format(self.name)
+        else:
+            return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
+
+    def __call__(self, timestamp, type, index):
+        if not self.ok:
+            return
+
+        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
+
+
 class AcquisitionLifecycleNode(Node):
     def __init__(self):
         super().__init__('acquisition')
@@ -87,6 +117,15 @@ class AcquisitionLifecycleNode(Node):
         self.bridge = CvBridge()  #This is used to pass images as ros msgs
         self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
+        # Timestamp logging
+        # run_idx_file = open("timestamp_logs/run_idx.txt", "r")
+        # run_idx = str(int(run_idx_file.read()))
+        # run_idx_file.close()
+        # self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/"+orientation+"_acquisition_log.txt")
+
+        self.timestamp_log = Logger("acquisition_{:s}".format(orientation))
+        self.get_logger().info(self.timestamp_log.check())
+
         self.get_logger().warn(f"\n-- Acquisition Configured!")
         return TransitionCallbackReturn.SUCCESS
 
@@ -112,7 +151,7 @@ class AcquisitionLifecycleNode(Node):
 
         del self.camera, self.bridge
         self.destroy_publisher(self.publisher_)
-        
+
         self.get_logger().warn(f"\n-- Acquisition Un-Configured!")
         return TransitionCallbackReturn.SUCCESS
     
@@ -124,7 +163,7 @@ class AcquisitionLifecycleNode(Node):
 
         self.destroy_subscription(self.subscription)
         self.destroy_publisher(self.publisher_)
-        
+
         self.camera.cleanupCamera()
         del self.camera, self.bridge
 
@@ -138,6 +177,7 @@ class AcquisitionLifecycleNode(Node):
         
         trigger = msg.exec_perception
         if (trigger):
+            start_time = self.get_clock().now().nanoseconds / 10**6
             global_index = msg.global_index            
             self.camera.TriggerCamera()
             numpyImage = self.camera.AcquireImage()
@@ -147,7 +187,16 @@ class AcquisitionLifecycleNode(Node):
             imageMessage.global_index = global_index
             imageMessage.image = self.bridge.cv2_to_imgmsg(numpyImage, encoding="passthrough")
             imageMessage.camera_orientation = self.camera.orientation
+
+            pub_time_1 = self.get_clock().now().nanoseconds / 10**6
             self.publisher_.publish(imageMessage)
+            pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+            #Timestamp logging
+            self.timestamp_log(start_time, 0, self.global_index)
+            self.timestamp_log((pub_time_1 + pub_time_2) / 2, 1, self.global_index)
+
+
         else:
             pass
 

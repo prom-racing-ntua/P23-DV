@@ -1,7 +1,7 @@
 #include "lifecycle_controller.hpp"
 #include <iomanip>
 
-LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false), buffer_ticks(0)
+LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false)
 {
     parameter_load();
     RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
@@ -16,7 +16,6 @@ LifecyclePID_PP_Node::~LifecyclePID_PP_Node()
 
 void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 {
-    buffer_ticks = 0;
     if (discipline == "Trackdrive")
     {
         mids.open("src/6.Controls/pid_pp_controller/data/" + midpoints);
@@ -336,19 +335,25 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     }
     else
     {
-        RCLCPP_INFO_STREAM(get_logger(), "Only "<<msg->count<<" midpoints.");
         return;
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-    bool is_end = msg->lap_count == laps_to_do;
+    if(msg->lap_count == laps_to_do && !is_end)
+    {
+        is_end = true;
+        last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
+    }
+    else if(is_end)
+    {
+        braking_distance -= Point::distance(last_position, Point(msg->waypoints[0].x, msg->waypoints[0].y));
+        last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
+    }
+    //bool is_end = msg->lap_count == laps_to_do;
     double ms = msg->is_out_of_map ? 2 : max_speed;
     this->is_out_of_map = msg->is_out_of_map;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
-    buffer_ticks = 0;
-    if (msg->is_out_of_map)
-        RCLCPP_INFO_STREAM(get_logger(), "Vehicle out of map. Attempting to reenter...");
 
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
         (a) The new objects can be constructed locally and the modification required is only the copying of the pointer address
@@ -371,6 +376,9 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     delete profile_to_delete;
     rclcpp::Duration total_time = this->now() - starting_time;
     total_execution_time += total_time.nanoseconds() / 1000000.0;
+
+    waypoints_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->global_index);
+
     // std::cout << "Time of Waypoints Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
 }
 
@@ -501,10 +509,11 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     last_steering = heading_angle;
 
     for_publish.steering_angle_target = heading_angle;
+    for_publish.global_index = msg->velocity_state.global_index;
 
     if(!switch_br && (force < 0 && v_x < safe_speed_to_break && is_end))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
 
-    switch_br = force < 0 && v_x < safe_speed_to_break && is_end;
+    switch_br = force < 0 && v_x < safe_speed_to_break && (is_end || projection.first < 0.1);
 
     for_publish.brake_pressure_target = switch_br ? 10.0 : 0;
     if (switch_br)
@@ -521,13 +530,13 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pub_target->publish(tg);
 
     /* EXTRA SAFETY CHECKS */
-    if(this->v_x > 1.5 * max_speed && buffer_ticks>10)
+    if(this->v_x > 1.5 * max_speed)
     {
         for_publish.motor_torque_target = 0;
         for_publish.brake_pressure_target = 1;
         RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
     }
-    if(this->v_x > 2 * max_speed && buffer_ticks>10)
+    if(this->v_x > 2 * max_speed)
     {
         for_publish.steering_angle_target = 0;
         for_publish.motor_torque_target = 0;
@@ -537,7 +546,9 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
     }
 
+    pub_time_1 = this->now().nanoseconds()/1e6;
     pub_actuators->publish(for_publish);
+    pub_time_2 = this->now().nanoseconds()/1e6;
     std::cout << "Command: Torque = " << std::fixed << std::setprecision(4) << for_publish.motor_torque_target << " Nm, Heading = " << std::fixed << std::setprecision(4) << heading_angle << " rad, BP = " << switch_br ? 1 : 0;
     std::cout << " , ld = " << std::fixed << std::setprecision(4) << ld << std::endl;
 
@@ -545,6 +556,9 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     total_execution_time += total_time.nanoseconds() / 1000000.0;
 
     std::cout << "Time of Pose Execution: " << total_time.nanoseconds() / 1000000.0 << " ms." << std::endl;
+
+    pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->velocity_state.global_index);
+    pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->velocity_state.global_index);
 }
 
 void LifecyclePID_PP_Node::parameter_load()
@@ -583,7 +597,7 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<int>("PID_max_output", 3000);
     declare_parameter<int>("Integral_max_output", 1500);
     declare_parameter<int>("spline_resolution_per_meter", 10);
-    declare_parameter<int>("total_laps", 1);
+    declare_parameter<int>("total_laps", 2);
 
     declare_parameter<string>("discipline", "Autocross");
     declare_parameter<string>("midpoints", "");

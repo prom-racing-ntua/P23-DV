@@ -12,11 +12,27 @@
 
 #include <chrono>
 #include <functional>
+#include <filesystem>
+#include <cstdio>
 #include <memory>
 #include <string>
 
 namespace path_planner
 {
+    class Logger
+    {
+    private:
+        FILE *file;
+        int run_idx;
+        std::string name;
+    public:
+        Logger();
+        void init(std::string name);
+        ~Logger();
+        std::string check()const;
+        void log(double timestamp, int type, int index);
+    };
+
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecyclePathPlanner: public rclcpp_lifecycle::LifecycleNode {
@@ -34,6 +50,8 @@ namespace path_planner
             float average_angle;
             float get_length(std::vector<Point> path)const;
             float get_angle_avg(std::vector<Point> path)const;
+            Logger timestamp_log;
+            double pub_time_1, pub_time_2;
         public:
             explicit LifecyclePathPlanner();
             ~LifecyclePathPlanner();
