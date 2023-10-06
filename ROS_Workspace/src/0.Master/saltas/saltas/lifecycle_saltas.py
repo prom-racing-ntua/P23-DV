@@ -72,6 +72,9 @@ class SaltasNode(Node):
             ('perception_frequency', 10)
             ]
         )
+
+        self.get_logger().info(create_new_run_log())
+
         self.get_logger().warn(f'\n-- Saltas Node Created')
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
@@ -98,7 +101,6 @@ class SaltasNode(Node):
         self.get_logger().info(f'Perception Frequency {self.perception_frequency} Hz')
 
         #Timestamp logging
-        self.get_logger().info(create_new_run_log())
         self.timestamp_log = Logger("saltas")
         self.get_logger().info(self.timestamp_log.check())
 
@@ -117,6 +119,9 @@ class SaltasNode(Node):
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().warn(f'\n-- Saltas Deactivated!')
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.saltas_clock.cancel()
         return TransitionCallbackReturn.SUCCESS
     
@@ -126,6 +131,9 @@ class SaltasNode(Node):
 
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
 
         self.get_logger().warn(f'\n-- Saltas Un-Configured!')
         return TransitionCallbackReturn.SUCCESS
@@ -139,6 +147,9 @@ class SaltasNode(Node):
         
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
+
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
 
         self.get_logger().info(f'\n-- Saltas Shutdown!')
         return TransitionCallbackReturn.SUCCESS

@@ -57,7 +57,4 @@ class Path_Planner_Node: public rclcpp::Node
         bool has_completed_total_path;
         int prev_lap;
         custom_msgs::msg::WaypointsMsg finalized;
-
-        /* Timestamp Logging*/
-        FILE *timestamp_log;
 };

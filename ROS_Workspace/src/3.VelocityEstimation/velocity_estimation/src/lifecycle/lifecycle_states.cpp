@@ -76,6 +76,19 @@ namespace ns_vel_est
         pub_ = create_publisher<custom_msgs::msg::VelEstimation>("velocity_estimation", 10);
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Configured!");
 
+        // Timestamp logging
+        run_idx_file = fopen("timestamp_logs/run_idx.txt", "r");
+        int run_idx;
+        fscanf(run_idx_file, "%d", &run_idx);
+        fclose(run_idx_file);
+        std::string loc = "timestamp_logs/run_" + std::to_string(run_idx);
+
+        char ext1[] = "/velocity_log.txt";
+        char f1[loc.length() + strlen(ext1) + 1];
+        snprintf(f1, sizeof(f1), "%s%s", loc, ext1);
+
+        this->timestamp_log = fopen(f1, "w");
+
         return ns_vel_est::CallbackReturn::SUCCESS;
     }
 

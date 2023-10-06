@@ -142,6 +142,9 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
+        if not self.timestamp_log.closed:
+            self.timestamp_log.close()
+
         self.get_logger().warn(f"\n-- Acquisition Deactivated!")
         return super().on_deactivate(state)
     

@@ -311,7 +311,6 @@ void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::Sh
 Path_Planner_Node::~Path_Planner_Node() {
     std::cout << "Average execution time: " << total_execution_time / waymaker.get_batch_number() << std::endl;
     std::cout << "Max angle: "<<average_angle <<std::endl;
-    fclose(timestamp_log);
 }
 
 float Path_Planner_Node::get_length(std::vector<Point> path)const

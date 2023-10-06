@@ -185,6 +185,9 @@ namespace ns_slam
             velocity_log_.close();
             perception_log_.close();
         }
+        fclose(odometry_timestamp_log);
+        fclose(perception_timestamp_log);
+        fclose(optim_timestamp_log);
 
         if (is_mapping_) map_log_.close();
 
