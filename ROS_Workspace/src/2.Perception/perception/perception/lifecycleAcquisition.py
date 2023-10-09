@@ -142,9 +142,6 @@ class AcquisitionLifecycleNode(Node):
         self.publishing = False        
         self.camera.deactivateAcquisition()
 
-        if not self.timestamp_log.closed:
-            self.timestamp_log.close()
-
         self.get_logger().warn(f"\n-- Acquisition Deactivated!")
         return super().on_deactivate(state)
     
@@ -196,8 +193,8 @@ class AcquisitionLifecycleNode(Node):
             pub_time_2 = self.get_clock().now().nanoseconds / 10**6
 
             #Timestamp logging
-            self.timestamp_log(start_time, 0, self.global_index)
-            self.timestamp_log((pub_time_1 + pub_time_2) / 2, 1, self.global_index)
+            self.timestamp_log(start_time, 0, global_index)
+            self.timestamp_log((pub_time_1 + pub_time_2) / 2, 1, global_index)
 
 
         else:

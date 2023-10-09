@@ -172,11 +172,11 @@ class InferenceLifecycleNode(Node):
 
                 #Timestamp logging
                 if cameraOrientation=="right" or cameraOrientation=="Right":
-                    self.timestamp_log_right(start_time, 0, global_index)
-                    self.timestamp_log_right((pub_time_1 + pub_time_2) / 2, 1, .global_index)
+                    self.timestamp_log_right(start_time, 0, globalIndex)
+                    self.timestamp_log_right((pub_time_1 + pub_time_2) / 2, 1, globalIndex)
                 elif cameraOrientation=="left" or cameraOrientation=="Left":
-                    self.timestamp_log_left(start_time, 0, global_index)
-                    self.timestamp_log_left((pub_time_1 + pub_time_2) / 2, 1, global_index)
+                    self.timestamp_log_left(start_time, 0, globalIndex)
+                    self.timestamp_log_left((pub_time_1 + pub_time_2) / 2, 1, globalIndex)
                 else:
                     self.get_logger().info("Logger error: unknown camera orientation: {:s}".format(cameraOrientation))
 

@@ -119,9 +119,6 @@ class SaltasNode(Node):
     def on_deactivate(self, state: State) -> TransitionCallbackReturn:
         self.get_logger().warn(f'\n-- Saltas Deactivated!')
 
-        if not self.timestamp_log.closed:
-            self.timestamp_log.close()
-
         self.saltas_clock.cancel()
         return TransitionCallbackReturn.SUCCESS
     
@@ -131,9 +128,6 @@ class SaltasNode(Node):
 
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
-
-        if not self.timestamp_log.closed:
-            self.timestamp_log.close()
 
         self.get_logger().warn(f'\n-- Saltas Un-Configured!')
         return TransitionCallbackReturn.SUCCESS
@@ -147,9 +141,6 @@ class SaltasNode(Node):
         
         self.destroy_timer(self.saltas_clock)
         self.destroy_publisher(self.clock_publisher)
-
-        if not self.timestamp_log.closed:
-            self.timestamp_log.close()
 
         self.get_logger().info(f'\n-- Saltas Shutdown!')
         return TransitionCallbackReturn.SUCCESS

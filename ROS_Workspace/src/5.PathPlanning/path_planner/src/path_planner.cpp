@@ -77,6 +77,7 @@ std::pair<int, int> count_cones_by_color(const std::vector<Cone> &local_map)
 
 void Path_Planner_Node::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg) {
     rclcpp::Time starting_time = this->now();
+    std::cout<<"Entered Mapping callback\n";
     int cone_count = msg->local_map.size();
     std::vector<Cone> full_map, local_map;
     double x0,y0;
