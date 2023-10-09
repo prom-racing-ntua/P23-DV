@@ -33,9 +33,9 @@ def generate_launch_description():
             namespace='vn_200')
 
     ld = LaunchDescription()
-    # ld.add_action(vectornav_launch)
+    ld.add_action(vectornav_launch)
     ld.add_action(logger_cmd)
-    ld.add_action(camera_logger)
-    ld.add_action(vn200_node)
+    # ld.add_action(camera_logger)
+    # ld.add_action(vn200_node)
 
     return ld

@@ -74,14 +74,14 @@ namespace ns_vel_est
                 msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
             }
         }
-
+        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Publishes results");
         pub_->publish(msg);
     }
 
     void LifecycleVelocityEstimationHandler::getNodeFrequency() {
         using namespace std::chrono_literals;
 
-        // Instead of a timer we get the node frequency from the mater node with the following client request
+        // Instead of a timer we get the node frequency from the master node with the following client request
         auto request = std::make_shared<custom_msgs::srv::GetFrequencies::Request>();
 
         RCLCPP_INFO(get_logger(), "Before wait for service");
