@@ -141,7 +141,7 @@ namespace lifecycle_manager_namespace
         auto future_result = changeStateServiceHandler->async_send_request(request);
 
         /* Instead of using a callback (which doesn't always work out check for the future status every once in a while)*/
-        auto future_status = wait_for_result(future_result, std::chrono::seconds(5));
+        auto future_status = wait_for_result(future_result, std::chrono::seconds(10));
 
         if (future_status != std::future_status::ready) {
             RCLCPP_ERROR(get_logger(), "Server time out while changing state for node %s", nodeName.c_str());
