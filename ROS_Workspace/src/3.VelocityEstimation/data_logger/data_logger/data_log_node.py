@@ -95,6 +95,7 @@ class DataLogger(Node):
         self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
     
     def vn_300_ins_callback(self, msg) -> None:
+        self.get_logger().warn(f'INS_MODE {msg.insstatus.mode}')
         self._dict_300.update({'ins_mode': msg.insstatus.mode, 'vel_x': msg.velbody.x, 'vel_y': msg.velbody.y, 'vel_z': msg.velbody.z})
         self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
     
