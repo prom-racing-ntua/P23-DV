@@ -668,7 +668,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     for_publish.steering_angle_target = heading_angle;
     bool switch_br = force < 0 && v_x < safe_speed_to_break && is_end;
 
-    for_publish.brake_pressure_target = switch_br ? 10.0 : 0.0;
+    for_publish.brake_pressure_target = switch_br ? 20.0 : 0.0;
     if (switch_br)
         for_publish.motor_torque_target = 0;
     // std::cout<<"13.. ";

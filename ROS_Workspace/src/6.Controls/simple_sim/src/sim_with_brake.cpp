@@ -232,8 +232,62 @@ std::ostream &operator<<(std::ostream &out, const State &a)
 	return out;																																				
 }
 
+steeringActuation::steeringActuation(double delay, double start, double approach_speed)
+	:delay_time(delay), start_time(start), speed(approach_speed), delta(0){}
 
-sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0), is_end(0)
+
+void steeringActuation::add_command(double command, double time)
+{
+	time -= start_time;
+	commands_log.push_back(std::make_pair(command, time));
+}
+
+double steeringActuation::get_command(){ return delta;}
+
+void steeringActuation::propagate(double dt, double time)
+{
+	time -= start_time;
+	if(commands_log.size() == 0)return ;
+	if(commands_log[0].second + delay_time > time)return ;
+
+	double current_command;
+
+	if(commands_log[commands_log.size()-1].second + delay_time < time)current_command = commands_log[commands_log.size()-1].first;
+	else for(int i = commands_log.size()-2; i>=0; i--)
+	{
+		if(commands_log[i].second + delay_time < time && commands_log[i+1].second + delay_time > time)
+		{
+			current_command = commands_log[i].first;
+			break;
+		}
+	}
+
+	if(current_command > delta)
+	{
+		delta = std::min(delta + speed * dt, current_command);
+	}
+	else delta = std::max(delta - speed * dt, current_command);
+}
+
+
+
+bool has_hit_cone(double sin, double cos, double x, double y, double x_c, double y_c, double wb=1.59, double tr=1.22)
+{
+	const double x1 = x_c-x;
+	const double y1 = y_c-y;
+	const double xt = x1*cos+y1*sin;
+	const double yt = x1*sin-y1*cos;
+	// if((std::abs(xt)<(wb/2)&&std::abs(yt)<(tr/2)))
+	// {
+	// 	std::cout<<"x = "<<x<<", y = "<<y<<", x_c = "<<x_c<<", y_c = "<<y_c<<", phi = "<<std::arcsin(sin)<<std::endl;
+	// 	return 1;
+	// }
+	// return 0;
+	return std::abs(xt)<(wb/2)&&std::abs(yt)<(tr/2);
+}
+
+
+sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0), is_end(0), total_doo(0), steering_model(70, 0, 0.5)
 {
 
     pub_pose = this->create_publisher<custom_msgs::msg::PoseMsg>("/pose", 10);
@@ -437,18 +491,20 @@ void sim_node::timer_callback()
 			else frx_ = torques[int(torques.size()) - mot_d_ticks - 1] * constants.gr * constants.eff / constants.R_wheel;
 			ffx_ = 0.0;
 		}
-		if (int(steering.size()) - st_d_ticks - 1 < 0)
-		{
-			d = 0;
-			// std::cout<<steering.size()<<" "<<st_d_ticks<<" /*/ ";
-		}
-		else
-			d = steering[int(steering.size()) - st_d_ticks - 1];
+		// if (int(steering.size()) - st_d_ticks - 1 < 0)
+		// {
+		// 	d = 0;
+		// 	// std::cout<<steering.size()<<" "<<st_d_ticks<<" /*/ ";
+		// }
+		// else
+		// 	d = steering[int(steering.size()) - st_d_ticks - 1];
 
-		if (last_d + 0.0005 < d) last_d = last_d + 0.0005;
-		else if (last_d - 0.0005 > d) last_d = last_d - 0.0005;
+		// if (last_d + 0.0005 < d) last_d = last_d + 0.0005;
+		// else if (last_d - 0.0005 > d) last_d = last_d - 0.0005;
+		last_d = steering_model.get_command();
 		last_d = std::min(3.14159 * 31.2 / 180, std::max(-3.14159 * 31.2 / 180, last_d));
 		state.next(dt_, frx_, ffx_, last_d);
+		steering_model.propagate(1e-3, state.t*1e3);
 		if (lap_change() && global_idx - idx_of_last_lap > 2500)
 		{
 			std::cout << "----- Lap: " << ++state.lap << " -----" << std::endl;
@@ -470,6 +526,7 @@ void sim_node::timer_callback()
 	// PUB POSE
     if (1 or global_idx % 25 == 0) //40Hz
     {
+		std::cout<<frx_<<" "<<ffx_<<std::endl;
         /* LOGS */
         log << int(frx_) << "\t" << std::fixed << std::setprecision(3) << d << "\t" << std::fixed << std::setprecision(3) << last_d << std::endl;
         log << state;
@@ -538,6 +595,17 @@ void sim_node::timer_callback()
 
         /* WHEELS TBD*/
 
+		/* Check if we are hitting cones*/
+		// state.theta, state.x, state.y
+		double sin = std::sin(state.theta), cos = std::cos(state.theta);
+		for(Cone cone:seen_cones)
+		{
+			if(has_hit_cone(sin, cos, state.x, state.y, cone.x, cone.y))
+			{
+				total_doo++;
+				RCLCPP_WARN(get_logger(), "A cone has bin hit. Total count: %d", total_doo);
+			}
+		}
     }
 
 	if (global_idx % 250 == 0)
@@ -638,7 +706,8 @@ void sim_node::timer_callback()
 void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg) {
 	// std::cout << ">>> COMMAND <<<" << std::endl;
 	torques.push_back(msg->motor_torque_target);
-	steering.push_back(msg->steering_angle_target);
+	//steering.push_back(msg->steering_angle_target);
+	steering_model.add_command(msg->steering_angle_target, state.t*1e3);
 	brake_press = (float)msg->brake_pressure_target;
 	std::ofstream log2;
 	log2.open("src/6.Controls/simple_sim/data/log2.txt", std::ios::app);

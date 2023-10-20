@@ -3,7 +3,7 @@ path_planning:
     #triangulation
     maximum_angle: 90
     maximum_edge_angle: 60
-    maximum_distance: 7
+    maximum_distance: 4
     target_depth: 10
 
     #penalties
@@ -14,6 +14,6 @@ path_planning:
     filtering_threshold: 90
 
     #local map selection
-    selection_radius_small: 7
-    selection_radius_big: 15
-    selection_angle: 45
+    selection_radius_small: 5
+    selection_radius_big: 12
+    selection_angle: 60

@@ -53,6 +53,21 @@ struct Cone
         x(a), y(b), color(c) {}
 };
 
+class steeringActuation 
+{
+    private:
+    std::vector<std::pair<double, double> > commands_log; // command, timestamp
+    double delay_time; //in ms
+    double start_time; //starting time to normalize commands
+    double speed;
+    double delta; // current wheel angle
+
+    public:
+    steeringActuation(double delay, double start, double approach_speed);
+    void add_command(double command, double time);
+    double get_command();
+    void propagate(double dt, double time);
+};
 
 struct Forces {
     double ffx, frx;
@@ -124,6 +139,9 @@ class sim_node: public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     bool lap_change()const;
 
+    // Actuator modelling
+    steeringActuation steering_model;
+
     std::ofstream log;
     long long int global_idx;
     double steering_dead_time;
@@ -138,5 +156,6 @@ class sim_node: public rclcpp::Node
     int discipline;
     int is_end;
     float brake_press;
+    int total_doo;
 };
 }
