@@ -85,7 +85,6 @@ class DataLogger(Node):
         
     #vn200/300 logging
     def vn_200_imu_callback(self, msg) -> None:
-        self.get_logger().warn('Logging vn_200')
         self._dict_200.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
         
     def vn_300_imu_callback(self, msg) -> None:
@@ -96,7 +95,6 @@ class DataLogger(Node):
         self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
     
     def vn_300_ins_callback(self, msg) -> None:
-        self.get_logger().warn(f'INS_MODE {msg.insstatus.mode}')
         self._dict_300.update({'ins_mode': msg.insstatus.mode, 'vel_x': msg.velbody.x, 'vel_y': msg.velbody.y, 'vel_z': msg.velbody.z})
         self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
     

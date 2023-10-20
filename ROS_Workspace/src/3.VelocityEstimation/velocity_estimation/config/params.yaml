@@ -28,8 +28,7 @@ velocity_estimation_node:
 
     # Sensor Positions
     vectornav-vn-200:
-      # x: 0.6461                 # [m]
-      x: 0.72                 # [m]
+      x: 0.6461                 # [m]
       y: 0.00                   # [m]
       pitch: 0.849             # [deg]
       roll: 12.8364             # [deg]
