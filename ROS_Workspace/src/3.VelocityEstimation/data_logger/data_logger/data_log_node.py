@@ -3,7 +3,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor, ExternalShutdownException
 from ament_index_python import get_package_share_directory
-
+import csv
 import os
 import pandas as pd
 import atexit
@@ -11,7 +11,7 @@ import atexit
 from vectornav_msgs.msg import ImuGroup, InsGroup, GpsGroup, AttitudeGroup
 from custom_msgs.msg import WheelSpeed, BrakePressure, SteeringAngle, VelEstimation
 
-FREQUENCY = 40  # Hz
+FREQUENCY = 10  # Hz
 class DataLogger(Node):
     def __init__(self) -> None:
         super().__init__("data_logger")
@@ -22,7 +22,10 @@ class DataLogger(Node):
 
         # Quality of Service preset for the subscribers
         sensor_data_profile = QoSPresetProfiles.get_from_short_key("SENSOR_DATA")
-
+        self.imu_flag = 0
+        self.ins_flag = 0
+        self.string_file_300 = ''
+        self.string_file_200 = ''
         # Create dictionary to hold incoming data
         if self._verbose:
             dict_vars_200 = ["Time_Received","ins_mode",
@@ -85,53 +88,91 @@ class DataLogger(Node):
         
     #vn200/300 logging
     def vn_200_imu_callback(self, msg) -> None:
-        self._dict_200.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
+        self.get_logger().warn('IMU callback')
+        share_dir = get_package_share_directory("data_logger")
+        if(self.imu_flag==0):
+            self.string_file_200 = os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" )
+            with open(self.string_file_200, 'w', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.accel.x,msg.accel.y,msg.accel.z])
+            self.imu_flag=1
+        else:
+            with open(self.string_file_200, 'a', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.accel.x,msg.accel.y,msg.accel.z])
+        self.get_logger().warn('Wrote IMU data')
+        # self._dict_200.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
         
     def vn_300_imu_callback(self, msg) -> None:
-        self._dict_300.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
+        return None
+        # self._dict_300.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
 
     def vn_200_ins_callback(self, msg) -> None:
-        self._dict_200.update({'ins_mode': msg.insstatus.mode, 'vel_x': msg.velbody.x, 'vel_y': msg.velbody.y, 'vel_z': msg.velbody.z})
-        self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
+        return None
+        # self._dict_200.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
+        # self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
     
     def vn_300_ins_callback(self, msg) -> None:
-        self._dict_300.update({'ins_mode': msg.insstatus.mode, 'vel_x': msg.velbody.x, 'vel_y': msg.velbody.y, 'vel_z': msg.velbody.z})
-        self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
+        self.get_logger().warn('INS callback')
+        share_dir = get_package_share_directory("data_logger")
+        self.get_logger().warn(f'INS_MODE {msg.insstatus.mode}')
+        if(self.ins_flag==0):
+            self.string_file_300 = os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" )
+            with open(self.string_file_300, 'w', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+            self.ins_flag=1
+        else:
+            with open(self.string_file_300, 'a', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+        self.get_logger().warn('Wrote INS data')
+        # self._dict_300.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
+        # self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
     
     def vn_200_att_callback(self, msg) -> None:
-        self._dict_200.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
+        return None
+        # self._dict_200.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
     
     def vn_300_att_callback(self, msg) -> None:
-        self._dict_300.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
+        return None
+        # self._dict_300.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
 
     def vn_200_gps_callback(self, msg) -> None:
-        self._dict_200.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
+        return None
+        # self._dict_200.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
 
     def vn_300_gps_callback(self, msg) -> None:
-        self._dict_300.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
+        return None
+        # self._dict_300.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
 
     #begin common logging
     def front_hall_callback(self, msg) -> None:
-        self._dict_common.update({'fl_wheel': msg.left_wheel, 'fr_wheel': msg.right_wheel})
+        return None
+        # self._dict_common.update({'fl_wheel': msg.left_wheel, 'fr_wheel': msg.right_wheel})
 
     def rear_hall_callback(self, msg) -> None:
-        self._dict_common.update({'rl_wheel': msg.left_wheel, 'rr_wheel': msg.right_wheel})
+        return None
+        # self._dict_common.update({'rl_wheel': msg.left_wheel, 'rr_wheel': msg.right_wheel})
 
     def steering_callback(self, msg) -> None:
-        self._dict_common.update({'steering_angle': msg.steering_angle})
+        return None
+        # self._dict_common.update({'steering_angle': msg.steering_angle})
 
     def brake_callback(self, msg) -> None:
-        self._dict_common.update({'f_brake': msg.front_cylinder, 'r_brake':msg.rear_cylinder})
+        return None
+        # self._dict_common.update({'f_brake': msg.front_cylinder, 'r_brake':msg.rear_cylinder})
 
     def velocity_callback(self, msg) -> None:
-        self._dict_common.update({'u_x_dv': msg.velocity_x, 'u_y_dv': msg.velocity_y, 'yaw_rate_dv': msg.yaw_rate, 'cov_dv': msg.variance_matrix})
+        return None
+        # self._dict_common.update({'u_x_dv': msg.velocity_x, 'u_y_dv': msg.velocity_y, 'yaw_rate_dv': msg.yaw_rate, 'cov_dv': msg.variance_matrix})
 
     def timer_callback(self) -> None:
         time = self.get_clock().now().seconds_nanoseconds()
         t = time[0] + round(time[1] / 10**9, 3)
-        self._dict_200.update({'Time_Received': t})
-        self._dict_300.update({'Time_Received': t})
-        self._dict_common.update({'Time_Received': t})
+        # self._dict_200.update({'Time_Received': t})
+        # self._dict_300.update({'Time_Received': t})
+        # self._dict_common.update({'Time_Received': t})
         new_df_200 = pd.DataFrame([self._dict_200])
         self._df_200 = pd.concat([self._df_200, new_df_200], axis=0, ignore_index=True)
         new_df_300 = pd.DataFrame([self._dict_300])
@@ -141,9 +182,9 @@ class DataLogger(Node):
 
     def save_data(self):
         share_dir = get_package_share_directory("data_logger")
-        self._df_common.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"velCommonLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
-        self._df_200.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
-        self._df_300.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_common.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"velCommonLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_200.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_300.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
         self.get_logger().warn("Log Data Saved")
 
 
