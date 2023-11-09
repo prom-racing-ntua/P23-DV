@@ -7,6 +7,7 @@ import csv
 import os
 import pandas as pd
 import atexit
+import time
 
 from vectornav_msgs.msg import ImuGroup, InsGroup, GpsGroup, AttitudeGroup
 from custom_msgs.msg import WheelSpeed, BrakePressure, SteeringAngle, VelEstimation
@@ -91,15 +92,15 @@ class DataLogger(Node):
         self.get_logger().warn('IMU callback')
         share_dir = get_package_share_directory("data_logger")
         if(self.imu_flag==0):
-            self.string_file_200 = os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" )
+            self.string_file_200 = os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.txt" )
             with open(self.string_file_200, 'w', encoding='UTF8', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.accel.x,msg.accel.y,msg.accel.z])
+                writer.writerow([time.time(), msg.accel.x,msg.accel.y,msg.accel.z])
             self.imu_flag=1
         else:
             with open(self.string_file_200, 'a', encoding='UTF8', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.accel.x,msg.accel.y,msg.accel.z])
+                writer.writerow([time.time(), msg.accel.x,msg.accel.y,msg.accel.z])
         self.get_logger().warn('Wrote IMU data')
         # self._dict_200.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
         
@@ -108,6 +109,7 @@ class DataLogger(Node):
         # self._dict_300.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
 
     def vn_200_ins_callback(self, msg) -> None:
+        self.get_logger().warn('Mpika INS_200')
         return None
         # self._dict_200.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
         # self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
@@ -117,15 +119,15 @@ class DataLogger(Node):
         share_dir = get_package_share_directory("data_logger")
         self.get_logger().warn(f'INS_MODE {msg.insstatus.mode}')
         if(self.ins_flag==0):
-            self.string_file_300 = os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" )
+            self.string_file_300 = os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.txt" )
             with open(self.string_file_300, 'w', encoding='UTF8', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+                writer.writerow([self.get_clock().now().seconds_nanoseconds(), msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
             self.ins_flag=1
         else:
             with open(self.string_file_300, 'a', encoding='UTF8', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([self.get_clock().now().seconds_nanoseconds()[0], msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+                writer.writerow([self.get_clock().now().seconds_nanoseconds(), msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
         self.get_logger().warn('Wrote INS data')
         # self._dict_300.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
         # self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
