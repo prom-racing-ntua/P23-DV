@@ -1,7 +1,24 @@
 simple_sim:
   ros__parameters:
-    discipline: "Acceleration"
+    discipline: "Trackdrive"
 
 sim_with_brake:
   ros__parameters:
     discipline: "Acceleration"
+    # discipline: "Skidpad"
+    # discipline: "Autocross"
+    # discipline: "Trackdrive"
+    # discipline: "EBS_Test"
+
+    # System Modelling Paraeters:
+    perception_range: 10.0  # m
+    brake_response: 100.0   # ms
+    brake_velocity: 100.0    # bars per s (=20bar / (time_to_reach - brake response)s)
+    steering_response: 100.0 # ms
+    steering_velocity: 0.5  # rad per s (for simplified model)
+    motor_response: 100.0    # ms
+
+    steering_kp: 100.0
+    steering_kd: 0.0
+
+    steering_simple_model: false  # 1: simple  0: high fidelity (kai kala)

@@ -348,13 +348,13 @@ class SteerFrame(ctk.CTkFrame):
     def set_target(self, target) -> None:
         if target!=self.target:
             self.target = target
-            target = target * 180 / pi
+            target = target 
             self.target_v.configure(text = "%.2f°"%target)
         
     def set_actual(self, steer) -> None:
         if steer!=self.actual:
             self.actual = steer
-            steer = steer * 180 / pi
+            steer = steer 
             self.actual_v.configure(text = "%.2f°"%steer)
             if steer>0:
                 self.bar_dec.set(steer/self.mx)
