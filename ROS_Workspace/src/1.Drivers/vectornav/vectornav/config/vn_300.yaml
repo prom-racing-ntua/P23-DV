@@ -1,7 +1,8 @@
 vn_300:
   vectornav_node:
     ros__parameters:
-      port: "/dev/vectornav_vn300"
+      # port: "/dev/vectornav_vn300"
+      port: "/dev/ttyUSB1"
       baud: 460800
       reconnect_ms: 500
       # Reference vnproglib-1.2.0.0 headers for enum definitions

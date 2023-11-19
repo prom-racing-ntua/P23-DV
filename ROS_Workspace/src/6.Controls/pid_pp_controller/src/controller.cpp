@@ -619,7 +619,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     */
 
     // min_radius = model.m * v_x * v_x / rem;
-    double mx_head = 3.14159 * 31.2 / 180;
+    double mx_head = 3.14159 * 24 / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
@@ -649,6 +649,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     else if (!is_end)
     {
         heading_angle = 0;
+
         std::cout << "tp error" << std::endl;
     }
     else
@@ -664,8 +665,9 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
 
     for_publish.steering_angle_target = heading_angle;
     bool switch_br = force < 0 && v_x < safe_speed_to_break && (is_end || projection.first < 0.1);
+    if(tp.error && !is_end || projection.second>2)switch_br=1;
 
-    for_publish.brake_pressure_target = switch_br ? 10.0 : 0.0;
+    for_publish.brake_pressure_target = switch_br ? 20.0 : 0.0;
     if (switch_br)
         for_publish.motor_torque_target = 0;
     // std::cout<<"13.. ";

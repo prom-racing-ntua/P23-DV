@@ -103,6 +103,7 @@ void VelocityEstimationHandler::publishResults() {
             msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
         }
     }
+    RCLCPP_WARN_STREAM(get_logger(), "publishing results");
     pub_->publish(msg);
 }
 

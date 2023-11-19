@@ -3,50 +3,66 @@ from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor, ExternalShutdownException
 from ament_index_python import get_package_share_directory
-
+import csv
 import os
 import pandas as pd
 import atexit
+import time
 
 from vectornav_msgs.msg import ImuGroup, InsGroup, GpsGroup, AttitudeGroup
 from custom_msgs.msg import WheelSpeed, BrakePressure, SteeringAngle, VelEstimation
 
-FREQUENCY = 40  # Hz
-
+FREQUENCY = 10  # Hz
 class DataLogger(Node):
     def __init__(self) -> None:
         super().__init__("data_logger")
         # Parameter to configure the amount of logged data
         self.start_time = int(self.get_clock().now().nanoseconds/10**9)
-        self.declare_parameter('verbose', False)
+        self.declare_parameter('verbose', True)
         self._verbose = self.get_parameter('verbose').value
 
         # Quality of Service preset for the subscribers
         sensor_data_profile = QoSPresetProfiles.get_from_short_key("SENSOR_DATA")
-
+        self.imu_flag = 0
+        self.ins_flag = 0
+        self.string_file_300 = ''
+        self.string_file_200 = ''
         # Create dictionary to hold incoming data
         if self._verbose:
-            dict_vars = ["Time_Received",
-                        "accel_x", "accel_y", "accel_z", "ang_vel_x", "ang_vel_y", "ang_vel_z",
-                        "ins_mode", "vel_x", "vel_y", "vel_z", "velu",
-                        "fl_wheel", "fr_wheel", "rl_wheel", "rr_wheel", "steering_angle",
-                        "f_brake", "r_brake",
-                        "accel2_x", "accel2_y", "accel2_z", "ang_vel2_x", "ang_vel2_y", "ang_vel2_z",
-                        "gps_vel_N", "gps_vel_E", "gps_vel_D", "gps2_vel_N", "gps2_vel_E", "gps2_vel_D",
-                        "yaw", "pitch", "roll",
-                        "u_x", "u_y", "yaw_rate", "cov"]
+            dict_vars_200 = ["Time_Received","ins_mode",
+                             "accel_x","accel_y","accel_z",
+                             "u_x","u_y","yaw_rate",
+                             "roll","pitch","yaw",
+                             "pos_x","pos_y","pos_z"]
+            
+            dict_vars_300 = ["Time_Received","ins_mode",
+                             "accel_x","accel_y","accel_z",
+                             "u_x","u_y","yaw_rate",
+                             "roll","pitch","yaw",
+                             "pos_x","pos_y","pos_z"]
+            
+            dict_vars_common = ["Time_Received","ins_mode_200","ins_mode_300",
+                                "u_x_dv","u_y_dv","yaw_rate_dv","cov_dv",
+                                "fl_wheel", "fr_wheel", "rl_wheel", "rr_wheel", 
+                                "steering_angle",
+                                "f_brake", "r_brake"]
         else:
-            dict_vars = ["Time_Received",
-                        "accel_x", "accel_y", "accel_z", "ang_vel_x", "ang_vel_y", "ang_vel_z",
-                        "ins_mode", "vel_x", "vel_y", "vel_z", "velu",
-                        "fl_wheel", "fr_wheel", "rl_wheel", "rr_wheel", "steering_angle",
-                        "f_brake", "r_brake"]
-        self._dict = dict(zip(dict_vars, [None]*len(dict_vars)))
-        self._df = pd.DataFrame(columns=dict_vars)
+            dict_vars = ["Time_Received", "ins_mode_200", "ins_mode_300",
+                         "u_x_dv","u_y_dv","yaw_rate_dv","cov",
+                         "accel_x", "accel_y", "accel_z", "ang_vel_x", "ang_vel_y", "ang_vel_z",
+                         "ins_mode", "vel_x", "vel_y", "vel_z", "velu",
+                         "fl_wheel", "fr_wheel", "rl_wheel", "rr_wheel", "steering_angle",
+                         "f_brake", "r_brake"]
+        self._dict_200 = dict(zip(dict_vars_200, [None]*len(dict_vars_200)))
+        self._df_200 = pd.DataFrame(columns=dict_vars_200)
+        self._dict_300 = dict(zip(dict_vars_300, [None]*len(dict_vars_300)))
+        self._df_300 = pd.DataFrame(columns=dict_vars_300)
+        self._dict_common = dict(zip(dict_vars_common, [None]*len(dict_vars_common)))
+        self._df_common = pd.DataFrame(columns=dict_vars_common)
 
         # Subscribers for all the sensor topics needed
-        self._vn_200_subscriber = self.create_subscription(ImuGroup, '/vn_200/raw/imu', self.vn_imu_callback, sensor_data_profile)
-        self._vn_300_subscriber = self.create_subscription(InsGroup, '/vn_300/raw/ins', self.vn_ins_callback, sensor_data_profile)
+        self._vn_200_imu_subscriber = self.create_subscription(ImuGroup, '/vn_200/raw/imu', self.vn_200_imu_callback, sensor_data_profile)
+        self._vn_300_ins_subscriber = self.create_subscription(InsGroup, '/vn_300/raw/ins', self.vn_300_ins_callback, sensor_data_profile)
         self._front_hall_subscriber = self.create_subscription(WheelSpeed, '/canbus/front_hall_sensors', self.front_hall_callback, sensor_data_profile)
         self._rear_hall_subscriber = self.create_subscription(WheelSpeed, '/canbus/rear_hall_sensors', self.rear_hall_callback, sensor_data_profile)
         self._steering_subscriber = self.create_subscription(SteeringAngle, '/canbus/steering_angle', self.steering_callback, sensor_data_profile)
@@ -55,10 +71,12 @@ class DataLogger(Node):
         if self._verbose:
             # Extra topics for data logging
             self.get_logger().warn('Verbosity Set to True')
-            self._vn_300_imu_subscriber = self.create_subscription(ImuGroup, '/vn_300/raw/imu', self.vn_imu2_callback, sensor_data_profile)
-            self._gps_subscriber = self.create_subscription(GpsGroup, "/vn_300/raw/gps", self.vn_gps_callback, sensor_data_profile)
-            self._gps2_subscriber = self.create_subscription(GpsGroup, "/vn_300/raw/gps2", self.vn_gps2_callback, sensor_data_profile)
-            self._attitude_subscriber = self.create_subscription(AttitudeGroup, "/vn_300/raw/attitude", self.vn_att_callback, sensor_data_profile)
+            self._vn_200_ins_subscriber = self.create_subscription(ImuGroup, '/vn_200/raw/ins', self.vn_200_ins_callback, sensor_data_profile)
+            self._vn_300_imu_subscriber = self.create_subscription(ImuGroup, '/vn_300/raw/imu', self.vn_300_imu_callback, sensor_data_profile)
+            self._vn_200_gps_subscriber = self.create_subscription(GpsGroup, "/vn_200/raw/gps2", self.vn_200_gps_callback, sensor_data_profile)
+            self._vn_300_gps_subscriber = self.create_subscription(GpsGroup, "/vn_300/raw/gps2", self.vn_300_gps_callback, sensor_data_profile)
+            self._vn_200_attitude_subscriber = self.create_subscription(AttitudeGroup, "/vn_200/raw/attitude", self.vn_200_att_callback, sensor_data_profile)
+            self._vn_300_attitude_subscriber = self.create_subscription(AttitudeGroup, "/vn_300/raw/attitude", self.vn_300_att_callback, sensor_data_profile)
 
         # Timer for taking the measurements
         time_step = 1 / FREQUENCY
@@ -68,52 +86,107 @@ class DataLogger(Node):
 
         # Command to save file at exit
         atexit.register(self.save_data)
+        
+    #vn200/300 logging
+    def vn_200_imu_callback(self, msg) -> None:
+        self.get_logger().warn('IMU callback')
+        share_dir = get_package_share_directory("data_logger")
+        if(self.imu_flag==0):
+            self.string_file_200 = os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.txt" )
+            with open(self.string_file_200, 'w', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([time.time(), msg.accel.x,msg.accel.y,msg.accel.z])
+            self.imu_flag=1
+        else:
+            with open(self.string_file_200, 'a', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([time.time(), msg.accel.x,msg.accel.y,msg.accel.z])
+        self.get_logger().warn('Wrote IMU data')
+        # self._dict_200.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
+        
+    def vn_300_imu_callback(self, msg) -> None:
+        return None
+        # self._dict_300.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z})
 
-    def vn_imu_callback(self, msg) -> None:
-        self._dict.update({'accel_x': msg.accel.x, 'accel_y': msg.accel.y, 'accel_z': msg.accel.z, 
-                          'ang_vel_x': msg.angularrate.x, 'ang_vel_y': msg.angularrate.y, 'ang_vel_z': msg.angularrate.z})
+    def vn_200_ins_callback(self, msg) -> None:
+        self.get_logger().warn('Mpika INS_200')
+        return None
+        # self._dict_200.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
+        # self._dict_common.update({'ins_mode_200': msg.insstatus.mode})
+    
+    def vn_300_ins_callback(self, msg) -> None:
+        self.get_logger().warn('INS callback')
+        share_dir = get_package_share_directory("data_logger")
+        self.get_logger().warn(f'INS_MODE {msg.insstatus.mode}')
+        if(self.ins_flag==0):
+            self.string_file_300 = os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.txt" )
+            with open(self.string_file_300, 'w', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds(), msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+            self.ins_flag=1
+        else:
+            with open(self.string_file_300, 'a', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([self.get_clock().now().seconds_nanoseconds(), msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+        self.get_logger().warn('Wrote INS data')
+        # self._dict_300.update({'ins_mode': msg.insstatus.mode, 'u_x': msg.velbody.x, 'u_y': msg.velbody.y, 'yaw_rate': msg.velbody.z})
+        # self._dict_common.update({'ins_mode_300': msg.insstatus.mode})
+    
+    def vn_200_att_callback(self, msg) -> None:
+        return None
+        # self._dict_200.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
+    
+    def vn_300_att_callback(self, msg) -> None:
+        return None
+        # self._dict_300.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
 
-    def vn_imu2_callback(self, msg) -> None:
-        self._dict.update({'accel2_x': msg.accel.x, 'accel2_y': msg.accel.y, 'accel2_z': msg.accel.z, 
-                          'ang_vel2_x': msg.angularrate.x, 'ang_vel2_y': msg.angularrate.y, 'ang_vel2_z': msg.angularrate.z})
+    def vn_200_gps_callback(self, msg) -> None:
+        return None
+        # self._dict_200.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
 
-    def vn_ins_callback(self, msg) -> None:
-        self._dict.update({'ins_mode': msg.insstatus.mode, 'vel_x': msg.velbody.x, 'vel_y': msg.velbody.y, 'vel_z': msg.velbody.z, 'velu': msg.velu})
+    def vn_300_gps_callback(self, msg) -> None:
+        return None
+        # self._dict_300.update({'pos_x': msg.posu.x, 'pos_y': msg.posu.y, 'pos_z': msg.posu.z})
 
-    def vn_gps_callback(self, msg) -> None:
-        self._dict.update({'gps_vel_N': msg.velned.x, 'gps_vel_E': msg.velned.y, 'gps_vel_D': msg.velned.z})
-
-    def vn_gps2_callback(self, msg) -> None:
-        self._dict.update({'gps2_vel_N': msg.velned.x, 'gps2_vel_E': msg.velned.y, 'gps2_vel_D': msg.velned.z})
-
-    def vn_att_callback(self, msg) -> None:
-        self._dict.update({'yaw': msg.yawpitchroll.x, 'pitch': msg.yawpitchroll.y, 'roll': msg.yawpitchroll.z})
-
+    #begin common logging
     def front_hall_callback(self, msg) -> None:
-        self._dict.update({'fl_wheel': msg.left_wheel, 'fr_wheel': msg.right_wheel})
+        return None
+        # self._dict_common.update({'fl_wheel': msg.left_wheel, 'fr_wheel': msg.right_wheel})
 
     def rear_hall_callback(self, msg) -> None:
-        self._dict.update({'rl_wheel': msg.left_wheel, 'rr_wheel': msg.right_wheel})
+        return None
+        # self._dict_common.update({'rl_wheel': msg.left_wheel, 'rr_wheel': msg.right_wheel})
 
     def steering_callback(self, msg) -> None:
-        self._dict.update({'steering_angle': msg.steering_angle})
+        return None
+        # self._dict_common.update({'steering_angle': msg.steering_angle})
 
     def brake_callback(self, msg) -> None:
-        self._dict.update({'f_brake': msg.front_cylinder, 'r_brake':msg.rear_cylinder})
+        return None
+        # self._dict_common.update({'f_brake': msg.front_cylinder, 'r_brake':msg.rear_cylinder})
 
     def velocity_callback(self, msg) -> None:
-        self._dict.update({'u_x': msg.velocity_x, 'u_y': msg.velocity_y, 'yaw_rate': msg.yaw_rate, 'cov': msg.variance_matrix})
+        return None
+        # self._dict_common.update({'u_x_dv': msg.velocity_x, 'u_y_dv': msg.velocity_y, 'yaw_rate_dv': msg.yaw_rate, 'cov_dv': msg.variance_matrix})
 
     def timer_callback(self) -> None:
         time = self.get_clock().now().seconds_nanoseconds()
         t = time[0] + round(time[1] / 10**9, 3)
-        self._dict.update({'Time_Received': t})
-        new_df = pd.DataFrame([self._dict])
-        self._df = pd.concat([self._df, new_df], axis=0, ignore_index=True)
+        # self._dict_200.update({'Time_Received': t})
+        # self._dict_300.update({'Time_Received': t})
+        # self._dict_common.update({'Time_Received': t})
+        new_df_200 = pd.DataFrame([self._dict_200])
+        self._df_200 = pd.concat([self._df_200, new_df_200], axis=0, ignore_index=True)
+        new_df_300 = pd.DataFrame([self._dict_300])
+        self._df_300 = pd.concat([self._df_300, new_df_300], axis=0, ignore_index=True)
+        new_df_common = pd.DataFrame([self._dict_common])
+        self._df_common = pd.concat([self._df_common, new_df_common], axis=0, ignore_index=True)
 
     def save_data(self):
         share_dir = get_package_share_directory("data_logger")
-        self._df.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"sensorLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_common.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"velCommonLog_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_200.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn200_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
+        # self._df_300.to_csv(os.path.join(share_dir, "../../../../testingLogs", f"vn300_{self.get_clock().now().seconds_nanoseconds()[0]}.csv" ))
         self.get_logger().warn("Log Data Saved")
 
 

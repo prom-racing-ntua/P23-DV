@@ -75,13 +75,13 @@ double State::calc_ffz(double v_x) const
 {
 	double lr = calc_lr(simplified, a_x);
 	double lf = calc_lf(lr);
-	return constants.m * constants.g * lf / (lf + lr) + 0.25 * constants.P_air * constants.CdA * v_x * v_x;
+	return constants.m * constants.g * lf / (lf + lr) + 0.25 * constants.P_air * constants.ClA * v_x * v_x;
 }
 double State::calc_frz(double v_x) const
 {
 	double lr = calc_lr(simplified, a_x);
 	double lf = calc_lf(lr);
-	return constants.m * constants.g * lr / (lf + lr) + 0.25 * constants.P_air * constants.CdA * v_x * v_x;
+	return constants.m * constants.g * lr / (lf + lr) + 0.25 * constants.P_air * constants.ClA * v_x * v_x;
 }
 double State::calc_lr(bool simplified, double a_x) const
 {

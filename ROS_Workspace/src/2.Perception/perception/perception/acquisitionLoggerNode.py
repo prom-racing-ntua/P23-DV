@@ -89,6 +89,8 @@ class AcquisitionNode(Node):
         numpyImage = self.camera.AcquireImage()
 
         # Save Image to Run folder
+        self.get_logger().warn(f"{numpyImage}")
+        print(type(numpyImage))
         cv2.imwrite(f"{self.runDirPath}/{self.camera.orientation}_{timestamp}_{self.i}.jpg" ,cv2.cvtColor(numpyImage, cv2.COLOR_RGB2BGR))
 
         self.i += 1
@@ -98,6 +100,7 @@ def main(args=None):
 
     # Create directory to save photos in
     homepath = os.getenv('HOME')
+    print("prin tin get epoch")
     runTime = int(getEpoch())
     share_dir = get_package_share_directory('perception')
     runDirPath = f"{share_dir}/../../../../PerceptionRuns/Run{runTime}"

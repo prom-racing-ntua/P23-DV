@@ -236,10 +236,12 @@ class LapFrame(ctk.CTkFrame):
         self.lap_count = -1
         self.total = ctk.CTkLabel(self, text = "/0", text_color = "white", font = ("CTkFont", 25), fg_color = "transparent", bg_color="transparent", corner_radius = 10)
         self.total.grid(row = 1, column = 1, columnspan = 1, padx = 5, pady = 5, sticky = "w")
+
+        self.set_max(2)
         
     def set_max(self, lap_count) -> None:
         self.lap_count = lap_count - 1
-        self.total.configure(text = "/"+str(lap_count - 1))
+        self.total.configure(text = "/ "+str(lap_count - 1))
         
     def set_lap(self, lap) -> None:
         if self.lap != lap:
@@ -346,13 +348,13 @@ class SteerFrame(ctk.CTkFrame):
     def set_target(self, target) -> None:
         if target!=self.target:
             self.target = target
-            target = target * 180 / pi
+            target = target 
             self.target_v.configure(text = "%.2f°"%target)
         
     def set_actual(self, steer) -> None:
         if steer!=self.actual:
             self.actual = steer
-            steer = steer * 180 / pi
+            steer = steer 
             self.actual_v.configure(text = "%.2f°"%steer)
             if steer>0:
                 self.bar_dec.set(steer/self.mx)

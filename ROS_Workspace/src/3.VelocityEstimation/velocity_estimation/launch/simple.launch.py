@@ -9,6 +9,7 @@ from launch_ros.actions import Node
 # Works (for now) by itself since it launches the master, but no canbus...
 
 def generate_launch_description():
+    logging = True
     ld = LaunchDescription()
 
     vel_estimation_dir = get_package_share_directory('velocity_estimation')
@@ -33,6 +34,15 @@ def generate_launch_description():
     vectornav_dir = get_package_share_directory('vectornav')
     launch_path = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')    
     vectornav_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(launch_path))
+    
+    if logging:
+        logger_cmd = Node(
+            package="data_logger",
+            executable="data_logger",
+            output="screen",
+            emulate_tty=True
+        )
+        ld.add_action(logger_cmd)
 
     ld.add_action(vectornav_launch)
     ld.add_action(estimation_node)

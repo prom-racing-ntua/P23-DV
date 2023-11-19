@@ -357,6 +357,27 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
     if (closest_d < DBL_MAX)
         return closest_p;
     
+    //Retries for section before us
+    for (int i = 0; i < std::max(0, last_visited_index - 1); i++)
+    //for(int i = total_length * samples_per_meter-1; i>=last_visited_index; i--)
+    //for(int i = total_length * samples_per_meter-1; i>=0; i--)
+    {
+        dist = Point::distance(rear, spline_samples[i].position());
+        trans = spline_samples[i].position() - rear;
+        R = (ld * ld) / (2 * (-trans.x() * std::sin(theta) + trans.y() * std::cos(theta)));
+        if (std::abs(ld - dist) <= closest_d && std::abs(R) > min_radius)
+        {
+            //if(closest_d<DBL_MAX && i - sel_idx > 100)continue; //Ds>10meters
+            closest_d = std::abs(ld - dist);
+            closest_p = trans;
+            sel_idx = i;
+            if(closest_d<=0.05)break;
+        }
+    }
+    if (closest_d < DBL_MAX)
+        return closest_p;
+
+    
     Point a(0, 0);
     std::cout<<"??"<<std::endl;
     a.error=1;
