@@ -31,7 +31,7 @@ pid_pp_controller:
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.75
-    max_speed: 3.0
+    max_speed: 30.0
     dt: 0.025
     safe_speed_to_break: 4.0
     braking_distance : 5.0
