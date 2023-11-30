@@ -44,9 +44,12 @@ def inferenceYOLO(model, img, tpu=True, debug=False):
     return results.pred[0].numpy(), inferenceTime
 
 def initKeypoint(small_modelpath):
-    core = ov.Core()
-    model = core.read_model(small_modelpath)
-    small_model = core.compile_model(model=model, device_name="GPU")
+    # core = ov.Core()
+    # model = core.read_model(small_modelpath)
+    # small_model = core.compile_model(model=model, device_name="GPU")
+    
+    small_model = VGGLikeV3()
+    small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
     return small_model
 
 def cropResizeCones(yolo_results, image, margin):
@@ -90,11 +93,14 @@ def runKeypoints(small_cones_imgs, small_keypoints_model):
             small_cones_imgs_list.append(torch.from_numpy(small_cones_imgs[i].transpose(2,0,1)).unsqueeze(0).float())
         small_cones_imgs_tensor = torch.cat(small_cones_imgs_list, dim=0)
     
+        # # Inference
+        # for i,input_img in enumerate(small_cones_imgs_tensor):
+        #     pred_hm = list(small_keypoints_model(input_img.unsqueeze(0)).values())[0][0]
+        #     pred_coords = np.array([np.asarray(np.unravel_index(pred_hm[j].argmax(), (64,48))) for j in range(7)])
+        #     small_predictions.append(pred_coords)
         # Inference
-        for i,input_img in enumerate(small_cones_imgs_tensor):
-            pred_hm = list(small_keypoints_model(input_img.unsqueeze(0)).values())[0][0]
-            pred_coords = np.array([np.asarray(np.unravel_index(pred_hm[j].argmax(), (64,48))) for j in range(7)])
-            small_predictions.append(pred_coords)
+        small_predictions = small_keypoints_model(small_cones_imgs_tensor/255.0).cpu().detach().numpy()
+        small_predictions = small_predictions.reshape(small_predictions.shape[0], 7, 2).tolist()
     
     return small_predictions 
 

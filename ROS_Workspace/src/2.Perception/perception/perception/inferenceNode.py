@@ -108,8 +108,8 @@ def main(args=None):
     tpu_yolo_v5 = f"{models}/yolov5n6_640_edgetpu.tflite"
 
     # Small Keypoints Parh
-    # smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
-    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
+    smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
+    # smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
 
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"

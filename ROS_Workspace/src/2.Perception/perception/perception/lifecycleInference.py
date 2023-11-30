@@ -17,6 +17,16 @@ from ament_index_python.packages import get_package_share_directory
 from .libraries.pipelineFunctions import *
 
 class InferenceLifecycleNode(Node):
+    def initKeypoint(self, small_modelpath):
+        # core = ov.Core()
+        # model = core.read_model(small_modelpath)
+        # small_model = core.compile_model(model=model, device_name="GPU")
+        self.get_logger().warn("\n-- Inference 21!")
+        small_model = VGGLikeV3()
+        self.get_logger().warn("\n-- Inference 22!")
+        small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
+        self.get_logger().warn("\n-- Inference 23!")
+        return small_model
     def __init__(self, yoloModel, smallKeypointsModel):
         super().__init__('inference')
         self.yoloModelPath = yoloModel
@@ -34,12 +44,13 @@ class InferenceLifecycleNode(Node):
         phase. Also open a log file if you want to idk.
         """
         self.publishing = False
-
+        self.get_logger().warn("\n-- Inference 1!")
         # Initialize Models
         self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
         # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
-        self.smallModel = initKeypoint(self.smallKeypointsModelPath)
-
+        self.get_logger().warn("\n-- Inference 2!")
+        self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
+        self.get_logger().warn("\n-- Inference 3!")
         # Setup Message Transcoder
         self.bridge = CvBridge()
 
@@ -148,7 +159,8 @@ def main(args=None):
     # Small Yolo v5
     yolov5s_model_path = f"{models}/yolov5s6.pt"
     # Small Keypoints Parh
-    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
+    # smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
+    smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
     smallKeypointsModelPath

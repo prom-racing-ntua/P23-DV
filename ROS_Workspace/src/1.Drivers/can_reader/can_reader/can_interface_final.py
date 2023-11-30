@@ -105,7 +105,7 @@ class CanInterface(Node):
         out_bytes = temp_msg.to_CanMsg()
 
         # Write message to terminal and serial port
-        self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
+        # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
         self._serial_port.write(out_bytes)
 
         # Print the total processing time
@@ -137,10 +137,12 @@ class CanInterface(Node):
             try:
                 serial_msg = bytearray.fromhex(serial_msg.strip().decode())
             except UnicodeDecodeError:
-                self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
+                # self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
+                return
+            except:
                 return
 
-            self.get_logger().info(f"Received message: {serial_msg}")
+            # self.get_logger().info(f"Received message: {serial_msg}")
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
 
@@ -170,10 +172,11 @@ class CanInterface(Node):
             temp_msg.ros_publisher.publish(ros_msg)
             
             # Print the total processing time
-            self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
+            # self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
         # self.get_logger().info("Finished reading from serial")
         else:
-            self.get_logger().info("Receiving empty stream")
+            # self.get_logger().info("Receiving empty stream")
+            return
         return
 
 

@@ -74,7 +74,7 @@ namespace ns_vel_est
                 msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
             }
         }
-        RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Publishes results");
+        // RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Publishes results");
         pub_->publish(msg);
     }
 

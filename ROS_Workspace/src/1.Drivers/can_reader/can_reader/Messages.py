@@ -456,7 +456,7 @@ class SteeringAngleMsg(CanInterfaceMessage):
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
-        self.get_logger().info(f"Getting steering at: {temp} ms")
+        # self.node_handle.get_logger().info(f"Getting steering at: {temp} ms")
         try:
             msg.steering_angle = rackDisplacement2rad(temp)
         except ValueError:

@@ -26,13 +26,17 @@ vectornav:
       errorMode: 1                     # ERRORMODE_SEND
       # Gps antenna offset and compass baseline
       GpsAntennaOffset: 
-        x: -0.2289
+        # x: -0.2289  #-0.46
+        x: -0.63
         y: +0.0
-        z: +0.0228
+        # z: +0.0228 ##+0.92
+        z: 0.808
       GpsBaselinePos: 
-        x: +0.4796
+        # x: +0.4796 #+0.85
+        x: 0.91
         y: +0.0
-        z: -0.0479
+        # z: -0.0479 #+0.42
+        z: 0.24
       GpsBaselineUncertainty: 
         x: 0.0254
         y: 0.0254

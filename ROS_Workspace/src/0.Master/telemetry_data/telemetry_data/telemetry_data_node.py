@@ -196,15 +196,15 @@ class TelemetryNode(Node):
 
         self.sub_syst = self.create_subscription(TxSystemState, '/system_state', self.system_callback, 10)
 
-        self.sub_sensors = self.create_subscription(RxVehicleSensors, '/sensor_data', self.sensor_callback, 10)
+        self.sub_sensors = self.create_subscription(RxVehicleSensors, '/canbus/sensor_data', self.sensor_callback, 10)
 
-        self.sub_steering = self.create_subscription(RxSteeringAngle, '/steering_angle', self.steering_callback, 10)
+        self.sub_steering = self.create_subscription(RxSteeringAngle, '/canbus/steering_angle', self.steering_callback, 10)
 
-        self.sub_wheels = self.create_subscription(RxWheelSpeed, '/wheel_encoders', self.wheel_callback, 10)
+        self.sub_wheels = self.create_subscription(RxWheelSpeed, '/canbus/wheel_encoders', self.wheel_callback, 10)
 
-        self.sub_as = self.create_subscription(AutonomousStatus, '/autonomous_status', self.as_callback, 10)
+        self.sub_as = self.create_subscription(AutonomousStatus, '/canbus/autonomous_status', self.as_callback, 10)
 
-        self.sub_miss = self.create_subscription(MissionSelection, '/mission_selection', self.mission_callback, 10)
+        self.sub_miss = self.create_subscription(MissionSelection, '/canbus/mission_selection', self.mission_callback, 10)
 
         self.data = Data()
         self.const = constants()
