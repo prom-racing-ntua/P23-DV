@@ -4,13 +4,17 @@ simple_sim:
 
 sim_with_brake:
   ros__parameters:
-    discipline: "Acceleration"
+    # discipline: "Acceleration"
     # discipline: "Skidpad"
-    # discipline: "Autocross"
+    discipline: "Autocross"
     # discipline: "Trackdrive"
     # discipline: "EBS_Test"
 
     # System Modelling Paraeters:
+    vehicle_model_integration_frequency: 1000.0 # Hz
+    sim_node_period: 25.0 # represents real time to simulate 25ms (default value(25) means sim-time==real-time)
+    steering_model_integration_frequency: 100000.0 # Hz.  should be 1kHz or 10kHz. 100kHz breaks it 
+
     perception_range: 10.0  # m
     brake_response: 100.0   # ms
     brake_velocity: 100.0    # bars per s (=20bar / (time_to_reach - brake response)s)
@@ -18,7 +22,7 @@ sim_with_brake:
     steering_velocity: 0.5  # rad per s (for simplified model)
     motor_response: 100.0    # ms
 
-    steering_kp: 100.0
+    steering_kp: 1000.0
     steering_kd: 0.0
 
     steering_simple_model: false  # 1: simple  0: high fidelity (kai kala)

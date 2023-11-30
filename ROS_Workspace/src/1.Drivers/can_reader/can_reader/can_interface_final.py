@@ -172,8 +172,8 @@ class CanInterface(Node):
             # Print the total processing time
             self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
         # self.get_logger().info("Finished reading from serial")
-        else:
-            self.get_logger().info("Receiving empty stream")
+        # else:
+            # self.get_logger().info("Receiving empty stream")
         return
 
 

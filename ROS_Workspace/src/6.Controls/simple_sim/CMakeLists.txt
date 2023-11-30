@@ -38,7 +38,11 @@ include_directories(
 add_executable(${PROJECT_NAME} src/sim.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 
-add_executable(sim_with_brake src/sim_with_brake.cpp)
+add_executable(sim_with_brake src/sim_with_brake.cpp
+                              src/sim_vehicle_state.cpp
+                              src/sim_actuator_modelling.cpp
+                              src/sim_steering_modelling.cpp
+                              )
 ament_target_dependencies(sim_with_brake rclcpp std_msgs custom_msgs)
 
 install(TARGETS
