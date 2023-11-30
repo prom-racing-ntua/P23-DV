@@ -1,8 +1,8 @@
 pid_pp_controller:
   ros__parameters:
-    discipline: "Acceleration"
+    # discipline: "Acceleration"
     # discipline: "Skidpad"
-    # discipline: "Autocross"
+    discipline: "Autocross"
     # discipline: "Trackdrive"
     # discipline: "EBS_Test"
     midpoints: "trackdrive_midpoints.txt"
