@@ -456,7 +456,7 @@ class DetectMultiBackend(nn.Module):
                 Interpreter, load_delegate = tf.lite.Interpreter, tf.lite.experimental.load_delegate,
             if edgetpu:  # TF Edge TPU https://coral.ai/software/#edgetpu-runtime
                 LOGGER.info(f'Loading {w} for TensorFlow Lite Edge TPU inference...')
-                delegate = {
+                delegate = { 
                     'Linux': 'libedgetpu.so.1',
                     'Darwin': 'libedgetpu.1.dylib',
                     'Windows': 'edgetpu.dll'}[platform.system()]

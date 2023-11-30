@@ -413,16 +413,16 @@ void sim_node::timer_callback()
 
 void sim_node::command_callback(const custom_msgs::msg::TxControlCommand::SharedPtr msg) {
 	torques.push_back(msg->motor_torque_target);
-	// motor_model.add_command(msg->motor_torque_target, state.t*1e3);
-	motor_model.add_command(20, state.t*1e3);
+	motor_model.add_command(msg->motor_torque_target, state.t*1e3);
+	// motor_model.add_command(20, state.t*1e3);
 
 	steering.push_back(msg->steering_angle_target);
-	// steering_model.add_command(msg->steering_angle_target, state.t*1e3);
+	steering_model.add_command(msg->steering_angle_target, state.t*1e3);
 	// steering_model.add_command(0.4*std::sin(state.t), state.t*1e3);
-	steering_model.add_command((state.t<=2?0.1:-0.2), state.t*1e3);
+	// steering_model.add_command((state.t<=2?0.1:-0.2), state.t*1e3);
 
-	// brake_model.add_command(msg->brake_pressure_target, state.t*1e3);
-	brake_model.add_command(0, state.t*1e3);
+	brake_model.add_command(msg->brake_pressure_target, state.t*1e3);
+	// brake_model.add_command(0, state.t*1e3);
 }
 }
 using namespace sim;

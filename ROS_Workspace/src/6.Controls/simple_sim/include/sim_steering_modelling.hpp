@@ -93,7 +93,7 @@ class SteeringState
 {
     public:
     SteeringState();
-    void init(Constants a, int kp, int ki, int kd, int dt, int max_out){constants = a; this->kp = kp; this->ki = ki; this->kd = kd; this->max_out = max_out;this->dt2 = dt;  steering_pid_controller.init(kp, ki, kd, dt, max_out);}
+    void init(Constants a, int kp, int ki, int kd, double dt, int max_out){constants = a; this->kp = kp; this->ki = ki; this->kd = kd; this->max_out = max_out;this->dt2 = dt;  steering_pid_controller.init(kp, ki, kd, dt, max_out);}
     void next(double dt, double theta_ref, double vx, double ax);
     double get_wheel_angle()const;
 

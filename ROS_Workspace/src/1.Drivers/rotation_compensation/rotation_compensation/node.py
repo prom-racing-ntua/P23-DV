@@ -36,10 +36,13 @@ class RotationCompensation(Node):
         self.vn_200_sub = self.create_subscription(ImuGroup, "/vn_200/raw/imu", self.vn_200_callback, 10)
         self.vn_300_sub = self.create_subscription(ImuGroup, "/vn_300/raw/imu", self.vn_300_callback, 10)
 
+        self.updater = self.create_timer(5, self.updater_callback)
+
         # Rows represent the sensors (vn200 - vn300) and columns angles (roll-pitch)
         self.euler_angles = np.zeros((2,2))
         self.angles_send = False
-
+    def updater_callback(self):
+        self.get_logger().info("{:.2f}.\ttotal = {:.4f}".format(self.get_clock().now().seconds_nanoseconds()[0], (self.init_time + self.sampling_time)))
     def vn_200_callback(self, msg) -> None:
         # if this is the first measurement set the initialization time
         if self.vn_200_average_accelerations.shape[0] == 1:

@@ -62,12 +62,12 @@ double PID::operator()(double error)
 	double proportional = this->filter(error * Kp, proportional_dampener);
 	double integral = this->filter(error_integral * Ki, integral_dampener);
 	double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
-
 	double correction = this->filter(proportional + integral + derivative, dampener);
 	request_sum += correction / 1000;
 	total_requests++;
 	last_error = error;
-	//std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
+	// std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
+	
 	return correction;
 }
 double PID::operator()(double error, double dt)
@@ -78,9 +78,11 @@ double PID::operator()(double error, double dt)
 	double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
 
 	double correction = this->filter(proportional + integral + derivative, dampener);
-
+	// std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
+	std::cout<<error<<" "<<last_error<<" "<<derivative<<std::endl;
 	request_sum += correction / 1000;
 	total_requests++;
+	last_error = error;
 
 	return correction;
 }
@@ -130,16 +132,11 @@ std::ostream &operator<<(std::ostream &out, const SteeringState &a)
 		/* 12 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.theta_ref
 		/* 13 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.get_wheel_angle()
 		/* 14 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.p_rack_ref
-		/* 13 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.w_ref
-		/* 15 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.i_out_sat
-		/* 16 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.t_rer
-		/* 17 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.situation
-		/* 18 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.i_a_data.get_last_input()
-		/* 19 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.i_a_data.get_command()
-		/* 20 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.ang_v_motor_data.get_last_input()
-		/* 21 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.ang_v_motor_data.get_command()
-		/* 22 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.p_rack_data.get_last_input()
-		/* 23 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.p_rack_data.get_command()
+		/* 15 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.w_ref
+		/* 16 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.i_out_sat
+		/* 17 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.t_rer
+		/* 19 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.situation
+		/* 20 */<< "\t"  << std::fixed << std::setprecision(3) << std::setw(10) << a.time
 		<< std::endl;
 }
 
@@ -385,7 +382,7 @@ double SteeringState::calc_v_ref()
 double SteeringState::calc_w_ref()
 {
 	double error_p = p_rack_ref - p_rack_data.get_command();
-	w_ref = steering_pid_controller(error_p, this->dt);
+	w_ref = steering_pid_controller(error_p);
 	return w_ref;
 }
 double SteeringState::calc_p_rack_ref()const

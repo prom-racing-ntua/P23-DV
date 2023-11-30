@@ -22,7 +22,7 @@ sim_with_brake:
     steering_velocity: 0.5  # rad per s (for simplified model)
     motor_response: 100.0    # ms
 
-    steering_kp: 1000.0
-    steering_kd: 0.0
+    steering_kp: 360.0
+    steering_kd: 12.0
 
     steering_simple_model: false  # 1: simple  0: high fidelity (kai kala)
