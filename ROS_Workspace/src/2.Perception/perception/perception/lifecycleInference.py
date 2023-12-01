@@ -18,35 +18,6 @@ from .libraries.pipelineFunctions import *
 from node_logger.node_logger import *
 
 
-# class Logger:
-#     def __init__(self, name):
-#         self.ok = True
-#         self.name = name
-#         try:
-#             self.run_idx = len(os.listdir("timestamp_logs")) - 1
-#             self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
-#         except Exception as e:
-#             self.ok = False
-#             self.error = e
-#         else:
-#             self.error = None
-
-#     def __del__(self):
-#         if self.ok:
-#             self.file.close()
-
-#     def check(self):
-#         if self.ok:
-#             return "Logger {:s} opened successfully".format(self.name)
-#         else:
-#             return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
-
-#     def __call__(self, timestamp, type, index):
-#         if not self.ok:
-#             return
-
-#         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
-
 class InferenceLifecycleNode(Node):
     def initKeypoint(self, small_modelpath):
         # core = ov.Core()
@@ -77,23 +48,23 @@ class InferenceLifecycleNode(Node):
         self.publishing = False
         
         # Initialize Models
-        # self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
-        # # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
-        # self.get_logger().warn("\n-- Inference 2!")
-        # self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
-        # self.get_logger().warn("\n-- Inference 3!")
-        # # Setup Message Transcoder
-        # self.bridge = CvBridge()
+        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
+        # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
+        self.get_logger().warn("\n-- Inference 2!")
+        self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
+        self.get_logger().warn("\n-- Inference 3!")
+        # Setup Message Transcoder
+        self.bridge = CvBridge()
 
-        # # Create Perception/SLAM topic
-        # self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
+        # Create Perception/SLAM topic
+        self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
 
-        # self.subscription = self.create_subscription(
-        #     AcquisitionMessage,
-        #     'acquisition_topic',
-        #     self.listener_callback,
-        #     10
-        # )
+        self.subscription = self.create_subscription(
+            AcquisitionMessage,
+            'acquisition_topic',
+            self.listener_callback,
+            10
+        )
         self.get_logger().warn("\n-- Inference 1!")
         #Timestamp logging
         try:
