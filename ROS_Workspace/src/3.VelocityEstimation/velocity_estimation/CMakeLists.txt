@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(vectornav_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(node_logger REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
@@ -30,7 +31,7 @@ add_executable(l_vel
   ${LIFECYCLE_FOLDER}/lifecycle_velocity_estimation_handler.cpp 
   ${LIFECYCLE_FOLDER}/lifecycle_states.cpp
 )
-ament_target_dependencies(l_vel rclcpp rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
+ament_target_dependencies(l_vel rclcpp node_logger rclcpp_lifecycle vectornav_msgs custom_msgs lifecycle_msgs)
 
 
 # install excutables to lib directory

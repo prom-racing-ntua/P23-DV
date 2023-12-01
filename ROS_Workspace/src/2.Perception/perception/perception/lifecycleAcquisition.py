@@ -20,40 +20,14 @@ from rclpy.timer import Timer
 from custom_msgs.msg import NodeSync, AcquisitionMessage
 from cv_bridge import CvBridge, CvBridgeError
 
+from node_logger.node_logger import *
+
 # Homemade Libraries
 from .libraries.cameraClass import Camera
 
 def getEpoch():
     return float(time.time())
 
-class Logger:
-    def __init__(self, name):
-        self.ok = True
-        self.name = name
-        try:
-            self.run_idx = len(os.listdir("timestamp_logs")) - 1
-            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
-        except Exception as e:
-            self.ok = False
-            self.error = e
-        else:
-            self.error = None
-
-    def __del__(self):
-        if self.ok:
-            self.file.close()
-
-    def check(self):
-        if self.ok:
-            return "Logger {:s} opened successfully".format(self.name)
-        else:
-            return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
-
-    def __call__(self, timestamp, type, index):
-        if not self.ok:
-            return
-
-        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
 
 class AcquisitionLifecycleNode(Node):

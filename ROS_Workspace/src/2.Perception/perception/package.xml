@@ -6,6 +6,7 @@
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <depend>node_logger</depend>
   <exec_depend>custom_msgs</exec_depend>
   <exec_depend>ros2launch</exec_depend>
 

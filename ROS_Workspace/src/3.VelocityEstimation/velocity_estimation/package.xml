@@ -11,6 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>eigen</depend>
+  <depend>node_logger</depend>
   <depend>vectornav_msgs</depend>
   <depend>custom_msgs</depend>
 

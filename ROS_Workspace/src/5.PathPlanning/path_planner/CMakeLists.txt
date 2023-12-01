@@ -21,6 +21,7 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(node_logger REQUIRED)
 find_package(custom_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
@@ -51,7 +52,7 @@ include_directories(
 add_executable(${PROJECT_NAME} src/path_planner.cpp src/triangulation_cgal.cpp)
 add_executable(l_pth src/lifecycle/lifecycle_pathplanning_node.cpp src/triangulation_cgal.cpp src/lifecycle/lifecycle_states.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs CGAL custom_msgs)
-ament_target_dependencies(l_pth rclcpp std_msgs CGAL custom_msgs rclcpp_lifecycle)
+ament_target_dependencies(l_pth rclcpp node_logger std_msgs CGAL custom_msgs rclcpp_lifecycle)
 
 #add_to_cached_list( CGAL_EXECUTABLE_TARGETS path_planner )
 

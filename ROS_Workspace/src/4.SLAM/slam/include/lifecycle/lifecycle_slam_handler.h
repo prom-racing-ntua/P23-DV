@@ -20,25 +20,15 @@
 #include "lifecycle_msgs/msg/state.hpp"
 
 #include "slam.h"
+#include "node_logger.hpp"
+
 
 
 namespace ns_slam
 {
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-    class Logger
-    {
-    private:
-        FILE *file;
-        int run_idx;
-        std::string name;
-    public:
-        Logger();
-        void init(std::string name);
-        ~Logger();
-        std::string check()const;
-        void log(double timestamp, int type, int index);
-    };
+    
 
     class LifecycleSlamHandler : public rclcpp_lifecycle::LifecycleNode {
     private:

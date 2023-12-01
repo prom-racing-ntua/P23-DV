@@ -12,12 +12,12 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='perception',
-            executable='lifecycle_inference',
+            executable='l_inf',
             name='inference',
         ),
         Node(
             package='perception',
-            executable='lifecycle_acquisition',
+            executable='l_acq',
             name='acquisition',
             parameters=[config],
         )

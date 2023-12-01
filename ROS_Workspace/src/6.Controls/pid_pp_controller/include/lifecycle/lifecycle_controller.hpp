@@ -17,25 +17,26 @@
 #include "custom_msgs/srv/set_total_laps.hpp"
 
 #include "pid_pp_module.hpp"
+#include "node_logger.hpp"
 
 using namespace std::chrono_literals;
 using namespace pid_pp;
 using std::placeholders::_1;
 
 namespace pid_pp{
-class Logger
-{
-private:
-    FILE *file;
-    int run_idx;
-    std::string name;
-public:
-    Logger();
-    void init(std::string name);
-    ~Logger();
-    std::string check()const;
-    void log(double timestamp, int type, int index);
-};
+// class Logger
+// {
+// private:
+//     FILE *file;
+//     int run_idx;
+//     std::string name;
+// public:
+//     Logger();
+//     void init(std::string name);
+//     ~Logger();
+//     std::string check()const;
+//     void log(double timestamp, int type, int index);
+// };
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -92,7 +93,7 @@ private:
     bool is_end;
     bool switch_br;
 
-    Logger waypoints_timestamp_log, pose_timestamp_log;
+    ::Logger waypoints_timestamp_log, pose_timestamp_log;
     double pub_time_1, pub_time_2;
 
     //Multithreading shit -- Ntroph :(

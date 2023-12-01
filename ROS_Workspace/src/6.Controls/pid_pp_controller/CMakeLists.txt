@@ -22,6 +22,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(node_logger REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(Eigen3 REQUIRED)
 
@@ -40,7 +41,7 @@ ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs custom_msgs)
 add_executable(l_pid src/lifecycle/lifecycle_controller.cpp src/lifecycle/lifecycle_states.cpp
 src/pid_pp_module.cpp
 src/cubic_spline.cpp)
-ament_target_dependencies(l_pid rclcpp std_msgs custom_msgs rclcpp_lifecycle)
+ament_target_dependencies(l_pid rclcpp std_msgs node_logger custom_msgs rclcpp_lifecycle)
 
 install(TARGETS
   ${PROJECT_NAME}
@@ -52,6 +53,8 @@ install(DIRECTORY
   config launch
   DESTINATION share/${PROJECT_NAME}/
 )
+
+# target_link_libraries(pid_pp_controller node_logger)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

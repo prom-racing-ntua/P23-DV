@@ -22,6 +22,7 @@ find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(node_logger REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(TBB REQUIRED)
 find_package(visualization_msgs REQUIRED)
@@ -54,7 +55,7 @@ ament_target_dependencies(test_run rclcpp visualization_msgs ament_index_cpp tf2
 
 # Lifecycle Node
 add_executable(l_slm src/lifecycle/lifecycle_slam_handler.cpp src/lifecycle/lifecycle_states.cpp src/unary_factor.cpp)
-ament_target_dependencies(l_slm rclcpp rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs)
+ament_target_dependencies(l_slm rclcpp node_logger rclcpp_lifecycle custom_msgs ament_index_cpp tf2_geometry_msgs)
 target_link_libraries(l_slm gtsam ${catkin_LIBRARIES})
 
 install(TARGETS

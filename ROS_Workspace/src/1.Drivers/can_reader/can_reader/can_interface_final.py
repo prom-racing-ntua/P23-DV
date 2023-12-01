@@ -8,65 +8,17 @@ from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 
 from custom_msgs.msg import *
 from .Messages import *
-
-def create_new_run_log() -> str:
-    current_runs = len(os.listdir("timestamp_logs"))
-    if(current_runs!=0):
-        if(len(os.listdir("timestamp_logs/run_{:d}".format(current_runs-1)))==0):
-            return "New dir exists."
-    try:
-        os.mkdir("timestamp_logs/run_{:d}".format(current_runs))
-    except FileExistsError:
-        return "New dir exists."
-    except Exception as e:
-        return "Error while creating new run dir:{:s}".format(repr(e))
-    else:
-        return "New run dir created successfully."
-class Logger:
-    def __init__(self, name):
-        self.ok = True
-        self.name = name
-        try:
-            self.run_idx = len(os.listdir("timestamp_logs")) - 1
-            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
-        except Exception as e:
-            self.ok = False
-            self.error = e
-        else:
-            self.error = None
-
-    def __del__(self):
-        if self.ok:
-            self.file.close()
-
-    def check(self):
-        if self.ok:
-            return "Logger {:s} opened successfully".format(self.name)
-        else:
-            return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
-
-    def __call__(self, timestamp, type, index):
-        if not self.ok:
-            return
-
-        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
-
-    def __call__(self, timestamp, type, index, data):
-        if not self.ok:
-            return
-
-        string = ""
-        if data is not None:
-            for i in data:
-                string = "{:s}\t{:.3f}".format(string, i)
-        self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, type, index, string))
-
+from node_logger.node_logger import *
 class CanInterface(Node):
     def __init__(self) -> None:
         super().__init__("can_interface")
 
         # Load port and node parameters from config file
         self.load_parameters()
+        if self.disable_send:
+            self.get_logger().warn("Output to USB DISABLED !!!")
+        else:
+            self.get_logger().warn("Output to USB ENABLED !!!")
         CanInterfaceMessage.node_handle = self
 
         # Mission Selection Variables
@@ -167,12 +119,15 @@ class CanInterface(Node):
         self._timeout = self.declare_parameter('timeout', 0.001).value
         self._read_frequency = self.declare_parameter('read_frequency', 200).value
         self.declare_parameter('service_target_pressure', 10).value
+        self.disable_send = self.declare_parameter('disable_send', False).value
 
 
     def universal_callback(self, msg) -> None:
         '''
         Callback for all subscribers calling the to_CanMsg method of the Message class
         '''
+        if self.disable_send:
+            return
         # self.get_logger().info("started uni callback")
         start_time = self.get_clock().now()
 

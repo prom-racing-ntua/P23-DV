@@ -24,23 +24,11 @@
 #include <pthread.h>  /* My beloved :3 */
 
 #include "velocity_estimation.h"
+#include "node_logger.hpp"
+
 
 namespace ns_vel_est
 {
-    class Logger
-    {
-    private:
-        FILE *file;
-        int run_idx;
-        std::string name;
-    public:
-        Logger();
-        void init(std::string name);
-        ~Logger();
-        std::string check()const;
-        void log(double timestamp, int type, int index);
-    };
-
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecycleVelocityEstimationHandler: public rclcpp_lifecycle::LifecycleNode {

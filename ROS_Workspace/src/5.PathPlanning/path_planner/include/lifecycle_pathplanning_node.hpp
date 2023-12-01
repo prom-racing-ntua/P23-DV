@@ -9,6 +9,8 @@
 #include "custom_msgs/msg/waypoints_msg.hpp"
 
 #include "triangulation_cgal.hpp"
+#include "node_logger.hpp"
+
 
 #include <chrono>
 #include <functional>
@@ -19,20 +21,6 @@
 
 namespace path_planner
 {
-    class Logger
-    {
-    private:
-        FILE *file;
-        int run_idx;
-        std::string name;
-    public:
-        Logger();
-        void init(std::string name);
-        ~Logger();
-        std::string check()const;
-        void log(double timestamp, int type, int index);
-    };
-
     using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
     class LifecyclePathPlanner: public rclcpp_lifecycle::LifecycleNode {

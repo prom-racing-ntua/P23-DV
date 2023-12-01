@@ -291,7 +291,7 @@ class SystemHealthMsg(CanInterfaceMessage):
             self.node_handle.get_logger().error(f"Unknown DV State received: {dv_state}")
             state = 0x0F
         
-        # if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
+        if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
         out_msg[1] = (self._ros_msg.lap_counter << 4) | state
 
         out_msg[2] = self._ros_msg.cones_count_actual
@@ -475,7 +475,7 @@ class SteeringAngleMsg(CanInterfaceMessage):
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
-        self.node_handle.get_logger().info(f"Getting steering at: {temp} ms")
+        # self.node_handle.get_logger().info(f"Getting steering at: {temp} ms")
         try:
             msg.steering_angle = rackDisplacement2rad(temp)
         except ValueError:

@@ -15,36 +15,37 @@ from ament_index_python.packages import get_package_share_directory
 
 # Homemade Libraries
 from .libraries.pipelineFunctions import *
+from node_logger.node_logger import *
 
 
-class Logger:
-    def __init__(self, name):
-        self.ok = True
-        self.name = name
-        try:
-            self.run_idx = len(os.listdir("timestamp_logs")) - 1
-            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
-        except Exception as e:
-            self.ok = False
-            self.error = e
-        else:
-            self.error = None
+# class Logger:
+#     def __init__(self, name):
+#         self.ok = True
+#         self.name = name
+#         try:
+#             self.run_idx = len(os.listdir("timestamp_logs")) - 1
+#             self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+#         except Exception as e:
+#             self.ok = False
+#             self.error = e
+#         else:
+#             self.error = None
 
-    def __del__(self):
-        if self.ok:
-            self.file.close()
+#     def __del__(self):
+#         if self.ok:
+#             self.file.close()
 
-    def check(self):
-        if self.ok:
-            return "Logger {:s} opened successfully".format(self.name)
-        else:
-            return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
+#     def check(self):
+#         if self.ok:
+#             return "Logger {:s} opened successfully".format(self.name)
+#         else:
+#             return "Couldn't open logger 'timestamp_logs/run_{:d}/{:s}_log.txt': {:s}".format(self.run_idx, self.name, repr(self.error))
 
-    def __call__(self, timestamp, type, index):
-        if not self.ok:
-            return
+#     def __call__(self, timestamp, type, index):
+#         if not self.ok:
+#             return
 
-        self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
+#         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
 class InferenceLifecycleNode(Node):
     def initKeypoint(self, small_modelpath):
@@ -63,9 +64,9 @@ class InferenceLifecycleNode(Node):
         self.smallKeypointsModelPath = smallKeypointsModel
         
         # Create a log file
-        path = get_package_share_directory("perception")
-        testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
-        self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
+        # path = get_package_share_directory("perception")
+        # testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+        # self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
         self.get_logger().warn("\n-- Inference Node Created")
         
     def on_configure(self, state: State) -> TransitionCallbackReturn:
@@ -74,31 +75,34 @@ class InferenceLifecycleNode(Node):
         phase. Also open a log file if you want to idk.
         """
         self.publishing = False
-        self.get_logger().warn("\n-- Inference 1!")
+        
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
-        # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
-        self.get_logger().warn("\n-- Inference 2!")
-        self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
-        self.get_logger().warn("\n-- Inference 3!")
-        # Setup Message Transcoder
-        self.bridge = CvBridge()
+        # self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
+        # # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
+        # self.get_logger().warn("\n-- Inference 2!")
+        # self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
+        # self.get_logger().warn("\n-- Inference 3!")
+        # # Setup Message Transcoder
+        # self.bridge = CvBridge()
 
-        # Create Perception/SLAM topic
-        self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
+        # # Create Perception/SLAM topic
+        # self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
 
-        self.subscription = self.create_subscription(
-            AcquisitionMessage,
-            'acquisition_topic',
-            self.listener_callback,
-            10
-        )
-
+        # self.subscription = self.create_subscription(
+        #     AcquisitionMessage,
+        #     'acquisition_topic',
+        #     self.listener_callback,
+        #     10
+        # )
+        self.get_logger().warn("\n-- Inference 1!")
         #Timestamp logging
-        self.timestamp_log_right = Logger("inference_right")
-        self.timestamp_log_left = Logger("inference_left")
-        self.get_logger().info(self.timestamp_log_right.check())
-        self.get_logger().info(self.timestamp_log_left.check())
+        try:
+            self.timestamp_log_right = Logger("inference_right")
+            self.timestamp_log_left = Logger("inference_left")
+            self.get_logger().info(self.timestamp_log_right.check())
+            self.get_logger().info(self.timestamp_log_left.check())
+        except Exception as e:
+            print("mpa"+str(e))
 
         self.get_logger().warn("\n-- Inference Configured!")
         return TransitionCallbackReturn.SUCCESS
