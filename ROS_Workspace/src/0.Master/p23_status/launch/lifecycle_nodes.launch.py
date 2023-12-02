@@ -102,10 +102,10 @@ def generate_launch_description():
     
     # Can be uncommented when running the inspection mission
     inspectionNode = Node(
-        package="inspection",
-        executable="insp",
-        name="inspection",
-        emulate_tty=True
+       package="inspection",
+       executable="insp",
+       name="inspection",
+       emulate_tty=True
     )
     ldList.append(inspectionNode)
 

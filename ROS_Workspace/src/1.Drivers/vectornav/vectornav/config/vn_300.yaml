@@ -1,8 +1,8 @@
 vn_300:
   vectornav_node:
     ros__parameters:
-      # port: "/dev/vectornav_vn300"
-      port: "/dev/ttyUSB1"
+      port: "/dev/vectornav_vn300"
+      # port: "/dev/ttyUSB1"
       baud: 460800
       reconnect_ms: 500
       # Reference vnproglib-1.2.0.0 headers for enum definitions
@@ -26,11 +26,11 @@ vn_300:
       spiChecksum: 0                   # CHECKSUMMODE_OFF
       errorMode: 1                     # ERRORMODE_SEND
       # Gps antenna offset and compass baseline
-      GpsAntennaOffset: 
+      GpsAntennaOffset: #vn->A
         x: -0.96
         y: +0.0
         z: -0.87
-      GpsBaselinePos: 
+      GpsBaselinePos: #A->B 
         x: +1.045
         y: +0.0
         z: +0.48

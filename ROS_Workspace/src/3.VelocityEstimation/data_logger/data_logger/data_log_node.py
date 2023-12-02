@@ -80,7 +80,7 @@ class DataLogger(Node):
 
         # Timer for taking the measurements
         time_step = 1 / FREQUENCY
-        self._timer = self.create_timer(time_step, self.timer_callback)
+        # self._timer = self.create_timer(time_step, self.timer_callback)
 
         self.get_logger().warn('Starting Logging')
 

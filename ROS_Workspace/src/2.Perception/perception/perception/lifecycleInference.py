@@ -33,7 +33,6 @@ class InferenceLifecycleNode(Node):
         super().__init__('inference')
         self.yoloModelPath = yoloModel
         self.smallKeypointsModelPath = smallKeypointsModel
-        
         # Create a log file
         # path = get_package_share_directory("perception")
         # testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
@@ -43,16 +42,16 @@ class InferenceLifecycleNode(Node):
     def on_configure(self, state: State) -> TransitionCallbackReturn:
         """
         Inference node needs to configure all the models in the configuration
-        phase. Also open a log file if you want to idk.
+        phase. Also open a log file if you want to, idk.
         """
         self.publishing = False
         
         # Initialize Models
-        self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
+        
+        self.get_logger().warn("\n-- YOLO initialized configured!")
         # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
-        self.get_logger().warn("\n-- Inference 2!")
-        self.smallModel = self.initKeypoint(self.smallKeypointsModelPath)
-        self.get_logger().warn("\n-- Inference 3!")
+        self.smallModel = initKeypoint(self.smallKeypointsModelPath)
+
         # Setup Message Transcoder
         self.bridge = CvBridge()
 
@@ -129,7 +128,7 @@ class InferenceLifecycleNode(Node):
         else:
             # Perform Perception Pipeline
             inferenceTiming = time.time()
-            results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True)
+            results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True) #normally True
             # self.get_logger().info(f"{cameraOrientation} results: {len(results)}")
             # self.get_logger().info(f"Padding Time and Inference Time {inferenceTime[0], inferenceTime[1]}")
             if results.size == 0:
@@ -188,9 +187,9 @@ def main(args=None):
     smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
-    smallKeypointsModelPath
+    smallKeypointsModelPath_2 = f"{models}/vggv3strip2.pt"
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath_2)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:

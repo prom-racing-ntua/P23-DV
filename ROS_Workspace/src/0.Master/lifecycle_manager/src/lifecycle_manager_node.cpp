@@ -119,8 +119,7 @@ namespace lifecycle_manager_namespace
         auto future_result = getStateServiceHandler->async_send_request(request, response_received_callback);
     }
 
-    void LifecycleManagerNode::changeNodeState(std::uint8_t transition, std::string nodeName)
-    {
+    void LifecycleManagerNode::changeNodeState(std::uint8_t transition, std::string nodeName) {
         using namespace std::chrono_literals;
 
         auto changeStateServiceHandler = lifecycleChangeStateMap.at(nodeName);
@@ -152,12 +151,13 @@ namespace lifecycle_manager_namespace
         if (future_result.get()->success) {
             RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
             goalCounter--;
-        } else {
+        } 
+        
+        else {
             RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
             // nodeStateMap[nodeName] = true;
             failedTransitionCounter++;
         }
-
         return;
     }
 
