@@ -428,7 +428,7 @@ class SensorVariablesMsg(CanInterfaceMessage):
     msg_type = RxVehicleSensors
 
     def data(self):
-        return self._data
+        return [self._data]
 
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
@@ -452,7 +452,7 @@ class WheelEncodersMsg(CanInterfaceMessage):
     msg_type = RxWheelSpeed
 
     def data(self):
-        return self._data
+        return [self._data]
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
 
@@ -473,7 +473,7 @@ class SteeringAngleMsg(CanInterfaceMessage):
     msg_type = RxSteeringAngle
 
     def data(self):
-        self._data
+        return [self._data]
     def to_ROS(self) -> msg_type: 
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024

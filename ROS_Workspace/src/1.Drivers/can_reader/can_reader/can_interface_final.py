@@ -186,7 +186,7 @@ class CanInterface(Node):
             except:
                 return
 
-            self.get_logger().info(f"Received message: {serial_msg}")
+            # self.get_logger().info(f"Received message: {serial_msg}")
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
 
@@ -219,6 +219,7 @@ class CanInterface(Node):
 
             logger = self._in_msgs_logger[msg_id]
             if logger is not None:
+                # self.get_logger().info(temp_msg.data())
                 logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
                 logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
 

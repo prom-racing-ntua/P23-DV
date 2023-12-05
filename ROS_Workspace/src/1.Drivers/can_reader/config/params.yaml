@@ -2,7 +2,7 @@ canbus:
   can_interface:
     ros__parameters:
       # Configure Port
-      port: '/dev/ttyACM0'
+      port: '/dev/can2usb'
       baudrate: 115200
       timeout: 0.001
       read_frequency: 250
@@ -12,6 +12,6 @@ canbus:
       outgoing_messages: ['system_state', 'vehicle_variables', 'control_command']
       
       # For testing on the wood ;)
-      disable_send: false
+      disable_send: true
       # enabled_sensors: ['test_hall']
       # outgoing_messages: ['state_pub']
