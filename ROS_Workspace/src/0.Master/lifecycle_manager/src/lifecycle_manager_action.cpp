@@ -122,13 +122,16 @@ namespace lifecycle_manager_namespace
         feedback->failed_transitions = failedTransitionCounter;
         ongoing_goal_handle->publish_feedback(feedback);
 
-        auto status_msg = custom_msgs::msg::LifecycleNodeTransitionState();
-        telemetry_node_transition_publisher->publish(status_msg);
+        // auto status_msg = custom_msgs::msg::LifecycleNodeTransitionState();
+        // telemetry_node_transition_publisher->publish(status_msg);
 
         if (goalCounter <= 0) {
             if (incoming_transition) result->success = false;
             else result->success = true;
 
+            auto status_msg = custom_msgs::msg::LifecycleNodeTransitionState();
+            telemetry_node_transition_publisher->publish(status_msg);
+            
             ongoing_goal_handle->succeed(result);
             incoming_transition = false;
             ongoing_goal_handle = nullptr;

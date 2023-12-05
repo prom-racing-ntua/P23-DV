@@ -447,6 +447,7 @@ class ErrorFrame(ctk.CTkFrame):
 
         self.grid_columnconfigure(0, weight = 3, uniform = "c")
         self.grid_columnconfigure(1, weight = 1, uniform = "c")
+        self.grid_columnconfigure(2, weight = 1, uniform = "c")
         
         self.grid_rowconfigure(0, weight = 1, uniform = "c")
         self.grid_rowconfigure(1, weight = 1, uniform = "c")
@@ -459,7 +460,10 @@ class ErrorFrame(ctk.CTkFrame):
         self.grid_rowconfigure(8, weight = 1, uniform = "c")
         self.grid_rowconfigure(9, weight = 1, uniform = "c")
         self.grid_rowconfigure(10, weight = 1, uniform = "c")
-        
+
+        #   --------------------------
+        #           Labels
+        #   -------------------------
         self.inference = ctk.CTkLabel(self, text = "Inference", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
         self.inference.grid(row = 0, column = 0, sticky = "news", padx = 10)
         
@@ -493,7 +497,9 @@ class ErrorFrame(ctk.CTkFrame):
         self.ins_mode = ctk.CTkLabel(self, text = "INS Mode", text_color = "white", bg_color = "transparent", fg_color = "transparent", font = ("CTkFont", 15), anchor = "w")
         self.ins_mode.grid(row = 10, column = 0, sticky = "news", padx = 10)
         
-        
+        #   --------------------------
+        #           Errors
+        #   -------------------------
         self.inference_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
         self.inference_status.grid(row = 0, column = 1, padx = 10, pady = 5)
         
@@ -526,6 +532,33 @@ class ErrorFrame(ctk.CTkFrame):
         
         self.ins_mode_status = ctk.CTkLabel(self, text = "0", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
         self.ins_mode_status.grid(row = 10, column = 1, padx = 5, pady = 5)
+
+        #   --------------------------
+        #         Transitions
+        #   -------------------------
+        self.inference_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.inference_trans.grid(row = 0, column = 2, padx = 10, pady = 5)
+        
+        self.vel_est_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.vel_est_trans.grid(row = 1, column = 2, padx = 10, pady = 5)
+        
+        self.slam_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.slam_trans.grid(row = 2, column = 2, padx = 10, pady = 5)
+        
+        self.mpc_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.mpc_trans.grid(row = 3, column = 2, padx = 10, pady = 5)
+        
+        self.pidpp_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.pidpp_trans.grid(row = 4, column = 2, padx = 10, pady = 5)
+        
+        self.pathp_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.pathp_trans.grid(row = 5, column = 2, padx = 10, pady = 5)
+        
+        self.cam_l_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.cam_l_trans.grid(row = 6, column = 2, padx = 10, pady = 5)
+        
+        self.cam_r_trans = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray20", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.cam_r_trans.grid(row = 7, column = 2, padx = 10, pady = 5)
         
         self.errors = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
         self.ins = -1
@@ -533,72 +566,96 @@ class ErrorFrame(ctk.CTkFrame):
         self.status = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
        
     def update(self, error, ins_mode, trans_id, status) -> None:
-        if(trans_id==0):
-            if error[0] != self.errors[0]:
-                self.errors[0] = error[0]
-                self.inference.configure(text_color = self.color_l(error[0]))
-                self.inference_status.configure(fg_color = self.color(error[0]))
+        if error[0] != self.errors[0]:
+            self.errors[0] = error[0]
+            self.inference.configure(text_color = self.color_l(error[0]))
+            self.inference_status.configure(fg_color = self.color(error[0]))
+        
+        if error[1] != self.errors[1]:
+            self.errors[1] = error[1]    
+            self.vel_est.configure(text_color = self.color_l(error[1]))
+            self.vel_est_status.configure(fg_color = self.color(error[1]))
+        
+        if error[2] != self.errors[2]:
+            self.errors[2] = error[2]      
+            self.slam.configure(text_color = self.color_l(error[2]))
+            self.slam_status.configure(fg_color = self.color(error[2]))
+        
+        if error[3] != self.errors[3]:
+            self.errors[3] = error[3]  
+            self.mpc.configure(text_color = self.color_l(error[3]))
+            self.mpc_status.configure(fg_color = self.color(error[3]))
+        
+        if error[4] != self.errors[4]:
+            self.errors[4] = error[4]  
+            self.pidpp.configure(text_color = self.color_l(error[4]))
+            self.pidpp_status.configure(fg_color = self.color(error[4]))
+        
+        if error[5] != self.errors[5]:
+            self.errors[5] = error[5]  
+            self.pathp.configure(text_color = self.color_l(error[5]))
+            self.pathp_status.configure(fg_color = self.color(error[5]))
+        
+        if error[6] != self.errors[6]:
+            self.errors[6] = error[6]  
+            self.cam_l.configure(text_color = self.color_l(error[6]))
+            self.cam_l_status.configure(fg_color = self.color(error[6]))
+        
+        if error[7] != self.errors[7]:
+            self.errors[7] = error[7]  
+            self.cam_r.configure(text_color = self.color_l(error[7]))
+            self.cam_r_status.configure(fg_color = self.color(error[7]))
+        
+        if error[8] != self.errors[8]:
+            self.errors[8] = error[8]  
+            self.vn_200.configure(text_color = self.color_l(error[8]))
+            self.vn_200_status.configure(fg_color = self.color(error[6]))
+        
+        if error[9] != self.errors[9]:
+            self.errors[9] = error[9]  
+            self.vn_300.configure(text_color = self.color_l(error[9]))
+            self.vn_300_status.configure(fg_color = self.color(error[7]))
             
-            if error[1] != self.errors[1]:
-                self.errors[1] = error[1]    
-                self.vel_est.configure(text_color = self.color_l(error[1]))
-                self.vel_est_status.configure(fg_color = self.color(error[1]))
-            
-            if error[2] != self.errors[2]:
-                self.errors[2] = error[2]      
-                self.slam.configure(text_color = self.color_l(error[2]))
-                self.slam_status.configure(fg_color = self.color(error[2]))
-            
-            if error[3] != self.errors[3]:
-                self.errors[3] = error[3]  
-                self.mpc.configure(text_color = self.color_l(error[3]))
-                self.mpc_status.configure(fg_color = self.color(error[3]))
-            
-            if error[4] != self.errors[4]:
-                self.errors[4] = error[4]  
-                self.pidpp.configure(text_color = self.color_l(error[4]))
-                self.pidpp_status.configure(fg_color = self.color(error[4]))
-            
-            if error[5] != self.errors[5]:
-                self.errors[5] = error[5]  
-                self.pathp.configure(text_color = self.color_l(error[5]))
-                self.pathp_status.configure(fg_color = self.color(error[5]))
-            
-            if error[6] != self.errors[6]:
-                self.errors[6] = error[6]  
-                self.cam_l.configure(text_color = self.color_l(error[6]))
-                self.cam_l_status.configure(fg_color = self.color(error[6]))
-            
-            if error[7] != self.errors[7]:
-                self.errors[7] = error[7]  
-                self.cam_r.configure(text_color = self.color_l(error[7]))
-                self.cam_r_status.configure(fg_color = self.color(error[7]))
-            
-            if error[8] != self.errors[8]:
-                self.errors[8] = error[8]  
-                self.vn_200.configure(text_color = self.color_l(error[8]))
-                self.vn_200_status.configure(fg_color = self.color(error[6]))
-            
-            if error[9] != self.errors[9]:
-                self.errors[9] = error[9]  
-                self.vn_300.configure(text_color = self.color_l(error[9]))
-                self.vn_300_status.configure(fg_color = self.color(error[7]))
-                
-            if self.ins!=ins_mode:
-                self.ins = ins_mode
-                self.ins_mode_status.configure(text = str(ins_mode))
-        else:
-            if(trans_id not in [0, 10]):
-                self.errors = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
-                self.ins_mode = -1
-            self.id = trans_id
-            if(trans_id == 0):
-                for button in [self.inference_status, self.vel_est_status, self.slam_status, self.mpc_status, self.pidpp_status, self.pathp_status, self.cam_l_status, self.cam_r_status, self.vn_200_status, self.vn_300_status]:
-                    button.configure(fg_color = 'gray30')
+        if self.ins!=ins_mode:
+            self.ins = ins_mode
+            self.ins_mode_status.configure(text = str(ins_mode))
 
-                for entry in [[self.inference_status, self.inference, 2], [self.vel_est_status, self.vel_est, 3], [self.slam_status,self.slam_, 4], [self.mpc_status, self.mpc, 7], [self.pidpp_status, self.pidpp, 6], [self.pathp_status, self.pathp, 5], [self.cam_l_status, self.cam_l, 1], [self.cam_r_status, self.cam_r, 0]]:
-                    if self.status[entry[2]] != status[entry[2]]:
-                        entry[1].configure(fg_color = self.color_t(entry[2]))
+        else:
+            for entry in [[self.inference_trans, self.inference, 2], 
+                          [self.vel_est_trans, self.vel_est, 3], 
+                          [self.slam_trans,self.slam, 4], 
+                          [self.mpc_trans, self.mpc, 7], 
+                          [self.pidpp_trans, self.pidpp, 6], 
+                          [self.pathp_trans, self.pathp, 5], 
+                          [self.cam_l_trans, self.cam_l, 1], 
+                          [self.cam_r_trans, self.cam_r, 0]]:
+                if self.status[entry[2]] != status[entry[2]]:
+                    entry[0].configure(fg_color = self.color_t(status[entry[2]]))
+                    self.status[entry[2]] = status[entry[2]]
+        self.id = trans_id
+        # else:
+        #     if(trans_id not in [0, 10]):
+        #         self.errors = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        #         self.ins_mode = -1
+            
+        #     if(trans_id not in [0, 10, self.id]):
+        #         for button in [self.inference_status, self.vel_est_status, self.slam_status, self.mpc_status, self.pidpp_status, self.pathp_status, self.cam_l_status, self.cam_r_status, self.vn_200_status, self.vn_300_status]:
+        #             button.configure(fg_color = 'gray10')
+
+        #     for entry in [[self.inference_status, self.inference, 2], 
+        #                   [self.vel_est_status, self.vel_est, 3], 
+        #                   [self.slam_status,self.slam, 4], 
+        #                   [self.mpc_status, self.mpc, 7], 
+        #                   [self.pidpp_status, self.pidpp, 6], 
+        #                   [self.pathp_status, self.pathp, 5], 
+        #                   [self.cam_l_status, self.cam_l, 1], 
+        #                   [self.cam_r_status, self.cam_r, 0]]:
+        #         if self.status[entry[2]] != status[entry[2]]:
+        #             entry[0].configure(fg_color = self.color_t(status[entry[2]]))
+        #             self.status[entry[2]] = status[entry[2]]
+                
+            
+
             
     def color(self, error) -> str:
         if error==0: return "green4"
@@ -609,7 +666,7 @@ class ErrorFrame(ctk.CTkFrame):
         else: return "red3"
 
     def color_t(self, status) -> str:
-        if status==0: return "gray30"
+        if status==0: return "gray20"
         elif status==1: return "yellow"
         elif status==2: return "green4"
         else: return "red3"

@@ -294,6 +294,7 @@ class TelemetryNode(Node):
                             msg.mpc_controller, 
                             msg.inspection_controller, 
                             msg.saltas]
+        GUI.error.update(self.data.errors, self.data.ins_mode, self.data.id, self.data.status)
 
     def sensor_callback(self, msg: RxVehicleSensors) -> None:
         self.data.actual_torque = msg.motor_torque_actual

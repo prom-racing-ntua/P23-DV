@@ -102,8 +102,8 @@ namespace lifecycle_manager_namespace
     }
     int LifecycleManagerNode::get_node_index_from_name(std::string node_name)const
     {
-        if      (node_name == "acquisition_left")   return 0;
-        else if (node_name == "acquisition_right")  return 1;
+        if      (node_name == "acquisition_left")   return 1;
+        else if (node_name == "acquisition_right")  return 0;
         else if (node_name == "inference")          return 2;
         else if (node_name == "velocity_estimation")return 3;
         else if (node_name == "slam")               return 4;
@@ -194,7 +194,7 @@ namespace lifecycle_manager_namespace
             goalCounter--;
         } else {
             RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
-            status_array[idx] = 1;
+            status_array[idx] = 3;
             // nodeStateMap[nodeName] = true;
             failedTransitionCounter++;
         }

@@ -39,31 +39,37 @@ namespace lifecycle_manager_namespace{
 
         switch(mission) {
             case(p23::ACCELERATION):
+                status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/acceleration_config.yaml");
                 nodesToShutdown = {"inspection", "path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
+                status_array = {1, 1, 1, 1, 1, 0, 0, 1, 0, 1};
                 configurationFileSelected += std::string("/skidpad_config.yaml");
                 nodesToShutdown = {"inspection", "path_planning", "pure_pursuit"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::AUTOX):
+                status_array = {1, 1, 1, 1, 1, 1, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/autox_config.yaml");
                 nodesToShutdown = {"inspection", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::TRACKDRIVE):
+                status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
                 nodesToShutdown = {"inspection", "pure_pursuit", "path_planning"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::EBS_TEST):
+                status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/ebs_test_config.yaml");
                 nodesToShutdown = {"inspection", "path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::INSPECTION):
+                status_array = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0};
                 configurationFileSelected += std::string("/inspection_config.yaml");
                 nodesToShutdown = {"saltas", "acquisition_left", "inference", "acquisition_right",
                     "velocity_estimation", "slam", "path_planning", "mpc", "pure_pursuit"};
