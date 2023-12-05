@@ -47,7 +47,7 @@ class Logger:
 
         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
-    def __call__(self, timestamp, type, index, data):
+    def __call__(self, timestamp, type, index, data = None):
         if not self.ok:
             return
 

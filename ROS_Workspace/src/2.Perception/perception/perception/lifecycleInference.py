@@ -35,9 +35,9 @@ class InferenceLifecycleNode(Node):
         self.smallKeypointsModelPath = smallKeypointsModel
         
         # Create a log file
-        # path = get_package_share_directory("perception")
-        # testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
-        # self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
+        path = get_package_share_directory("perception")
+        testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+        self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
         self.get_logger().warn("\n-- Inference Node Created")
         
     def on_configure(self, state: State) -> TransitionCallbackReturn:
@@ -176,7 +176,8 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
     # EdgeTPU YOLO
-    yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
+    # yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"
     # Medium Yolo v5
