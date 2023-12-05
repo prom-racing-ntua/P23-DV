@@ -19,16 +19,6 @@ from node_logger.node_logger import *
 
 
 class InferenceLifecycleNode(Node):
-    def initKeypoint(self, small_modelpath):
-        # core = ov.Core()
-        # model = core.read_model(small_modelpath)
-        # small_model = core.compile_model(model=model, device_name="GPU")
-        self.get_logger().warn("\n-- Inference 21!")
-        small_model = VGGLikeV3()
-        self.get_logger().warn("\n-- Inference 22!")
-        small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
-        self.get_logger().warn("\n-- Inference 23!")
-        return small_model
     def __init__(self, yoloModel, smallKeypointsModel):
         super().__init__('inference')
         self.yoloModelPath = yoloModel
@@ -45,36 +35,38 @@ class InferenceLifecycleNode(Node):
         phase. Also open a log file if you want to, idk.
         """
         self.publishing = False
-        
-        # Initialize Models
-        
-        self.get_logger().warn("\n-- YOLO initialized configured!")
-        # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
-        self.smallModel = initKeypoint(self.smallKeypointsModelPath)
-
-        # Setup Message Transcoder
-        self.bridge = CvBridge()
-
-        # Create Perception/SLAM topic
-        self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
-
-        self.subscription = self.create_subscription(
-            AcquisitionMessage,
-            'acquisition_topic',
-            self.listener_callback,
-            10
-        )
-        self.get_logger().warn("\n-- Inference 1!")
-        #Timestamp logging
         try:
-            self.timestamp_log_right = Logger("inference_right")
-            self.timestamp_log_left = Logger("inference_left")
-            self.get_logger().info(self.timestamp_log_right.check())
-            self.get_logger().info(self.timestamp_log_left.check())
-        except Exception as e:
-            print("mpa"+str(e))
+        # Initialize Models
+            self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
+            # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
+            self.smallModel = initKeypoint(self.smallKeypointsModelPath)
 
-        self.get_logger().warn("\n-- Inference Configured!")
+
+            # Setup Message Transcoder
+            self.bridge = CvBridge()
+
+            # Create Perception/SLAM topic
+            self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
+
+            self.subscription = self.create_subscription(
+                AcquisitionMessage,
+                'acquisition_topic',
+                self.listener_callback,
+                10
+            )
+            #Timestamp logging
+            try:
+                self.timestamp_log_right = Logger("inference_right")
+                self.timestamp_log_left = Logger("inference_left")
+                self.get_logger().info(self.timestamp_log_right.check())
+                self.get_logger().info(self.timestamp_log_left.check())
+            except Exception as e:
+                print("mpa"+str(e))
+
+            self.get_logger().warn("\n-- Inference Configured!")
+        except Exception as e:
+            self.get_logger().error("Inference not configutred.\n Error: ", repr(e))
+
         return TransitionCallbackReturn.SUCCESS
     
     def on_activate(self, state: State) -> TransitionCallbackReturn:

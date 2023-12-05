@@ -13,22 +13,25 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     # Local load has way slower performance for some reason...
     # TODO: See if loading locally makes any difference in the tpu inference performance
     # self.get_logger().warn("\n-- Mpika init YOLO")
-    yolov5_local_path = os.path.join(get_package_prefix("perception"), "..", "..", "..", "yolov5")
-    # self.get_logger().warn("\n-- got YOLOv5 path")
-    yolov7_local_path = "/home/prom/YOLO_models/yolov7"
-    # self.get_logger().warn("\n-- got YOLO paths")
+    try:
+        yolov5_local_path = os.path.join(get_package_prefix("perception"), "..", "..", "..", "yolov5")
+        # self.get_logger().warn("\n-- got YOLOv5 path")
+        yolov7_local_path = "/home/prom/YOLO_models/yolov7"
+        # self.get_logger().warn("\n-- got YOLO paths")
 
-    if "v5" in modelpath:
-        yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=False)
-    
-    elif "v7" in modelpath:
-        yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
-    
-    self.get_logger().warn("\n-- loaded model successfully")
+        if "v5" in modelpath:
+            yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=False)
+        
+        elif "v7" in modelpath:
+            yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
+        
 
-    yolo_model.agnostic = True
-    yolo_model.conf = conf
-    yolo_model.iou = iou
+        yolo_model.agnostic = True
+        yolo_model.conf = conf
+        yolo_model.iou = iou
+    except Exception as e:
+        print("YOLO init failed. ", repr(e))
+        raise("YOLO init failed. ", repr(e))
     return yolo_model
 
 def inferenceYOLO(model, img, tpu=True, debug=False):
@@ -51,9 +54,12 @@ def initKeypoint(small_modelpath):
     # core = ov.Core()
     # model = core.read_model(small_modelpath)
     # small_model = core.compile_model(model=model, device_name="GPU")
-    
-    small_model = VGGLikeV3()
-    small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
+    try:
+        small_model = VGGLikeV3()
+        small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
+    except Exception as e:
+        print("Keypoints init failed. ", repr(e))
+        raise("Keypoints init failed. ", repr(e))
     return small_model
 
 def cropResizeCones(yolo_results, image, margin):
