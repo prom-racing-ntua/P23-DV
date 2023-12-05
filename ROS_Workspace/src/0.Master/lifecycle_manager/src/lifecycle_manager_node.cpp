@@ -10,7 +10,7 @@
 
 namespace lifecycle_manager_namespace
 {
-    LifecycleManagerNode::LifecycleManagerNode() : Node("lifecycle_manager")
+    LifecycleManagerNode::LifecycleManagerNode() : Node("lifecycle_manager"), status_array({0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
     {
         RCLCPP_INFO(get_logger(), "Initializing Lifecycle Manager");
         
@@ -71,12 +71,47 @@ namespace lifecycle_manager_namespace
 
         node_state_publisher_ = create_publisher<custom_msgs::msg::LifecycleNodeStatus>(
             std::string(get_name()) + std::string("/lifecycle_node_status"), 10);
+
+        telemetry_node_transition_publisher = create_publisher<custom_msgs::msg::LifecycleNodeTransitionState>("/transition_state", 10);
     }
 
     void LifecycleManagerNode::initializeResurrectionClients()
     {
         nodeResurrectionClient = create_client<custom_msgs::srv::ResurrectNode>("resurrection_manager/resurrection_service");
         nodeResurrectionOrderClient = create_client<custom_msgs::srv::ResurrectOrder>("resurrection_manager/resurrection_node_control");
+    }
+    
+
+    custom_msgs::msg::LifecycleNodeTransitionState LifecycleManagerNode::create_transition_status_msg_from_ids()const
+    {
+        custom_msgs::msg::LifecycleNodeTransitionState msg;
+        msg.transition_requested = 10; //no new
+
+        msg.acquisition_right = status_array[0];
+        msg.acquistion_left = status_array[1];
+        msg.inference = status_array[2];
+        msg.velocity_estimation = status_array[3];
+        msg.slam = status_array[4];
+        msg.path_planning = status_array[5];
+        msg.pid_pp_controller = status_array[6];
+        msg.mpc_controller = status_array[7];
+        msg.inspection_controller = status_array[8];
+        msg.saltas = status_array[9];
+
+        return msg;
+    }
+    int LifecycleManagerNode::get_node_index_from_name(std::string node_name)const
+    {
+        if      (node_name == "acquisition_left")   return 0;
+        else if (node_name == "acquisition_right")  return 1;
+        else if (node_name == "inference")          return 2;
+        else if (node_name == "velocity_estimation")return 3;
+        else if (node_name == "slam")               return 4;
+        else if (node_name == "path_planning")      return 5;
+        else if (node_name == "pure_pursuit")       return 6;
+        else if (node_name == "mpc")                return 7;
+        else if (node_name == "inspection")         return 8;
+        else if (node_name == "saltas")             return 9;
     }
 
     void LifecycleManagerNode::getNodeState(std::string nodeName)
@@ -119,11 +154,14 @@ namespace lifecycle_manager_namespace
         auto future_result = getStateServiceHandler->async_send_request(request, response_received_callback);
     }
 
-    void LifecycleManagerNode::changeNodeState(std::uint8_t transition, std::string nodeName) {
+    void LifecycleManagerNode::changeNodeState(std::uint8_t transition, std::string nodeName)
+    {
         using namespace std::chrono_literals;
 
         auto changeStateServiceHandler = lifecycleChangeStateMap.at(nodeName);
         auto request = std::make_shared<lifecycle_msgs::srv::ChangeState::Request>();
+        int idx = get_node_index_from_name(nodeName);
+        status_array[idx] = 1;
 
         request->transition.id = transition;
 
@@ -133,6 +171,7 @@ namespace lifecycle_manager_namespace
                 "Service %s is not available.",
                 changeStateServiceHandler->get_service_name());
             // nodeStateMap[nodeName] = true;
+            status_array[idx] = 3;
             failedTransitionCounter++;
             return;
         }
@@ -144,20 +183,22 @@ namespace lifecycle_manager_namespace
 
         if (future_status != std::future_status::ready) {
             RCLCPP_ERROR(get_logger(), "Server time out while changing state for node %s", nodeName.c_str());
+            status_array[idx] = 3;
             return;
         }
 
         // We have an answer, let's print our success.
         if (future_result.get()->success) {
             RCLCPP_INFO(get_logger(), "Changed Status of node %s, new goal counter: %u", nodeName.c_str(), goalCounter);
+            status_array[idx] = 2;
             goalCounter--;
-        } 
-        
-        else {
+        } else {
             RCLCPP_INFO(get_logger(), "Couldn't change status of node %s", nodeName.c_str());
+            status_array[idx] = 1;
             // nodeStateMap[nodeName] = true;
             failedTransitionCounter++;
         }
+        telemetry_node_transition_publisher->publish(create_transition_status_msg_from_ids());
         return;
     }
 

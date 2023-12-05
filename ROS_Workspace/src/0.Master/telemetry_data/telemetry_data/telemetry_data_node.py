@@ -2,7 +2,7 @@
 
 import rclpy
 from custom_msgs.msg import VelEstimation, TxControlCommand, TxSystemState, RxVehicleSensors, RxSteeringAngle, \
-    RxWheelSpeed, AutonomousStatus, MissionSelection
+    RxWheelSpeed, AutonomousStatus, MissionSelection, LifecycleNodeTransitionState
 from custom_msgs.srv import SetTotalLaps
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
@@ -171,6 +171,8 @@ class Data:
         self.actual_brake_f = 0
         self.actual_brake_r = 0
         self.errors = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.status = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.id = 0
         self.yaw_i = q_per_tire()
         self.yaw = 0
         self.vy = 0
@@ -206,6 +208,8 @@ class TelemetryNode(Node):
 
         self.sub_miss = self.create_subscription(MissionSelection, '/canbus/mission_selection', self.mission_callback, 10)
 
+        self.sub_trans_status = self.create_subscription(LifecycleNodeTransitionState, 'transition_state', self.transition_callback, 10)
+
         self.data = Data()
         self.const = constants()
 
@@ -235,7 +239,7 @@ class TelemetryNode(Node):
         GUI.brake.set_target(self.data.target_brake)
         GUI.brake.set_both(self.data.actual_brake_f, self.data.actual_brake_r)
 
-        GUI.error.update(self.data.errors, self.data.ins_mode)
+        GUI.error.update(self.data.errors, self.data.ins_mode, self.data.id, self.data.status)
 
         GUI.update_idletasks()
         fx, fy, fz, mx, my = self.create_ellipses()
@@ -250,20 +254,20 @@ class TelemetryNode(Node):
         # end = time.time()
         # print(end-start)
 
-    def velocity_callback(self, msg) -> None:
+    def velocity_callback(self, msg: VelEstimation) -> None:
         self.data.actual_speed = msg.velocity_x
         self.data.vy = msg.velocity_y
         self.data.yaw = msg.yaw_rate
         self.data.accel_x = msg.acceleration_x
         self.data.accel_y = msg.acceleration_y
 
-    def controls_callback(self, msg) -> None:
+    def controls_callback(self, msg: TxControlCommand) -> None:
         self.data.target_speed = msg.speed_target / 3.6
         self.data.target_torque = msg.motor_torque_target
         self.data.target_steer = msg.steering_angle_target
         self.data.target_brake = msg.brake_pressure_target
 
-    def system_callback(self, msg) -> None:
+    def system_callback(self, msg: TxSystemState) -> None:
         self.data.dv_status = msg.dv_status.id
         self.data.errors = [msg.camera_inference_error,
                             msg.velocity_estimation_error,
@@ -278,21 +282,34 @@ class TelemetryNode(Node):
         self.data.ins_mode = msg.ins_mode
         self.data.lap_count = msg.lap_counter
 
-    def sensor_callback(self, msg) -> None:
+    def transition_callback(self, msg: LifecycleNodeTransitionState) -> None:
+        self.data.id = msg.transition_requested
+        self.data.status = [msg.acquisition_right, 
+                            msg.acquistion_left, 
+                            msg.inference, 
+                            msg.velocity_estimation, 
+                            msg.slam, 
+                            msg.path_planning, 
+                            msg.pid_pp_controller, 
+                            msg.mpc_controller, 
+                            msg.inspection_controller, 
+                            msg.saltas]
+
+    def sensor_callback(self, msg: RxVehicleSensors) -> None:
         self.data.actual_torque = msg.motor_torque_actual
         self.data.actual_brake_f = msg.brake_pressure_front
         self.data.actual_brake_r = msg.brake_pressure_rear
 
-    def steering_callback(self, msg) -> None:
+    def steering_callback(self, msg: RxSteeringAngle) -> None:
         self.data.actual_steer = msg.steering_angle * 180 / 3.14159
 
-    def wheel_callback(self, msg) -> None:
+    def wheel_callback(self, msg: RxWheelSpeed) -> None:
         self.data.yaw_i.set(msg.front_left, msg.front_right, msg.rear_left, msg.rear_right)
 
-    def as_callback(self, msg) -> None:
+    def as_callback(self, msg: AutonomousStatus) -> None:
         self.data.as_status = msg.id
 
-    def mission_callback(self, msg) -> None:
+    def mission_callback(self, msg: MissionSelection) -> None:
         self.data.mission = msg.mission_selected
 
     def create_ellipses(self):

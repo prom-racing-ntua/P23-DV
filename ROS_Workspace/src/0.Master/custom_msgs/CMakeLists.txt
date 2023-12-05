@@ -51,6 +51,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DriverlessStatus.msg"
   "msg/Mission.msg"
   "msg/LifecycleNodeStatus.msg"
+  "msg/LifecycleNodeTransitionState.msg"
   "msg/DriverlessTransition.msg"
 
   # Path Planning Messages

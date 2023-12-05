@@ -29,6 +29,7 @@
 #include "custom_msgs/msg/driverless_transition.hpp"
 #include "custom_msgs/msg/lifecycle_node_status.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
+#include "custom_msgs/msg/lifecycle_node_transition_state.hpp"
 
 /* Services */
 #include "lifecycle_msgs/srv/change_state.hpp"
@@ -108,6 +109,12 @@ namespace lifecycle_manager_namespace
         rclcpp::Publisher<custom_msgs::msg::LifecycleNodeStatus>::SharedPtr node_state_publisher_;
         rclcpp::TimerBase::SharedPtr heartbeatTimer;
         int heartbeatTimeoutPeriod, heartbeatFrequency, heartbeatTimerDuration;
+
+        /* Publisher that sends the transition state of each node for debugging */
+        rclcpp::Publisher<custom_msgs::msg::LifecycleNodeTransitionState>::SharedPtr telemetry_node_transition_publisher;
+        std::vector<uint8_t> status_array;
+        custom_msgs::msg::LifecycleNodeTransitionState create_transition_status_msg_from_ids()const;
+        int get_node_index_from_name(std::string node_name)const;
         
         /* All Action based things for the Lifecycle Manager */
         rclcpp_action::Server<DVTransition>::SharedPtr dv_status_service;

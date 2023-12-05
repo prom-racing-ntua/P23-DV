@@ -40,37 +40,46 @@ namespace lifecycle_manager_namespace
         p23::DV_Transitions newDVStatus = static_cast<p23::DV_Transitions>(goal->transition.id);
         p23::Mission missionSent = static_cast<p23::Mission>(goal->mission.id);
 
+        auto status_msg = custom_msgs::msg::LifecycleNodeTransitionState();
+        status_array = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
         /* Reset the failedTransitionCounter and set new goalCounter depending on transition */
         failedTransitionCounter = 0;
 
         using namespace std::placeholders;
         switch(newDVStatus) {
             case(p23::DV_Transitions::ON_STARTUP):
+                status_msg.transition_requested = 0;
                 RCLCPP_INFO(get_logger(), "Received Startup signal, start a heartbeat check for each node managed");
                 startup();
                 goalCounter = 0;
                 break;
             case(p23::DV_Transitions::SHUTDOWN_NODES):
+                status_msg.transition_requested = 6;
                 RCLCPP_INFO(get_logger(), "Either Mission Finished or AS Emergency, shutting down currently running nodes");
                 goalCounter = nodeList.size();
                 std::thread{std::bind(&LifecycleManagerNode::shutdownSelectedNodes, this, _1, _2), nodeList, Transition::TRANSITION_ACTIVE_SHUTDOWN}.detach();
                 break;
             case(p23::DV_Transitions::ON_MISSION_LOCKED):
+                status_msg.transition_requested = 1;
                 RCLCPP_INFO(get_logger(), "Received mission, configure the nodes");
                 goalCounter = nodeList.size();
                 std::thread{std::bind(&LifecycleManagerNode::configureNodes, this, _1), missionSent}.detach();
                 break;
             case(p23::DV_Transitions::ON_MISSION_UNLOCKED):
+                status_msg.transition_requested = 2;
                 RCLCPP_INFO(get_logger(), "Unlocking mission, waiting for new mission to arrive, cleanup nodes");
                 goalCounter = nodeList.size();
                 std::thread{std::bind(&LifecycleManagerNode::cleanupNodes, this)}.detach();
                 break;
             case(p23::DV_Transitions::ON_AS_READY):
+                status_msg.transition_requested = 3;
                 RCLCPP_INFO(get_logger(), "Received AS Ready, shutdown the nodes that are not used and wait for AS driving");
                 goalCounter = nodeList.size() + nodesToShutdown.size() - 1;
                 std::thread{std::bind(&LifecycleManagerNode::activateSystem, this)}.detach();
                 break;
             case(p23::DV_Transitions::ON_AS_DRIVING):
+                status_msg.transition_requested = 5;
                 goalCounter = 1;
                 RCLCPP_INFO(get_logger(), "Received AS Driving, activate control node");
                 std::thread{std::bind(&LifecycleManagerNode::activateControls, this)}.detach();
@@ -79,6 +88,7 @@ namespace lifecycle_manager_namespace
                 RCLCPP_ERROR(get_logger(), "Unknown Transition Requested");
                 return;
         }
+        telemetry_node_transition_publisher->publish(status_msg);
         goalTimer->reset();
         return;
     }
@@ -111,6 +121,9 @@ namespace lifecycle_manager_namespace
         feedback->remaining_transitions = goalCounter;
         feedback->failed_transitions = failedTransitionCounter;
         ongoing_goal_handle->publish_feedback(feedback);
+
+        auto status_msg = custom_msgs::msg::LifecycleNodeTransitionState();
+        telemetry_node_transition_publisher->publish(status_msg);
 
         if (goalCounter <= 0) {
             if (incoming_transition) result->success = false;
