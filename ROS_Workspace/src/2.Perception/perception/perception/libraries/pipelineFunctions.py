@@ -11,16 +11,20 @@ from .cnn import *
 
 def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     # Local load has way slower performance for some reason...
-
     # TODO: See if loading locally makes any difference in the tpu inference performance
+    # self.get_logger().warn("\n-- Mpika init YOLO")
     yolov5_local_path = os.path.join(get_package_prefix("perception"), "..", "..", "..", "yolov5")
+    # self.get_logger().warn("\n-- got YOLOv5 path")
     yolov7_local_path = "/home/prom/YOLO_models/yolov7"
+    # self.get_logger().warn("\n-- got YOLO paths")
 
     if "v5" in modelpath:
         yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=False)
-        
+    
     elif "v7" in modelpath:
         yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
+    
+    self.get_logger().warn("\n-- loaded model successfully")
 
     yolo_model.agnostic = True
     yolo_model.conf = conf
@@ -34,7 +38,7 @@ def inferenceYOLO(model, img, tpu=True, debug=False):
         padded_img = np.zeros((640,640,3),dtype=np.uint8)
         # The original image is (1024,1280) so resizing it to (512,640) is needed. Note: Keypoints require the full image (1024,1280) for maximum resolution. Therefore, the image size cannot be changed in main()
         padded_img[:512] = cv2.resize(img, (640,512))
-        
+
         results = model(padded_img)
     else:
         results = model(img)
@@ -214,16 +218,12 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
         if best_score < thresh:  
             rt.append(rt_converter(camera, best_trans))
             reduced_classes.append(classes[j])
-
     return rt, reduced_classes
 
-# def initKeypoint(small_modelpath, large_modelpath):
-#     small_model = VGGLikeV3()
-#     small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
-#     large_model = LargeCNN()
-#     large_model.load_state_dict(torch.load(large_modelpath,map_location=torch.device('cpu')))
-#     return small_model, large_model
-
+def initKeypoint2(small_modelpath):
+    small_model = VGGLikeV3()
+    small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
+    return small_model
 
 # def cropResizeCones(yolo_results, image, size_cutoff_small, size_cutoff_large, margin):
 #     img_h = image.shape[0] # camera image height

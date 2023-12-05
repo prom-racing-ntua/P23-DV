@@ -25,6 +25,7 @@ class CanInterface(Node):
         self._received_mission = None
         self._locked_mission = None
         self._shuting_down = False
+        self.exitflag = 0
 
         # Create the comm port to the Can/USB board
         self._serial_port = serial.Serial(port=self._port, baudrate=self._baud_rate, timeout=self._timeout)
@@ -167,7 +168,7 @@ class CanInterface(Node):
         # The current limit is defined by the time delay we want to allow the messages to have (assuming an average 
         # message size of 11 bytes). So the number multiplied by 11*read_frequency is the allowed time delay.
         # Generally we don't want this to happen so if it occurs we should adjust the read speed accordingly.
-        
+        # assert self.exitflag == 1, "bad exitflag"
         if self._serial_port.in_waiting > (11*self.get_parameter("read_frequency").value*0.2):
             self._serial_port.reset_input_buffer()
             self.get_logger().warn("Input buffer overflow. Flushing buffer.")
@@ -185,7 +186,7 @@ class CanInterface(Node):
             except:
                 return
 
-            # self.get_logger().info(f"Received message: {serial_msg}")
+            self.get_logger().info(f"Received message: {serial_msg}")
             # Can id is the first 2 bytes - 4 hex characters
             msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
 
@@ -195,7 +196,7 @@ class CanInterface(Node):
             except KeyError:
                 self.get_logger().error(f"Invalid message can-id received: {hex(msg_id)}")
                 return
-
+            # self.get_logger().info(f"Message_can_id is : {Message.can_id}")
             temp_msg = Message(serial_msg)
 
             # Check if we received new mission and handle it
@@ -224,7 +225,8 @@ class CanInterface(Node):
             # Print the total processing time
             # self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
         # self.get_logger().info("Finished reading from serial")
-        # else:
+        else:
+            return
         #      self.get_logger().info("Receiving empty stream")
         return
 

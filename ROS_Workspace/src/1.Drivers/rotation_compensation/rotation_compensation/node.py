@@ -45,12 +45,14 @@ class RotationCompensation(Node):
         self.get_logger().info("{:.2f}.\ttotal = {:.4f}".format(self.get_clock().now().seconds_nanoseconds()[0], (self.init_time + self.sampling_time)))
     def vn_200_callback(self, msg) -> None:
         # if this is the first measurement set the initialization time
+        self.get_logger().warn("Mpika vn_200_call")
         if self.vn_200_average_accelerations.shape[0] == 1:
             self.init_time = self.get_clock().now().seconds_nanoseconds()[0]
         # add the new measurements to the array
         measurements = np.array([msg.accel.x, msg.accel.y, msg.accel.z])
         self.vn_200_average_accelerations = np.vstack((self.vn_200_average_accelerations, measurements))
         # check if sampling time is over
+        self.get_logger().warn("Prin to check vn_200_call")
         if self.get_clock().now().seconds_nanoseconds()[0] >= (self.init_time + self.sampling_time):
             self.calculate_average()
 
@@ -96,7 +98,6 @@ def main(args=None):
     node = RotationCompensation()
     executor = SingleThreadedExecutor()
     executor.add_node(node)
-
     try:
         executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):

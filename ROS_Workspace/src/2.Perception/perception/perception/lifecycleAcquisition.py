@@ -6,7 +6,7 @@ import time
 
 # Perception/Acquisition Related Imports
 import cv2
-import gxipy as gx
+import gxipy
 
 # ROS2 Related Imports
 import rclpy
@@ -35,7 +35,7 @@ class AcquisitionLifecycleNode(Node):
         super().__init__('acquisition')
         # Init Devices
         # Get Device info - see if cameras are connected
-        device_manager = gx.DeviceManager()
+        device_manager = gxipy.DeviceManager()
         dev_num, dev_info_list = device_manager.update_device_list()
         if dev_num == 0:
             self.get_logger().error("No Devices Found")
@@ -134,7 +134,6 @@ class AcquisitionLifecycleNode(Node):
             self.get_logger().info(f"\n-- Acquisition Shutdown!")
             return TransitionCallbackReturn.SUCCESS
         
-
         self.destroy_subscription(self.subscription)
         self.destroy_publisher(self.publisher_)
 

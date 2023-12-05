@@ -371,6 +371,7 @@ class MissionMsg(CanInterfaceMessage):
 
     # Handles the mission handshake and locking
     def handle_mission(self) -> bool:
+        self.node_handle.get_logger().error("Started decoding ROS Mission Msg")
         mission_confirmed = False
         mission_byte = int.from_bytes(self._can_msg, byteorder='big')
         # self.node_handle.get_logger().info(f"{mission_byte}")
@@ -466,16 +467,17 @@ class WheelEncodersMsg(CanInterfaceMessage):
 
 
 class SteeringAngleMsg(CanInterfaceMessage):
+    exitflag=1
     can_id = 0x05
     byte_size = 2
     msg_type = RxSteeringAngle
 
     def data(self):
         self._data
-    def to_ROS(self) -> msg_type:
+    def to_ROS(self) -> msg_type: 
         msg = self.msg_type()
         temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
-        # self.node_handle.get_logger().info(f"Getting steering at: {temp} ms")
+        # self.get_logger().info(f"Getting steering at: {temp} ms")
         try:
             msg.steering_angle = rackDisplacement2rad(temp)
         except ValueError:

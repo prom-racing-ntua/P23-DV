@@ -1,4 +1,4 @@
-pyenv local 3.9.0
+pyenv local 3.9.18
 if [ $# -eq 0 ]
   then
     scriptToRun=mpc_prom_skidpad.py

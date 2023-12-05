@@ -49,7 +49,8 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper = 15.0
+u_upper = 20.0
+u_thr = 2.0
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -58,6 +59,7 @@ eff=0.85
 h_cog=0.27
 window=10
 mi_fric=0.03
+
 ellipse_array=[]
 
 #for dynamic model
@@ -192,14 +194,14 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-        3e3*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 3e3*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+        5e2*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 5e2*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             # + 0e1*(e_c)**2 # costs on deviating on the
             #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
             #                     #path in x-direction
             + 1e-3*(z[5]-current_target[2])**2 #dphi gap
-            + 1e2*(z[6]-current_target[3])**2
+            + 2e2*(z[6]-current_target[3])**2
             + 1e1*(z[0]/1000)**2 # penalty on input F,dF
             + 1e1*(z[9]/1000)**2
             + 5e2*z[1]**2 #penalty on delta,ddelta
@@ -564,7 +566,7 @@ def cubic_spline_inference(cs,parameter,x):
         ##velocity profile started
         curvature = np.abs(dx * ddy - dy * ddx) / (dx**2 + dy**2)**(3/2)
         u_first=np.sqrt((b*g/curvature))
-        if(u_first>u_upper):u_first=u_upper
+        if(u_first>u_upper-u_thr):u_first=u_upper-u_thr
         u_max.append(u_first)
         if(i==0): 
             # u_forward=x_temp[3] 
