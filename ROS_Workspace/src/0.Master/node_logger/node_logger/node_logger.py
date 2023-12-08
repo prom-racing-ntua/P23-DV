@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 import os
+from dataclasses import dataclass
 
 def create_new_run_log() -> str:
-    current_runs = len(os.listdir("timestamp_logs"))
+    try:
+        current_runs = len(os.listdir("timestamp_logs"))
+    except Exception as e:
+        return str(repr(e))
+    
     if(current_runs!=0):
         if(len(os.listdir("timestamp_logs/run_{:d}".format(current_runs-1)))==0):
             return "New dir exists."
+        
     try:
         os.mkdir("timestamp_logs/run_{:d}".format(current_runs))
     except FileExistsError:
@@ -15,7 +21,13 @@ def create_new_run_log() -> str:
     else:
         return "New run dir created successfully."
     
+@dataclass
 class Logger:
+    ok: bool
+    name: str
+    run_idx: int
+    file: any
+    error: Exception
     def __init__(self, name):
         self.ok = True
         self.name = name
