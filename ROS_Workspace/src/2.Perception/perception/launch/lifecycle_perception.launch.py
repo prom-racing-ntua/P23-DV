@@ -18,7 +18,13 @@ def generate_launch_description():
         Node(
             package='perception',
             executable='l_acq',
-            name='acquisition',
+            name='acquisition_left',
+            parameters=[config],
+        ),
+        Node(
+            package='perception',
+            executable='l_acq',
+            name='acquisition_right',
             parameters=[config],
         )
     ])

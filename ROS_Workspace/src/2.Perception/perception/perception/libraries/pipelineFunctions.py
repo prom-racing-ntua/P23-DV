@@ -16,7 +16,7 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
     try:
         yolov5_local_path = os.path.join(get_package_prefix("perception"), "..", "..", "..", "yolov5")
         # self.get_logger().warn("\n-- got YOLOv5 path")
-        yolov7_local_path = "/home/prom/YOLO_models/yolov7"
+        # yolov7_local_path = "/home/prom/YOLO_models/yolov7"
         # self.get_logger().warn("\n-- got YOLO paths")
 
         if "v5" in modelpath:
@@ -25,7 +25,6 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
         elif "v7" in modelpath:
             yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
         
-
         yolo_model.agnostic = True
         yolo_model.conf = conf
         yolo_model.iou = iou
@@ -109,10 +108,12 @@ def runKeypoints(small_cones_imgs, small_keypoints_model):
         #     pred_coords = np.array([np.asarray(np.unravel_index(pred_hm[j].argmax(), (64,48))) for j in range(7)])
         #     small_predictions.append(pred_coords)
         # Inference
+        baseTime_keypoints= time.time()
         small_predictions = small_keypoints_model(small_cones_imgs_tensor/255.0).cpu().detach().numpy()
         small_predictions = small_predictions.reshape(small_predictions.shape[0], 7, 2).tolist()
+        inferenceTime = (time.time() - baseTime_keypoints)*1000
     
-    return small_predictions 
+    return small_predictions, inferenceTime
 
 
 def yaw_matrix(yaw):

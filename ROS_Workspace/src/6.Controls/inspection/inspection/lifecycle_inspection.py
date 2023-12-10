@@ -23,7 +23,7 @@ class InspectionMission(Node):
         super().__init__('inspection')
         self.node = rclpy.create_node(name or type(self).__name__)
         #changes
-        self.mode = self.declare_parameter('mode','bench').value
+        self.mode = self.declare_parameter('mode','inspection').value
         #changes
         self.get_logger().warn("Inspection node created at mode {} ".format(self.mode))
 
@@ -38,24 +38,28 @@ class InspectionMission(Node):
             self.mission_finished = False
             self._steering_angle = 0.0
             self._actual_torque = 0.0
-            self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+            # self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+            self.get_logger().warn("Inspection Configured on modeee {}".format(self.mode))
         else:
             self.load_from_config()
             self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
             self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
             self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
-            self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
-            self._command_timer = self.create_timer(1/self.publish_frequency, self.timer_callback)  
-        self._command_timer.cancel()
-
-        self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))
+            # self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
+            self._command_timer = self.create_timer(1/self.publish_frequency, self.timer_callback)
+            self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))  
+        # self.get_logger().warn("Inspection Configured with parameter {}".format(self.steering_step))
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state:State) -> TransitionCallbackReturn:
+        if(self.mode=="bench"): self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
+        
+        if(self.mode=="inspection"):
+            self._start_time = self.get_time() 
+            self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
+        
         self._command_timer.cancel()
         self._command_timer.reset()
-
-        self._start_time = self.get_time()
 
         self.get_logger().warn(f"\n-- Inspection Activated!")
         return super().on_activate(state)
@@ -193,7 +197,7 @@ class InspectionMission(Node):
         msg.motor_torque_target = TORQUE_COMMAND
         msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)
    
-        self._command_publisher.publish(msg)       
+        self._command_publisher.publish(msg)
         
         if time > MISSION_DURATION:
             self.mission_finished = True

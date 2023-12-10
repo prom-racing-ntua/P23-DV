@@ -2,7 +2,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn
-from dataclasses import dataclass
+from dataclasses import *
 
 @dataclass
 class Entry:
@@ -19,13 +19,13 @@ class Entry:
 @dataclass
 class Log:
     lines: list[str]
-    start_entries: list[float] = []
-    pub_entries: list[float] = []
+    start_entries: list[float] = field(default_factory = list)
+    pub_entries: list[float] = field(default_factory = list)
     time_response: list[float] = None
     t0: float = None
-    times: list[float] = []
-    run: int
-    name: str
+    times: list[float] = field(default_factory = list)
+    run: int = 0
+    name: str = ''
 
     def __init__(self, run: int, name: str, base: str):
         # run: 0, 1, ...
@@ -33,19 +33,26 @@ class Log:
         # base: <<base>>/timestamp_logs/run_...
         self.run = run
         self.name = name
+        self.times = []
+        self.pub_entries = []
+        self.start_entries = []
+        self.time_response = None
+        self.times = []
+        self.t0 = None
 
         try:
-            self.file = open("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, run, name), "r")
+            self.file = open("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, int(run), name), "r")
         except Exception as e:
-            print("Couldn't open {:s} log: {:s}".format(name, e))
+            print("Couldn't open {:s} log: {:s}".format(name, str(repr(e))))
         else:
             print("Log {:s} open successfully.".format(name))
-
+        self.lines = self.file.readlines()
         self.fill_entries()
 
     def fill_entries(self):
         for line in self.lines:
             line = line.split()
+            for i in range(len(line)): line[i] = float(line[i])
             if self.t0 is None:
                 self.t0 = line[0]
             self.times.append(line[0] - self.t0)
@@ -105,9 +112,9 @@ class Chain:
     n: int
     delays_n: int
     mx: int = 0
-    comm_delays: list[float] = []
+    comm_delays: list[float] = field(default_factory=list)
     time_response: list[float] = None
-    times: list[float] = []
+    times: list[float] = field(default_factory=list)
     t0: float = None
     def __init__(self, logs: list[Log], log_final:bool = 0):
         self.logs = logs
@@ -117,10 +124,10 @@ class Chain:
         lengths = np.empty([self.n])
 
         for log in logs:
-            lengths.append(max(len(log.start_entries), len(log.pub_entries)))
+            lengths = np.append(lengths, max(len(log.start_entries), len(log.pub_entries)))
             self.mx = max(self.mx, lengths[-1])
 
-        self.delays = np.zeros([self.mx, self.delays_n])
+        # self.delays = np.zeros([self.mx, self.delays_n])
 
     def fill_delays(self):
         for i in range(1, self.n):
@@ -172,13 +179,13 @@ run: int = 0
 run = input('Enter desired run index: ')
 callbacks = [
     'saltas', 
-    'acquisition_left', 'acquisition_right' 
+    'acquisition_left', 'acquisition_right', 
     'inference_left', 'inference_right',
     'slam_perception', 'slam_odometry', 'slam_optim',
     'velocity',
     'path_planning',
-    'pid_pp_waypoints', 'pid_pp_pose',
-    'canbus_sensor', 'canbus_wheel', 'canbus_steering', 'canbus_controls', 'canbus_velocity'
+    'pid_pp_waypoints', 'pid_pp_pose'
+    # 'canbus_sensor', 'canbus_wheel', 'canbus_steering', 'canbus_controls', 'canbus_velocity'
 ]
 
 logs:list[Log] = []
@@ -190,8 +197,8 @@ for item in callbacks:
 chains: list[list[Log]] = [
     [logs_dict['saltas'], logs_dict['acquisition_left'], logs_dict['inference_left'], logs_dict['slam_perception']],
     [logs_dict['saltas'], logs_dict['acquisition_right'], logs_dict['inference_right'], logs_dict['slam_perception']],
-    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbub_velocity']],
-    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
+    # [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbub_velocity']],
+    # [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
     [logs_dict['slam_optim'], logs_dict['path_planning'], logs_dict['pid_pp_waypoints']]
 ]
 
@@ -241,5 +248,4 @@ corr_name = input("""Enter the desired item
                   21: salm-path-controls
                   >>> """)
 
-match operation:
-    case
+logs_dict['inference_left'].analyze_time_response('mean')

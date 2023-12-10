@@ -1,0 +1,14 @@
+inspection:
+  ros__parameters:
+    mode: 'inspection' #'inspection' or 'bench'
+    steering_step: 3.0
+    max_torque: 10.0
+    min_torque: 0.0
+    torque_step: 1.0
+    max_steering: 24.0
+    min_steering: -24.0
+    steering_step: 1.0
+    max_press: 20.0
+    min_press: 0.0
+    press_step: 1.0
+    publish_frequency: 40.0

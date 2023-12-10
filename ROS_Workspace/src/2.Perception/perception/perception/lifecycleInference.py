@@ -65,7 +65,7 @@ class InferenceLifecycleNode(Node):
 
             self.get_logger().warn("\n-- Inference Configured!")
         except Exception as e:
-            self.get_logger().error("Inference not configutred.\n Error: ", repr(e))
+            self.get_logger().error("Inference not configured.\n Error: ", repr(e))
 
         return TransitionCallbackReturn.SUCCESS
     
@@ -119,16 +119,19 @@ class InferenceLifecycleNode(Node):
             self.get_logger().info(f"Failed to get image from acquisition node {cameraOrientation}, on Index {globalIndex}")
         else:
             # Perform Perception Pipeline
+            start_time2 = self.get_clock().now().nanoseconds / 10**6
             inferenceTiming = time.time()
             results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True) #normally True
+            yolo_t = self.get_clock().now().nanoseconds / 10**6 - start_time2
+            self.get_logger().info("YOLO time = {:.3f}\n".format(yolo_t))
             # self.get_logger().info(f"{cameraOrientation} results: {len(results)}")
-            # self.get_logger().info(f"Padding Time and Inference Time {inferenceTime[0], inferenceTime[1]}")
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
             else:
                 smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
-                keypointsPredictions = runKeypoints(smallConesList, self.smallModel)
+                keypointsPredictions, inf_t = runKeypoints(smallConesList, self.smallModel)
                 finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
+                self.get_logger().info("keyp time = {:.3f}\n".format(inf_t))
                 try:
                     # This sometimes throws an error,don't know why
                     rangeList, thetaList = zip(*finalCoords)
@@ -167,8 +170,8 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
     # EdgeTPU YOLO
-    # yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
-    yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8.tflite"
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
+    # yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"
     # Medium Yolo v5

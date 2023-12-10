@@ -41,25 +41,25 @@ namespace lifecycle_manager_namespace{
             case(p23::ACCELERATION):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                nodesToShutdown = {"inspection", "path_planning", "mpc"};
+                nodesToShutdown = {"inspection","path_planning", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 status_array = {1, 1, 1, 1, 1, 0, 0, 1, 0, 1};
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                nodesToShutdown = {"inspection", "path_planning", "pure_pursuit"};
+                nodesToShutdown = {"inspection","path_planning", "pure_pursuit"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::AUTOX):
                 status_array = {1, 1, 1, 1, 1, 1, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/autox_config.yaml");
-                nodesToShutdown = {"inspection", "mpc"};
+                nodesToShutdown = {"inspection","mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::TRACKDRIVE):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
-                nodesToShutdown = {"inspection", "pure_pursuit", "path_planning"};
+                nodesToShutdown = {"inspection","pure_pursuit", "path_planning"};
                 controlsNode = {"mpc"};
                 break;
             case(p23::EBS_TEST):
@@ -74,6 +74,7 @@ namespace lifecycle_manager_namespace{
                 nodesToShutdown = {"saltas", "acquisition_left", "inference", "acquisition_right",
                     "velocity_estimation", "slam", "path_planning", "mpc", "pure_pursuit"};
                 controlsNode = {"inspection"};
+                // RCLCPP_INFO(get_logger(), "Inspection node selected as controls node");
                 break;
             case(p23::MANUAL):
                 RCLCPP_INFO(get_logger(), "Mission is in manual mode, PC will shutdown");

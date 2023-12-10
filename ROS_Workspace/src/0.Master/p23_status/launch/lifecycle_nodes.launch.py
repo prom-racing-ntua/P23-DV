@@ -101,6 +101,15 @@ def generate_launch_description():
     ldList.append(purePursuitNode)
     
     # Can be uncommented when running the inspection mission
+        
+    keyboardNode = Node(
+            package='inspection',
+            executable='keyboard_publisher', #same as name given on setup.py
+            name='keyboard_publisher', #needed for config file
+            emulate_tty=True
+    )
+    ldList.append(keyboardNode)
+
     inspectionNode = Node(
        package="inspection",
        executable="insp",

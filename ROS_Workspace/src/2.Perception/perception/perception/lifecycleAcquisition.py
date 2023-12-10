@@ -28,8 +28,6 @@ from .libraries.cameraClass import Camera
 def getEpoch():
     return float(time.time())
 
-
-
 class AcquisitionLifecycleNode(Node):
     def __init__(self):
         super().__init__('acquisition')
@@ -58,49 +56,52 @@ class AcquisitionLifecycleNode(Node):
         self.get_logger().warn(f"\n-- Aquisition Node Created")
 
     def on_configure(self, state: State) -> TransitionCallbackReturn:
-        self.publishing = False
+        try:
+            self.publishing = False
 
-        serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
-        orientation = self.get_parameter('orientation').get_parameter_value().string_value
-        exposureTime = self.get_parameter('exposureTime').get_parameter_value().integer_value
-        autoExposure = self.get_parameter('autoExposure').get_parameter_value().bool_value
-        expectedGrayValue = self.get_parameter('expectedGrayValue').get_parameter_value().integer_value
-        ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
-        ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
+            serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
+            orientation = self.get_parameter('orientation').get_parameter_value().string_value
+            exposureTime = self.get_parameter('exposureTime').get_parameter_value().integer_value
+            autoExposure = self.get_parameter('autoExposure').get_parameter_value().bool_value
+            expectedGrayValue = self.get_parameter('expectedGrayValue').get_parameter_value().integer_value
+            ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
+            ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
 
-        self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {expectedGrayValue}, {autoExposure}")
+            self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {expectedGrayValue}, {autoExposure}")
 
-        # Initialize camera class
-        self.camera = Camera(resolution=(ROIx, ROIy), serialNumber=serialNumber,
-                                orientation=orientation, exposureTime=exposureTime,
-                                autoExposure=autoExposure, expectedGrayValue=expectedGrayValue)
+            # Initialize camera class
+            self.camera = Camera(resolution=(ROIx, ROIy), serialNumber=serialNumber,
+                                    orientation=orientation, exposureTime=exposureTime,
+                                    autoExposure=autoExposure, expectedGrayValue=expectedGrayValue)
 
-        # Open Camera and set settings
-        self.camera.OnClickOpen()
-        self.camera.SetSettings()
+            # Open Camera and set settings
+            self.camera.OnClickOpen()
+            self.camera.SetSettings()
 
-        # Setup saltas clock node
-        self.subscription = self.create_subscription(
-            NodeSync,
-            'saltas_clock',
-            self.trigger_callback,
-            10
-        )
+            # Setup saltas clock node
+            self.subscription = self.create_subscription(
+                NodeSync,
+                'saltas_clock',
+                self.trigger_callback,
+                10
+            )
 
-        # Setup Publisher
-        self.bridge = CvBridge()  #This is used to pass images as ros msgs
-        self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
+            # Setup Publisher
+            self.bridge = CvBridge()  #This is used to pass images as ros msgs
+            self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
 
-        # Timestamp logging
-        # run_idx_file = open("timestamp_logs/run_idx.txt", "r")
-        # run_idx = str(int(run_idx_file.read()))
-        # run_idx_file.close()
-        # self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/"+orientation+"_acquisition_log.txt")
+            # Timestamp logging
+            # run_idx_file = open("timestamp_logs/run_idx.txt", "r")
+            # run_idx = str(int(run_idx_file.read()))
+            # run_idx_file.close()
+            # self.timestamp_log = open("timestamp_logs/run_" + run_idx + "/"+orientation+"_acquisition_log.txt")
 
-        self.timestamp_log = Logger("acquisition_{:s}".format(orientation))
-        self.get_logger().info(self.timestamp_log.check())
+            self.timestamp_log = Logger("acquisition_{:s}".format(orientation))
+            self.get_logger().info(self.timestamp_log.check())
 
-        self.get_logger().warn(f"\n-- Acquisition Configured!")
+            self.get_logger().warn(f"\n-- Acquisition Configured!")
+        except Exception as e:
+            self.get_logger().error(">>> ", repr(e))
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
@@ -168,8 +169,6 @@ class AcquisitionLifecycleNode(Node):
             #Timestamp logging
             self.timestamp_log(start_time, 0, global_index)
             self.timestamp_log((pub_time_1 + pub_time_2) / 2, 1, global_index)
-
-
         else:
             pass
 

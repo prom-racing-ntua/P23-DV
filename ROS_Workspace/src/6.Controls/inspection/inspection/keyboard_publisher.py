@@ -10,6 +10,7 @@ import std_msgs.msg
 class KeystrokeListen:
     def __init__(self, name=None):
         self.node = rclpy.create_node(name or type(self).__name__)
+        self.bool = 1 #just do sth in if/else
         self.pub_code = self.node.create_publisher(std_msgs.msg.UInt32, 'key_pressed',qos_profile=10)
         if self.exit_on_esc:
             self.logger.info('To end this node, press the escape key')
@@ -49,7 +50,8 @@ class KeystrokeListen:
         try:
             char = getattr(key, 'char', None)
             if isinstance(char, str):
-                self.logger.info('pressed ' + char)
+                self.bool=1
+                # self.logger.info('pressed ' + char)
             else:
                 try:
                     # known keys like spacebar, ctrl
@@ -59,7 +61,7 @@ class KeystrokeListen:
                     # unknown keys like headphones skip song button
                     name = 'UNKNOWN'
                     vk = key.vk
-                self.logger.info('pressed {} ({})'.format(name, vk))
+                # self.logger.info('pressed {} ({})'.format(name, vk))
                 self.pub_code.publish(self.pub_code.msg_type(data=vk))
         except Exception as e:
             self.logger.error(str(e))
