@@ -18,15 +18,6 @@ class Entry:
 
 @dataclass
 class Log:
-    lines: list[str]
-    start_entries: list[float] = field(default_factory = list)
-    pub_entries: list[float] = field(default_factory = list)
-    time_response: list[float] = None
-    t0: float = None
-    times: list[float] = field(default_factory = list)
-    run: int = 0
-    name: str = ''
-
     def __init__(self, run: int, name: str, base: str):
         # run: 0, 1, ...
         # name: <<name>>_log.txt
@@ -44,6 +35,8 @@ class Log:
             self.file = open("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, int(run), name), "r")
         except Exception as e:
             print("Couldn't open {:s} log: {:s}".format(name, str(repr(e))))
+            print("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, int(run), name) )
+            return
         else:
             print("Log {:s} open successfully.".format(name))
         self.lines = self.file.readlines()
@@ -55,8 +48,9 @@ class Log:
             for i in range(len(line)): line[i] = float(line[i])
             if self.t0 is None:
                 self.t0 = line[0]
-            self.times.append(line[0] - self.t0)
+            
             if line[1] == 0:
+                self.times.append(line[0] - self.t0)
                 self.start_entries.append(Entry(line[0], line[1], line[2], line[3:]))
             elif line[1] == 1:
                 self.pub_entries.append(Entry(line[0], line[1], line[2], line[3:]))
@@ -82,18 +76,20 @@ class Log:
             return Entry(-1, -1, -1, [])
         
     def analyze_time_response(self, analysis_type: str):
+        print('lalo')
         if len(self.start_entries)==0 or len(self.pub_entries)==0: return
         if self.time_response is None:
-            for couple in [self.start_entries, self.pub_entries]:
+            self.time_response = []
+            for couple in np.array([self.start_entries, self.pub_entries]).T:
                 if couple[0].index == couple[1].index:
                     self.time_response.append(couple[1].timestamp - couple[0].timestamp)
-        
         if self.time_response is not None:
             if(analysis_type == "plot"):
                 plt.plot(self.times, self.time_response)
                 plt.grid()
                 plt.show()
             elif(analysis_type == 'histogram'):
+                print('hola')
                 seaborn.histplot(self.time_response)
                 plt.grid()
                 plt.show()
@@ -107,21 +103,13 @@ class Log:
 
 @dataclass
 class Chain:
-    logs: list[Log]
-    log_final: bool
-    n: int
-    delays_n: int
-    mx: int = 0
-    comm_delays: list[float] = field(default_factory=list)
-    time_response: list[float] = None
-    times: list[float] = field(default_factory=list)
-    t0: float = None
     def __init__(self, logs: list[Log], log_final:bool = 0):
         self.logs = logs
         self.log_final = log_final
         self.n = len(logs)
         self.delays_n = 2 * self.n - 3 + log_final
         lengths = np.empty([self.n])
+        self.mx = 0
 
         for log in logs:
             lengths = np.append(lengths, max(len(log.start_entries), len(log.pub_entries)))
@@ -149,6 +137,7 @@ class Chain:
     def analyze_time_response(self, analysis_type: str):
         if len(self.start_entries)==0 or len(self.pub_entries)==0: return
         if self.time_response is None:
+            self.time_response = []
             for couple in [self.log[0].start_entries, self.log[-1].pub_entries]:
                 if couple[0].index == couple[1].index:
                     self.time_response.append(couple[1].timestamp - couple[0].timestamp)
@@ -174,7 +163,7 @@ class Chain:
             return self.comm_delays
         
     
-base = '../ROS_Workspace'
+base = '/home/prom/P23-DV/ROS_Workspace'
 run: int = 0
 run = input('Enter desired run index: ')
 callbacks = [
@@ -184,8 +173,8 @@ callbacks = [
     'slam_perception', 'slam_odometry', 'slam_optim',
     'velocity',
     'path_planning',
-    'pid_pp_waypoints', 'pid_pp_pose'
-    # 'canbus_sensor', 'canbus_wheel', 'canbus_steering', 'canbus_controls', 'canbus_velocity'
+    'pid_pp_waypoints', 'pid_pp_pose',
+    'canbus_sensor', 'canbus_wheel', 'canbus_steering', 'canbus_controls', 'canbus_velocity'
 ]
 
 logs:list[Log] = []
@@ -197,8 +186,8 @@ for item in callbacks:
 chains: list[list[Log]] = [
     [logs_dict['saltas'], logs_dict['acquisition_left'], logs_dict['inference_left'], logs_dict['slam_perception']],
     [logs_dict['saltas'], logs_dict['acquisition_right'], logs_dict['inference_right'], logs_dict['slam_perception']],
-    # [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbub_velocity']],
-    # [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
+    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbus_velocity']],
+    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
     [logs_dict['slam_optim'], logs_dict['path_planning'], logs_dict['pid_pp_waypoints']]
 ]
 
@@ -211,15 +200,12 @@ operation: int = None
 corr_name: int = None
 
 operation = input("""Enter the desired operation:
-                  0: histogram of callback
-                  1: plot of time response of callback
-                  2: mean of time response of callback
-                  4: histogram of chain
-                  5: plot of time response of chain
-                  6: mean of time response of chain
+                  0: histogram of item
+                  1: plot of time response of item
+                  2: mean of time response of item
                   7: histogram of communication delays of callback
-                  7: histogram of communication delays of chain
-                  7: histogram of complete communication delays
+                  8: histogram of communication delays of chain
+                  9: histogram of complete communication delays
                   >>> """)
 
 corr_name = input("""Enter the desired item
@@ -248,4 +234,9 @@ corr_name = input("""Enter the desired item
                   21: salm-path-controls
                   >>> """)
 
-logs_dict['inference_left'].analyze_time_response('mean')
+if corr_name<=16:
+    obj = logs[corr_name]
+    if operation==0:obj.analyze_time_response("histogram")
+    elif operation==1:obj.analyze_time_response("plot")
+    elif operation==3:print("Mean time is: {:.3f}".format(obj.analyze_time_response("mean")))
+

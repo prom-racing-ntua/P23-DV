@@ -410,6 +410,7 @@ class MissionMsg(CanInterfaceMessage):
                 self.node_handle._received_mission = mission
             
         # Send back received message for acknowledgment
+        self.node_handle.get_logger().warn("Sent aknowledgement.")
         out_msg = bytearray(2)
         out_msg[0] = 0x04
         out_msg[1] = mission_byte
@@ -428,7 +429,7 @@ class SensorVariablesMsg(CanInterfaceMessage):
     msg_type = RxVehicleSensors
 
     def data(self):
-        return [self._data]
+        return self._data
 
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
@@ -452,7 +453,7 @@ class WheelEncodersMsg(CanInterfaceMessage):
     msg_type = RxWheelSpeed
 
     def data(self):
-        return [self._data]
+        return self._data
     def to_ROS(self) -> msg_type:
         msg = self.msg_type()
 

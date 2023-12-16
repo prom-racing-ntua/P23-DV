@@ -12,6 +12,6 @@ canbus:
       outgoing_messages: ['system_state', 'vehicle_variables', 'control_command']
       
       # For testing on the wood ;)
-      disable_send: true
+      disable_send: false
       # enabled_sensors: ['test_hall']
       # outgoing_messages: ['state_pub']

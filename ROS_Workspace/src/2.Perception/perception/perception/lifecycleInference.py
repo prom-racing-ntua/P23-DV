@@ -123,7 +123,7 @@ class InferenceLifecycleNode(Node):
             inferenceTiming = time.time()
             results, inferenceTime = inferenceYOLO(model=self.yoloModel, img=image, tpu=True) #normally True
             yolo_t = self.get_clock().now().nanoseconds / 10**6 - start_time2
-            self.get_logger().info("YOLO time = {:.3f}\n".format(yolo_t))
+            # self.get_logger().info("YOLO time = {:.3f}\n".format(yolo_t))
             # self.get_logger().info(f"{cameraOrientation} results: {len(results)}")
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
@@ -131,7 +131,7 @@ class InferenceLifecycleNode(Node):
                 smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
                 keypointsPredictions, inf_t = runKeypoints(smallConesList, self.smallModel)
                 finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
-                self.get_logger().info("keyp time = {:.3f}\n".format(inf_t))
+                # self.get_logger().info("keyp time = {:.3f}\n".format(inf_t))
                 try:
                     # This sometimes throws an error,don't know why
                     rangeList, thetaList = zip(*finalCoords)

@@ -264,7 +264,7 @@ class TelemetryNode(Node):
     def controls_callback(self, msg: TxControlCommand) -> None:
         self.data.target_speed = msg.speed_target / 3.6
         self.data.target_torque = msg.motor_torque_target
-        self.data.target_steer = msg.steering_angle_target
+        self.data.target_steer = msg.steering_angle_target*180/np.pi
         self.data.target_brake = msg.brake_pressure_target
 
     def system_callback(self, msg: TxSystemState) -> None:

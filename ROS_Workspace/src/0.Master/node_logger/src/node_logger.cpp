@@ -20,11 +20,6 @@ void Logger::init(std::string name)
         return;
     }
     
-    // this->run_idx = std::count_if(
-    //         begin(dirIter),
-    //         end(dirIter),
-    //         [](auto& entry) { return is_regular_file(entry.path()); }
-    // );
     this->run_idx = -1;
 
     for(auto& entry: dirIter) ++run_idx;
@@ -54,5 +49,16 @@ std::string Logger::check()const
 void Logger::log(double timestamp, int type, int index)
 {
     if(file == nullptr)return;
-    fprintf(file, "%f\t%d\t%d\n", timestamp, type, index);
+    
+    try
+    {
+        fprintf(file, "%f\t%d\t%d\n", timestamp, type, index);
+    }
+    catch(const std::exception& e)
+    {
+        std::cout << "Error during writing:" << e.what() << '\n';
+        std::cout << "Aborting writing. Plz fix!"<<std::endl;
+        fprintf(file, "Error during writing: %s\n Aborting Writing. Plz Fiz!!!\n");
+        file = nullptr;
+    }
 }

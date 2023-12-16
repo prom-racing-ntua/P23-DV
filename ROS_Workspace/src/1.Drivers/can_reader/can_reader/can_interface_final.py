@@ -218,10 +218,9 @@ class CanInterface(Node):
             pub_time_2 = self.get_clock().now().nanoseconds/10**6
 
             logger = self._in_msgs_logger[msg_id]
-            # if logger is not None:
-            #     # self.get_logger().info(temp_msg.data())
-            #     logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
-            #     logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
+            if logger is not None:
+                logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
+                logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
 
             # Print the total processing time
             # self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")

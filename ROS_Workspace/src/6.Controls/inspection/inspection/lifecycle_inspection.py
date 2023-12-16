@@ -22,10 +22,24 @@ class InspectionMission(Node):
     def __init__(self,name=None) -> None:
         super().__init__('inspection')
         self.node = rclpy.create_node(name or type(self).__name__)
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+            ('mode', 'inspection'),
+            ('max_torque', 10.0),
+            ('min_torque', 0.0),
+            ('torque_step', 1.0),
+            ('max_steering', 24.0),
+            ('min_steering', -24.0),
+            ('steering_step', 1.0),
+            ('max_press',20.0),
+            ('min_press',0.0),
+            ('press_step',1.0),
+            ('publish_frequency',40.0)
+            ]
+        ) 
         #changes
-        self.mode = self.declare_parameter('mode','inspection').value
-        #changes
-        self.get_logger().warn("Inspection node created at mode {} ".format(self.mode))
+        self.get_logger().warn("Inspection node created")
 
     def on_configure(self, state:State) -> TransitionCallbackReturn:
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
@@ -33,18 +47,19 @@ class InspectionMission(Node):
 
         self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
-
+        self.mode = self.get_parameter('mode').get_parameter_value().string_value
+        self.get_logger().info(f"{self.mode}")
         if(self.mode=="inspection"):
             self.mission_finished = False
             self._steering_angle = 0.0
             self._actual_torque = 0.0
             # self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
-            self.get_logger().warn("Inspection Configured on modeee {}".format(self.mode))
+            self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))
         else:
             self.load_from_config()
-            self._steering_command = self.declare_parameter('steering', 0.0).value  #[mm]
-            self._brake_command = self.declare_parameter('brake', 0.0).value        #[bar]
-            self._torque_command = self.declare_parameter('torque', 0.0).value      #[Nm]
+            self._steering_command = 0.0  #[mm]
+            self._brake_command = 0.0  #[bar]
+            self._torque_command = 0.0  #[Nm]
             # self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
             self._command_timer = self.create_timer(1/self.publish_frequency, self.timer_callback)
             self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))  
@@ -52,8 +67,10 @@ class InspectionMission(Node):
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state:State) -> TransitionCallbackReturn:
-        if(self.mode=="bench"): self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
-        
+        if(self.mode=="bench"): 
+            self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
+            self.get_logger().warn("Created subscr")  
+     
         if(self.mode=="inspection"):
             self._start_time = self.get_time() 
             self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
@@ -71,9 +88,9 @@ class InspectionMission(Node):
         return TransitionCallbackReturn.SUCCESS
 
     def on_cleanup(self, state:State) -> TransitionCallbackReturn:
-        self._command_timer.cancel()
-        self.destroy_timer(self._command_timer)
-
+        if(self.mode=="bench"): #albanian solution 
+            self._command_timer.cancel()
+            self.destroy_timer(self._command_timer)
         self.destroy_publisher(self._command_publisher)
         self.destroy_publisher(self._state_publisher)
 
@@ -105,16 +122,18 @@ class InspectionMission(Node):
     
     #for mode bench
     def load_from_config(self) -> None:
-        self.max_torque = self.declare_parameter('max_torque', 10.0).value
-        self.min_torque = self.declare_parameter('min_torque', 0.0).value
-        self.torque_step = self.declare_parameter('torque_step', 1.0).value
-        self.max_steering = self.declare_parameter('max_steering', 24.0).value
-        self.min_steering = self.declare_parameter('min_steering', -24.0).value
-        self.steering_step = self.declare_parameter('steering_step', 1.0).value
-        self.max_press = self.declare_parameter('max_press', 20.0).value
-        self.min_press = self.declare_parameter('min_press', 0.0).value
-        self.press_step = self.declare_parameter('press_step', 1.0).value
-        self.publish_frequency = self.declare_parameter('publish_frequency',40.0).value  
+        # serialNumber = self.get_parameter('serialNumber').get_parameter_value().string_value
+        # orientation = self.get_parameter('orientation').get_parameter_value().string_value
+        self.max_torque = self.get_parameter('max_torque').get_parameter_value().double_value
+        self.min_torque = self.get_parameter('min_torque').get_parameter_value().double_value
+        self.torque_step = self.get_parameter('torque_step').get_parameter_value().double_value
+        self.max_steering = self.get_parameter('max_steering').get_parameter_value().double_value
+        self.min_steering = self.get_parameter('min_steering').get_parameter_value().double_value
+        self.steering_step = self.get_parameter('steering_step').get_parameter_value().double_value
+        self.max_press = self.get_parameter('max_press').get_parameter_value().double_value
+        self.min_press = self.get_parameter('min_press').get_parameter_value().double_value
+        self.press_step = self.get_parameter('press_step').get_parameter_value().double_value
+        self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
         
     def timer_callback(self):
         msg = TxControlCommand()
@@ -123,9 +142,9 @@ class InspectionMission(Node):
         msg.motor_torque_target = self._torque_command
         msg.speed_actual = 0
         msg.speed_target = 0
-        self.get_logger().info(f'Brake pressure is {msg.brake_pressure_target} bar')
-        self.get_logger().info(f'Steering Angle is {msg.steering_angle_target} rad')
-        self.get_logger().info(f'Motor Torque {msg.motor_torque_target} Nm')
+        # self.get_logger().info(f'Brake pressure is {msg.brake_pressure_target} bar')
+        # self.get_logger().info(f'Steering Angle is {msg.steering_angle_target} rad')
+        # self.get_logger().info(f'Motor Torque {msg.motor_torque_target} Nm')
         self._command_publisher.publish(msg)
     
     def on_code(self, msg):

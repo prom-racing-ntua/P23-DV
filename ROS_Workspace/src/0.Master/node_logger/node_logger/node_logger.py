@@ -62,9 +62,15 @@ class Logger:
     def __call__(self, timestamp, type, index, data = None):
         if not self.ok:
             return
-
-        string = ""
-        if data is not None:
-            for i in data:
-                string = "{:s}\t{:.3f}".format(string, i)
-        self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, type, index, string))
+        try:
+            string = ""
+            if data is not None:
+                for i in data:
+                    string = "{:s}\t{:.3f}".format(string, i)
+            self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, type, index, string))
+        except Exception as e:
+            self.file.write("Error during writing: {:s}".format(repr(e)))
+            self.file.write("Aborting writing. Plz fix!")
+            print("Error during writing: {:s}".format(repr(e)))
+            print("Aborting writing. Plz fix!")
+            self.ok = False
