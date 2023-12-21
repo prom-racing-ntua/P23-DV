@@ -26,11 +26,16 @@ class CanInterface(Node):
         self._locked_mission = None
         self._shuting_down = False
         self.exitflag = 0
+        self.only_logs = False
 
-        # Create the comm port to the Can/USB board
-        self._serial_port = serial.Serial(port=self._port, baudrate=self._baud_rate, timeout=self._timeout)
-        # Send empty message to Can/USB board to initialize its operation (is necessary by design)
-        self._serial_port.write(b'0000')
+        try:
+            # Create the comm port to the Can/USB board
+            self._serial_port = serial.Serial(port=self._port, baudrate=self._baud_rate, timeout=self._timeout)
+            # Send empty message to Can/USB board to initialize its operation (is necessary by design)
+            self._serial_port.write(b'0000')
+        except Exception as e:
+            self.get_logger().error("Unable to open serial port. \nError: {:s}\n Entering log-only mode".format(repr(e)))
+            self.only_logs = True
 
         # Define Incoming Messages
         self._in_msgs = {
@@ -107,7 +112,7 @@ class CanInterface(Node):
         self._read_timer = self.create_timer(1 / self.get_parameter('read_frequency').value, self.read_serial)
 
         # Close port at exit
-        atexit.register(self._serial_port.close)
+        if not self.only_logs:atexit.register(self._serial_port.close)
         self.get_logger().info("Can Interface Node is online")
 
 
@@ -144,7 +149,7 @@ class CanInterface(Node):
         # Write message to terminal and serial port
         # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
         end_time_1 = self.get_clock().now().nanoseconds/10**6
-        self._serial_port.write(out_bytes)
+        if not self.only_logs:self._serial_port.write(out_bytes)
         end_time_2 = self.get_clock().now().nanoseconds/10**6
 
         logger = self._out_msgs_logger[type(msg)]
@@ -162,6 +167,7 @@ class CanInterface(Node):
         '''
         Checks for new messages finds their id and passes the data to the corresponding parser function
         '''
+        if self.only_logs:return
         # self.get_logger().info("Started reading from serial")
         # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 
         # to receive the latests ones. 
