@@ -249,7 +249,11 @@ class KinematicVariablesMsg(CanInterfaceMessage):
     msg_type = VelEstimation
 
     def data(self):
-        return []
+        return [self._ros_msg.velocity_x,
+                self._ros_msg.velocity_y,
+                self._ros_msg.yaw_rate,
+                self._ros_msg.acceleration_x,
+                self._ros_msg.acceleration_y,]
 
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
