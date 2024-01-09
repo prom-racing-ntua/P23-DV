@@ -90,7 +90,7 @@ class AcquisitionNode(Node):
 
         # Save Image to Run folder
         self.get_logger().warn(f"{numpyImage}")
-        print(type(numpyImage))
+        print("type is:",type(numpyImage))
         cv2.imwrite(f"{self.runDirPath}/{self.camera.orientation}_{timestamp}_{self.i}.jpg" ,cv2.cvtColor(numpyImage, cv2.COLOR_RGB2BGR))
 
         self.i += 1

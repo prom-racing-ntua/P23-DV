@@ -4,16 +4,16 @@ from dataclasses import dataclass
 
 def create_new_run_log() -> str:
     try:
-        current_runs = len(os.listdir("timestamp_logs"))
+        current_runs = len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs"))
     except Exception as e:
         return str(repr(e))
     
     if(current_runs!=0):
-        if(len(os.listdir("timestamp_logs/run_{:d}".format(current_runs-1)))==0):
+        if(len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}".format(current_runs-1)))==0):
             return "New dir exists."
         
     try:
-        os.mkdir("timestamp_logs/run_{:d}".format(current_runs))
+        os.mkdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}".format(current_runs))
     except FileExistsError:
         return "New dir exists."
     except Exception as e:
@@ -35,8 +35,8 @@ class Logger:
         #   self.ok = False
         #   self.error = Exception()
         try:
-            self.run_idx = len(os.listdir("timestamp_logs")) - 1
-            self.file = open("timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+            self.run_idx = len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs")) - 1
+            self.file = open("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
         except Exception as e:
             self.ok = False
             self.error = e

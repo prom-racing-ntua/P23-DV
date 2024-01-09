@@ -9,6 +9,7 @@
 #include "vectornav_msgs/msg/attitude_group.hpp"
 #include "vectornav_msgs/msg/imu_group.hpp"
 #include "vectornav_msgs/msg/ins_group.hpp"
+#include "vectornav_msgs/msg/gps_group.hpp"
 #include "custom_msgs/msg/vel_estimation.hpp"
 #include "custom_msgs/msg/rx_steering_angle.hpp"
 #include "custom_msgs/msg/rx_wheel_speed.hpp"
@@ -26,7 +27,7 @@ private:
     VelocityEstimator<VelocityEstimationHandler> estimator_;
 
     // ROS Subscriber members
-    rclcpp::Subscription<vectornav_msgs::msg::InsGroup>::SharedPtr vn_velocity_sub_;        // vn-300
+    rclcpp::Subscription<vectornav_msgs::msg::GpsGroup>::SharedPtr vn_velocity_sub_;        // vn-300
     // rclcpp::Subscription<vectornav_msgs::msg::AttitudeGroup>::SharedPtr vn_attitude_sub_;   // vn-300
     rclcpp::Subscription<vectornav_msgs::msg::ImuGroup>::SharedPtr vn_imu_sub_;             // vn-200
     rclcpp::Subscription<custom_msgs::msg::RxWheelSpeed>::SharedPtr wheel_encoder_sub_;     // can-usb
@@ -60,7 +61,7 @@ private:
 
     // Callbacks
     void masterCallback(const custom_msgs::msg::NodeSync::SharedPtr msg);
-    void velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg);
+    void velocityCallback(const vectornav_msgs::msg::GpsGroup::SharedPtr msg);
     // void attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg);
     void imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg);
     void wheelSpeedCallback(const custom_msgs::msg::RxWheelSpeed::SharedPtr msg);

@@ -11,12 +11,12 @@ def generate_launch_description():
         'saltas_acquisition_params.yaml'
     )
     return LaunchDescription([
-        # Node(
-        #     package='perception',
-        #     executable='acquisition_logger',
-        #     name='acquisition_left',
-        #     parameters=[config]
-        # ),
+        Node(
+            package='perception',
+            executable='acquisition_logger',
+            name='acquisition_left',
+            parameters=[config]
+        ),
         Node(
             package='perception',
             executable='acquisition_logger',

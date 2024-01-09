@@ -205,7 +205,7 @@ def obj(z,current_target):
             + 5e2*z[1]**2 #penalty on delta,ddelta
             + 5e2*z[10]**2
             + 1e-3*(sar**2)
-            # + 1e-3*(dsa**2)MPC/MPC_embotech/mpc_prom_simple.py
+            # + 1e-3*(dsa**2)
             + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
             # + 1e-1*((1/(z[6]**2 +1e-3))) #vx and index
             - 1e-3*(z[6])
@@ -214,15 +214,15 @@ def obj(z,current_target):
 
 def constr(z,current_target):
     """Least square costs on deviating from the path and on the inputs F and phi
-    z = [dF,ddelta,xPos,yPos,phi, vx, vy, r, F, delta, index]
+    z = [dF,ddelta,dindex, xPos,yPos,phi, vx, vy, r, F, delta, index]
     current_target = point on path that is to be headed for
     """
     saf,sar = getSas(z) 
     Ffz,Frz = getFz(z)
     Fry = getFy(Frz,sar)
     a,b = getEllipseParams(Frz)
-    # constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
-    constr1 = (z[6]-current_target[3])**2 #velocity constraint
+    constr1 = (z[2]-current_target[0])**2 + (z[3]-current_target[1])**2 #inside track constraint
+    # constr1 = (z[6]-current_target[3])**2 #velocity constraint
     constr2 = (z[8]/(a*Frz))**2 + (Fry/(b*Frz))**2 #tyre constraints
     constr3 = saf
     return (constr1,constr2,constr3) 

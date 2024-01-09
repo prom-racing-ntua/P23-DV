@@ -20,8 +20,8 @@ namespace mpc {
 
     void LifecycleMpcHandler::setLogger() {
         data_logger.open(data_logger_txt);
-        // data_logger << "emerg_counter,flag,torque,steering\n";
-        data_logger << "vx,vy,r\n";
+        // data_logger << (pub_time_1+pub_time_2)/2 << "," << mpc_solver.emergency_counter << "," << mpc_solver.ellipse_counter << "," << mpc_solver.exitflag_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
+        data_logger << "ts,em_c,ell_c,ex_c,ex,torque,steering\n";
     }
 
     void LifecycleMpcHandler::setClient() {
@@ -44,12 +44,12 @@ namespace mpc {
 
     void LifecycleMpcHandler::declareParameters() {
         declare_parameter<bool>("simulation",false);
-        declare_parameter<bool>("regen",false);
+        declare_parameter<bool>("regen",true);
         declare_parameter<std::string>("mission","autox");
-        declare_parameter<float>("v_limit",5.0);
+        declare_parameter<float>("v_limit",10.0);
         declare_parameter<int>("total_laps",2);
-        declare_parameter<float>("F_max",500.0);
-        declare_parameter<float>("F_min",-500.0);
+        declare_parameter<float>("F_max",1000.0);
+        declare_parameter<float>("F_min",-1000.0);
         declare_parameter<float>("s_interval",0.15);
         declare_parameter<float>("distance_safe",0.9);
         declare_parameter<float>("emergency_forward",1.0);
@@ -78,7 +78,7 @@ namespace mpc {
         mpc_solver.s_space_min = get_parameter("s_space_min").as_double();
         mpc_solver.total_laps_ = get_parameter("total_laps").as_int();
         data_logger_txt = "src/6.Controls/mpc/data/data_logger.csv";
-        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.lookahead_ << " " << node_freq_ << std::endl;
+        std::cout << "param is: " << mpc_solver.known_track_ << " " << mpc_solver.F_max << " " << mpc_solver.v_limit_ << std::endl;
         std::cout << "declared params" << std::endl;
     }
         
@@ -100,6 +100,7 @@ namespace mpc {
     }
 
     void LifecycleMpcHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr pose_msg) {
+        rclcpp::Time starting_time = this->now();
         std::cout << "Im at mpc iteration " << global_int + 1 << std::endl;
         std::cout << "Im at mission: " << mpc_solver.mission_ << " and lap: " << mpc_solver.lap_counter << " out of " << mpc_solver.total_laps_ << " laps." << std::endl;
         std::cout << "Finish and brake flags are: " << mpc_solver.finish_flag << " " << mpc_solver.brake_flag << std::endl;
@@ -116,7 +117,6 @@ namespace mpc {
             std::cout << "I get lap counter " << mpc_solver.lap_counter_official << std::endl;
         }
         auto mpc_msg = custom_msgs::msg::TxControlCommand();  
-        rclcpp::Time starting_time = this->now();
         if(path_flag==0) {
             std::cout << "havent data yet" << std::endl;
             mpc_msg.speed_target = (float)(0.0);
@@ -151,20 +151,25 @@ namespace mpc {
             mpc_solver.global_int_ = global_int;
         }
         std::cout << "Publishing brake pressure: " << mpc_msg.brake_pressure_target << std::endl;
-        RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
-        RCLCPP_INFO(this->get_logger(), "Publishing target speed: %1i" " and actual speed: %1i" "",mpc_msg.speed_target, mpc_msg.speed_actual);
+        // RCLCPP_INFO(this->get_logger(), "Publishing motor torque: %.6f" " ,wheel angle: %.6f" "",mpc_msg.motor_torque_target, 57.2958*mpc_msg.steering_angle_target);
+        // RCLCPP_INFO(this->get_logger(), "Publishing target speed: %1i" " and actual speed: %1i" "",mpc_msg.speed_target, mpc_msg.speed_actual);
         if(mpc_solver.exitflag!=1) RCLCPP_INFO(this->get_logger(), "Issue with solver");
-        else RCLCPP_INFO(this->get_logger(),"Solver all good");
+        // else RCLCPP_INFO(this->get_logger(),"Solver all good");
+        pub_time_1 = this->now().nanoseconds()/1e6;
         mpc_publisher_->publish(mpc_msg);
+        pub_time_2 = this->now().nanoseconds()/1e6;
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
         // data_logger << "--,iteration"<<global_int<<",--\n";
-        // data_logger << mpc_solver.emergency_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
-        data_logger << mpc_solver.vel_struct.velocity_x << "," << mpc_solver.vel_struct.velocity_y << "," << mpc_solver.dist_eucl <<"\n";
+        data_logger << (pub_time_1+pub_time_2)/2 << "," << mpc_solver.emergency_counter << "," << mpc_solver.ellipse_counter << "," << mpc_solver.exitflag_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
+        // data_logger << mpc_solver.vel_struct.velocity_x << "," << mpc_solver.vel_struct.velocity_y << "," << mpc_solver.dist_eucl <<"\n";
+        pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, pose_msg->velocity_state.global_index);
+        pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, pose_msg->velocity_state.global_index);
 }
 
     void LifecycleMpcHandler::path_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr path_msg) {
+        rclcpp::Time starting_time = this->now();
         std::cout << "mpika path callback" << std::endl;
         int pp_points = int(path_msg->count);
         std::cout << "received path points = " << pp_points << std::endl;
@@ -212,6 +217,7 @@ namespace mpc {
         std::cout << "last point of path callback is: " << mpc_solver.whole_track(points-1,0) << " " << mpc_solver.whole_track(points-1,1) << std::endl;
         std::cout << "finished path callback" << std::endl;
         if(path_flag==0) path_flag=1;
+        waypoints_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, path_msg->global_index);
 }
 
     LifecycleMpcHandler::~LifecycleMpcHandler() {

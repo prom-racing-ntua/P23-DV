@@ -17,6 +17,11 @@ namespace mpc{
         total_laps_client = this->create_client<custom_msgs::srv::SetTotalLaps>("/p23_status/set_total_laps");
         setClient();
 
+        waypoints_timestamp_log.init("mpc_waypoints");
+        RCLCPP_INFO_STREAM(get_logger(),waypoints_timestamp_log.check());
+        pose_timestamp_log.init("mpc_pose");
+        RCLCPP_INFO_STREAM(get_logger(),pose_timestamp_log.check());
+
         RCLCPP_WARN(get_logger(), "\n-- MPC Configured!");
         return mpc::CallbackReturn::SUCCESS;
     }
@@ -62,7 +67,7 @@ namespace mpc{
             RCLCPP_INFO(get_logger(), "\n-- MPC Shutdown!");
             return mpc::CallbackReturn::SUCCESS;
         }
-
+        
         mpc_publisher_->on_deactivate();
         mpc_publisher_.reset();
         /* Should actually free up memory and such */

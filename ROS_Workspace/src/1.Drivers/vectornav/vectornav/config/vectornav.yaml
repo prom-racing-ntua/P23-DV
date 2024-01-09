@@ -27,16 +27,16 @@ vectornav:
       # Gps antenna offset and compass baseline
       GpsAntennaOffset: 
         # x: -0.2289  #-0.46
-        x: -0.67
+        x: -0.63
         y: +0.0
         # z: +0.0228 ##+0.92
-        z: 0.77
+        z: -0.81
       GpsBaselinePos: 
         # x: +0.4796 #+0.85
-        x: 0.92
+        x: 0.91
         y: +0.0
         # z: -0.0479 #+0.42
-        z: 0.192
+        z: 0.24
       GpsBaselineUncertainty: 
         x: 0.0254
         y: 0.0254

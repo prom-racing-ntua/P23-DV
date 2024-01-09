@@ -12,7 +12,7 @@ void Logger::init(std::string name)
     std::filesystem::directory_iterator dirIter;
     try
     {
-        dirIter = std::filesystem::directory_iterator("timestamp_logs");
+        dirIter = std::filesystem::directory_iterator("/home/prom/P23-DV/ROS_Workspace/timestamp_logs");
     }
     catch(const std::exception& e)
     {
@@ -24,8 +24,8 @@ void Logger::init(std::string name)
 
     for(auto& entry: dirIter) ++run_idx;
     
-    char f1[30 + name.length()];
-    snprintf(f1, sizeof(f1), "timestamp_logs/run_%d/%s_log.txt", this->run_idx, name.c_str());
+    char f1[70 + name.length()];
+    snprintf(f1, sizeof(f1), "/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_%d/%s_log.txt", this->run_idx, name.c_str());
     this->file = fopen(f1, "w");
 }
 Logger::~Logger()

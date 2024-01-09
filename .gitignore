@@ -10,6 +10,4 @@ ROS_Workspace/LidarLog
 ROS_Workspace/PerceptionRuns
 ROS_Workspace/spline_log.txt
 ROS_Workspace/timestamp_logs/**
-ROS_Workspace/src/6.Controls/simple_sim/data/log.txt
-ROS_Workspace/src/6.Controls/simple_sim/data/log2.txt
-ROS_Workspace/src/6.Controls/simple_sim/data/target_log.txt
+ROS_Workspace/src/6.Controls/simple_sim/data/**

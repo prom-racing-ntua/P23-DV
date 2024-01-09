@@ -93,6 +93,7 @@ def cropResizeCones(yolo_results, image, margin):
 
 def runKeypoints(small_cones_imgs, small_keypoints_model):
     small_predictions = []
+    inferenceTime=0
     
     if (len(small_cones_imgs)>0):
         small_cones_imgs_list = []

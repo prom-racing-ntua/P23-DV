@@ -24,6 +24,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(node_logger REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -78,7 +79,7 @@ src/FORCESNLPsolver/include/FORCESNLPsolver_memory.h
 src/FORCESNLPsolver/include/FORCESNLPsolver.h
 )
 
-ament_target_dependencies(l_mpc rclcpp rclcpp_lifecycle custom_msgs)
+ament_target_dependencies(l_mpc node_logger rclcpp rclcpp_lifecycle custom_msgs)
 target_link_libraries(l_mpc ${CMAKE_SOURCE_DIR}/src/FORCESNLPsolver/lib/libFORCESNLPsolver.a)
 
 # add_executable(

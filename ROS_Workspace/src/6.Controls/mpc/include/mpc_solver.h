@@ -171,6 +171,7 @@ class MpcSolver {
         float s_space_max;
         float s_space_min;
         int exitflag = 0;
+        int exitflag_counter = 0;
         int total_laps_;
         PointsData params_array;
         PointsData whole_track;

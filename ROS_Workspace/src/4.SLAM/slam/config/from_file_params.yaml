@@ -36,5 +36,5 @@ slam_from_file_node:
 
     # The files should be placed in the DataFiles directory and the variables
     # below must have the relative path in the form "/DataFiles/my_log_file.txt"
-    perception_log: "/DataFiles/perceptionLog_1688747028.txt" #before it was log_9
-    odometry_log: "/DataFiles/velocityLog_1688747028.txt"
+    perception_log: "/DataFiles/perceptionLog_1703341129.txt" #before it was log_9
+    odometry_log: "/DataFiles/velocityLog_1703341129.txt"

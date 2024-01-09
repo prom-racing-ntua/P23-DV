@@ -13,6 +13,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
+#include "node_logger.hpp"
 
 using namespace mpc;
 using namespace path_planning;
@@ -44,11 +45,14 @@ namespace mpc {
     rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_client;
     std::ofstream data_logger;
     std::string data_logger_txt;
+    Logger timestamp_log;
+    double pub_time_1, pub_time_2;
     size_t count_;
     std::ofstream outputFile;
     int path_flag = 0;
     double total_execution_time;
     int global_int = -1;
+    ::Logger waypoints_timestamp_log, pose_timestamp_log;
     protected:
       mpc::CallbackReturn on_configure(const rclcpp_lifecycle::State &state);
       mpc::CallbackReturn on_activate(const rclcpp_lifecycle::State &state);

@@ -51,7 +51,10 @@ void VelocityEstimationHandler::setSubscribers() {
      */
     auto sensor_qos{ rclcpp::QoS(rclcpp::KeepLast(5), rmw_qos_profile_sensor_data) };
 
-    vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vn_300/raw/ins",
+    // vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::InsGroup>("vn_300/raw/ins",
+    //     sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1));
+
+        vn_velocity_sub_ = create_subscription<vectornav_msgs::msg::GpsGroup>("vn_300/raw/gps2",
         sensor_qos, std::bind(&VelocityEstimationHandler::velocityCallback, this, _1));
 
     // vn_attitude_sub_ = create_subscription<vectornav_msgs::msg::AttitudeGroup>("vn_300/raw/attitude",
@@ -191,15 +194,15 @@ void VelocityEstimationHandler::masterCallback(const custom_msgs::msg::NodeSync:
     // RCLCPP_INFO_STREAM(get_logger(), "\n-- Execution Completed --\nTime of execution " << total_time.nanoseconds() / 1000000.0 << " ms.");
 }
 
-void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg) {
+void VelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::GpsGroup::SharedPtr msg) {
     // When in mode 0 or mode 3 we still get messages in the topics but the values are 0, messing up the filter, so we ignore them instead
-    if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3))
-    {
-        return;
-    }
+    // if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3))
+    // {
+    //     return;
+    // }
     // Write measurements to corresponding node vector
     Eigen::Matrix<double, 3, 1> velocity_vec{};
-    velocity_vec << static_cast<double>(msg->velbody.x), static_cast<double>(msg->velbody.y), static_cast<double>(msg->velbody.z);
+    velocity_vec << static_cast<double>(msg->velned.x), static_cast<double>(msg->velned.y), static_cast<double>(msg->velned.z);
     velocity_vec = vn_300_rotation_matrix_ * velocity_vec;
     if (std::isnan(velocity_vec(0)) or std::isnan(velocity_vec(1)))
     {
