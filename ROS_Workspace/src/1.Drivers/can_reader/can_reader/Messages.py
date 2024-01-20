@@ -332,6 +332,35 @@ class SystemHealthMsg(CanInterfaceMessage):
             out_msg[7] = 0
 
         return out_msg
+    
+class SteeringParamsMsg(CanInterfaceMessage):
+    can_id = 0x06
+    byte_size = 9
+    msg_type = TxSteeringParams
+
+    def data(self) -> tuple:
+        return [float(self._ros_msg.kd),
+                float(self._ros_msg.kp),
+                float(self._ros_msg.ki),
+                float(self._ros_msg.dt)]
+
+    def to_CanMsg(self) -> bytearray:
+        out_msg = bytearray(self.byte_size)
+        out_msg[0] = self.can_id
+
+        if self.node_handle._shuting_down:
+            self._ros_msg.kd = 0.0
+            self._ros_msg.kp = 0.0
+            self._ros_msg.ki = 0.0
+            self._ros_msg.dt = 0.0
+
+        #send steering params
+        out_msg[1:3] = floatToBytes(self._ros_msg.kp, multiplier=8, signed=True)
+        out_msg[3:5] = floatToBytes(self._ros_msg.kd, multiplier=8, signed=True)
+        out_msg[5:7] = floatToBytes(self._ros_msg.ki, multiplier=8, signed=True)
+        out_msg[7:9] = floatToBytes(self._ros_msg.dt, multiplier=512, signed=True)
+
+        return out_msg
 
 
 class AsStatusMsg(CanInterfaceMessage):

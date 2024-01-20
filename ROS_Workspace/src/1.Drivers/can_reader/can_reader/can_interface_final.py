@@ -50,7 +50,8 @@ class CanInterface(Node):
         self._out_msgs = {
             ActuatorCommandsMsg.msg_type    : ActuatorCommandsMsg,
             KinematicVariablesMsg.msg_type  : KinematicVariablesMsg,
-            SystemHealthMsg.msg_type        : SystemHealthMsg
+            SystemHealthMsg.msg_type        : SystemHealthMsg,
+            SteeringParamsMsg.msg_type      : SteeringParamsMsg
         }
 
         # Define ROS Publishers for the incoming messages
@@ -64,9 +65,11 @@ class CanInterface(Node):
         ActuatorCommandsMsg.ros_subscriber = self.create_subscription(TxControlCommand, '/control_commands', self.universal_callback, 10)
         KinematicVariablesMsg.ros_subscriber = self.create_subscription(VelEstimation, '/velocity_estimation', self.universal_callback, 10)
         SystemHealthMsg.ros_subscriber = self.create_subscription(TxSystemState, '/system_state', self.universal_callback, 10)
+        SteeringParamsMsg.ros_subscriber = self.create_subscription(TxSteeringParams,'/steering_params',self.universal_callback,10)
 
         self.get_logger().info(create_new_run_log())
 
+        #for timestamp logging 
         self.sensor_timestamp_log = Logger("canbus_sensor")
         self.get_logger().info(self.sensor_timestamp_log.check())
         self.wheel_timestamp_log = Logger("canbus_wheel")
@@ -91,7 +94,8 @@ class CanInterface(Node):
         self._out_msgs_logger = {
             ActuatorCommandsMsg.msg_type    : self.controls_timestamp_log,
             KinematicVariablesMsg.msg_type  : self.velocity_timestamp_log,
-            SystemHealthMsg.msg_type        : None
+            SystemHealthMsg.msg_type        : None,
+            SteeringParamsMsg.msg_type      : None
         }
 
 

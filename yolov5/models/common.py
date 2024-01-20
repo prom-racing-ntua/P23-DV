@@ -460,7 +460,13 @@ class DetectMultiBackend(nn.Module):
                     'Linux': 'libedgetpu.so.1',
                     'Darwin': 'libedgetpu.1.dylib',
                     'Windows': 'edgetpu.dll'}[platform.system()]
-                interpreter = Interpreter(model_path=w, experimental_delegates=[load_delegate(delegate,options={"device": ":0"})])
+                file = open("wrong.txt", 'w')
+                file.write('hello\n')
+                try:
+                    interpreter = Interpreter(model_path=w, experimental_delegates=[load_delegate(delegate,options={"device": ":0"})])
+                except Exception as e:
+                    file.write(repr(e)+'/n')
+                file.close()
             else:  # TFLite
                 LOGGER.info(f'Loading {w} for TensorFlow Lite inference...')
                 interpreter = Interpreter(model_path=w)  # load TFLite model

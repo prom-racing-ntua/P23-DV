@@ -29,6 +29,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CanInterface/TxSystemState.msg"
   "msg/CanInterface/TxControlCommand.msg"
   "msg/CanInterface/TxVehicleVariables.msg"   # Not actually used
+  "msg/CanInterface/TxSteeringParams.msg"   # Not actually used
 
   ## Can-USB receive msgs
   "msg/CanInterface/RxWheelSpeed.msg"

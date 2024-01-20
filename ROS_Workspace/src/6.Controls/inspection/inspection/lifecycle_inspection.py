@@ -25,7 +25,7 @@ class InspectionMission(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-            ('mode', 'inspection'),
+            ('mode', 'bench'),
             ('max_torque', 10.0),
             ('min_torque', 0.0),
             ('torque_step', 1.0),
@@ -35,7 +35,11 @@ class InspectionMission(Node):
             ('max_press',20.0),
             ('min_press',0.0),
             ('press_step',1.0),
-            ('publish_frequency',40.0)
+            ('publish_frequency',40.0),
+            ('kp',-100.0),
+            ('ki',0.0),
+            ('kd',10.0),
+            ('dt',0.1)
             ]
         ) 
         #changes
@@ -43,12 +47,12 @@ class InspectionMission(Node):
 
     def on_configure(self, state:State) -> TransitionCallbackReturn:
         self._command_publisher = self.create_publisher(TxControlCommand ,'/control_commands', 10)
+        self._steering_publisher = self.create_publisher(TxSteeringParams,'/steering_params',10)
         self._state_publisher = self.create_publisher(TxSystemState ,'/system_state', 10)
 
         self._steering_sub = self.create_subscription(RxSteeringAngle, 'canbus/steering_angle', self.set_steering, 10)
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
         self.mode = self.get_parameter('mode').get_parameter_value().string_value
-        self.get_logger().info(f"{self.mode}")
         if(self.mode=="inspection"):
             self.mission_finished = False
             self._steering_angle = 0.0
@@ -69,7 +73,6 @@ class InspectionMission(Node):
     def on_activate(self, state:State) -> TransitionCallbackReturn:
         if(self.mode=="bench"): 
             self.sub_code = self.create_subscription(UInt32, 'key_pressed', self.on_code,10)
-            self.get_logger().warn("Created subscr")  
      
         if(self.mode=="inspection"):
             self._start_time = self.get_time() 
@@ -93,6 +96,7 @@ class InspectionMission(Node):
             self.destroy_timer(self._command_timer)
         self.destroy_publisher(self._command_publisher)
         self.destroy_publisher(self._state_publisher)
+        self.destroy_publisher(self._steering_publisher)
 
         self.destroy_subscription(self._steering_sub)
         self.destroy_subscription(self._motor_sub)
@@ -113,6 +117,7 @@ class InspectionMission(Node):
 
         self.destroy_publisher(self._command_publisher)
         self.destroy_publisher(self._state_publisher)
+        self.destroy_publisher(self._steering_publisher)
 
         self.destroy_subscription(self._steering_sub)
         self.destroy_subscription(self._motor_sub)
@@ -134,18 +139,25 @@ class InspectionMission(Node):
         self.min_press = self.get_parameter('min_press').get_parameter_value().double_value
         self.press_step = self.get_parameter('press_step').get_parameter_value().double_value
         self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
+        self.kp = self.get_parameter('kp').get_parameter_value().double_value
+        self.ki = self.get_parameter('ki').get_parameter_value().double_value
+        self.kd = self.get_parameter('kd').get_parameter_value().double_value
+        self.dt = self.get_parameter('dt').get_parameter_value().double_value
         
     def timer_callback(self):
         msg = TxControlCommand()
+        msg2 = TxSteeringParams()
         msg.brake_pressure_target = self._brake_command
         msg.steering_angle_target = self._steering_command
         msg.motor_torque_target = self._torque_command
         msg.speed_actual = 0
         msg.speed_target = 0
-        # self.get_logger().info(f'Brake pressure is {msg.brake_pressure_target} bar')
-        # self.get_logger().info(f'Steering Angle is {msg.steering_angle_target} rad')
-        # self.get_logger().info(f'Motor Torque {msg.motor_torque_target} Nm')
         self._command_publisher.publish(msg)
+        msg2.kp = self.kp
+        msg2.kd = self.kd
+        msg2.ki = self.ki
+        msg2.dt = self.dt
+        self._steering_publisher.publish(msg2)
     
     def on_code(self, msg):
         if msg.data == keyboard.Key.f1.value.vk:
