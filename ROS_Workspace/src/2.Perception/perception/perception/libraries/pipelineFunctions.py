@@ -201,34 +201,40 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
                         [-5.8, 11.9, 0],
                         [-7.4, 2.7, 0]])
         
-        # Use solvePnP to get cone position in camera frame and then find range,theta from car CoG
-        thresh = np.sqrt((cropped_img_corners[j][2] - cropped_img_corners[j][0]) * (cropped_img_corners[j][3] - cropped_img_corners[j][1])) * 0.02
-        best_score = np.inf
-        
+        # Use solvePnP to get cone position in camera frame and then find range,theta from car CoG        
         _, rot, trans = cv2.solvePnP(real_coords, cone_keypoints_numpy, cameraMatrix, distCoeffs, cv2.SOLVEPNP_IPPE)
+        
+        # Sometimes the KeypointNet mispredicts the coordinates of one or more keypoints
+        # To prevent garbage measurements from being sent to SLAM a reprojection error check is included
+        # Supposing the camera is placed where solvePnP says it is compared to the cone in question,
+        # how far from the original pixels would the keypoints project in this case?
+        # We use a threshold that depends directly on the size of the bounding box in the original image
+        # and, therefore, indirectly on the distance of the cone 
+        # If the reprojection distance is above a threshold try using solvePnP for all 7 different sets of 6 keypoints
+        # Do not try it for less than 6 keypoints as accuracy drops despite low reprojection errors
+        thresh = np.sqrt((cropped_img_corners[j][2] - cropped_img_corners[j][0]) * (cropped_img_corners[j][3] - cropped_img_corners[j][1])) * 0.04
+        best_score = np.inf
         reproj = cv2.projectPoints(real_coords, rot, trans, cameraMatrix, distCoeffs)[0].reshape(7,2)
-        score = np.abs(cone_keypoints_numpy-reproj).mean()
+        score = np.linalg.norm(cone_keypoints-reproj, axis=1).mean()
         if score < best_score:
             best_rot = rot
             best_trans = trans
             best_score = score
-        
-        if best_score >= thresh:      
+            
+        if best_score >= thresh:
             for i in range(7):
                 partial_real_coords = np.array([real_coords[row] for row in range(7) if row not in [i]])
-                partial_cone_keypoints = np.array([cone_keypoints_numpy[row] for row in range(7) if row not in [i]])
+                partial_cone_keypoints = np.array([cone_keypoints[row] for row in range(7) if row not in [i]])
                 _, rot, trans = cv2.solvePnP(partial_real_coords, partial_cone_keypoints, cameraMatrix, distCoeffs, cv2.SOLVEPNP_IPPE)
                 reproj = cv2.projectPoints(partial_real_coords, rot, trans, cameraMatrix, distCoeffs)[0].reshape(6,2)
-                score = np.abs(partial_cone_keypoints-reproj).mean()
+                score = np.linalg.norm(partial_cone_keypoints-reproj, axis=1).mean()
                 if score < best_score:
                     best_rot = rot
                     best_trans = trans
                     best_score = score
-
-        if best_score < thresh:  
-            rt.append(rt_converter(camera, best_trans))
-            reduced_classes.append(classes[j])
-    return rt, reduced_classes
+                    
+        rt.append([np.sqrt(best_trans[0]**2+best_trans[2]**2)[0]/100, math.atan2(best_trans[0], best_trans[2])])
+        reduced_classes.append(classes[j])
 
 def initKeypoint2(small_modelpath):
     small_model = VGGLikeV3()
