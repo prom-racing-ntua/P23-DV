@@ -180,12 +180,11 @@ def main(args=None):
     yolov5s_model_path = f"{models}/yolov5s6.pt"
     # Small Keypoints Parh
     # smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
-    smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
+    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.pt"
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
-    smallKeypointsModelPath_2 = f"{models}/vggv3strip2.pt"
     # Spin inference node
-    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath_2)
+    inference_node = InferenceLifecycleNode(yoloModel=yolov5_edgetpu_model_path, smallKeypointsModel=smallKeypointsModelPath)
     executor = MultiThreadedExecutor(num_threads=3)
     
     try:

@@ -54,7 +54,7 @@ def initKeypoint(small_modelpath):
     # model = core.read_model(small_modelpath)
     # small_model = core.compile_model(model=model, device_name="GPU")
     try:
-        small_model = VGGLikeV3()
+        small_model = KeypointNet()
         small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))
     except Exception as e:
         print("Keypoints init failed. ", repr(e))
@@ -104,15 +104,17 @@ def runKeypoints(small_cones_imgs, small_keypoints_model):
         small_cones_imgs_tensor = torch.cat(small_cones_imgs_list, dim=0)
     
         # # Inference
-        # for i,input_img in enumerate(small_cones_imgs_tensor):
-        #     pred_hm = list(small_keypoints_model(input_img.unsqueeze(0)).values())[0][0]
-        #     pred_coords = np.array([np.asarray(np.unravel_index(pred_hm[j].argmax(), (64,48))) for j in range(7)])
-        #     small_predictions.append(pred_coords)
-        # Inference
         baseTime_keypoints= time.time()
-        small_predictions = small_keypoints_model(small_cones_imgs_tensor/255.0).cpu().detach().numpy()
-        small_predictions = small_predictions.reshape(small_predictions.shape[0], 7, 2).tolist()
+        for i,input_img in enumerate(small_cones_imgs_tensor):
+            pred_hm = list(small_keypoints_model(input_img.unsqueeze(0)))[0]
+            pred_coords = np.array([np.asarray(np.unravel_index(pred_hm[j].argmax(), (64,48))) for j in range(7)])
+            small_predictions.append(pred_coords)
         inferenceTime = (time.time() - baseTime_keypoints)*1000
+        # Inference
+        # baseTime_keypoints= time.time()
+        # small_predictions = small_keypoints_model(small_cones_imgs_tensor/255.0).cpu().detach().numpy()
+        # small_predictions = small_predictions.reshape(small_predictions.shape[0], 7, 2).tolist()
+        # inferenceTime = (time.time() - baseTime_keypoints)*1000
     
     return small_predictions, inferenceTime
 
@@ -178,7 +180,7 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
     reduced_classes = []
     for j in range(len(classes)):
         cone_keypoints = []
-        
+
         # Depending on lens used choose an intrinsic camera matrix
         cameraMatrix = np.array([[1250, 0, 640], [0, 1250, 512], [0, 0, 1]]).astype(float)
         distCoeffs = np.array([[0, 0, 0, 0, 0]]).astype(float)         
