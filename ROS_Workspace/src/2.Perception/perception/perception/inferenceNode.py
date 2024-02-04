@@ -110,15 +110,14 @@ def main(args=None):
     # Small Keypoints Parh
     smallKeypointsModelPath = f"{models}/vggv3strip2.pt"
     # smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
-    smallKeypointsModelPath_2 = f"{models}/vggv3strip2.pt"
-    smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.xml"
+    # smallKeypointsModelPath = f"{models}/Res4NetNoBNMSEAugmSize16.pt"
 
     # Large Keypoints dated 17/1/2023
     # largeKeypointsModelPath = f"{models}/largeKeypoints17012023.pt"
 
     # Initialize Models 
-    smallModel_2 = initKeypoint2(smallKeypointsModelPath_2)
-    print("small_model_2 is",smallModel_2)
+    # smallModel_2 = initKeypoint2(smallKeypointsModelPath_2)
+    # print("small_model_2 is",smallModel_2)
     smallModel = initKeypoint(smallKeypointsModelPath)
     yoloModel = initYOLOModel(tpu_yolo_v5, conf=0.70, iou=0.30)
 

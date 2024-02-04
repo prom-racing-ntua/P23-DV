@@ -201,13 +201,22 @@ void P23StatusNode::updateASStatus(const custom_msgs::msg::AutonomousStatus::Sha
         break;
 
     case(p23::AS_Status::AS_EMERGENCY):
-        /* Send a deactivation signal to the nodes.*/
-        // Safely stop then shutdown nodes. Activate service brakes for redundancy.
-        RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
-        currentAsStatus = statusReceived;
+        if(currentDvStatus == p23::DV_Status::STARTUP || currentDvStatus == p23::DV_Status::LV_ON|| currentDvStatus == p23::DV_Status::MISSION_SELECTED)
+        {
+            RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. Nodes already inactive");
+            currentAsStatus = statusReceived;
+            success = 1;
+        }
+        else
+        {
+            /* Send a deactivation signal to the nodes.*/
+            // Safely stop then shutdown nodes. Activate service brakes for redundancy.
+            RCLCPP_WARN(get_logger(), "Current AS Status: AS_EMERGENCY. De-activating nodes");
+            currentAsStatus = statusReceived;
 
-        // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
-        success = changeDVStatus(p23::SHUTDOWN_NODES);
+            // TODO: Do emergency brake maneuver and when in standstill shutdown nodes
+            success = changeDVStatus(p23::SHUTDOWN_NODES);
+        }
         break;
     }
     if (success) currentAsStatus = statusReceived;

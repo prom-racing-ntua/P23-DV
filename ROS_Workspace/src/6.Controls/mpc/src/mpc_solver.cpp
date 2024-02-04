@@ -264,7 +264,10 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             if(lap_counter < total_laps_) spline_data(i,3) = u_second_pass[i];
             if(mission_=="skidpad" and (lap_counter<=1 or lap_counter==3)) spline_data(i,3) = 5.0; 
             else if (lap_counter == total_laps_ and X[3]>=6.0) spline_data(i,3) = 6.0;
-            else if (lap_counter == total_laps_ and X[3]<6.0 and X[3]>=3.0) spline_data(i,3) = 3.0;
+            else if (lap_counter == total_laps_ and X[3]<6.0 and X[3]>=3.0){ 
+                std::cout << "mpika se gkaou simeio" << std::endl;
+                spline_data(i,3) = 3.0;
+            }
             else if (lap_counter == total_laps_ and X[3]<3.0) {
                 brake_flag = 1;
                 spline_data(i,3) = 0.0;
@@ -420,10 +423,10 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
         }
         if(mission_=="autox") {
             if(critical_dist<0.1 and lap_lock==0) {
+                lap_counter++;
                 lap_lock=1;
             }
-            if(critical_dist > 5*l_f) {
-                lap_counter++;
+            if(critical_dist > 5*l_f and lap_lock==1) {
                 lap_lock=0;
         }
         }
@@ -434,6 +437,7 @@ void MpcSolver::generateFirstPointUnknown() { //basically the same as known..
             }
             if(critical_dist > l_f) lap_lock=0;
         }
+        std::cout << "custom lap counter gives" << lap_counter << std::endl;
     }
 
     void MpcSolver::generateFinishFlag(int lap_counter) {

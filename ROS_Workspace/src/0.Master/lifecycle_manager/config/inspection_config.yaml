@@ -1,17 +1,22 @@
-/inspection:
+inspection:
   ros__parameters:
-    mode: 'bench' #'inspection' or 'bench'
-    max_torque: 10.0
+    mode: 'inspection' #'inspection' or 'bench'
+    max_torque: 15.0
     min_torque: 0.0
     torque_step: 1.0
     # [ 24.0mm,       (23.96173 + 27.01392) / 2 = 25.4878 deg = 0.4448rad],
     max_steering: 0.448
     # [-24.0mm,       (-27.01392 -23.96173) / 2 = -25.4878 deg = -0.4448rad]
     min_steering: -0.448
-    #1 degree = x rad
-    steering_step: 0.0174
-    max_press: 20.0
+    #1 degree = 0.0174 rad
+    steering_step: 0.087
+    max_press: 21.0
     min_press: 0.0
-    press_step: 1.0
+    press_step: 20.0
     publish_frequency: 40.0
-
+    kp: -1000.0
+    kd: 10.0
+    ki: 0.0
+    dt: 0.01
+    minvel: -10000.0
+    maxvel: 10000.0

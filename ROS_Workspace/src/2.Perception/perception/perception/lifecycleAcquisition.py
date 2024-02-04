@@ -51,6 +51,7 @@ class AcquisitionLifecycleNode(Node):
             ('expectedGrayValue', 50),
             ('ROIx', 1280),
             ('ROIy', 1024),
+            ('log_photos', False)
             ]
         )
         self.get_logger().warn(f"\n-- Aquisition Node Created")
@@ -66,6 +67,7 @@ class AcquisitionLifecycleNode(Node):
             expectedGrayValue = self.get_parameter('expectedGrayValue').get_parameter_value().integer_value
             ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
             ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
+            self.log_photos = self.get_parameter("log_photos").get_parameter_value().bool_value
 
             self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {expectedGrayValue}, {autoExposure}")
 
@@ -155,6 +157,19 @@ class AcquisitionLifecycleNode(Node):
             global_index = msg.global_index            
             self.camera.TriggerCamera()
             numpyImage = self.camera.AcquireImage()
+
+            if self.log_photos:
+                try:
+                    #path to save the image
+                    path = '/home/prom/Desktop/Image'
+                    #name the image based on the global index and give the path to save
+                    path = os.path.join(path, f'image_{global_index}.jpg')
+                    if global_index%40 == 0:                    #save the numpy image to the folder
+                        cv2.imwrite(path, numpyImage)
+                except Exception as z:
+                    self.get_logger().info("Photo logger error: {:s}".format(repr(z)))
+                    self.log_photos = False
+
 
             # Send Image to Perception Node
             imageMessage = AcquisitionMessage()

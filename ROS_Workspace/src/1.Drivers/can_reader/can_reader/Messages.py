@@ -234,8 +234,9 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
         out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
         # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
         out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
-        if self._ros_msg.brake_pressure_target: out_msg[5] = self.node_handle.get_parameter('service_target_pressure').value
-        else: out_msg[5] = 0
+        out_msg[5] = int(self._ros_msg.brake_pressure_target)
+        # floatToBytes(self._ros_msg.brake_pressure_target,multiplier=2,num_bytes=1, signed=True)
+        # else: out_msg[5] = 0
 
         # Speed Actual and speed target
         out_msg[6] = self._ros_msg.speed_actual
@@ -296,7 +297,10 @@ class SystemHealthMsg(CanInterfaceMessage):
             state = 0x0F
         
         if state == 0x0F: self.node_handle.get_logger().error("Received Node Error. Entering AS Emergency!")
-        out_msg[1] = (self._ros_msg.lap_counter << 4) | state
+        try:
+            out_msg[1] = (self._ros_msg.lap_counter << 4) | state
+        except Exception as e:
+            self.node_handle.get_logger().warn(f"Error setting lap count: {repr(e)}. msg = {(self._ros_msg.lap_counter << 4) | state}. lap = {self._ros_msg.lap_counter}")
 
         out_msg[2] = self._ros_msg.cones_count_actual
         out_msg[3:5] = self._ros_msg.cones_count_all.to_bytes(2, byteorder='big')
@@ -333,16 +337,19 @@ class SystemHealthMsg(CanInterfaceMessage):
 
         return out_msg
     
+#xx    
 class SteeringParamsMsg(CanInterfaceMessage):
     can_id = 0x06
-    byte_size = 9
+    byte_size = 13
     msg_type = TxSteeringParams
 
     def data(self) -> tuple:
         return [float(self._ros_msg.kd),
                 float(self._ros_msg.kp),
                 float(self._ros_msg.ki),
-                float(self._ros_msg.dt)]
+                float(self._ros_msg.dt),
+                float(self._ros_msg.maxvel),
+                float(self._ros_msg.minvel)]
 
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
@@ -353,14 +360,19 @@ class SteeringParamsMsg(CanInterfaceMessage):
             self._ros_msg.kp = 0.0
             self._ros_msg.ki = 0.0
             self._ros_msg.dt = 0.0
+            self._ros_msg.minvel = 0.0
+            self._ros_msg.maxvel = 0.0
 
         #send steering params
         out_msg[1:3] = floatToBytes(self._ros_msg.kp, multiplier=8, signed=True)
         out_msg[3:5] = floatToBytes(self._ros_msg.kd, multiplier=8, signed=True)
         out_msg[5:7] = floatToBytes(self._ros_msg.ki, multiplier=8, signed=True)
         out_msg[7:9] = floatToBytes(self._ros_msg.dt, multiplier=512, signed=True)
-
+        out_msg[9:11] = floatToBytes(self._ros_msg.minvel, multiplier=1, signed=True)
+        out_msg[11:13] = floatToBytes(self._ros_msg.maxvel, multiplier=1, signed=True)
+        
         return out_msg
+#xx
 
 
 class AsStatusMsg(CanInterfaceMessage):
@@ -421,11 +433,14 @@ class MissionMsg(CanInterfaceMessage):
             raise ValueError("Received Multiple Missions")
 
         elif ones == 0:
-            # Unlock mission
-            self.node_handle.get_logger().warn("Mission Unlocked")
-            mission_confirmed = True
-            self.node_handle._locked_mission = 0
-            self.node_handle._received_mission = None
+            if self.node_handle.get_clock().now().nanoseconds / 10**9 - self.node_handle.time_of_lock < 0.5: #0.5s
+                self.node_handle.ignore_unlock = True
+            else:    
+                # Unlock mission
+                self.node_handle.get_logger().warn("Mission Unlocked")
+                mission_confirmed = True
+                self.node_handle._locked_mission = 0
+                self.node_handle._received_mission = None
             
         else:
             # Received valid mission
@@ -437,6 +452,7 @@ class MissionMsg(CanInterfaceMessage):
                 mission_confirmed = True
                 self.node_handle._locked_mission = mission
                 self.node_handle.get_logger().warn(f"Mission Confirmed {hex(self.node_handle._locked_mission)}")
+                self.node_handle.time_of_lock = self.node_handle.get_clock().now().nanoseconds / 10**9
             
             else:
                 # Received mission the first time
@@ -456,26 +472,30 @@ class MissionMsg(CanInterfaceMessage):
         return ros_msg
 
 
-class SensorVariablesMsg(CanInterfaceMessage):
+class SensorVariablesMsg(CanInterfaceMessage): 
     can_id = 0x300
-    byte_size = 4
+    byte_size = 6
     msg_type = RxVehicleSensors
 
     def data(self):
         return self._data
 
-    def to_ROS(self) -> msg_type:
+    def to_ROS(self) -> msg_type: #xx
         msg = self.msg_type()
         
         # Set Motor Torque
         motor_torque = int.from_bytes(self._can_msg[2:4], byteorder='big', signed=True)
-        msg.motor_torque_actual = motor_torque
+        msg.motor_torque_actual = int(motor_torque/100) 
+        
+        #Set Motor RPM
+        motor_rpm = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=True)
+        msg.motor_rpm = motor_rpm
 
         # Set Brake Hydraulic Pressure
         msg.brake_pressure_front = float(int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False))
         msg.brake_pressure_rear = float(int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False))
 
-        self._data = [motor_torque, msg.brake_pressure_front, msg.brake_pressure_rear]
+        self._data = [msg.motor_torque_actual, motor_rpm, msg.brake_pressure_front, msg.brake_pressure_rear]
 
         return msg
 

@@ -10,7 +10,8 @@
   <depend>rclpy</depend>
 
   <exec_depend>vectornav_msgs</exec_depend>  
-  <exec_depend>custom_msgs</exec_depend>  
+  <exec_depend>custom_msgs</exec_depend> 
+  <depend>node_logger</depend>
   <exec_depend>ros2launch</exec_depend>
   
   <test_depend>ament_copyright</test_depend>

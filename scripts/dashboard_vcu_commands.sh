@@ -15,7 +15,9 @@ case $miss in
   exit 0
   ;;
   *)
-	ros2 topic pub --times 1 /canbus/mission_selection custom_msgs/msg/MissionSelection mission_selected:\ 3
+  #6 for inspection
+  #3 for autox
+	ros2 topic pub --times 1 /canbus/mission_selection custom_msgs/msg/MissionSelection mission_selected:\ 6
 	;;
 esac
 

@@ -18,6 +18,7 @@
 #include "custom_msgs/msg/rx_steering_angle.hpp"
 #include "custom_msgs/msg/rx_wheel_speed.hpp"
 #include "custom_msgs/msg/node_sync.hpp"
+#include "custom_msgs/msg/rx_vehicle_sensors.hpp"
 #include "custom_msgs/srv/get_frequencies.hpp"
 
 #include <semaphore.h>
@@ -42,6 +43,7 @@ namespace ns_vel_est
         // rclcpp::Subscription<vectornav_msgs::msg::AttitudeGroup>::SharedPtr vn_attitude_sub_;   // vn-300
         rclcpp::Subscription<vectornav_msgs::msg::ImuGroup>::SharedPtr vn_imu_sub_;             // vn-200
         rclcpp::Subscription<custom_msgs::msg::RxWheelSpeed>::SharedPtr wheel_encoder_sub_;     // can-usb
+        rclcpp::Subscription<custom_msgs::msg::RxVehicleSensors>::SharedPtr vehicle_sensors_sub_;    // can-usb
         rclcpp::Subscription<custom_msgs::msg::RxSteeringAngle>::SharedPtr steering_sub_;       // can-usb
 
         // ROS Subscriber to the master node to sync velocity estimation and perception. The frequency of the node is determined by
@@ -75,6 +77,7 @@ namespace ns_vel_est
         // void attitudeCallback(const vectornav_msgs::msg::AttitudeGroup::SharedPtr msg);
         void imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg);
         void wheelSpeedCallback(const custom_msgs::msg::RxWheelSpeed::SharedPtr msg);
+        void motorSpeedCallback(const custom_msgs::msg::RxVehicleSensors::SharedPtr msg);
         void steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg);
 
     public:

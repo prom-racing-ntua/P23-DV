@@ -27,6 +27,8 @@ class CanInterface(Node):
         self._shuting_down = False
         self.exitflag = 0
         self.only_logs = False
+        self.ignore_unlock = False
+        self.time_of_lock = 0
 
         try:
             # Create the comm port to the Can/USB board
@@ -136,8 +138,7 @@ class CanInterface(Node):
         '''
         Callback for all subscribers calling the to_CanMsg method of the Message class
         '''
-        if self.disable_send:
-            return
+        
         # self.get_logger().info("started uni callback")
         start_time = self.get_clock().now()
 
@@ -150,6 +151,9 @@ class CanInterface(Node):
         temp_msg = Message(msg)
         out_bytes = temp_msg.to_CanMsg()
 
+        if self.disable_send and type(msg)==ActuatorCommandsMsg.msg_type:
+            return
+
         # Write message to terminal and serial port
         # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
         end_time_1 = self.get_clock().now().nanoseconds/10**6
@@ -157,6 +161,7 @@ class CanInterface(Node):
         end_time_2 = self.get_clock().now().nanoseconds/10**6
 
         logger = self._out_msgs_logger[type(msg)]
+        
         if logger is not None:
               logger( start_time.nanoseconds/10**6    , 0, msg.global_index, temp_msg.data())
               logger( (end_time_1 + end_time_2) / 2   , 1, msg.global_index, temp_msg.data())
@@ -219,6 +224,11 @@ class CanInterface(Node):
                 # else push the mission to the rest of the system
                 if not confirmed:
                     self.get_logger().warn(f"Received new mission {hex(self._received_mission)}")
+                    return
+
+                if self.ignore_unlock:
+                    self.ignore_unlock = False
+                    self.get_logger().warn("Unlocked too fast. Assuming sparking and ignoring ...")
                     return
             
             # Create the message object according to its type

@@ -181,11 +181,31 @@ class Data:
         self.mission = 0
         self.ins_mode = 0
 
+        self.actual_speed_last_time = 0
+        self.target_speed_last_time = 0
+        self.accel_x_last_time = 0
+        self.accel_y_last_time = 0
+        self.lap_count_last_time = 0
+        self.target_torque_last_time = 0
+        self.actual_torque_last_time = 0
+        self.target_steer_last_time = 0
+        self.actual_steer_last_time = 0
+        self.target_brake_last_time = 0
+        self.actual_brake_f_last_time = 0
+        self.actual_brake_r_last_time = 0
+        self.errors_last_time = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.status_last_time = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.dv_status_last_time = 0
+        self.as_status_last_time = 0
+        self.mission_last_time = 0
+        self.ins_mode_last_time = 0
+
         self.fx = q_per_tire()
         self.fy = q_per_tire()
         self.fz = q_per_tire()
         self.mx = q_per_tire()
         self.my = q_per_tire()
+
 
 
 class TelemetryNode(Node):
@@ -216,14 +236,20 @@ class TelemetryNode(Node):
         timer_period = 0.1
         self.time = self.create_timer(timer_period, self.update_all)
 
+    def uptodate(self, last, current):
+        if current - last <= 0.1 * 1e9: return 0
+        elif current - last <= 1: return 1
+        else:return 2
+
     def update_all(self) -> None:
         global GUI
         # start = time.time()
+        tm = time.monotonic_ns()
 
         GUI.state_.change_all(self.data.dv_status, self.data.as_status, self.data.mission)
 
-        GUI.velocity.set_target(self.data.target_speed)
-        GUI.velocity.set_actual(self.data.actual_speed)
+        GUI.velocity.set_target(self.data.target_speed, self.uptodate(self.data.target_speed_last_time, tm))
+        GUI.velocity.set_actual(self.data.actual_speed, self.uptodate(self.data.actual_speed_last_time, tm))
 
         GUI.accel.update_ax(self.data.accel_x)
         GUI.accel.update_ay(self.data.accel_y)
@@ -261,13 +287,28 @@ class TelemetryNode(Node):
         self.data.accel_x = msg.acceleration_x
         self.data.accel_y = msg.acceleration_y
 
+        tm = time.monotonic_ns()
+
+        self.data.actual_speed_last_time = tm
+        self.data.accel_x_last_time = tm
+        self.data.accel_y_last_time = tm
+
     def controls_callback(self, msg: TxControlCommand) -> None:
+        tm = time.monotonic_ns()
+
         self.data.target_speed = msg.speed_target / 3.6
         self.data.target_torque = msg.motor_torque_target
         self.data.target_steer = msg.steering_angle_target*180/np.pi
         self.data.target_brake = msg.brake_pressure_target
 
+        self.data.target_speed_last_time = tm
+        self.data.target_torque_last_time = tm
+        self.data.target_steer_last_time = tm
+        self.data.target_brake_last_time = tm
+
     def system_callback(self, msg: TxSystemState) -> None:
+        tm = time.monotonic_ns()
+
         self.data.dv_status = msg.dv_status.id
         self.data.errors = [msg.camera_inference_error,
                             msg.velocity_estimation_error,
@@ -281,6 +322,11 @@ class TelemetryNode(Node):
                             msg.vn_300_error]
         self.data.ins_mode = msg.ins_mode
         self.data.lap_count = msg.lap_counter
+
+        self.data.dv_status_last_time = tm
+        self.data.errors_last_time = tm
+        self.data.ins_mode_last_time = tm
+        self.data.lap_count_last_time = tm
 
     def transition_callback(self, msg: LifecycleNodeTransitionState) -> None:
         self.data.id = msg.transition_requested
@@ -297,21 +343,36 @@ class TelemetryNode(Node):
         GUI.error.update(self.data.errors, self.data.ins_mode, self.data.id, self.data.status)
 
     def sensor_callback(self, msg: RxVehicleSensors) -> None:
+        tm = time.monotonic_ns()
+
         self.data.actual_torque = msg.motor_torque_actual
         self.data.actual_brake_f = msg.brake_pressure_front
         self.data.actual_brake_r = msg.brake_pressure_rear
 
+        self.data.actual_torque_last_time = tm
+        self.data.actual_brake_f_last_time = tm
+        self.data.actual_brake_r_last_time = tm
+
     def steering_callback(self, msg: RxSteeringAngle) -> None:
+        tm = time.monotonic_ns()
+
         self.data.actual_steer = msg.steering_angle * 180 / 3.14159
+
+        self.data.actual_steer_last_time = tm
 
     def wheel_callback(self, msg: RxWheelSpeed) -> None:
         self.data.yaw_i.set(msg.front_left, msg.front_right, msg.rear_left, msg.rear_right)
 
     def as_callback(self, msg: AutonomousStatus) -> None:
         self.data.as_status = msg.id
+        tm = time.monotonic_ns()
+        self.data.as_status_last_time = tm
 
     def mission_callback(self, msg: MissionSelection) -> None:
         self.data.mission = msg.mission_selected
+
+        tm = time.monotonic_ns()
+        self.data.mission_last_time = tm
 
     def create_ellipses(self):
         vx = self.data.actual_speed

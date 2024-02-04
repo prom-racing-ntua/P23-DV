@@ -10,11 +10,13 @@ inspection:
     min_steering: -0.448
     #1 degree = x rad
     steering_step: 0.0174
-    max_press: 20.0
+    max_press: 25.0
     min_press: 0.0
     press_step: 1.0
     publish_frequency: 40.0
     kp: -1000.0
+    kd: 10.0
     ki: 0.0
-    kd: 50.0
-    dt: 0.1
+    dt: 0.01
+    minvel: -10000.0
+    maxvel: 10000.0

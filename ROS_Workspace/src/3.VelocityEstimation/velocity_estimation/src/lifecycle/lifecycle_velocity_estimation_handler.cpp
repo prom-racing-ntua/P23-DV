@@ -33,6 +33,9 @@ namespace ns_vel_est
     
         wheel_encoder_sub_ = create_subscription<custom_msgs::msg::RxWheelSpeed>("canbus/wheel_encoders",
             sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::wheelSpeedCallback, this, _1));
+
+        vehicle_sensors_sub_ = create_subscription<custom_msgs::msg::RxVehicleSensors>("canbus/sensor_data",
+            sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::motorSpeedCallback, this, _1));
     
         steering_sub_ = create_subscription<custom_msgs::msg::RxSteeringAngle>("canbus/steering_angle",
             sensor_qos, std::bind(&LifecycleVelocityEstimationHandler::steeringCallback, this, _1));
@@ -161,6 +164,11 @@ namespace ns_vel_est
         {
             return;
         }
+        //change for mode 1
+        if(msg->insstatus.mode == 1 and measurement_vector_(ObservationVyaw)<0.01) { //na oristei ws threshold sto config
+            msg->velbody.x = std::sqrt(std::pow(msg->velbody.x,2) + std::pow(msg->velbody.y,2)); //option1 or nothing
+            msg->velbody.y = 0.0;
+        }
         // Write measurements to corresponding node vector
         Eigen::Matrix<double, 3, 1> velocity_vec{};
         velocity_vec << static_cast<double>(msg->velbody.x), static_cast<double>(msg->velbody.y), static_cast<double>(msg->velbody.z);
@@ -239,6 +247,11 @@ namespace ns_vel_est
         else \
             measurement_vector_(ObservationVhall_rear) = rear_avg;
 
+        updated_sensors_[RearWheelEncoders] = false;
+    }
+
+    void LifecycleVelocityEstimationHandler::motorSpeedCallback(const custom_msgs::msg::RxVehicleSensors::SharedPtr msg) {
+        measurement_vector_(ObservationVhall_rear) = msg->motor_rpm / 3.9; // gearbox reduction
         updated_sensors_[RearWheelEncoders] = false;
     }
 

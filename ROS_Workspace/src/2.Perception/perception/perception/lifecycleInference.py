@@ -24,9 +24,9 @@ class InferenceLifecycleNode(Node):
         self.yoloModelPath = yoloModel
         self.smallKeypointsModelPath = smallKeypointsModel
         # Create a log file
-        path = get_package_share_directory("perception")
-        testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
-        self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
+        # path = get_package_share_directory("perception")
+        # testingLogs = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+        # self.fp = open(f'{testingLogs}/Inference_log_file_{int(time.time())}.txt', 'w')
         self.get_logger().warn("\n-- Inference Node Created")
         
     def on_configure(self, state: State) -> TransitionCallbackReturn:
@@ -40,7 +40,6 @@ class InferenceLifecycleNode(Node):
             self.yoloModel = initYOLOModel(self.yoloModelPath, conf=0.7, iou=0.3)
             # self.smallModel, self.largeModel = initKeypoint(self.smallKeypointsModelPath, self.largeKeypointsModelPath)
             self.smallModel = initKeypoint(self.smallKeypointsModelPath)
-
 
             # Setup Message Transcoder
             self.bridge = CvBridge()
@@ -131,7 +130,6 @@ class InferenceLifecycleNode(Node):
                 smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
                 keypointsPredictions, inf_t = runKeypoints(smallConesList, self.smallModel)
                 finalCoords, classesList = finalCoordinates(cameraOrientation, classesList, croppedImagesCorners, keypointsPredictions, 0)
-                # self.get_logger().info("keyp time = {:.3f}\n".format(inf_t))
                 try:
                     # This sometimes throws an error,don't know why
                     rangeList, thetaList = zip(*finalCoords)
@@ -162,7 +160,8 @@ class InferenceLifecycleNode(Node):
 
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
-                self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
+                # self.get_logger().info(f"Inference time is: {inferenceTime} ms")
+                # self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):
     rclpy.init(args=args)
@@ -170,7 +169,7 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
     # EdgeTPU YOLO
-    yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8_edgetpu.tflite"
     # yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"

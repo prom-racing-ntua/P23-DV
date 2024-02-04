@@ -21,6 +21,7 @@ def initYOLOModel(modelpath, conf=0.75, iou=0.45):
 
         if "v5" in modelpath:
             yolo_model = torch.hub.load(yolov5_local_path, 'custom', modelpath, source='local', force_reload=False)
+            # yolo_model = torch.hub.load('ultralytics/yolov5', 'custom', modelpath, force_reload=False)
         
         elif "v7" in modelpath:
             yolo_model = torch.hub.load(yolov7_local_path, 'custom', modelpath, source='local', force_reload=False)
@@ -235,6 +236,7 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
                     
         rt.append([np.sqrt(best_trans[0]**2+best_trans[2]**2)[0]/100, math.atan2(best_trans[0], best_trans[2])])
         reduced_classes.append(classes[j])
+    return rt, reduced_classes
 
 def initKeypoint2(small_modelpath):
     small_model = VGGLikeV3()

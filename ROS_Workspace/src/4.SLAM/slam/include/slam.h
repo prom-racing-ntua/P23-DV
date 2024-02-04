@@ -177,6 +177,7 @@ public:
 	gtsam::Vector3 getEstimatedCarPose();
 	std::vector<gtsam::Vector3> getEstimatedMap();
 	int getConeCount() { return cone_count_; }
+	std::fstream gkaou1;
 };
 
 
@@ -563,8 +564,17 @@ int GraphSLAM<T>::findNearestNeighbor(PerceptionMeasurement& observed_landmark, 
 template <class T>
 void GraphSLAM<T>::optimizeFactorGraph(gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_variable_values) {
 	// Update the current estimated robot pose
+	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
+	gkaou1 << "0";
+	gkaou1.close();
 	isam_->update(new_factors, new_variable_values);
+	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
+	gkaou1 << "1";
+	gkaou1.close();
 	estimated_global_state_ = isam_->calculateEstimate();
+	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
+	gkaou1 << "2";
+	gkaou1.close();
 }
 
 // Used to be part of optimization, split for ROS purposes

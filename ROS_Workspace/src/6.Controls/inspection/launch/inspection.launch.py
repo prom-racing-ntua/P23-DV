@@ -21,7 +21,7 @@ def generate_launch_description():
             executable='insp',
             name='inspection',
             parameters=[config]
-        ),
+        )   
     ])
 
 # def generate_launch_description():

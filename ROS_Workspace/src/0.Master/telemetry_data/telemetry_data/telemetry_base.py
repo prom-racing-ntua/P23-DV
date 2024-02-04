@@ -59,6 +59,12 @@ class TelemetryApp(ctk.CTk):
         self.ell_rr = EllipseFrame(self, 0, "RR")
         self.ell_rr.grid(row = 4, column = 2, sticky = "news", padx = 3, pady = 3)
        
+def uptodate_color(status):
+    if status==0: return "green4"
+    elif status==1: return "yellow"
+    elif status==2: return "red3"
+    
+
 class VelocityFrame(ctk.CTkFrame):
     def __init__(self, master) -> None:
         super().__init__(master)
@@ -71,32 +77,48 @@ class VelocityFrame(ctk.CTkFrame):
         self.grid_rowconfigure(3, weight = 1, uniform = "c")
         
         self.grid_columnconfigure(0, weight = 1, uniform = 'c')
-        self.grid_columnconfigure(1, weight = 2, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 3, uniform = 'c')
+        self.grid_columnconfigure(1, weight = 1, uniform = 'c')
                 
         self.speedbar = ctk.CTkProgressBar(self, width = 30, height = 120, corner_radius = 0, border_width = 1, border_color = 'black', fg_color = "gray39", progress_color = "SeaGreen3", orientation = "vertical")
         self.speedbar.grid(row = 0, column = 0, rowspan = 4, sticky = "ns", pady = 10)
         self.speedbar.set(0.0)
         
         self.actual_l = ctk.CTkLabel(self, text = "Actual", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 10)
-        self.actual_l.grid(row = 0, column = 1, padx = 5, pady = 5)
+        self.actual_l.grid(row = 0, column = 1, padx = 5, pady = 5, columnspan = 2)
         self.actual_v = ctk.CTkLabel(self, text = "0 m/s", text_color = "white", font = ("CTkFont", 30))
         self.actual_v.grid(row = 1, column = 1, sticky = "nswe", padx = 5, pady = 5)
+        self.actual_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.actual_status.grid(row = 1, column = 2, padx = 10, pady = 5)
         
         self.target_v = ctk.CTkLabel(self, text = "0 m/s", text_color = "white", font = ("CTkFont", 20))
         self.target_v.grid(row = 2, column = 1, sticky = "nswe", padx = 5, pady = 5)
         self.target_l = ctk.CTkLabel(self, text = "Target", text_color = "gray85", font = ("CTkFont", 10), fg_color = "gray30", bg_color="transparent", corner_radius = 10)
-        self.target_l.grid(row = 3, column = 1, padx = 5, pady = 5)
+        self.target_l.grid(row = 3, column = 1, padx = 5, pady = 5, columnspan = 2)
+        self.target_status = ctk.CTkLabel(self, text = "", text_color = "white", bg_color = "transparent", fg_color = "gray30", font = ("CTkFont", 15), anchor = "w", corner_radius = 20)
+        self.target_status.grid(row = 2, column = 2, padx = 10, pady = 5)
         
         self.target = 0
         self.actual = 0
+        self.target_uptodate = -1
+        self.actual_uptodate = -1
         
         
-    def set_target(self, target) -> None:
+    def set_target(self, target, up_to_date) -> None:
         if target!=self.target:
             self.target = target
             self.target_v.configure(text = "%.2f m/s"%target)
         
-    def set_actual(self, speed) -> None:
+        if up_to_date!=self.target_uptodate:
+            self.target_uptodate = up_to_date
+            self.target_status.configure(fg_color = uptodate_color(up_to_date))
+
+
+        
+    def set_actual(self, speed, up_to_date) -> None:
+        if up_to_date!=self.actual_uptodate:
+            self.actual_uptodate = up_to_date
+            self.actual_status.configure(fg_color = uptodate_color(up_to_date))
         if speed != self.actual:
             self.actual = speed
             self.actual_v.configure(text = "%.2f m/s"%speed)

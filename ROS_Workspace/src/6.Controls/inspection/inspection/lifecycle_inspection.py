@@ -13,7 +13,7 @@ from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
 
 COMMAND_FREQUENCY = 40          # [Hz]
-TORQUE_COMMAND = 4.0            # [N*m]
+TORQUE_COMMAND = 0.0            # [N*m]
 MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
@@ -39,7 +39,9 @@ class InspectionMission(Node):
             ('kp',-100.0),
             ('ki',0.0),
             ('kd',10.0),
-            ('dt',0.1)
+            ('dt',0.01),
+            ('minvel',-1000.0),
+            ('maxvel',+1000.0)
             ]
         ) 
         #changes
@@ -54,6 +56,7 @@ class InspectionMission(Node):
         self._motor_sub = self.create_subscription(RxVehicleSensors, 'canbus/sensor_data', self.set_motor, 10)
         self.mode = self.get_parameter('mode').get_parameter_value().string_value
         if(self.mode=="inspection"):
+            self.load_from_config()
             self.mission_finished = False
             self._steering_angle = 0.0
             self._actual_torque = 0.0
@@ -140,9 +143,11 @@ class InspectionMission(Node):
         self.press_step = self.get_parameter('press_step').get_parameter_value().double_value
         self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
         self.kp = self.get_parameter('kp').get_parameter_value().double_value
-        self.ki = self.get_parameter('ki').get_parameter_value().double_value
         self.kd = self.get_parameter('kd').get_parameter_value().double_value
+        self.ki = self.get_parameter('ki').get_parameter_value().double_value
         self.dt = self.get_parameter('dt').get_parameter_value().double_value
+        self.minvel = self.get_parameter('minvel').get_parameter_value().double_value
+        self.maxvel = self.get_parameter('maxvel').get_parameter_value().double_value
         
     def timer_callback(self):
         msg = TxControlCommand()
@@ -157,6 +162,8 @@ class InspectionMission(Node):
         msg2.kd = self.kd
         msg2.ki = self.ki
         msg2.dt = self.dt
+        msg2.minvel = self.minvel
+        msg2.maxvel = self.maxvel
         self._steering_publisher.publish(msg2)
     
     def on_code(self, msg):
@@ -207,12 +214,34 @@ class InspectionMission(Node):
             if(self._brake_command>self.max_press): 
                 self._brake_command=self.max_press
                 self.get_logger().warn("Trying to exceed maximum brake pressure set at {} bar.".format(self.max_press))
+        elif msg.data == keyboard.Key.caps_lock.value.vk:
+            self.get_logger().info('Start sending Mission Finished')
+            self.mission_finished = True
+
+            finished_cli = self.create_client(SetTotalLaps, "/p23_status/set_total_laps")
+            if not finished_cli.wait_for_service(timeout_sec=5.0):
+                self.get_logger().error("P23 Service is not available")
+            else:
+                req = SetTotalLaps.Request()
+                req.total_laps = 0
+                self.future = finished_cli.call_async(req)
+                self.future.add_done_callback(self.client_callback)
+            self.get_logger().info('Sent mission finished')
         #other key pressed
         else:
             self.get_logger().debug('Key ignored: {}'.format(msg.data))
 
     #for mode inspection   
     def send_commands(self) -> None:
+        msg2 = TxSteeringParams()
+        msg2.kp = self.kp
+        msg2.kd = self.kd
+        msg2.ki = self.ki
+        msg2.dt = self.dt
+        msg2.minvel = self.minvel
+        msg2.maxvel = self.maxvel
+        self._steering_publisher.publish(msg2)
+
         if self.mission_finished:
             msg = TxControlCommand()
             msg.brake_pressure_target = 5.0 #value at finish
@@ -266,14 +295,14 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     lifecycle_inspection = InspectionMission()
     executor = SingleThreadedExecutor()
-
-    try:
-        rclpy.spin(lifecycle_inspection, executor)
-    except (KeyboardInterrupt, ExternalShutdownException):
-        pass
-    finally:
-        try:
-            lifecycle_inspection.destroy_node()
-            rclpy.shutdown()
-        except Exception:
-            pass
+    rclpy.spin(lifecycle_inspection, executor)
+    # try:
+        
+    # except (KeyboardInterrupt, ExternalShutdownException):
+    #     pass
+    # finally:
+    #     try:
+    #         lifecycle_inspection.destroy_node()
+    #         rclpy.shutdown()
+    #     except Exception:
+    #         pass

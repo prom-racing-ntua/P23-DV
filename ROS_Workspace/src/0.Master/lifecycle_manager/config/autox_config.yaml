@@ -1,24 +1,26 @@
 /acquisition_left:
   ros__parameters:
     serialNumber: "KE0220040188"
-    exposureTime: 100000
-    autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
+    exposureTime: 2000 #xx
+    autoExposure: True # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "left"
+    log_photos: False
 
 
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220030138"
-    exposureTime: 100000
-    autoExposure: False
+    exposureTime: 2000 #xx
+    autoExposure: True
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "right"
+    log_photos: False
 
 
 /slam:
@@ -95,13 +97,13 @@
       # x: 0.6578 #0.4278+0.32
       x: 0.7478
       y: 0.00                   # [m]
-      pitch: -11.438977472517111           # [deg]
-      roll: -0.7276509584823427            # [deg]
+      pitch: -2.2845550695979377           # [deg]
+      roll: -1.3338435051354365            # [deg]
     vectornav-vn-300:
       x: 0.4278                 # [m]
       y: 0.00                   # [m]
-      pitch: 14.578116791591146           # [deg]
-      roll: -0.07003972808507326             # [deg]
+      pitch: 13.985712925639929           # [deg]
+      roll: -3.2071296189376963             # [deg]
     
     # Car characteristics
     wheel_radius: 0.1995        # [m]

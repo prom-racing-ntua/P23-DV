@@ -70,7 +70,8 @@ def generate_launch_description():
         package='slam',
         executable='l_slm',
         name='slam',
-        emulate_tty=True
+        emulate_tty=True,
+        # prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no']
     )
     ldList.append(slamNode)
 

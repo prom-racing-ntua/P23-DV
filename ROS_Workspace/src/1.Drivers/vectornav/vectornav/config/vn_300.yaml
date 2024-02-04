@@ -26,13 +26,13 @@ vn_300:
       spiChecksum: 0                   # CHECKSUMMODE_OFF
       errorMode: 1                     # ERRORMODE_SEND
       # Gps antenna offset and compass baseline
-      GpsAntennaOffset: 
+      GpsAntennaOffset: #vn300->A
         # x: -0.2289  #-0.46
         x: -0.26
         y: 0.0
         # z: +0.0228 ##+0.92
         z: 0.59
-      GpsBaselinePos: 
+      GpsBaselinePos: #A->B
         # x: +0.4796 #+0.85
         x: 1.11
         y: 0.0
