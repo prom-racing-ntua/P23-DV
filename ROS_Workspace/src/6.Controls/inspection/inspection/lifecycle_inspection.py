@@ -41,7 +41,16 @@ class InspectionMission(Node):
             ('kd',10.0),
             ('dt',0.01),
             ('minvel',-1000.0),
-            ('maxvel',+1000.0)
+            ('maxvel',+1000.0),
+            ('motor_by_function', False),
+            ('motor_function', 'sine'),
+            ('motor_frequency', 1.0),
+            ('steer_by_function', False),
+            ('steer_function', 'sine'),
+            ('steer_frequency', 1.0),
+            ('brake_by_function', False),
+            ('brake_function', 'sine'),
+            ('brake_frequency', 1.0),
             ]
         ) 
         #changes
@@ -148,13 +157,43 @@ class InspectionMission(Node):
         self.dt = self.get_parameter('dt').get_parameter_value().double_value
         self.minvel = self.get_parameter('minvel').get_parameter_value().double_value
         self.maxvel = self.get_parameter('maxvel').get_parameter_value().double_value
+
+        self.motor_by_func = self.get_parameter('motor_by_function').get_parameter_value().bool_value
+        self.motor_func = self.get_parameter('motor_function').get_parameter_value().string_value
+        self.motor_freq = self.get_parameter('motor_frequency').get_parameter_value().double_value
+        self.steer_by_func = self.get_parameter('steer_by_function').get_parameter_value().bool_value
+        self.steer_func = self.get_parameter('steer_function').get_parameter_value().string_value
+        self.steer_freq = self.get_parameter('steer_frequency').get_parameter_value().double_value
+        self.brake_by_func = self.get_parameter('brake_by_function').get_parameter_value().bool_value
+        self.brake_func = self.get_parameter('brake_function').get_parameter_value().string_value
+        self.brake_freq = self.get_parameter('brake_frequency').get_parameter_value().double_value
         
     def timer_callback(self):
         msg = TxControlCommand()
         msg2 = TxSteeringParams()
-        msg.brake_pressure_target = self._brake_command
-        msg.steering_angle_target = self._steering_command
-        msg.motor_torque_target = self._torque_command
+        if not self.brake_by_func:
+            msg.brake_pressure_target = self._brake_command
+        elif self.brake_func == 'sine':
+            msg.brake_pressure_target = (self.min_press + self.max_press)/2 + 0.5*(self.max_press - self.min_press)*sin(2*pi*self.brake_freq*time.monotonic_ns()*1e-9)
+        elif self.brake_func == 'square':
+            normd_t = (time.monotonic_ns()*1e-9)%(1/self.brake_freq)
+            msg.brake_pressure_target = self.max_press if normd_t<(1/(2*self.brake_freq)) else self.min_press
+        
+        if not self.steer_by_func:
+            msg.steering_angle_target = self._steering_command
+        elif self.steer_func == 'sine':
+            msg.steering_angle_target = (self.min_steering + self.max_steering)/2 + 0.5*(self.max_steering - self.min_steering)*sin(2*pi*self.steer_freq*time.monotonic_ns()*1e-9)
+        elif self.steer_func == 'square':
+            normd_t = (time.monotonic_ns()*1e-9)%(1/self.steer_freq)
+            msg.steering_angle_target = self.max_steering if normd_t<(1/(2*self.steer_freq)) else self.min_steering
+        if not self.motor_by_func:
+            msg.motor_torque_target = self._torque_command
+        elif self.motor_func == 'sine':
+            msg.motor_torque_target = (self.min_torque + self.max_torque)/2 + 0.5*(self.max_torque - self.min_torque)*sin(2*pi*self.motor_freq*time.monotonic_ns()*1e-9)
+        elif self.motor_func == 'square':
+            normd_t = (time.monotonic_ns()*1e-9)%(1/self.motor_freq)
+            msg.motor_torque_target = self.max_torque if normd_t<(1/(2*self.motor_freq)) else self.min_torque
+
         msg.speed_actual = 0
         msg.speed_target = 0
         self._command_publisher.publish(msg)

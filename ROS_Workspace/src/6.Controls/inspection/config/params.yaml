@@ -20,3 +20,12 @@ inspection:
     dt: 0.01
     minvel: -10000.0
     maxvel: 10000.0
+    motor_by_function: True   # True or False
+    motor_function: 'square'    # 'sine' or 'square'
+    motor_frequency: 0.5     # float Hz
+    steer_by_function: True   # True or False
+    steer_function: 'square'    # 'sine' or 'square'
+    steer_frequency: 0.5     # float Hz
+    brake_by_function: True   # True or False
+    brake_function: 'square'    # 'sine' or 'square'
+    brake_frequency: 0.5     # float Hz

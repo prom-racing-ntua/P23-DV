@@ -18,7 +18,7 @@ bool has_hit_cone(double sin, double cos, double x, double y, double x_c, double
 }
 
 
-sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025,/*steering*/ 0.000279, 0.293, 0.0525, 11783, 0.052493, 0.015152, 0.06, 0.0, 27.98, 561.15, 50336, 973, 0.005, 0.0004, 0.00004, 100, 20, 30, 24*0.9, 5.78e-5, 0.01434, 0.0508, 0.002, 0.5, 0.8, 620), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0), is_end(0), total_doo(0), steering_model(), brake_model(), motor_model()
+sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.0, 1.59, 0.66, 1.225, 2.0, 7.0, 3.9, 0.85, 0.2054, 9.81, 0.275, 0.467, 4, 2, 0.079, 0.0735, 0.6, 0.025,/*steering*/ 0.000279, 0.293, 0.0525, 11783, 0.052493, 0.015152, 0.06, 0.0, 27.98, 561.15, 50336, 973, 0.005, 0.0004, 0.00004, 100, 20, 30, 24*0.9, 5.78e-5, 0.01434, 0.0508, 0.002, 0.5, 0.8, 620), global_idx(0), steering_dead_time(0.07), motor_dead_time(0.01), last_d(0), idx_of_last_lap(-1), sent(0), is_end(0), total_doo(0), steering_model(), brake_model(), motor_model()
 {
 	parameter_load();
 	pubs_and_subs();

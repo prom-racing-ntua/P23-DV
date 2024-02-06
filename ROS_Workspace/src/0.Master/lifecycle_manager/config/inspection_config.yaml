@@ -20,3 +20,10 @@ inspection:
     dt: 0.01
     minvel: -10000.0
     maxvel: 10000.0
+
+    motor_by_function: True # True or False
+    motor_function: 'sine' # 'sine' or 'square'
+    steer_by_function: True # True or False
+    steer_function: 'sine' # 'sine' or 'square'
+    brake_by_function: True # True or False
+    brake_function: 'sine' # 'sine' or 'square'
