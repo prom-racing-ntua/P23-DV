@@ -160,7 +160,8 @@ namespace ns_vel_est
 
     void LifecycleVelocityEstimationHandler::velocityCallback(const vectornav_msgs::msg::InsGroup::SharedPtr msg) {
         // When in mode 0 or mode 3 we still get messages in the topics but the values are 0, messing up the filter, so we ignore them instead
-        if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3))
+        // also added mode 1 option to ignore vy
+        if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3) or (msg->insstatus.mode==1 and measurement_vector_(ObservationVyaw)>=0.01))
         {
             return;
         }

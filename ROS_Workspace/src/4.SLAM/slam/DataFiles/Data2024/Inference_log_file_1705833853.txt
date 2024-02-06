@@ -1,0 +1,1 @@
+GlobalIndex: 0 cameraOrientation: left InferenceTime: 113.94166946411133GlobalIndex: 4 cameraOrientation: left InferenceTime: 48.90322685241699
