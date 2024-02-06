@@ -159,15 +159,15 @@ void sim_node::pubs_and_subs()
 
 	pub_syst = this->create_publisher<custom_msgs::msg::TxSystemState>("/system_state", 10);
 
-	pub_sens = this->create_publisher<custom_msgs::msg::RxVehicleSensors>("/sensor_data", 10);
+	pub_sens = this->create_publisher<custom_msgs::msg::RxVehicleSensors>("/canbus/sensor_data", 10);
 
-	pub_steer = this->create_publisher<custom_msgs::msg::RxSteeringAngle>("/steering_angle", 10);
+	pub_steer = this->create_publisher<custom_msgs::msg::RxSteeringAngle>("/canbus/steering_angle", 10);
 
-	pub_wheel = this->create_publisher<custom_msgs::msg::RxWheelSpeed>("/wheel_encoders", 10);
+	pub_wheel = this->create_publisher<custom_msgs::msg::RxWheelSpeed>("/canbus/wheel_encoders", 10);
 
-	pub_aut = this->create_publisher<custom_msgs::msg::AutonomousStatus>("/autonomous_status", 10);
+	pub_aut = this->create_publisher<custom_msgs::msg::AutonomousStatus>("/canbus/autonomous_status", 10);
 
-	pub_miss = this->create_publisher<custom_msgs::msg::MissionSelection>("/mission_selection", 10);
+	pub_miss = this->create_publisher<custom_msgs::msg::MissionSelection>("/canbus/mission_selection", 10);
 
 	sub_comm = this->create_subscription<custom_msgs::msg::TxControlCommand>("/control_commands", 10, std::bind(&sim_node::command_callback, this, _1));
 }

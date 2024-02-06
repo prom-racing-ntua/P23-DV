@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 import os
 from dataclasses import dataclass
+from ament_index_python.packages import get_package_share_directory
 
 def create_new_run_log() -> str:
     try:
-        current_runs = len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs"))
+        path = get_package_share_directory("node_logger")
+        base_path = os.path.join(path, "..", "..", "..", "..", "timestamp_logs")
+        current_runs = len(os.listdir(base_path))
     except Exception as e:
         return str(repr(e))
     
     if(current_runs!=0):
-        if(len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}".format(current_runs-1)))==0):
+        if(len(os.listdir(os.path.join(base_path, "run_{:d}".format(current_runs-1))))==0):
             return "New dir exists."
         
     try:
-        os.mkdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}".format(current_runs))
+        os.mkdir(os.path.join(base_path, "run_{:d}".format(current_runs)))
     except FileExistsError:
         return "New dir exists."
     except Exception as e:
@@ -35,8 +38,10 @@ class Logger:
         #   self.ok = False
         #   self.error = Exception()
         try:
-            self.run_idx = len(os.listdir("/home/prom/P23-DV/ROS_Workspace/timestamp_logs")) - 1
-            self.file = open("/home/prom/P23-DV/ROS_Workspace/timestamp_logs/run_{:d}/{:s}_log.txt".format(self.run_idx, name), "w")
+            path = get_package_share_directory("node_logger")
+            base_path = os.path.join(path, "..", "..", "..", "..", "timestamp_logs")
+            self.run_idx = len(os.listdir(base_path)) - 1
+            self.file = open(os.path.join(base_path, "run_{:d}/{:s}_log.txt".format(self.run_idx, name)), "w")
         except Exception as e:
             self.ok = False
             self.error = e
@@ -74,3 +79,38 @@ class Logger:
             print("Error during writing: {:s}".format(repr(e)))
             print("Aborting writing. Plz fix!")
             self.ok = False
+
+@dataclass
+class old_Logger:
+    ok: bool
+    name: str
+    run_idx: int
+    file: any
+    error: Exception
+    def __init__(self, name):
+        self.ok = True
+        self.name = name
+        
+        try:
+            path = get_package_share_directory("node_logger")
+            base_path = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+            self.run_idx = len(os.listdir(base_path)) - 1
+            self.file = open(os.path.join(base_path, "run_{:d}/{:s}_log.txt".format(self.run_idx, name)), "w")
+        except Exception as e:
+            self.ok = False
+            self.error = e
+        else:
+            self.error = None
+
+    def __del__(self):
+        if self.ok:
+            self.file.close()
+
+    def check(self):
+        if self.ok:
+            return "Logger {:s} opened successfully".format(self.name)
+        else:
+            return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
+
+    def __call__(self, data):
+        self.write(data)

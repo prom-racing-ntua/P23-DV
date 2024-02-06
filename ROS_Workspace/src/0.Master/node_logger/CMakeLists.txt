@@ -16,6 +16,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 # uncomment the following section in order to fill in
@@ -34,6 +35,8 @@ add_library(${PROJECT_NAME}_lib SHARED
   src/node_logger.cpp 
   node_logger/node_logger.py
 )
+ament_target_dependencies(${PROJECT_NAME}_lib ament_index_cpp)
+
 # This installs the library to the package and setting its parameters
 install(
   TARGETS ${PROJECT_NAME}_lib

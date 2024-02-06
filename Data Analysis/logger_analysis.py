@@ -163,7 +163,7 @@ class Chain:
             return self.comm_delays
         
     
-base = '/home/prom/P23-DV/ROS_Workspace'
+base = '/home/nick/Desktop/Prom Racing/Testing_Data/clown_testing_23_12_24'
 run: int = 0
 run = input('Enter desired run index: ')
 callbacks = [
@@ -199,16 +199,20 @@ for chain in chains:
 operation: int = None
 corr_name: int = None
 
-operation = input("""Enter the desired operation:
+for call in callbacks:
+    corr = logs_dict[call]
+    print("{:s} /t: {:.3f}".format(call, corr.analyze_time_response("mean")))
+
+operation = int(input("""Enter the desired operation:
                   0: histogram of item
                   1: plot of time response of item
                   2: mean of time response of item
                   7: histogram of communication delays of callback
                   8: histogram of communication delays of chain
                   9: histogram of complete communication delays
-                  >>> """)
+                  >>> """))
 
-corr_name = input("""Enter the desired item
+corr_name = int(input("""Enter the desired item
                   0:  saltas
                   1:  acquisition left
                   2:  acquisition right
@@ -231,8 +235,8 @@ corr_name = input("""Enter the desired item
                   18: saltas-acq-inf-slam (right)
                   19: saltas-velocity-can2usb
                   20: saltas-velocity-slam-controls
-                  21: salm-path-controls
-                  >>> """)
+                  21: slam-path-controls
+                  >>> """))
 
 if corr_name<=16:
     obj = logs[corr_name]

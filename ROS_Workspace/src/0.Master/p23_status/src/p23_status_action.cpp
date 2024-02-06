@@ -17,7 +17,7 @@ namespace p23_status_namespace
     {
         uint remainingTransitions, failedTransitions;
 
-        remainingTransitions = feedback->remaining_transitions;
+        remainingTransitions = fee.dback->remaining_transitions;
         failedTransitions = feedback->failed_transitions;
         RCLCPP_INFO(get_logger(), "Got feedback from Manager. Remaining Transitions: %u. Failed Transitions: %u", remainingTransitions, failedTransitions);
 

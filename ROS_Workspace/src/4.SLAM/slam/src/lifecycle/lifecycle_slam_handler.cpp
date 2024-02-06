@@ -73,9 +73,11 @@ void LifecycleSlamHandler::odometryCallback(const custom_msgs::msg::VelEstimatio
     // Keep odometry log
     if (is_logging_)
     {
-        velocity_log_ << odometry.global_index << '\n' << odometry.velocity_x << '\n' << odometry.velocity_y << '\n' << odometry.yaw_rate << '\n';
-        for (auto val : variance_array) velocity_log_ << val << ' ';
-        velocity_log_ << '\n';
+        std::ostringstream os;
+        os << odometry.global_index << '\n' << odometry.velocity_x << '\n' << odometry.velocity_y << '\n' << odometry.yaw_rate << '\n';
+        for (auto val : variance_array) os << val << ' ';
+        os << '\n';
+        velocity_log_.log(os.str());
     }
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
@@ -138,13 +140,15 @@ void LifecycleSlamHandler::perceptionCallback(const custom_msgs::msg::Perception
     // Keep perception log
     if (is_logging_)
     {
-        perception_log_ << static_cast<unsigned long>(msg->global_index) << '\n';
-        for (auto col : color) perception_log_ << col << ' ';
-        perception_log_ << '\n';
-        for (auto rng : range) perception_log_ << rng << ' ';
-        perception_log_ << '\n';
-        for (auto th : theta) perception_log_ << th << ' ';
-        perception_log_ << '\n';
+        std::ostringstream os;
+        os << static_cast<unsigned long>(msg->global_index) << '\n';
+        for (auto col : color) os << col << ' ';
+        os << '\n';
+        for (auto rng : range) os << rng << ' ';
+        os << '\n';
+        for (auto th : theta) os << th << ' ';
+        os << '\n';
+        perception_log_.log(os.str());
     }
     // Print computation time
     rclcpp::Duration total_time{ this->now() - starting_time };
@@ -184,10 +188,22 @@ void LifecycleSlamHandler::optimizationCallback() {
     custom_msgs::msg::LocalMapMsg map_msg{};
     custom_msgs::msg::ConeStruct cone_msg{};
 
-    if (is_mapping_) map_log_ << optimization_pose_symbol.index() << '\n';
+    if (is_mapping_) 
+    {
+        std::ostringstream os;
+        os<< optimization_pose_symbol.index() << '\n';
+        map_log_.log(os.str());
+    }
+    // map_log_ << optimization_pose_symbol.index() << '\n';
     for (auto cone : track)
     {
-        if (is_mapping_) map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+        if (is_mapping_) 
+        {
+            std::ostringstream os;
+            os<< cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
+            map_log_.log(os.str());
+        }
+        // map_log_ << cone[0] << ' ' << cone[1] << ' ' << cone[2] << '\n';
 
         cone_msg.color = cone[0];
         cone_msg.coords.x = cone[1];

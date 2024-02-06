@@ -111,7 +111,7 @@ void SlamFromFile::run_slam() {
 		PerceptionMeasurement landmark;
 		gtsam::Matrix2 obs_noise;
 
-		// RCLCPP_INFO_STREAM(get_logger(), "Got Perception -> " << observation_size << '\n');
+		RCLCPP_WARN(get_logger(), "Got Perception ->%d\n", perception_.color.size() );
 		for (int i{ 0 }; i < observation_size; i++)
 		{
 			landmark.color = perception_.color[i];
@@ -142,6 +142,7 @@ void SlamFromFile::run_slam() {
 
 	if (!all_observed_landmarks.empty())
 	{
+		RCLCPP_INFO_STREAM(get_logger(), "Optimizing"<<std::endl);
 		int perception_count{ static_cast<int>(all_observed_landmarks.size()) };
 		if (!map_ready_) {
             addAccelObservations(all_observed_landmarks);

@@ -33,8 +33,12 @@ namespace ns_slam
         // Create Log files
         if (is_logging_)
         {
-            velocity_log_.open(share_dir_ + "/../../../../testingLogs/velocityLog_" + std::to_string(init_time) + ".txt");
-            perception_log_.open(share_dir_ + "/../../../../testingLogs/perceptionLog_" + std::to_string(init_time) + ".txt");
+            // velocity_log_.open(share_dir_ + "/../../../../testingLogs/velocityLog_" + std::to_string(init_time) + ".txt");
+            // perception_log_.open(share_dir_ + "/../../../../testingLogs/perceptionLog_" + std::to_string(init_time) + ".txt");
+            velocity_log_.init("velocity");
+            RCLCPP_INFO_STREAM(get_logger(), velocity_log_.check());
+            perception_log_.init("perception");
+            RCLCPP_INFO_STREAM(get_logger(), perception_log_.check());
         }
 
         // Timestamp logging
@@ -58,7 +62,11 @@ namespace ns_slam
             }
         }
         else
-            map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
+        {
+            // map_log_.open(share_dir_ + "/../../../../testingLogs/mapLog_" + std::to_string(init_time) + ".txt");
+            map_log_.init("mapLog");
+            RCLCPP_INFO_STREAM(get_logger(), map_log_.check());
+        }
 
         //Initialize global lock
         if (pthread_spin_init(&global_lock_, PTHREAD_PROCESS_SHARED))
@@ -139,13 +147,13 @@ namespace ns_slam
             return ns_slam::CallbackReturn::FAILURE;
         }
 
-        if (is_logging_)
-        {
-            velocity_log_.close();
-            perception_log_.close();
-        }
+        // if (is_logging_)
+        // {
+        //     velocity_log_.close();
+        //     perception_log_.close();
+        // }
 
-        if (is_mapping_) map_log_.close();
+        // if (is_mapping_) map_log_.close();
 
         RCLCPP_WARN(get_logger(), "\n-- SLAM Un-Configured!");
         return ns_slam::CallbackReturn::SUCCESS;
@@ -175,13 +183,13 @@ namespace ns_slam
         velocity_subscriber_.reset();
         perception_subscriber_.reset();
 
-        if (is_logging_)
-        {
-            velocity_log_.close();
-            perception_log_.close();
-        }
+        // if (is_logging_)
+        // {
+        //     velocity_log_.close();
+        //     perception_log_.close();
+        // }
 
-        if (is_mapping_) map_log_.close();
+        // if (is_mapping_) map_log_.close();
 
         RCLCPP_INFO(get_logger(), "\n-- SLAM Shutdown!");
         return ns_slam::CallbackReturn::SUCCESS;

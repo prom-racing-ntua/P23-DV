@@ -5,6 +5,7 @@
 #include <limits>
 #include <chrono>
 #include <cstdio>
+#include <sstream>
 #include <filesystem>
 #include <functional>
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -57,9 +58,9 @@ namespace ns_slam
 
         // Log file variables
         std::string share_dir_;
-        std::ofstream velocity_log_;
-        std::ofstream perception_log_;
-        std::ofstream map_log_;
+        old_Logger velocity_log_;
+        old_Logger perception_log_;
+        old_Logger map_log_;
         Logger perception_timestamp_log, odometry_timestamp_log, optim_timestamp_log;
         double pub_time_1, pub_time_2;
 

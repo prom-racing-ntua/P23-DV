@@ -469,7 +469,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         //if(std::isnan(fx_rem)&&!std::isnan(local_speed))exit(50);
         fz_rear_avail = model->Fz_calc("rear", 0, 0);
         fz_rear_avail *= safety_factor; //VP_SF4
-        fx_rear_rem = model->my_max(fz_rear_avail) * fz_rear_avail;//available fx assuming 0 fy
+        fx_rear_rem = model->mx_max(fz_rear_avail) * fz_rear_avail;//available fx assuming 0 fy
         fx_rem = std::min(fx_rem, fx_rear_rem);
 
         local_accel = std::min(fx_rem / m, max_accel_eng);

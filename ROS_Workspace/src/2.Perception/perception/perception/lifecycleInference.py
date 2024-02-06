@@ -57,8 +57,10 @@ class InferenceLifecycleNode(Node):
             try:
                 self.timestamp_log_right = Logger("inference_right")
                 self.timestamp_log_left = Logger("inference_left")
+                self.log_data = old_Logger("inference")
                 self.get_logger().info(self.timestamp_log_right.check())
                 self.get_logger().info(self.timestamp_log_left.check())
+                self.get_logger().info(self.log_data.check())
             except Exception as e:
                 print("mpa"+str(e))
 
@@ -161,7 +163,7 @@ class InferenceLifecycleNode(Node):
                 # Log inference time
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
                 # self.get_logger().info(f"Inference time is: {inferenceTime} ms")
-                # self.fp.write(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
+                self.log_data(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
     
 def main(args=None):
     rclpy.init(args=args)
