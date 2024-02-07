@@ -64,15 +64,22 @@ class Logger:
 
         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
-    def __call__(self, timestamp, type, index, data = None):
+    def __call__(self, timestamp, io, index, data = None):
         if not self.ok:
             return
         try:
             string = ""
             if data is not None:
                 for i in data:
-                    string = "{:s}\t{:.3f}".format(string, i)
-            self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, type, index, string))
+                    if type(i) is float:
+                        string = "{:s}\t{:.3f}".format(string, i)
+                    elif type(i) is int or type(i) is bool:
+                        string = "{:s}\t{:d}".format(string, i)
+                    elif type(i) is str:
+                        string = "{:s}\t{:s}".format(string, i)
+                    else:
+                        print('Requested data type unaccounted for: {}'.format(type(i)))
+            self.file.write("{:0.8f}\t{:d}\t{:d}{:s}\n".format(timestamp, io, index, string))
         except Exception as e:
             self.file.write("Error during writing: {:s}".format(repr(e)))
             self.file.write("Aborting writing. Plz fix!")

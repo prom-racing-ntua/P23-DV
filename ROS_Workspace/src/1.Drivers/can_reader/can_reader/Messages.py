@@ -271,6 +271,15 @@ class SystemHealthMsg(CanInterfaceMessage):
     byte_size = 8
     msg_type = TxSystemState
 
+    def data(self):
+        return [
+            self._ros_msg.dv_status.id,
+            self._ros_msg.lap_counter << 4,
+            self.sensor_status,
+            self.node_status,
+            self.pc_temp
+        ]
+
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
@@ -314,6 +323,7 @@ class SystemHealthMsg(CanInterfaceMessage):
         sensor_status_bits[4] = int(self._ros_msg.ins_mode & 2)
         sensor_status_bits[5] = int(self._ros_msg.ins_mode & 1)
         out_msg[5] = bitsToByte(sensor_status_bits)
+        self.sensor_status = ''.join([str(int(x)) for x in sensor_status_bits])
 
         # Set node status byte
         node_status_bits = [0,0,0,0,0,0,0,0]
@@ -325,6 +335,7 @@ class SystemHealthMsg(CanInterfaceMessage):
         node_status_bits[5] = self._ros_msg.path_planning_error
         node_status_bits[6] = self._ros_msg.pi_pp_controls_error
         out_msg[6] = bitsToByte(node_status_bits)
+        self.node_status = ''.join([str(int(x)) for x in node_status_bits])
 
         # Get the CPU temperature reading and set the corresponding byte
         try:
@@ -334,7 +345,7 @@ class SystemHealthMsg(CanInterfaceMessage):
         except Exception:
             self.node_handle.get_logger().error(f"{Exception}")
             out_msg[7] = 0
-
+        self.pc_temp = out_msg[7]
         return out_msg
     
 #xx    

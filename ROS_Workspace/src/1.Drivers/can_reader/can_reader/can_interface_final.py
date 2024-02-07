@@ -82,6 +82,8 @@ class CanInterface(Node):
         self.get_logger().info(self.controls_timestamp_log.check())
         self.velocity_timestamp_log = Logger("canbus_velocity")
         self.get_logger().info(self.velocity_timestamp_log.check())
+        self.health_timestamp_log = Logger("canbus_health")
+        self.get_logger().info(self.health_timestamp_log.check())
 
         # Define Incoming Message Logger
         self._in_msgs_logger = {
@@ -96,7 +98,7 @@ class CanInterface(Node):
         self._out_msgs_logger = {
             ActuatorCommandsMsg.msg_type    : self.controls_timestamp_log,
             KinematicVariablesMsg.msg_type  : self.velocity_timestamp_log,
-            SystemHealthMsg.msg_type        : None,
+            SystemHealthMsg.msg_type        : self.health_timestamp_log,
             SteeringParamsMsg.msg_type      : None
         }
 
@@ -161,10 +163,13 @@ class CanInterface(Node):
         end_time_2 = self.get_clock().now().nanoseconds/10**6
 
         logger = self._out_msgs_logger[type(msg)]
-        
+        try:
+            global_index = msg.global_index
+        except:
+            global_index = 0
         if logger is not None:
-              logger( start_time.nanoseconds/10**6    , 0, msg.global_index, temp_msg.data())
-              logger( (end_time_1 + end_time_2) / 2   , 1, msg.global_index, temp_msg.data())
+              logger( start_time.nanoseconds/10**6    , 0, global_index, temp_msg.data())
+              logger( (end_time_1 + end_time_2) / 2   , 1, global_index, temp_msg.data())
 
         # Print the total processing time
         # self.get_logger().info(f"Time to process message inside uni callback: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
