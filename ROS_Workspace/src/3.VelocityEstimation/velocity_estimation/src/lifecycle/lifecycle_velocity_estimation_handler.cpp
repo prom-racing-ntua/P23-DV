@@ -2,6 +2,7 @@
 
 #include "rmw/qos_profiles.h"
 #include <rclcpp/qos.hpp>
+#include <fstream>
 
 
 namespace ns_vel_est
@@ -69,13 +70,22 @@ namespace ns_vel_est
         msg.yaw_rate = pub_state(StateVyaw);
         msg.acceleration_x = pub_state(StateAx);
         msg.acceleration_y = pub_state(StateAy);
+        bool ok = true;
 
         for (size_t i{ 0 }; i < outputs.size(); ++i)
         {
             for (size_t j{ 0 }; j < outputs.size(); ++j)
             {
                 msg.variance_matrix[i * outputs.size() + j] = pub_cov(outputs[i], outputs[j]);
+                if(pub_cov(outputs[i], outputs[j]) > 20)ok=false;
             }
+        }
+        if (msg.velocity_x > 20 || msg.velocity_y > 20 || msg.yaw_rate > 20 || msg.acceleration_x > 20 || msg.acceleration_y >20|| !ok)
+        {
+            RCLCPP_ERROR(get_logger(), "\n-- Velocity Estimation fucked up!" );
+            RCLCPP_INFO_STREAM(get_logger(), pub_state);
+            RCLCPP_INFO_STREAM(get_logger(), measurement_vector_);
+            
         }
         // RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Publishes results");
         pub_time_1 = this->now().nanoseconds()/1e6;
@@ -114,12 +124,42 @@ namespace ns_vel_est
         pitch = pitch * M_PI / 180.0;
         yaw = yaw * M_PI / 180.0;
 
-        Eigen::Matrix<double, 3, 3> rot_matrix{};
-        rot_matrix <<
-            std::cos(pitch) * std::cos(yaw), std::cos(pitch)* std::sin(yaw), -std::sin(pitch),
-            -std::cos(roll) * std::sin(yaw) + std::sin(roll) * std::sin(pitch) * std::cos(yaw), std::cos(roll)* std::cos(yaw) + std::sin(roll) * std::sin(pitch) * std::sin(yaw), std::sin(roll)* std::cos(pitch),
-            std::sin(roll)* std::sin(yaw) + std::cos(roll) * std::sin(pitch) * std::cos(yaw), -std::sin(roll) * std::cos(yaw) + std::cos(roll) * std::sin(pitch) * std::sin(yaw), std::cos(roll)* std::cos(pitch);
-        return rot_matrix.transpose();
+        double a = roll;
+        double b = pitch;
+        double c = yaw;
+
+        Eigen::Matrix<double, 3, 3> rot_matrix_yaw{};
+        Eigen::Matrix<double, 3, 3> rot_matrix_pitch{};
+        Eigen::Matrix<double, 3, 3> rot_matrix_roll{};
+        Eigen::Matrix<double, 3, 3> rot_matrix_{};
+        // RCLCPP_INFO_STREAM(get_logger(), "roll = "<<roll<<"\t pitch = "<<pitch<<"\t yaw = "<<yaw<<std::endl);
+        rot_matrix_yaw <<
+            std::cos(c), - std::sin(c), 0,
+            std::sin(c),   std::cos(c), 0,
+                      0,             0, 1;
+
+        rot_matrix_pitch <<
+            std::cos(b), 0, std::sin(b),
+                     0 , 1,           0,
+          - std::sin(b), 0, std::cos(b);
+
+        rot_matrix_roll <<
+            1,           0,            0,
+            0, std::cos(a), -std::sin(a),
+            0, std::sin(a),  std::cos(a);
+
+        // rot_matrix_ = rot_matrix_yaw * rot_matrix_pitch * rot_matrix_roll;
+        rot_matrix_ = rot_matrix_yaw;
+        rot_matrix_ *= rot_matrix_pitch;
+        rot_matrix_ *= rot_matrix_roll;
+
+        // RCLCPP_INFO_STREAM(get_logger(), rot_matrix_);
+
+        // rot_matrix <<
+        //     std::cos(pitch) * std::cos(yaw), std::cos(pitch)* std::sin(yaw), -std::sin(pitch),
+        //     -std::cos(roll) * std::sin(yaw) + std::sin(roll) * std::sin(pitch) * std::cos(yaw), std::cos(roll)* std::cos(yaw) + std::sin(roll) * std::sin(pitch) * std::sin(yaw), std::sin(roll)* std::cos(pitch),
+        //     std::sin(roll)* std::sin(yaw) + std::cos(roll) * std::sin(pitch) * std::cos(yaw), -std::sin(roll) * std::cos(yaw) + std::cos(roll) * std::sin(pitch) * std::sin(yaw), std::cos(roll)* std::cos(pitch);
+        return rot_matrix_;
     }
 
     // ROS Callback Functions
@@ -174,6 +214,7 @@ namespace ns_vel_est
         Eigen::Matrix<double, 3, 1> velocity_vec{};
         velocity_vec << static_cast<double>(msg->velbody.x), static_cast<double>(msg->velbody.y), static_cast<double>(msg->velbody.z);
         velocity_vec = vn_300_rotation_matrix_ * velocity_vec;
+        // RCLCPP_INFO_STREAM(get_logger(), velocity_vec);
         if (std::isnan(velocity_vec(0)) or std::isnan(velocity_vec(1)))
         {
             return;
@@ -181,7 +222,7 @@ namespace ns_vel_est
         else
         {
             measurement_vector_(ObservationVx) = velocity_vec(0);
-            measurement_vector_(ObservationVy) = velocity_vec(1);
+            measurement_vector_(ObservationVy) = 0; //velocity_vec(1);
             // Set the update vector indices
             updated_sensors_[VelocitySensor] = true;
         }
@@ -197,10 +238,19 @@ namespace ns_vel_est
         Eigen::Matrix<double, 3, 1> yaw_rate_vec{};
         yaw_rate_vec << static_cast<double>(msg->angularrate.x), static_cast<double>(msg->angularrate.y), static_cast<double>(msg->angularrate.z);
         yaw_rate_vec = vn_200_rotation_matrix_ * yaw_rate_vec;
+        
 
         Eigen::Matrix<double, 3, 1> acceleration_vec{};
         acceleration_vec << static_cast<double>(msg->accel.x), static_cast<double>(msg->accel.y), static_cast<double>(msg->accel.z);
+        // RCLCPP_INFO_STREAM(get_logger(), "'--------'");
+        // std::ofstream fs;
+        // fs.open("accel_data.txt", std::ios_base::app);
+        // fs<<msg->accel.x<<'\t'<<msg->accel.y<<'\t'<<msg->accel.z<<'\t';
+        // RCLCPP_INFO_STREAM(get_logger(), acceleration_vec);
         acceleration_vec = vn_200_rotation_matrix_ * acceleration_vec;
+        // fs<<acceleration_vec(0)<<'\t'<<acceleration_vec(1)<<'\t'<<acceleration_vec(2)<<'\n';
+        // fs.close();
+        // RCLCPP_INFO_STREAM(get_logger(), acceleration_vec);
 
         if (std::isnan(acceleration_vec(0)) or std::isnan(acceleration_vec(1)) or std::isnan(yaw_rate_vec(2)))
         {
@@ -209,8 +259,8 @@ namespace ns_vel_est
         else
         {
             measurement_vector_(ObservationVyaw) = yaw_rate_vec(2);
-            measurement_vector_(ObservationAx) = acceleration_vec(1);
-            measurement_vector_(ObservationAy) = -acceleration_vec(0);
+            measurement_vector_(ObservationAx) = acceleration_vec(0); //corrected
+            measurement_vector_(ObservationAy) = acceleration_vec(1);
             // Set the update vector indices
             updated_sensors_[Accelerometer] = true;
             updated_sensors_[Gyroscope] = true;
@@ -252,8 +302,9 @@ namespace ns_vel_est
     }
 
     void LifecycleVelocityEstimationHandler::motorSpeedCallback(const custom_msgs::msg::RxVehicleSensors::SharedPtr msg) {
+        // Approach with hall sensor substitution working
         measurement_vector_(ObservationVhall_rear) = msg->motor_rpm / 3.9; // gearbox reduction
-        updated_sensors_[RearWheelEncoders] = false;
+        updated_sensors_[RearWheelEncoders] = true;
     }
 
     void LifecycleVelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {
