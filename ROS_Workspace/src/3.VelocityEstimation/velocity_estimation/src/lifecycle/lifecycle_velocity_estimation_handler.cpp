@@ -203,6 +203,10 @@ namespace ns_vel_est
         // also added mode 1 option to ignore vy
         if ((msg->insstatus.mode == 0) or (msg->insstatus.mode == 3) or (msg->insstatus.mode==1 and measurement_vector_(ObservationVyaw)>=0.01))
         {
+            measurement_vector_(ObservationVx) = measurement_vector_(ObservationVhall_rear) * 0.2054 / 9.5493;
+            measurement_vector_(ObservationVy) = 0; //velocity_vec(1);
+            // Set the update vector indices
+            updated_sensors_[VelocitySensor] = true;
             return;
         }
         //change for mode 1

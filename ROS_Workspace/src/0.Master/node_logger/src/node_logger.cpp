@@ -73,7 +73,7 @@ void old_Logger::log(const std::string &data)
     
     try
     {
-        fprintf(file, "%s", data);
+        fprintf(file, "%s", data.c_str());
     }
     catch(const std::exception& e)
     {

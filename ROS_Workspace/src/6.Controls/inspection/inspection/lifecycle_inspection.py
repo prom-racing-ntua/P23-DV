@@ -13,7 +13,7 @@ from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
 
 COMMAND_FREQUENCY = 40          # [Hz]
-TORQUE_COMMAND = 0.0            # [N*m]
+TORQUE_COMMAND = 5.0            # [N*m]
 MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
@@ -194,8 +194,8 @@ class InspectionMission(Node):
             normd_t = (time.monotonic_ns()*1e-9)%(1/self.motor_freq)
             msg.motor_torque_target = self.max_torque if normd_t<(1/(2*self.motor_freq)) else self.min_torque
 
-        msg.speed_actual = 0
-        msg.speed_target = 0
+        msg.speed_actual = 0.0
+        msg.speed_target = 0.0
         self._command_publisher.publish(msg)
         msg2.kp = self.kp
         msg2.kd = self.kd
@@ -213,6 +213,8 @@ class InspectionMission(Node):
                 '[Up]/[Down] = Increase and decrease motor torque',
                 '[Left]/[Right] = Steering',
                 '[ShiftL]/[ShiftR] = Decrease and increase brake pressure'
+                '[CapsLk] = Manual mission finished',
+                '[ctrl_r] = Inverting motor torque',
             ]))
         #torque_handling
         elif msg.data == keyboard.Key.up.value.vk:
@@ -227,6 +229,15 @@ class InspectionMission(Node):
             if(self._torque_command<self.min_torque): 
                 self._torque_command=self.min_torque
                 self.get_logger().warn("Trying to exceed minimum torque set at {} Nm.".format(self.min_torque))
+        elif msg.data == keyboard.Key.ctrl_r.value.vk:
+            self.get_logger().info('Inverting motor torque')
+            self._torque_command = -self._torque_command
+            if(self._torque_command<self.min_torque): 
+                self._torque_command=self.min_torque
+                self.get_logger().warn("Trying to exceed minimum torque set at {} Nm.".format(self.min_torque))
+            elif(self._torque_command>self.max_torque): 
+                self._torque_command=self.max_torque
+                self.get_logger().warn("Trying to exceed maximum torque set at {} Nm.".format(self.max_torque))
         #steering handling
         elif msg.data == keyboard.Key.left.value.vk:
             self.get_logger().info('Steering left')
@@ -290,8 +301,8 @@ class InspectionMission(Node):
         time = self.get_time() - self._start_time
         msg = TxControlCommand()
 
-        msg.speed_actual = 0
-        msg.speed_target = 0
+        msg.speed_actual = 0.0
+        msg.speed_target = 0.0
         # Constant torque and sinusoidal movement of the steering wheel
         msg.motor_torque_target = TORQUE_COMMAND
         msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)

@@ -573,7 +573,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     // std::cout<<"6.. ";
     double min_radius;
     double fz = model.Fz_calc("full", 1, 0, v_x);
-    double force = pid_controller(projection.first - this->v_x);
+    double force = pid_controller(projection.first, this->v_x);
     // Checking Force
     double fx_next = force - 0.5 * v_x * v_x * model.cd_A - 0.03 * fz + v_y * r * model.m;
     double fx; // old fx, new fx
@@ -623,7 +623,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
-    min_radius = std::max(v_x * v_x / (mu * model.g), mn_radius_wheel);
+    min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
     double ld;

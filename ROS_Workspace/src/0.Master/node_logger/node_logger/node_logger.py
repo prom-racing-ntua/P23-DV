@@ -100,9 +100,10 @@ class old_Logger:
         
         try:
             path = get_package_share_directory("node_logger")
-            base_path = os.path.join(path, "..", "..", "..", "..", "testingLogs")
+            base_path = os.path.join(path, "..", "..", "..", "..", "timestamp_logs")
             self.run_idx = len(os.listdir(base_path)) - 1
-            self.file = open(os.path.join(base_path, "run_{:d}/{:s}_log.txt".format(self.run_idx, name)), "w")
+            self.filename = os.path.join(base_path, "run_{:d}/{:s}_log.txt".format(self.run_idx, name))
+            self.file = open(self.filename , "w")
         except Exception as e:
             self.ok = False
             self.error = e
@@ -117,7 +118,9 @@ class old_Logger:
         if self.ok:
             return "Logger {:s} opened successfully".format(self.name)
         else:
-            return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
+            return "Couldn't open logger {:s}, {:s}: {:s}".format(self.name,self.filename, repr(self.error))
 
     def __call__(self, data):
-        self.write(data)
+        if not self.ok:
+            return
+        self.file.write(data)

@@ -181,79 +181,82 @@ class CanInterface(Node):
         '''
         Checks for new messages finds their id and passes the data to the corresponding parser function
         '''
-        if self.only_logs:return
-        # self.get_logger().info("Started reading from serial")
-        # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 
-        # to receive the latests ones. 
-        # The current limit is defined by the time delay we want to allow the messages to have (assuming an average 
-        # message size of 11 bytes). So the number multiplied by 11*read_frequency is the allowed time delay.
-        # Generally we don't want this to happen so if it occurs we should adjust the read speed accordingly.
-        # assert self.exitflag == 1, "bad exitflag"
-        if self._serial_port.in_waiting > (11*self.get_parameter("read_frequency").value*0.2):
-            self._serial_port.reset_input_buffer()
-            self.get_logger().warn("Input buffer overflow. Flushing buffer.")
-            return
-        
-        start_time = self.get_clock().now()
-        serial_msg = self._serial_port.readline()
-        if serial_msg != b'':
-            # Receiving strange message that cannot be decoded, don't know why... [b'\xa8\xfe\x01 P\x00\x00\x00\x00\x00\x00\x00\xc8S\x00']
-            try:
-                serial_msg = bytearray.fromhex(serial_msg.strip().decode())
-            except UnicodeDecodeError:
-                # self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
+        try:
+            if self.only_logs:return
+            # self.get_logger().info("Started reading from serial")
+            # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 
+            # to receive the latests ones. 
+            # The current limit is defined by the time delay we want to allow the messages to have (assuming an average 
+            # message size of 11 bytes). So the number multiplied by 11*read_frequency is the allowed time delay.
+            # Generally we don't want this to happen so if it occurs we should adjust the read speed accordingly.
+            # assert self.exitflag == 1, "bad exitflag"
+            if self._serial_port.in_waiting > (11*self.get_parameter("read_frequency").value*0.2):
+                self._serial_port.reset_input_buffer()
+                self.get_logger().warn("Input buffer overflow. Flushing buffer.")
                 return
-            except:
-                return
-
-            # self.get_logger().info(f"Received message: {serial_msg}")
-            # Can id is the first 2 bytes - 4 hex characters
-            msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
-
-            # Get the message object from the received id, if it exists or throw an error
-            try:
-                Message = self._in_msgs[msg_id]
-            except KeyError:
-                self.get_logger().error(f"Invalid message can-id received: {hex(msg_id)}")
-                return
-            # self.get_logger().info(f"Message_can_id is : {Message.can_id}")
-            temp_msg = Message(serial_msg)
-
-            # Check if we received new mission and handle it
-            if Message == MissionMsg:
-                try:
-                    confirmed = temp_msg.handle_mission()
-                except ValueError:
-                    return
-                # If mission is not locked wait for acknowledgment
-                # else push the mission to the rest of the system
-                if not confirmed:
-                    self.get_logger().warn(f"Received new mission {hex(self._received_mission)}")
-                    return
-
-                if self.ignore_unlock:
-                    self.ignore_unlock = False
-                    self.get_logger().warn("Unlocked too fast. Assuming sparking and ignoring ...")
-                    return
             
-            # Create the message object according to its type
-            ros_msg = temp_msg.to_ROS()
-            pub_time_1 = self.get_clock().now().nanoseconds/10**6
-            temp_msg.ros_publisher.publish(ros_msg)
-            pub_time_2 = self.get_clock().now().nanoseconds/10**6
+            start_time = self.get_clock().now()
+            serial_msg = self._serial_port.readline()
+            if serial_msg != b'':
+                # Receiving strange message that cannot be decoded, don't know why... [b'\xa8\xfe\x01 P\x00\x00\x00\x00\x00\x00\x00\xc8S\x00']
+                try:
+                    serial_msg = bytearray.fromhex(serial_msg.strip().decode())
+                except UnicodeDecodeError:
+                    # self.get_logger().error(f"Received message cannot be decoded {serial_msg}")
+                    return
+                except:
+                    return
 
-            logger = self._in_msgs_logger[msg_id]
-            if logger is not None:
-                logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
-                logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
+                # self.get_logger().info(f"Received message: {serial_msg}")
+                # Can id is the first 2 bytes - 4 hex characters
+                msg_id = int.from_bytes(serial_msg[0:2], byteorder='big', signed=False)
 
-            # Print the total processing time
-            # self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
-        # self.get_logger().info("Finished reading from serial")
-        else:
+                # Get the message object from the received id, if it exists or throw an error
+                try:
+                    Message = self._in_msgs[msg_id]
+                except KeyError:
+                    self.get_logger().error(f"Invalid message can-id received: {hex(msg_id)}")
+                    return
+                # self.get_logger().info(f"Message_can_id is : {Message.can_id}")
+                temp_msg = Message(serial_msg)
+
+                # Check if we received new mission and handle it
+                if Message == MissionMsg:
+                    try:
+                        confirmed = temp_msg.handle_mission()
+                    except ValueError:
+                        return
+                    # If mission is not locked wait for acknowledgment
+                    # else push the mission to the rest of the system
+                    if not confirmed:
+                        self.get_logger().warn(f"Received new mission {hex(self._received_mission)}")
+                        return
+
+                    if self.ignore_unlock:
+                        self.ignore_unlock = False
+                        self.get_logger().warn("Unlocked too fast. Assuming sparking and ignoring ...")
+                        return
+                
+                # Create the message object according to its type
+                ros_msg = temp_msg.to_ROS()
+                pub_time_1 = self.get_clock().now().nanoseconds/10**6
+                temp_msg.ros_publisher.publish(ros_msg)
+                pub_time_2 = self.get_clock().now().nanoseconds/10**6
+
+                logger = self._in_msgs_logger[msg_id]
+                if logger is not None:
+                    logger(start_time.nanoseconds/10**6 , 0, 0, temp_msg.data())
+                    logger((pub_time_1 + pub_time_2) / 2, 1, 0, temp_msg.data())
+
+                # Print the total processing time
+                # self.get_logger().info(f"Time to process message in read_serial: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
+            # self.get_logger().info("Finished reading from serial")
+            else:
+                return
+            #      self.get_logger().info("Receiving empty stream")
             return
-        #      self.get_logger().info("Receiving empty stream")
-        return
+        except:
+            return
 
 
 

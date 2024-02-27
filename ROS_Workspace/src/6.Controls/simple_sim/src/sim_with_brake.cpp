@@ -89,7 +89,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	{
 		fs.open("src/6.Controls/simple_sim/data/map.txt");
 		state.x = -5.5;
-	}
+			}
 	else if (discipline == 2 or discipline == 4)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
@@ -104,7 +104,7 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
 	int count;
 	fs >> count;
-	double x, y;
+		double x, y;
 	int c;
 	unseen_cones.reserve(count);
 	for (int i = 0; i < count; i++)

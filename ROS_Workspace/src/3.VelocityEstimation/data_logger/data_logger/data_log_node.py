@@ -40,13 +40,13 @@ class DataLogger(Node):
         
     def vn_200_imu_callback(self, msg) -> None:
         meas_time = self.get_clock().now().nanoseconds/10**6
-        self.vn200_log(meas_time, 0, self.imu_index, [msg.accel.x,msg.accel.y,msg.accel.z])
+        self.vn200_log(meas_time, 0, self.imu_index, [msg.accel.x,msg.accel.y,msg.accel.z, msg.angularrate.z])
 
         self.imu_index += 1
 
     def vn_300_ins_callback(self, msg) -> None:
         meas_time = self.get_clock().now().nanoseconds/10**6
-        self.vn300_log(meas_time, 0, self.imu_index, [msg.insstatus.mode,msg.velbody.x,msg.velbody.y,msg.velbody.z])
+        self.vn300_log(meas_time, 0, self.imu_index, [msg.insstatus.mode,msg.insstatus.gps_heading_ins, msg.insstatus.gps_compass,msg.velbody.x,msg.velbody.y,msg.velbody.z, (msg.velbody.x**2+msg.velbody.y**2+msg.velbody.z**2)**0.5])
 
         self.ins_index += 1
         

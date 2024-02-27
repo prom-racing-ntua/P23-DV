@@ -28,20 +28,20 @@ vn_300:
       # Gps antenna offset and compass baseline
       GpsAntennaOffset: #vn300->A
         # x: -0.2289  #-0.46
-        x: -0.26
-        y: 0.0
+        x: 1.92542062e-01
+        y: 2.46531413e-04
         # z: +0.0228 ##+0.92
-        z: 0.59
+        z: -6.23079043e-01
       GpsBaselinePos: #A->B
         # x: +0.4796 #+0.85
-        x: 1.11
-        y: 0.0
+        x: 1.01183811
+        y:  -7.90761136e-05
         # z: -0.0479 #+0.42
-        z: -0.03
+        z: -1.58693549e-01
       GpsBaselineUncertainty: 
-        x: 0.03
-        y: 0.03
-        z: 0.03
+        x: 0.0254
+        y: 0.0254
+        z: 0.0254
       # Binary output register 1
       BO1:
         asyncMode: 1                        # ASYNCMODE_ONE_PORT

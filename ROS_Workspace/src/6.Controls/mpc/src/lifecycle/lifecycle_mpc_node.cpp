@@ -21,7 +21,7 @@ namespace mpc {
     void LifecycleMpcHandler::setLogger() {
         data_logger.open(data_logger_txt);
         // data_logger << (pub_time_1+pub_time_2)/2 << "," << mpc_solver.emergency_counter << "," << mpc_solver.ellipse_counter << "," << mpc_solver.exitflag_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
-        data_logger << "ts,em_c,ell_c,ex_c,ex,torque,steering\n";
+        data_logger << "ts,em_c,ell_c,ex_c,ex,torque,steering,vel_target\n";
     }
 
     void LifecycleMpcHandler::setClient() {
@@ -46,12 +46,12 @@ namespace mpc {
         declare_parameter<bool>("simulation",false);
         declare_parameter<bool>("regen",true);
         declare_parameter<std::string>("mission","autox");
-        declare_parameter<float>("v_limit",5.0);
+        declare_parameter<float>("v_limit",3.0);
         declare_parameter<int>("total_laps",2);
-        declare_parameter<float>("F_max",1000.0);
-        declare_parameter<float>("F_min",-1000.0);
+        declare_parameter<float>("F_max",550.0);
+        declare_parameter<float>("F_min",-550.0);
         declare_parameter<float>("s_interval",0.15);
-        declare_parameter<float>("distance_safe",0.9);
+        declare_parameter<float>("distance_safe",1.0);
         declare_parameter<float>("emergency_forward",1.0);
         declare_parameter<float>("F_init",350.0); //20Nm
         declare_parameter<float>("node_freq",40.0);
@@ -85,6 +85,7 @@ namespace mpc {
     void LifecycleMpcHandler::ReadKnownTrack() {
         std::cout << "File to read from is: " << mpc_solver.midpoints_txt_ << std::endl;
         Eigen::MatrixXd spline_input = readTrack(mpc_solver.midpoints_txt_);
+        std::cout << "read track" << std::endl;
         path_planning::PointsArray midpoints{spline_input};
         midpoints.conservativeResize(midpoints.rows(), midpoints.cols());
         // midpoints.row(midpoints.rows() - 1) = midpoints.row(0);
@@ -142,8 +143,8 @@ namespace mpc {
             mpc_solver.callSolver(global_int);
             mpc_solver.generateOutput();         
             //define message to ROS2
-            mpc_msg.speed_target = mpc_solver.output_struct.speed_target*3.6;
-            mpc_msg.speed_actual = mpc_solver.output_struct.speed_actual*3.6;
+            mpc_msg.speed_target = mpc_solver.output_struct.speed_target;
+            mpc_msg.speed_actual = mpc_solver.output_struct.speed_actual;
             mpc_msg.motor_torque_target = mpc_solver.output_struct.motor_torque_target;
             mpc_msg.steering_angle_target = mpc_solver.output_struct.steering_angle_target;
             mpc_msg.brake_pressure_target = mpc_solver.output_struct.brake_pressure_target;
@@ -162,7 +163,7 @@ namespace mpc {
         total_execution_time += total_time.nanoseconds() / 1000000.0;
         std::cout << "Time of mpc Execution: "<<total_time.nanoseconds() / 1000000.0 << " ms." <<std::endl;
         // data_logger << "--,iteration"<<global_int<<",--\n";
-        data_logger << (pub_time_1+pub_time_2)/2 << "," << mpc_solver.emergency_counter << "," << mpc_solver.ellipse_counter << "," << mpc_solver.exitflag_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target <<"\n";
+        data_logger << (pub_time_1+pub_time_2)/2 << "," << mpc_solver.emergency_counter << "," << mpc_solver.ellipse_counter << "," << mpc_solver.exitflag_counter << "," << mpc_solver.exitflag << "," << mpc_msg.motor_torque_target << "," << 57.2958*mpc_msg.steering_angle_target << "," << mpc_solver.output_struct.speed_target <<"\n";
         // data_logger << mpc_solver.vel_struct.velocity_x << "," << mpc_solver.vel_struct.velocity_y << "," << mpc_solver.dist_eucl <<"\n";
         pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, pose_msg->velocity_state.global_index);
         pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, pose_msg->velocity_state.global_index);
@@ -217,6 +218,8 @@ namespace mpc {
         std::cout << "last point of path callback is: " << mpc_solver.whole_track(points-1,0) << " " << mpc_solver.whole_track(points-1,1) << std::endl;
         std::cout << "finished path callback" << std::endl;
         if(path_flag==0) path_flag=1;
+        mpc_solver.should_exit = path_msg->should_exit;
+        if(path_msg->should_exit) RCLCPP_INFO(this->get_logger(), "Got Path Planning should exit flag!!");
         waypoints_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, path_msg->global_index);
 }
 

@@ -35,7 +35,14 @@ def generate_launch_description():
     vectornav_launch = os.path.join(vectornav_dir, 'launch', 'both_sensors.launch.py')
     vectornav = IncludeLaunchDescription(PythonLaunchDescriptionSource(vectornav_launch))
 
-    ldList = [p23_status, lifecycle_manager, vectornav, canbus]
+    logger_cmd = Node(
+        package="data_logger",
+        executable="data_logger",
+        output="screen",
+        emulate_tty=True,
+    )
+
+    ldList = [p23_status, lifecycle_manager, vectornav, canbus, logger_cmd]
 
     ld = LaunchDescription(ldList)
     return ld

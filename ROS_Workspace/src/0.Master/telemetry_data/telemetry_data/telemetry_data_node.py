@@ -233,6 +233,9 @@ class TelemetryNode(Node):
         self.data = Data()
         self.const = constants()
 
+        self.time_of_as_ready = None
+        self.as_ready_delay = False
+
         timer_period = 0.1
         self.time = self.create_timer(timer_period, self.update_all)
 
@@ -246,7 +249,7 @@ class TelemetryNode(Node):
         # start = time.time()
         tm = time.monotonic_ns()
 
-        GUI.state_.change_all(self.data.dv_status, self.data.as_status, self.data.mission)
+        GUI.state_.change_all(self.data.dv_status, self.data.as_status, self.data.mission, self.as_ready_delay)
 
         GUI.velocity.set_target(self.data.target_speed, self.uptodate(self.data.target_speed_last_time, tm))
         GUI.velocity.set_actual(self.data.actual_speed, self.uptodate(self.data.actual_speed_last_time, tm))
@@ -367,6 +370,12 @@ class TelemetryNode(Node):
         self.data.as_status = msg.id
         tm = time.monotonic_ns()
         self.data.as_status_last_time = tm
+
+        if self.time_of_as_ready is None and msg.id==2:
+            self.time_of_as_ready = tm
+        elif self.time_of_as_ready is not None and msg.id==2:
+            self.as_ready_delay = tm - self.time_of_as_ready >= 5e9
+        
 
     def mission_callback(self, msg: MissionSelection) -> None:
         self.data.mission = msg.mission_selected

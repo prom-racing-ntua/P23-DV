@@ -137,6 +137,7 @@ namespace path_planner
         for_pub.count = waypoints.size();
         std::vector<custom_msgs::msg::Point2Struct> waypoints_ros;
         waypoints_ros.reserve(waypoints.size());
+        bool should_exit = false;
         custom_msgs::msg::Point2Struct sample;
         for (Point point : waypoints)
         {
@@ -175,7 +176,8 @@ namespace path_planner
             else
             {
                 RCLCPP_WARN(get_logger(), "Best path is faulty. Aborting...");
-                exit(1); //Initiates ABS. If there is a safer method, it should be prefered.
+                should_exit = true;
+                // exit(1); //Initiates ABS. If there is a safer method, it should be prefered.
             }
         }
         else
@@ -189,6 +191,7 @@ namespace path_planner
         for_pub.initial_v_x = msg->pose.velocity_state.global_index == 0 ? -1 : msg->pose.velocity_state.velocity_x;
         for_pub.lap_count = msg->lap_count;
         for_pub.global_index = msg->pose.velocity_state.global_index;
+        for_pub.should_exit = should_exit;
         pub_time_1 = this->now().nanoseconds()/1e6;
         pub_waypoints->publish(for_pub);
         pub_time_2 = this->now().nanoseconds()/1e6;
@@ -200,6 +203,11 @@ namespace path_planner
         std::cout << waymaker.get_batch_number() << " score: " << batch_output.second << " no of midpoints: " << waypoints.size() << std::endl;
         rclcpp::Duration total_time = this->now() - starting_time;
         total_execution_time += total_time.nanoseconds() / 1000000.0;
+
+        if(should_exit)
+        {
+            exit(1);
+        }
         // RCLCPP_INFO_STREAM(get_logger(), "Time of Execution: " << total_time.nanoseconds() / 1000000.0 << " ms.");
     }
 

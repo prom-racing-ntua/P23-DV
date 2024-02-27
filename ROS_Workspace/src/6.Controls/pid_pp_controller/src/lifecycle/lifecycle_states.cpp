@@ -47,6 +47,8 @@ namespace pid_pp
         discipline = get_parameter("discipline").as_string();
         midpoints = get_parameter("midpoints").as_string();
         braking_distance = get_parameter("braking_distance").as_double();
+        max_steering = get_parameter("max_steering").as_double();
+        max_torque_difference = get_parameter("max_torque_difference").as_double();
 
         is_end = false;
 

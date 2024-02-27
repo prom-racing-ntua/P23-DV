@@ -1,8 +1,8 @@
 /acquisition_left:
   ros__parameters:
     serialNumber: "KE0220040188"
-    exposureTime: 2000 #xx
-    autoExposure: True # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
+    exposureTime: 450 #xx
+    autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50
     ROIx: 1280
@@ -14,8 +14,8 @@
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220030138"
-    exposureTime: 2000 #xx
-    autoExposure: True
+    exposureTime: 450 #xx
+    autoExposure: False
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
@@ -32,7 +32,7 @@
     track_map: ""
 
     # Defines the starting position of the car
-    starting_position: [ -6.847, 0.0, 0.0 ] #before -7.5
+    starting_position: [ -2.0, 0.0, 0.0 ] #before -7.5
     starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
@@ -83,13 +83,13 @@
                                   0.0,    0.0,    0.0,    0.0, 3.0e-4,    0.0,
                                   0.0,    0.0,    0.0,    0.0,    0.0, 1.0e-4]
 
-    measurement_noise_covariance: [   0.030,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
+    measurement_noise_covariance: [   0.30,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
                                    -13.0e-4,   0.024,      0.0,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0, 1.22e-06,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0,      0.0,     0.032,-7.612e-05,  0.0,   0.0,
                                         0.0,     0.0,      0.0,-7.612e-05,     0.051,  0.0,   0.0,
-                                        0.0,     0.0,      0.0,       0.0,       0.0, 60.0,   0.0,
-                                        0.0,     0.0,      0.0,       0.0,       0.0,  0.0, 180.0]
+                                        0.0,     0.0,      0.0,       0.0,       0.0,  60.0,  0.0,
+                                        0.0,     0.0,      0.0,       0.0,       0.0,  0.0,   50.0]
 
     # Sensor Positions
     vectornav-vn-200:
@@ -97,16 +97,16 @@
       # x: 0.6578 #0.4278+0.32
       x: 0.7478
       y: 0.00                   # [m]
-      pitch: -2.2845550695979377           # [deg]
-      roll: -1.3338435051354365            # [deg]
+      pitch: -0.8273161639198132      # [deg]
+      roll: 0.6821242110610948     # [deg]
     vectornav-vn-300:
       x: 0.4278                 # [m]
       y: 0.00                   # [m]
-      pitch: 13.985712925639929           # [deg]
-      roll: -3.2071296189376963             # [deg]
+      pitch: 19.503786663504414      # [deg]
+      roll: 1.1431943680205523       # [deg]
     
     # Car characteristics
-    wheel_radius: 0.1995        # [m]
+    wheel_radius: 0.2054        # [m]
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]
 
@@ -114,7 +114,7 @@
 /path_planning:
   ros__parameters:
     #triangulation
-    maximum_angle: 90
+    maximum_angle: 60
     maximum_edge_angle: 60
     maximum_distance: 5
     target_depth: 12
@@ -136,44 +136,46 @@
   ros__parameters:
     discipline: "Autocross"
     #model
-    mass: 193.5
+    mass: 250.0
     gravitational_acceleration: 9.81
     wheelbase: 1.59
     weight_distribution: 0.467
     h_cog: 0.27
     air_density: 1.225
-    Cd*A: 2.0
-    Cl*A: 7.0
+    Cd*A: 0.05
+    Cl*A: -0.2
     gear_ratio: 3.9
     wheel_radius: 0.2054
     efficiency: 0.85
     Fz_0: 1112.0554070627252
-    max_positive_torque:  30.0 #186.2              #EDIT BEFORE
-    max_negative_torque:  -5.0 # -186.2             #EDIT BEFORE
+    max_positive_torque:  46.0 #186.2              #EDIT BEFORE
+    max_negative_torque:  -30.0 # -186.2             #EDIT BEFORE
     minimum_weight_distribution_rear: 1.0  
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 2.5                             #EDIT BEFORE
-    ld_max: 7.0                             #EDIT BEFORE
+    ld_min: 3.0                             #EDIT BEFORE
+    ld_max: 12.0                             #EDIT BEFORE
     v_min: 0.0                              #EDIT BEFORE
-    v_max: 10.0                             #EDIT BEFORE
+    v_max: 15.0                             #EDIT BEFORE
     emergency_factor: 0.75
-    emergency_threshold: 0.75
-    safety_factor: 0.6
-    max_speed: 3.0                         #EDIT BEFORE
+    emergency_threshold: 1.5
+    safety_factor: 0.85
+    max_speed: 3.0                      #EDIT BEFORE
     dt: 0.025
-    safe_speed_to_break: 3.0
-    braking_distance: 5.0                   #EDIT BEFORE
+    safe_speed_to_break: 0.2
+    braking_distance: 1.5                  #EDIT BEFORE
+    max_steering: 25.0
+    max_torque_difference: 3.0
 
     #PID
-    kp: 2000
-    ki: 2000
-    kd: 100
+    kp: 1000
+    ki: 100
+    kd: 0
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 2                           #CHECK BEFORE
+    total_laps: 2                         #CHECK BEFORE
 
 /mpc:
   ros__parameters:
@@ -181,13 +183,13 @@
     mission: "autox"
     regen: true
     total_laps: 2
-    v_limit: 5.0
+    v_limit: 2.5
     node_freq: 40.0
     s_interval: 0.15
-    distance_safe: 0.9
+    distance_safe: 1.0
     emergency_forward: 1.0
-    F_init: 300.0
-    F_max: 500.0
-    F_min: -500.0
+    F_init: 400.0
+    F_max: 600.0
+    F_min: -600.0
     s_space_max: 0.5
     s_space_min: 0.1  

@@ -55,7 +55,8 @@ namespace pid_pp
         PID(); // Default Constructor
         void init(int kp, int ki, int kd, double dt, int damp, int integ_damp = INT_MAX, int prop_damp = INT_MAX, int der_damp = INT_MAX);
         double operator()(double error);            // main operation. Get controller output as object_name(error)
-        double operator()(double error, double dt); // same but also provides different dt than one from constructor
+        double operator()(double target, double actual);
+        // double operator()(double error, double dt); // same but also provides different dt than one from constructor
         void flush_error();                      // sets error integral to 0
         ~PID();                                  // stats
     };

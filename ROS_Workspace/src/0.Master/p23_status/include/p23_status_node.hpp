@@ -75,6 +75,7 @@ private:
     // From Vectornav Service
     uint insMode;
     bool nodesReady;
+    bool wait_for_mode_2;
 
     int sensorCheckupFrequency, systemStateFrequency;
 

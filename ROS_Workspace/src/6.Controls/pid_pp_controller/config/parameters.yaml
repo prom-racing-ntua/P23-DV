@@ -28,6 +28,7 @@ pid_pp_controller:
     ld_max: 5.0
     v_min: 3.0
     v_max: 7.0
+    max_steering: 14.0
     emergency_factor: 0.75
     emergency_threshold: 0.75
     safety_factor: 0.5

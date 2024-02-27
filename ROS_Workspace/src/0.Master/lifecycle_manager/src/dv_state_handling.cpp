@@ -47,20 +47,20 @@ namespace lifecycle_manager_namespace{
             case(p23::SKIDPAD):
                 status_array = {1, 1, 1, 1, 1, 0, 0, 1, 0, 1};
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                nodesToShutdown = {"inspection","path_planning", "pure_pursuit"};
-                controlsNode = {"mpc"};
+                nodesToShutdown = {"inspection","path_planning", "mpc"};
+                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::AUTOX):
                 status_array = {1, 1, 1, 1, 1, 1, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/autox_config.yaml");
-                nodesToShutdown = {"inspection","mpc"};
+                nodesToShutdown = {"inspection", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::TRACKDRIVE):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
-                nodesToShutdown = {"inspection","pure_pursuit", "path_planning"};
-                controlsNode = {"mpc"};
+                nodesToShutdown = {"inspection","mpc", "path_planning"};
+                controlsNode = {"pure_pursuit"};
                 break;
             case(p23::EBS_TEST):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};

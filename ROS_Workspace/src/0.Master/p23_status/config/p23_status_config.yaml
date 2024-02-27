@@ -6,3 +6,4 @@ p23_status:
      # know all the nodes that are needed by the DV Circuit.
     system_state_publish_frequency: 10 #in Hz
     sensor_checkup_frequency: 1 #in Hz
+    wait_for_mode_2: false

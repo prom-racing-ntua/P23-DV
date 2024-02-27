@@ -322,6 +322,7 @@ class TorqueFrame(ctk.CTkFrame):
     def set_actual(self, trq) -> None:
         if trq!=self.actual:
             self.actual = trq
+            
             self.actual_v.configure(text = "%.2f Nm"%trq)
             if trq>0:
                 self.bar_acc.set(trq/self.mx)
@@ -812,7 +813,7 @@ class StateFrame(ctk.CTkFrame):
         else:
             self.dv_v.configure(text = "invalid", text_color = "red")
             
-    def change_as(self, state) -> None:
+    def change_as(self, state, as_ready_delay) -> None:
         if state==self.aut:
             return
         self.aut = state
@@ -820,7 +821,7 @@ class StateFrame(ctk.CTkFrame):
         if state==1:
             self.aut_v.configure(text = "OFF", text_color = "white")
         elif state==2:
-            self.aut_v.configure(text = "READY", text_color = "white")
+            self.aut_v.configure(text = "READY", text_color = ("white" if not as_ready_delay else "yellow2"))
         elif state==3:
             self.aut_v.configure(text = "DRIVING", text_color = "blue")
         elif state==4:
@@ -854,7 +855,7 @@ class StateFrame(ctk.CTkFrame):
         else:
             self.miss_v.configure(text = "invalid", text_color = "red")
 
-    def change_all(self, dv, AS, miss) -> None:
+    def change_all(self, dv, AS, miss, as_ready_delay) -> None:
         self.change_dv(dv)
-        self.change_as(AS)
+        self.change_as(AS, as_ready_delay)
         self.change_miss(miss)

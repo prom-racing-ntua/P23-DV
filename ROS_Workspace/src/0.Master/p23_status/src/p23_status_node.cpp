@@ -333,5 +333,6 @@ void P23StatusNode::loadParameters() {
         });
     systemStateFrequency = declare_parameter<int>("system_state_publish_frequency", 10);
     sensorCheckupFrequency = declare_parameter<int>("sensor_checkup_frequency", 1);
+    wait_for_mode_2 = declare_parameter<bool>("wait_for_mode_2", true);
 }
 } // p23_status_namespace

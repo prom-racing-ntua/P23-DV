@@ -1,24 +1,26 @@
 /acquisition_left:
   ros__parameters:
     serialNumber: "KE0220040188"
-    exposureTime: 2000
+    exposureTime: 450 #xx
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "left"
+    log_photos: False
 
 
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220030138"
-    exposureTime: 2000
+    exposureTime: 450 #xx
     autoExposure: False
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
     orientation: "right"
+    log_photos: False
 
 
 /slam:
@@ -82,72 +84,77 @@
                                   0.0,    0.0,    0.0,    0.0, 3.0e-4,    0.0,
                                   0.0,    0.0,    0.0,    0.0,    0.0, 1.0e-4]
 
-    measurement_noise_covariance: [   0.030,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
+    measurement_noise_covariance: [   0.30,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
                                    -13.0e-4,   0.024,      0.0,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0, 1.22e-06,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0,      0.0,     0.032,-7.612e-05,  0.0,   0.0,
                                         0.0,     0.0,      0.0,-7.612e-05,     0.051,  0.0,   0.0,
                                         0.0,     0.0,      0.0,       0.0,       0.0, 60.0,   0.0,
-                                        0.0,     0.0,      0.0,       0.0,       0.0,  0.0, 180.0]
+                                        0.0,     0.0,      0.0,       0.0,       0.0,  0.0, 50.0]
 
     # Sensor Positions
     vectornav-vn-200:
-      x: 0.6461                 # [m]
+      # x: 0.6461                 # [m]
+      # x: 0.6578 #0.4278+0.32
+      x: 0.7478
       y: 0.00                   # [m]
-      pitch: 0.69165            # [deg]
-      roll: 12.71075            # [deg]
+      pitch: -0.8273161639198132      # [deg]
+      roll: 0.6821242110610948     # [deg]
     vectornav-vn-300:
       x: 0.4278                 # [m]
       y: 0.00                   # [m]
-      pitch: 11.08213           # [deg]
-      roll: 0.05579             # [deg]
+      pitch: 19.503786663504414      # [deg]
+      roll: 1.1431943680205523       # [deg]
     
     # Car characteristics
-    wheel_radius: 0.1995        # [m]
+    wheel_radius: 0.2054        # [m]
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]
 
-pid_pp_controller:
+/pure_pursuit:
   ros__parameters:
     discipline: "Skidpad"
     #model
-    mass: 193.5
+    mass: 250.0
     gravitational_acceleration: 9.81
     wheelbase: 1.59
     weight_distribution: 0.467
     h_cog: 0.27
     air_density: 1.225
-    Cd*A: 2.0
-    Cl*A: 7.0
+    Cd*A: 0.05
+    Cl*A: -0.2
     gear_ratio: 3.9
     wheel_radius: 0.2054
     efficiency: 0.85
     Fz_0: 1112.0554070627252
-    max_positive_torque: 186.2
-    max_negative_torque: -186.2          #!!!
+    max_positive_torque:  46.0 #186.2              #EDIT BEFORE
+    max_negative_torque:  -30.0 # -186.2             #EDIT BEFORE
+    minimum_weight_distribution_rear: 1.0  
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 3.0                 
-    ld_max: 5.0
-    v_min: 3.0
-    v_max: 10.0
+    ld_min: 3.0                             #EDIT BEFORE
+    ld_max: 9.0                            #EDIT BEFORE
+    v_min: 0.0                              #EDIT BEFORE
+    v_max: 15.0                             #EDIT BEFORE
     emergency_factor: 0.75
-    emergency_threshold: 0.75
-    safety_factor: 0.5
-    max_speed: 100.0
+    emergency_threshold: 3.0
+    safety_factor: 0.85
+    max_speed: 0.75                      #EDIT BEFORE
     dt: 0.025
     safe_speed_to_break: 3.0
-    braking_distance: 15.0  #includes entering finish zone
+    braking_distance: 0.5                  #EDIT BEFORE
+    max_steering: 25.0
+    max_torque_difference: 3.0
 
     #PID
-    kp: 2000  
-    ki: 2000
-    kd: 100
+    kp: 1000
+    ki: 100
+    kd: 0
     PID_max_output: 3000
     Integral_max_output: 2000
     spline_resolution_per_meter: 10
-    total_laps: 3
+    total_laps: 2                         #CHECK BEFORE
 
 /mpc:
   ros__parameters:

@@ -80,14 +80,16 @@ private:
     double emergency_threshold;
     double safety_factor;
     double max_speed, spline_res_per_meter;
+    double max_steering;
     double safe_speed_to_break, braking_distance;
     double last_steering, last_torque;
+    double max_torque_difference;
     Point last_position; // used to implement braking distance
     int laps_to_do;
     int prev_lap;
     string discipline, midpoints;
     std::ifstream mids;
-    bool is_out_of_map;
+    bool is_out_of_map, should_exit;
     std::ofstream log;
 
     bool is_end;

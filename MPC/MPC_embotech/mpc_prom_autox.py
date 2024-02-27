@@ -49,7 +49,7 @@ l_r = lol*WD_front
 CdA = 2.0 # for drag (changed)
 ClA = 7.0 # for downforce (changed)
 pair = 1.225
-u_upper=15.0
+u_upper = 2.5
 m = 190.0   # mass of the car
 g = 9.81
 Iz = 110.0
@@ -192,8 +192,8 @@ def obj(z,current_target):
     e_c= casadi.sin(current_target[2])*(z[3]-current_target[0]) - casadi.cos(current_target[3])*((z[4]-current_target[1])) #katakorifi
     e_l= -casadi.cos(current_target[2])*(z[3]-current_target[0]) - casadi.sin(current_target[3])*((z[4]-current_target[1])) #orizontia
     return (
-        5e2*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
-            + 5e2*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
+        8e2*(z[3]-current_target[0])**2 # costs on deviating on the path in x-direction
+            + 8e2*(z[4]-current_target[1])**2 # costs on deviating on the path in y-direction
             # + 0e1*(e_c)**2 # costs on deviating on the
             #                             # path in y-direction
             # + 1e3*(e_l)**2 # costs on deviating on the
@@ -203,7 +203,7 @@ def obj(z,current_target):
             + 1e2*(z[0]/1000)**2 # penalty on input F,dF
             + 1e2*(z[9]/1000)**2
             + 5e2*z[1]**2 #penalty on delta,ddelta
-            + 5e2*z[10]**2
+            + 1e3*z[10]**2
             + 1e-3*(sar**2)
             # + 1e-3*(dsa**2)
             + 1e-2*((z[9]/(a*Frz))**2 + (Fry/(b*Frz))**2)
@@ -329,8 +329,8 @@ def generate_pathplanner():
 
     # Inequality constraints
     # from brake -> Fbrake = -4120.0
-    model.lb = np.array([-3560.7*eff,  -np.deg2rad(30), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -15.0, -15.0, -3560.7*eff, -np.deg2rad(30), 0])
-    model.ub = np.array([+3560.7*eff,  np.deg2rad(+30), INDEX_MAX, 400.,   400.,   +np.inf, 15.0, +15.0, 15.0, 3560.7*eff, np.deg2rad(30), INDEX_MAX*100])
+    model.lb = np.array([-3560.7*eff,  -np.deg2rad(25), 0.0, -400.,   -400.,  -np.inf,  -1e-6, -5.0, -5.0, -3560.7*eff, -np.deg2rad(25), 0])
+    model.ub = np.array([+3560.7*eff,  np.deg2rad(+25), INDEX_MAX, 400.,   400.,   +np.inf, 5.0, +5.0, 5.0, 3560.7*eff, np.deg2rad(25), INDEX_MAX*100])
 
     model.nh = 3 #number of inequality constr
     model.ineq = constr

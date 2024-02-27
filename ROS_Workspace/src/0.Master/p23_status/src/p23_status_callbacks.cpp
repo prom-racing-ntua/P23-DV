@@ -61,7 +61,7 @@ void P23StatusNode::checkVectornav() {
         {
             // insMode = 2; //HARD CODED FOR LAB
             // If in mission inspection set ins mode to 2
-            if (currentMission == p23::INSPECTION || 1) {
+            if (currentMission == p23::INSPECTION || !wait_for_mode_2) {
                 insMode = 2;
             }
             // Check if we received the same mode as before

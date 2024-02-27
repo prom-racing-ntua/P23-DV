@@ -4,7 +4,7 @@
 # In separate message now
 # AutonomousStatus    as_status
 
-int16               motor_torque_actual
+float32             motor_torque_actual
 int16               motor_rpm
 
 float32             brake_pressure_front

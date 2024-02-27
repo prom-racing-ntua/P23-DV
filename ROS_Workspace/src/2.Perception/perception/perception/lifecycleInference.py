@@ -171,7 +171,7 @@ def main(args=None):
     path = get_package_share_directory("perception")
     models = os.path.join(path,"models")
     # EdgeTPU YOLO
-    yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8_edgetpu.tflite"
+    yolov5_edgetpu_model_path = f"{models}/yolov5n6_640_edgetpu.tflite"
     # yolov5_edgetpu_model_path = f"{models}/yolov5n6-int8.tflite"
     # Yolo v7
     yolov7_model_path = f"{models}/yolov7.pt"

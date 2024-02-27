@@ -85,21 +85,38 @@ double PID::operator()(double error)
     //std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
     return correction;
 }
-
-double PID::operator()(double error, double dt)
+double PID::operator()(double target, double actual)
 {
-    error_integral += error * dt;
+    double error = target - actual;
+    error_integral += actual > 0.1 ? error * dt : 0;
+    
+    //std::cout<<"INTEGRAL = "<<(last_error)<<std::endl;
     double proportional = this->filter(error * Kp, proportional_dampener);
     double integral = this->filter(error_integral * Ki, integral_dampener);
     double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
 
     double correction = this->filter(proportional + integral + derivative, dampener);
-
     request_sum += correction / 1000;
     total_requests++;
-
+    last_error = error;
+    //std::cout << "Error: " << error << ". Correction: " << correction << ". P: "<< proportional <<" "<<integral<<" "<<derivative<<" "<<proportional + derivative + integral<<std::endl;
     return correction;
 }
+
+// double PID::operator()(double error, double dt)
+// {
+//     error_integral += error * dt;
+//     double proportional = this->filter(error * Kp, proportional_dampener);
+//     double integral = this->filter(error_integral * Ki, integral_dampener);
+//     double derivative = (last_error == -1) ? 0 : (this->filter((error - last_error) / dt, derivative_dampener));
+
+//     double correction = this->filter(proportional + integral + derivative, dampener);
+
+//     request_sum += correction / 1000;
+//     total_requests++;
+
+//     return correction;
+// }
 
 void PID::flush_error()
 {
@@ -318,7 +335,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         error_y = spline_samples[i].position().y() - position.y();
         error = error_x * error_x + error_y * error_y;
         // std::cout<<error<<std::endl;
-        if (error <= min_error)
+        if (error <= min_error && std::abs(spline_samples[i].s()-spline_samples[last_visited_index].s())*total_length<5)
         {
             min_error = error;
             min_error_index = i;
@@ -345,9 +362,9 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
         trans = spline_samples[i].position() - rear;
         if(trans.x() * std::cos(theta) + trans.y() * std::sin(theta) < 0 )continue; //target point should be in front
         R = (ld * ld) / (2 * (-trans.x() * std::sin(theta) + trans.y() * std::cos(theta)));
-        if (std::abs(ld - dist) <= closest_d && std::abs(R) > min_radius)
+        if (std::abs(ld - dist) <= closest_d /*&& std::abs(R) > min_radius*/)
         {
-            //if(closest_d<DBL_MAX && i - sel_idx > 100)continue; //Ds>10meters
+            if(closest_d < 1.0 && std::abs(spline_samples[i].s() - spline_samples[last_visited_index].s())*total_length > 10)continue; //Ds>10meters
             closest_d = std::abs(ld - dist);
             closest_p = trans;
             sel_idx = i;
@@ -460,7 +477,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         fz_avail *= safety_factor; //VP_SF2
         
         drag = 0.5 * model->cd_A * std::pow(local_speed, 2);
-        max_accel_eng = (model->max_positive_force - drag) / m;
+        max_accel_eng = (model->max_positive_force - drag - 0.1 * m * g) / m;
         max_accel_eng *= safety_factor; //VP_SF3
         
         fx_rem = model->mx_max(fz_avail) * std::sqrt(std::max(0.0,std::pow(fz_avail, 2) - std::pow(fy_req / model->my_max(fz_avail), 2)));
@@ -472,7 +489,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         fx_rear_rem = model->mx_max(fz_rear_avail) * fz_rear_avail;//available fx assuming 0 fy
         fx_rem = std::min(fx_rem, fx_rear_rem);
 
-        local_accel = std::min(fx_rem / m, max_accel_eng);
+        local_accel = std::min(fx_rem / m, max_accel_eng) * safety_factor; //VP_SF5;
         
         ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
         u_accel = std::sqrt(local_speed * local_speed + 2 * local_accel * ds);
@@ -496,20 +513,20 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         fy_req = m * std::pow(local_speed, 2) * std::abs(spline_samples[i].k());
 
         fz_avail = model->Fz_calc("full", 1, 1, local_speed, model->min_wd);
-        fz_avail *= safety_factor; //VP_SF5
+        fz_avail *= safety_factor; //VP_SF6
 
         fx_rem = - model->mx_max(fz_avail) * std::sqrt(std::max(0.0,std::pow(fz_avail, 2) - std::pow(fy_req / model->my_max(fz_avail), 2)));
 
         drag = 0.5 * model->cd_A * std::pow(local_speed, 2);
-        max_decel_eng = (model->max_negative_force + drag) / m;
-        max_decel_eng *= safety_factor; //VP_SF6
+        max_decel_eng = (model->max_negative_force + drag + 0.1 * m * g) / m;
+        max_decel_eng *= safety_factor; //VP_SF7
 
         fz_rear_avail = model->Fz_calc("rear", 1, 1, local_speed);
-        fz_rear_avail *= safety_factor; //VP_SF7
+        fz_rear_avail *= safety_factor; //VP_SF8
         fx_rear_rem = -model->mx_max(fz_rear_avail)*fz_rear_avail;
         fx_rem = std::max(fx_rem, fx_rear_rem);
 
-        local_decel = std::max(fx_rem / m, max_decel_eng);
+        local_decel = std::max(fx_rem / m, max_decel_eng) * safety_factor; //VP_SF9;
 
         //std::cout<<local_decel<<std::endl;
 

@@ -1,7 +1,7 @@
 #include "lifecycle_controller.hpp"
 #include <iomanip>
 
-LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false)
+LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false), should_exit(false), last_torque(0)
 {
     parameter_load();
     RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
@@ -264,7 +264,7 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
 
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-            bool is_end = 0;
+            bool is_end = 1;
             double ms = max_speed;
             double v_init = this->v_x;
             VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
@@ -309,16 +309,46 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             delete profile_to_delete;
         }
     }
+    else if (discipline == "EBS_Test")
+    {
+        if (lap == 0)
+        {
+            path_planning::PointsArray midpoints(20, 2);
+            for (int i = 0; i < 20; i++)
+            {
+                midpoints(i, 0) = i * 5;
+                midpoints(i, 1) = 0;
+            }
+            path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
+            bool is_end = 1;
+            double ms = max_speed;
+            double v_init = 3;
+            VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, 0, safety_factor, braking_distance);
+            path_planning::ArcLengthSpline *spline_to_delete = this->spline;
+            VelocityProfile *profile_to_delete = this->profile;
+            this->has_run_waypoints = true;
+            this->is_end = is_end;
+            this->profile = profile;
+            this->spline = spline;
+            /* VARIABLE UNLOCK */
+            // pthread_spin_unlock(&global_lock_);
+
+            delete spline_to_delete;
+            delete profile_to_delete;
+        }
+    }
+    else
+        RCLCPP_ERROR(get_logger(), "Invalid Discipline: %s", discipline);
 }
 
 void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsMsg::SharedPtr msg)
 {
-    std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
+        std::cout << ++count_wp << " Entered Waypoints callback" << std::endl;
     rclcpp::Time starting_time = this->now();
     path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
     if (msg->count >= 3)
     {
-        for (int i = 0; i < msg->count; i++)
+                for (int i = 0; i < msg->count; i++)
         {
             midpoints(i, 0) = msg->waypoints[i].x;
             midpoints(i, 1) = msg->waypoints[i].y;
@@ -326,7 +356,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     }
     else if (msg->count == 2)
     {
-        midpoints(0, 0) = msg->waypoints[0].x;
+                midpoints(0, 0) = msg->waypoints[0].x;
         midpoints(0, 1) = msg->waypoints[0].y;
         midpoints(1, 0) = 0.5 * msg->waypoints[0].x + 0.5 * msg->waypoints[1].x;
         midpoints(1, 1) = 0.5 * msg->waypoints[0].y + 0.5 * msg->waypoints[1].y;
@@ -335,15 +365,17 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     }
     else
     {
-        return;
+                return;
     };
     path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
-    if(msg->lap_count == laps_to_do && !is_end)
+    // RCLCPP_INFO_STREAM(get_logger(), "Lap = %d / %d\n", msg->lap_count, laps_to_do);
+    if (msg->lap_count == laps_to_do && !is_end)
     {
+        RCLCPP_WARN(get_logger(), "Max laps detected. Starting Finishing Sequence...");
         is_end = true;
         last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
     }
-    else if(is_end)
+    else if (is_end)
     {
         braking_distance -= Point::distance(last_position, Point(msg->waypoints[0].x, msg->waypoints[0].y));
         last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
@@ -351,9 +383,10 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     //bool is_end = msg->lap_count == laps_to_do;
     double ms = msg->is_out_of_map ? 2 : max_speed;
     this->is_out_of_map = msg->is_out_of_map;
+    this->should_exit = msg->should_exit;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
 
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, true, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, msg->lap_count < 2, safety_factor, braking_distance); // last available speed is used. Alternatively should be in waypoints msg
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
         (a) The new objects can be constructed locally and the modification required is only the copying of the pointer address
@@ -407,6 +440,25 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         prev_lap = msg->lap_count;
         known_map_substitute(prev_lap, laps_to_do);
     }
+    if(should_exit)
+    {
+        RCLCPP_WARN(get_logger(), "Path Planning has died due to bad path. Sending full breaks until Lifecycle Manager detects failure and activates EBS");
+        custom_msgs::msg::TxControlCommand for_publish;
+        for_publish.brake_pressure_target = 20.0;
+        for_publish.motor_torque_target = model.max_negative_torque;
+        for_publish.steering_angle_target = 0;
+        for_publish.global_index = msg->velocity_state.global_index;
+        for_publish.speed_actual = v_x * 3.6;
+        for_publish.speed_target = 0;
+        
+        pub_time_1 = this->now().nanoseconds()/1e6;
+        pub_actuators->publish(for_publish);
+        pub_time_2 = this->now().nanoseconds()/1e6;
+
+        pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->velocity_state.global_index);
+        pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->velocity_state.global_index);
+        return;
+    }
 
     Point position(msg->position.x, msg->position.y);
     // Point direction(std::cos(theta), std::sin(theta));
@@ -418,14 +470,14 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
     log << projection.first << " " << this->v_x << std::endl;
     custom_msgs::msg::TxControlCommand for_publish;
-    for_publish.speed_actual = this->v_x * 3.6;
-    for_publish.speed_target = projection.first * 3.6;
+    for_publish.speed_actual = this->v_x;
+    for_publish.speed_target = projection.first ;
     // std::cout<<"6.. ";
     double min_radius;
     double fz = model.Fz_calc("full", 1, 0, v_x);
-    double force = pid_controller(projection.first - this->v_x);
+    double fx_next = pid_controller(projection.first, this->v_x);
     // Checking Force
-    double fx_next = force - 0.5 * v_x * v_x * model.cd_A - 0.03 * fz + v_y * r * model.m;
+    double force = fx_next + 0.5 * v_x * v_x * model.cd_A + 0.05 * fz - v_y * r * model.m;
     double fx; // old fx, new fx
     fx = std::abs(fx_next) > std::abs(model.m * a_x) ? fx_next : model.m * a_x;
 
@@ -456,6 +508,8 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     double trq = model.Torque(force);
     trq = std::min(model.max_positive_torque, std::max(model.max_negative_torque, trq));
 
+    last_torque = trq = std::min(last_torque + max_torque_difference, std::max(last_torque - max_torque_difference, trq));
+
     for_publish.motor_torque_target = trq;
 
     // CALCULATING MIN RADIUS
@@ -468,11 +522,11 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     */
 
     // min_radius = model.m * v_x * v_x / rem;
-    double mx_head = 3.14159 * 20 / 180;
+    double mx_head = 3.14159 * max_steering / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
-    min_radius = std::max(v_x * v_x / (mu * model.g), mn_radius_wheel);
+    min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
     double ld;
@@ -481,11 +535,11 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     {
         ld = pp_controller.lookahead(v_x, false);
     }
-    else
+    else if(!is_end)
     {
         RCLCPP_INFO_STREAM(get_logger(), "Emergency Manouevre. Error = "<<projection.second<<"m");
         std::cout << "emergency manouevre" << std::endl;
-        for_publish.motor_torque_target *= 0.25;
+        for_publish.motor_torque_target *= for_publish.motor_torque_target > 0 ? 0.25 : 1;
         ld = pp_controller.lookahead(v_x, true);
     }
     // std::cout<<"10.. ";
@@ -514,11 +568,12 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     if(!switch_br && (force < 0 && v_x < safe_speed_to_break && is_end))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
 
     switch_br = force < 0 && v_x < safe_speed_to_break && (is_end || projection.first < 0.1);
+    if(tp.error && !is_end)switch_br=1;
 
-    for_publish.brake_pressure_target = switch_br ? 10.0 : 0;
-    if (switch_br)
-        for_publish.motor_torque_target = 0;
-    // std::cout<<"13.. ";
+    for_publish.brake_pressure_target = switch_br ? 20.0 : 0;
+    // if (switch_br)
+    //     for_publish.motor_torque_target = 0;
+    // // std::cout<<"13.. ";
 
     double lr = model.wb * model.wd;
     Point drear = Point(-lr * std::cos(theta), -lr * std::sin(theta));
@@ -530,22 +585,21 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pub_target->publish(tg);
 
     /* EXTRA SAFETY CHECKS */
-    if(this->v_x > 1.5 * max_speed)
-    {
-        for_publish.motor_torque_target = 0;
-        for_publish.brake_pressure_target = 1;
-        RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
-    }
-    if(this->v_x > 2 * max_speed)
-    {
-        for_publish.steering_angle_target = 0;
-        for_publish.motor_torque_target = 0;
-        for_publish.brake_pressure_target = 1;
-        pub_actuators->publish(for_publish);
-        RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
-        exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
-    }
-
+    // if(this->v_x > 1.5 * max_speed)
+    // {
+    //     for_publish.motor_torque_target = model.max_negative_torque;
+    //     for_publish.brake_pressure_target = 20;
+    //     RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
+    // }
+    // if(this->v_x > 2 * max_speed)
+    // {
+    //     for_publish.steering_angle_target = 0;
+    //     for_publish.motor_torque_target = model.max_negative_torque;
+    //     for_publish.brake_pressure_target = 20;
+    //     pub_actuators->publish(for_publish);
+    //     RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
+    //     exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
+    // }
     pub_time_1 = this->now().nanoseconds()/1e6;
     pub_actuators->publish(for_publish);
     pub_time_2 = this->now().nanoseconds()/1e6;
@@ -563,44 +617,46 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
 void LifecyclePID_PP_Node::parameter_load()
 {
-    declare_parameter<float>("mass", 193.5);
+    declare_parameter<float>("mass", 250.0);
     declare_parameter<float>("gravitational_acceleration", 9.81);
     declare_parameter<float>("wheelbase", 1.59);
     declare_parameter<float>("weight_distribution", 0.467);
     declare_parameter<float>("h_cog", 0.275);
     declare_parameter<float>("air_density", 1.225);
-    declare_parameter<float>("Cd*A", 2);
-    declare_parameter<float>("Cl*A", 7);
+    declare_parameter<float>("Cd*A", 0.5);
+    declare_parameter<float>("Cl*A", -0.02);
     declare_parameter<float>("gear_ratio", 3.9);
     declare_parameter<float>("wheel_radius", 0.2054);
     declare_parameter<float>("efficiency", 0.85);
     declare_parameter<float>("Fz_0", 1112.0554070627252);
-    declare_parameter<float>("ld_min", 2);
-    declare_parameter<float>("ld_max", 7);
-    declare_parameter<float>("max_positive_torque", 186.2);
-    declare_parameter<float>("max_negative_torque", -186.2);
+    declare_parameter<float>("ld_min", 3);
+    declare_parameter<float>("ld_max", 9);
+    declare_parameter<float>("max_positive_torque", 100);
+    declare_parameter<float>("max_negative_torque", -40);
     declare_parameter<float>("minimum_weight_distribution_rear", 1);
     declare_parameter<float>("c_tire", 0.66);
     declare_parameter<float>("v_min", 0);
-    declare_parameter<float>("v_max", 10);
-    declare_parameter<float>("emergency_factor", 0.8);
-    declare_parameter<float>("emergency_threshold", 0.7);
-    declare_parameter<float>("safety_factor", 0.75);
+    declare_parameter<float>("v_max", 15);
+    declare_parameter<float>("emergency_factor", 0.75);
+    declare_parameter<float>("emergency_threshold", 1.5);
+    declare_parameter<float>("safety_factor", 1.0);
     declare_parameter<float>("max_speed", 15);
     declare_parameter<float>("dt", 0.025);
-    declare_parameter<float>("safe_speed_to_break", 1);
-    declare_parameter<float>("braking_distance", 5);
+    declare_parameter<float>("safe_speed_to_break", 0.0);
+    declare_parameter<float>("braking_distance", 1.0);
+    declare_parameter<float>("max_steering", 24.0);
+    declare_parameter<float>("max_torque_difference", 3.0);
 
     declare_parameter<int>("kp", 1000);
-    declare_parameter<int>("ki", 1000);
+    declare_parameter<int>("ki", 100);
     declare_parameter<int>("kd", 0);
     declare_parameter<int>("PID_max_output", 3000);
     declare_parameter<int>("Integral_max_output", 1500);
     declare_parameter<int>("spline_resolution_per_meter", 10);
-    declare_parameter<int>("total_laps", 2);
+    declare_parameter<int>("total_laps", 4);
 
-    declare_parameter<string>("discipline", "Autocross");
-    declare_parameter<string>("midpoints", "");
+    declare_parameter<string>("discipline", "Skidpad");
+    declare_parameter<string>("midpoints", "midpoints_from_pp.txt");
 }
 
 int main(int argc, char *argv[])

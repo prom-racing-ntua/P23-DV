@@ -212,16 +212,18 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
     def data(self) -> tuple:
         return [float(self._ros_msg.steering_angle_target),
                 float(self._ros_msg.motor_torque_target),
-                float(self._ros_msg.brake_pressure_target)]
+                float(self._ros_msg.brake_pressure_target),
+                float(self._ros_msg.speed_actual),
+                float(self._ros_msg.speed_target)]
 
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)
         out_msg[0] = self.can_id
 
         if self.node_handle._shuting_down:
-            self._ros_msg.steering_angle_target = 0
-            self._ros_msg.motor_torque_target = 0
-            self._ros_msg.brake_pressure_target = True
+            self._ros_msg.steering_angle_target = 0.0
+            self._ros_msg.motor_torque_target = 0.0
+            self._ros_msg.brake_pressure_target = 0.0
             self._ros_msg.speed_actual = 0
             self._ros_msg.speed_target = 0
 
@@ -233,14 +235,14 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
 
         out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
         # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
-        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=128,signed=True)
+        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target/2, multiplier=128,signed=True)
         out_msg[5] = int(self._ros_msg.brake_pressure_target)
         # floatToBytes(self._ros_msg.brake_pressure_target,multiplier=2,num_bytes=1, signed=True)
         # else: out_msg[5] = 0
 
         # Speed Actual and speed target
-        out_msg[6] = self._ros_msg.speed_actual
-        out_msg[7] = self._ros_msg.speed_target
+        out_msg[6] = np.uint8(self._ros_msg.speed_actual*3.6)
+        out_msg[7] = np.uint8(self._ros_msg.speed_target*3.6)
         return out_msg
 
 
@@ -375,9 +377,9 @@ class SteeringParamsMsg(CanInterfaceMessage):
             self._ros_msg.maxvel = 0.0
 
         #send steering params
-        out_msg[1:3] = floatToBytes(self._ros_msg.kp, multiplier=8, signed=True)
-        out_msg[3:5] = floatToBytes(self._ros_msg.kd, multiplier=8, signed=True)
-        out_msg[5:7] = floatToBytes(self._ros_msg.ki, multiplier=8, signed=True)
+        out_msg[1:3] = floatToBytes(self._ros_msg.kp, multiplier=1, signed=True)
+        out_msg[3:5] = floatToBytes(self._ros_msg.kd, multiplier=1, signed=True)
+        out_msg[5:7] = floatToBytes(self._ros_msg.ki, multiplier=1, signed=True)
         out_msg[7:9] = floatToBytes(self._ros_msg.dt, multiplier=512, signed=True)
         out_msg[9:11] = floatToBytes(self._ros_msg.minvel, multiplier=1, signed=True)
         out_msg[11:13] = floatToBytes(self._ros_msg.maxvel, multiplier=1, signed=True)
@@ -485,7 +487,7 @@ class MissionMsg(CanInterfaceMessage):
 
 class SensorVariablesMsg(CanInterfaceMessage): 
     can_id = 0x300
-    byte_size = 6
+    byte_size = 8
     msg_type = RxVehicleSensors
 
     def data(self):
@@ -496,7 +498,7 @@ class SensorVariablesMsg(CanInterfaceMessage):
         
         # Set Motor Torque
         motor_torque = int.from_bytes(self._can_msg[2:4], byteorder='big', signed=True)
-        msg.motor_torque_actual = int(motor_torque/100) 
+        msg.motor_torque_actual = motor_torque/100 
         
         #Set Motor RPM
         motor_rpm = int.from_bytes(self._can_msg[4:6], byteorder='big', signed=True)
@@ -506,7 +508,10 @@ class SensorVariablesMsg(CanInterfaceMessage):
         msg.brake_pressure_front = float(int.from_bytes(self._can_msg[0:1], byteorder='big', signed=False))
         msg.brake_pressure_rear = float(int.from_bytes(self._can_msg[1:2], byteorder='big', signed=False))
 
-        self._data = [msg.motor_torque_actual, motor_rpm, msg.brake_pressure_front, msg.brake_pressure_rear]
+        # Set linear voltage 
+        linear_voltage_temp = (float(int.from_bytes(self._can_msg[6:8],byteorder='big', signed=False)))/1024
+
+        self._data = [msg.motor_torque_actual, motor_rpm * 0.2 / (9.5493*3.9), msg.brake_pressure_front, msg.brake_pressure_rear, linear_voltage_temp]
 
         return msg
 
@@ -534,20 +539,22 @@ class WheelEncodersMsg(CanInterfaceMessage):
 class SteeringAngleMsg(CanInterfaceMessage):
     exitflag=1
     can_id = 0x05
-    byte_size = 2
+    byte_size = 8
     msg_type = RxSteeringAngle
 
     def data(self):
-        return [self._data]
+        return self._data
     def to_ROS(self) -> msg_type: 
         msg = self.msg_type()
-        temp = int.from_bytes(self._can_msg, byteorder='little', signed=True) / 1024
-        # self.get_logger().info(f"Getting steering at: {temp} ms")
+        temp = int.from_bytes(self._can_msg[0:2], byteorder='little', signed=True) / 1024
         try:
             msg.steering_angle = rackDisplacement2rad(temp)
         except ValueError:
             msg.steering_angle = rackDisplacement2rad(24 * temp/abs(temp))
-        self._data = msg.steering_angle
+        linear_voltage = float(int.from_bytes(self._can_msg[2:4],byteorder='big',signed=False)/1024)
+        requested_velocity = int.from_bytes(self._can_msg[4:6], byteorder='little', signed=False)
+        actual_velocity = int.from_bytes(self._can_msg[6:8], byteorder='little', signed=False)
+        self._data = [msg.steering_angle,linear_voltage,requested_velocity,actual_velocity]
 
         return msg
 

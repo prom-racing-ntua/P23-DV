@@ -76,8 +76,8 @@ struct SlipAngles{
 };
 
 struct output_data {
-    int speed_target;
-    int speed_actual;
+    float speed_target;
+    float speed_actual;
     float motor_torque_target;
     float steering_angle_target;
     float brake_pressure_target;
@@ -136,6 +136,7 @@ class MpcSolver {
         std::vector<double> u_second_pass;
         std::vector<double> u_third_pass;
         std::vector<double> u_final_pass;
+        bool should_exit = false;
         int global_int_=0;
         center center_point;
         center start_point;
