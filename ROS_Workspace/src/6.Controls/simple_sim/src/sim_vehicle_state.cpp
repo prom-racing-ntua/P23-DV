@@ -108,7 +108,7 @@ double State::calc_drag(double v_x) const
 }
 double State::calc_roll(double fz) const
 {
-	double coeff = 0.03;
+	double coeff = 0.1;
 
 	return coeff * fz;
 }

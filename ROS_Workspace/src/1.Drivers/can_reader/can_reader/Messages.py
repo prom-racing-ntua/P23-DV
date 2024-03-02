@@ -166,8 +166,8 @@ class CanInterfaceMessage():
             received_byte_size = int.from_bytes(received_message[2:3], byteorder='big', signed=False)
 
             # Checks that the received message is valid
-            if received_id != self.can_id: raise ValueError('Received message id does not match the default value')
-            if received_byte_size != self.byte_size: raise ValueError(f'Received message id does not match the default value {received_byte_size}')
+            if received_id != self.can_id: raise ValueError(f'Received message id does not match the default value: {received_id} != {self.can_id}')
+            if received_byte_size != self.byte_size: raise ValueError(f'Received message id does not match the default value {received_byte_size} != {self.byte_size}')
 
             self._can_msg = received_message[3:]
             return
@@ -312,6 +312,7 @@ class SystemHealthMsg(CanInterfaceMessage):
             out_msg[1] = (self._ros_msg.lap_counter << 4) | state
         except Exception as e:
             self.node_handle.get_logger().warn(f"Error setting lap count: {repr(e)}. msg = {(self._ros_msg.lap_counter << 4) | state}. lap = {self._ros_msg.lap_counter}")
+            raise ValueError(f"Error setting lap count: {repr(e)}. msg = {(self._ros_msg.lap_counter << 4) | state}. lap = {self._ros_msg.lap_counter}")
 
         out_msg[2] = self._ros_msg.cones_count_actual
         out_msg[3:5] = self._ros_msg.cones_count_all.to_bytes(2, byteorder='big')

@@ -11,7 +11,7 @@ def generate_launch_description():
     slam_node = Node(
         package="slam",
         name="slam_node",
-        executable="lifecycle_slam",
+        executable="l_slm",
         output="screen",
         emulate_tty=True,
         parameters=[os.path.join(slam_dir, "config", "params.yaml")]

@@ -1,7 +1,6 @@
-velocity_estimation_node:
+/velocity_estimation:
   ros__parameters:
-    frequency: 40               # [Hz]
-
+    frequency: 40                         # [Hz]
     initial_state_vector: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     initial_state_covariance: [1.0e-3,    0.0,    0.0,    0.0,    0.0,    0.0,
@@ -18,7 +17,7 @@ velocity_estimation_node:
                                   0.0,    0.0,    0.0,    0.0, 3.0e-4,    0.0,
                                   0.0,    0.0,    0.0,    0.0,    0.0, 1.0e-4]
 
-    measurement_noise_covariance: [   0.030,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
+    measurement_noise_covariance: [   0.30,-13.0e-4,      0.0,       0.0,       0.0,  0.0,   0.0,
                                    -13.0e-4,   0.024,      0.0,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0, 1.22e-06,       0.0,       0.0,  0.0,   0.0,
                                         0.0,     0.0,      0.0,     0.032,-7.612e-05,  0.0,   0.0,
@@ -28,17 +27,19 @@ velocity_estimation_node:
 
     # Sensor Positions
     vectornav-vn-200:
-      x: 0.6461                 # [m]
+      # x: 0.6461                 # [m]
+      # x: 0.6578 #0.4278+0.32
+      x: 0.7478
       y: 0.00                   # [m]
-      pitch: 0.849             # [deg]
-      roll: 12.8364             # [deg]
+      pitch: -1.565904627026856           # [deg]
+      roll: -1.4526554393945559           # [deg]
     vectornav-vn-300:
       x: 0.4278                 # [m]
       y: 0.00                   # [m]
-      pitch: 11.08213           # [deg]
-      roll: 0.05579             # [deg]
+      pitch: 13.00079787866103          # [deg]
+      roll: 2.181913870022126             # [deg]
     
     # Car characteristics
-    wheel_radius: 0.1995        # [m]
+    wheel_radius: 0.2054        # [m]
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]

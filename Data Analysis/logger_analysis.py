@@ -21,7 +21,7 @@ class Log:
     def __init__(self, run: int, name: str, base: str):
         # run: 0, 1, ...
         # name: <<name>>_log.txt
-        # base: <<base>>/timestamp_logs/run_...
+        # base: <<base>>/run_...
         self.run = run
         self.name = name
         self.times = []
@@ -32,15 +32,18 @@ class Log:
         self.t0 = None
 
         try:
-            self.file = open("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, int(run), name), "r")
+            self.file = open("{:s}/run_{:d}/{:s}_log.txt".format(base, int(run), name), "r")
         except Exception as e:
             print("Couldn't open {:s} log: {:s}".format(name, str(repr(e))))
-            print("{:s}/timestamp_logs/run_{:d}/{:s}_log.txt".format(base, int(run), name) )
+            print("{:s}/run_{:d}/{:s}_log.txt".format(base, int(run), name) )
             return
-        else:
-            print("Log {:s} open successfully.".format(name))
+        # else:
+        #     print("Log {:s} open successfully.".format(name))
         self.lines = self.file.readlines()
-        self.fill_entries()
+        try:
+            self.fill_entries()
+        except:
+            return
 
     def fill_entries(self):
         for line in self.lines:
@@ -76,7 +79,6 @@ class Log:
             return Entry(-1, -1, -1, [])
         
     def analyze_time_response(self, analysis_type: str):
-        print('lalo')
         if len(self.start_entries)==0 or len(self.pub_entries)==0: return
         if self.time_response is None:
             self.time_response = []
@@ -163,9 +165,9 @@ class Chain:
             return self.comm_delays
         
     
-base = '/home/nick/Desktop/Prom Racing/Testing_Data/clown_testing_23_12_24'
+base = '/home/nick/Desktop/DV-Testing-1'
 run: int = 0
-run = input('Enter desired run index: ')
+# run = input('Enter desired run index: ')
 callbacks = [
     'saltas', 
     'acquisition_left', 'acquisition_right', 
@@ -177,70 +179,115 @@ callbacks = [
     'canbus_sensor', 'canbus_wheel', 'canbus_steering', 'canbus_controls', 'canbus_velocity'
 ]
 
-logs:list[Log] = []
-logs_dict:dict[str, Log] = {}
-for item in callbacks:
-    logs.append(Log(run, item, base))
-    logs_dict[item] = logs[-1]
+# logs:list[Log] = []
+# logs_dict:dict[str, Log] = {}
+# for item in callbacks:
+#     logs.append(Log(run, item, base))
+#     logs_dict[item] = logs[-1]
 
-chains: list[list[Log]] = [
-    [logs_dict['saltas'], logs_dict['acquisition_left'], logs_dict['inference_left'], logs_dict['slam_perception']],
-    [logs_dict['saltas'], logs_dict['acquisition_right'], logs_dict['inference_right'], logs_dict['slam_perception']],
-    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbus_velocity']],
-    [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
-    [logs_dict['slam_optim'], logs_dict['path_planning'], logs_dict['pid_pp_waypoints']]
-]
+# chains: list[list[Log]] = [
+#     [logs_dict['saltas'], logs_dict['acquisition_left'], logs_dict['inference_left'], logs_dict['slam_perception']],
+#     [logs_dict['saltas'], logs_dict['acquisition_right'], logs_dict['inference_right'], logs_dict['slam_perception']],
+#     [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbus_velocity']],
+#     [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
+#     [logs_dict['slam_optim'], logs_dict['path_planning'], logs_dict['pid_pp_waypoints']]
+# ]
 
 
-chains_logs: list[Chain] = []
-for chain in chains:
-    chains_logs.append(Chain(chain, 'canbus' in chain[-1].name))
+# chains_logs: list[Chain] = []
+# for chain in chains:
+#     chains_logs.append(Chain(chain, 'canbus' in chain[-1].name))
 
-operation: int = None
-corr_name: int = None
+# operation: int = None
+# corr_name: int = None
 
-for call in callbacks:
-    corr = logs_dict[call]
-    print("{:s} /t: {:.3f}".format(call, corr.analyze_time_response("mean")))
+# for call in callbacks:
+#     corr = logs_dict[call]
+#     print("{:s} /t: {:.3f}".format(call, corr.analyze_time_response("mean")))
 
-operation = int(input("""Enter the desired operation:
-                  0: histogram of item
-                  1: plot of time response of item
-                  2: mean of time response of item
-                  7: histogram of communication delays of callback
-                  8: histogram of communication delays of chain
-                  9: histogram of complete communication delays
-                  >>> """))
+# operation = int(input("""Enter the desired operation:
+#                   0: histogram of item
+#                   1: plot of time response of item
+#                   2: mean of time response of item
+#                   7: histogram of communication delays of callback
+#                   8: histogram of communication delays of chain
+#                   9: histogram of complete communication delays
+#                   >>> """))
 
-corr_name = int(input("""Enter the desired item
-                  0:  saltas
-                  1:  acquisition left
-                  2:  acquisition right
-                  3:  inference left
-                  4:  inference right
-                  5:  SLAM perception
-                  6:  SLAM odometry
-                  7:  SLAM optimization
-                  8:  Velocity Estimation
-                  9:  Path Planning
-                  10: PID - PP Pose Callback
-                  11: PID - PP Waypoints Callback
-                  12: CAN2USB Sensor Data
-                  13: CAN2USB Wheel Speed
-                  14: CAN2USB Steering Angle
-                  15: CAN2USB Control Coommands
-                  16: CAN2USB Velociy Estimation
-                  ---------
-                  17: saltas-acq-inf-slam (left)
-                  18: saltas-acq-inf-slam (right)
-                  19: saltas-velocity-can2usb
-                  20: saltas-velocity-slam-controls
-                  21: slam-path-controls
-                  >>> """))
+# corr_name = int(input("""Enter the desired item
+#                   0:  saltas
+#                   1:  acquisition left
+#                   2:  acquisition right
+#                   3:  inference left
+#                   4:  inference right
+#                   5:  SLAM perception
+#                   6:  SLAM odometry
+#                   7:  SLAM optimization
+#                   8:  Velocity Estimation
+#                   9:  Path Planning
+#                   10: PID - PP Pose Callback
+#                   11: PID - PP Waypoints Callback
+#                   12: CAN2USB Sensor Data
+#                   13: CAN2USB Wheel Speed
+#                   14: CAN2USB Steering Angle
+#                   15: CAN2USB Control Coommands
+#                   16: CAN2USB Velociy Estimation
+#                   ---------
+#                   17: saltas-acq-inf-slam (left)
+#                   18: saltas-acq-inf-slam (right)
+#                   19: saltas-velocity-can2usb
+#                   20: saltas-velocity-slam-controls
+#                   21: slam-path-controls
+#                   >>> """))
 
-if corr_name<=16:
-    obj = logs[corr_name]
-    if operation==0:obj.analyze_time_response("histogram")
-    elif operation==1:obj.analyze_time_response("plot")
-    elif operation==3:print("Mean time is: {:.3f}".format(obj.analyze_time_response("mean")))
+# if corr_name<=16:
+#     obj = logs[corr_name]
+#     if operation==0:obj.analyze_time_response("histogram")
+#     elif operation==1:obj.analyze_time_response("plot")
+#     elif operation==3:print("Mean time is: {:.3f}".format(obj.analyze_time_response("mean")))
 
+
+total = {}
+
+runs = os.listdir('/home/nick/Desktop/DV-Testing-1')
+for run in runs:
+    # print(run[4:6])
+    rn = int(run[4:6])
+
+    logs:list[Log] = []
+    logs_dict:dict[str, Log] = {}
+    for item in callbacks:
+        logs.append(Log(rn, item, base))
+        logs_dict[item] = logs[-1]
+
+    chains: list[list[Log]] = [
+        [logs_dict['saltas'], logs_dict['acquisition_left'], logs_dict['inference_left'], logs_dict['slam_perception']],
+        [logs_dict['saltas'], logs_dict['acquisition_right'], logs_dict['inference_right'], logs_dict['slam_perception']],
+        [logs_dict['saltas'], logs_dict['velocity'], logs_dict['canbus_velocity']],
+        [logs_dict['saltas'], logs_dict['velocity'], logs_dict['slam_odometry'], logs_dict['pid_pp_pose'], logs_dict['canbus_controls'],],
+        [logs_dict['slam_optim'], logs_dict['path_planning'], logs_dict['pid_pp_waypoints']]
+    ]
+
+
+    chains_logs: list[Chain] = []
+    for chain in chains:
+        chains_logs.append(Chain(chain, 'canbus' in chain[-1].name))
+
+    operation: int = None
+    corr_name: int = None
+
+    for call in callbacks:
+        corr = logs_dict[call]
+        try:
+            # print("{:s} \t: {:.3f}".format(call, corr.analyze_time_response("mean")))
+            if call in total:
+                total[call][0] += corr.analyze_time_response("mean")
+                total[call][1] += 1
+            else:
+                total[call] = [0, 0]
+        except:
+            continue
+
+for item in total:
+    if(total[item][1]!=0):
+        print("{:s} \t: {:.3f}".format(item, total[item][0]/total[item][1]))

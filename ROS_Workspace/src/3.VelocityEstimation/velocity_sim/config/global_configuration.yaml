@@ -1,0 +1,7 @@
+velocity_sim_node:
+  ros__parameters:
+    vn200_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/vn200_log.txt"
+    vn300_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/vn300_log.txt"
+    sensor_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/sensor_log.txt"
+
+    node_relative_frequency: 1 # base frequency / velocity frequency. 1 for realtime

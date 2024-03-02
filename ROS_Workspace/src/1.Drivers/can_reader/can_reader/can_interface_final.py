@@ -72,18 +72,20 @@ class CanInterface(Node):
         self.get_logger().info(create_new_run_log())
 
         #for timestamp logging 
-        self.sensor_timestamp_log = Logger("canbus_sensor")
+        self.sensor_timestamp_log: Logger = Logger("canbus_sensor")
         self.get_logger().info(self.sensor_timestamp_log.check())
-        self.wheel_timestamp_log = Logger("canbus_wheel")
+        self.wheel_timestamp_log: Logger = Logger("canbus_wheel")
         self.get_logger().info(self.wheel_timestamp_log.check())
-        self.steer_timestamp_log = Logger("canbus_steering")
+        self.steer_timestamp_log: Logger = Logger("canbus_steering")
         self.get_logger().info(self.steer_timestamp_log.check())
-        self.controls_timestamp_log = Logger("canbus_controls")
+        self.controls_timestamp_log: Logger = Logger("canbus_controls")
         self.get_logger().info(self.controls_timestamp_log.check())
-        self.velocity_timestamp_log = Logger("canbus_velocity")
+        self.velocity_timestamp_log: Logger = Logger("canbus_velocity")
         self.get_logger().info(self.velocity_timestamp_log.check())
-        self.health_timestamp_log = Logger("canbus_health")
+        self.health_timestamp_log: Logger = Logger("canbus_health")
         self.get_logger().info(self.health_timestamp_log.check())
+
+        
 
         # Define Incoming Message Logger
         self._in_msgs_logger = {
@@ -102,6 +104,24 @@ class CanInterface(Node):
             SteeringParamsMsg.msg_type      : None
         }
 
+        self.run_path = None
+
+        for log in [self.sensor_timestamp_log,self.wheel_timestamp_log,self.steer_timestamp_log,self.controls_timestamp_log,self.velocity_timestamp_log,self.health_timestamp_log]:
+            if log.get_run_path() is not None:
+                self.run_path = log.get_run_path()
+                break
+
+        
+        if self.run_path is not None:
+            try:
+                self.error_file = open(os.path.join(self.run_path, 'can_reader_error_log.txt'), 'w')
+            except:
+                self.error_file = None
+
+        if self.run_path is None or self.error_file is None:
+            self.get_logger().error(f'Unable to open error file. Continuing without error logging! \n')
+        else:
+            self.get_logger().info(f'Error log file opened successfully.\n')
 
         ## --- For P22 --- ##
         # self._in_msgs = {
@@ -137,43 +157,84 @@ class CanInterface(Node):
 
 
     def universal_callback(self, msg) -> None:
-        '''
-        Callback for all subscribers calling the to_CanMsg method of the Message class
-        '''
-        
-        # self.get_logger().info("started uni callback")
-        start_time = self.get_clock().now()
-
         try:
-            Message = self._out_msgs[type(msg)]
-        except KeyError:
-            self.get_logger().error(f"Invalid message ros-type received: {type(msg)}")
+            '''
+            Callback for all subscribers calling the to_CanMsg method of the Message class
+            '''
+            
+            # self.get_logger().info("started uni callback")
+            start_time = self.get_clock().now()
+
+            try:
+                Message = self._out_msgs[type(msg)]
+            except KeyError:
+                self.get_logger().error(f"Invalid message ros-type received: {type(msg)}")
+                return
+
+            temp_msg = Message(msg)
+            out_bytes = temp_msg.to_CanMsg()
+
+            if self.disable_send and type(msg)==ActuatorCommandsMsg.msg_type:
+                return
+
+            # Write message to terminal and serial port
+            # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
+            end_time_1 = self.get_clock().now().nanoseconds/10**6
+            if not self.only_logs:self._serial_port.write(out_bytes)
+            end_time_2 = self.get_clock().now().nanoseconds/10**6
+
+            logger = self._out_msgs_logger[type(msg)]
+            try:
+                global_index = msg.global_index
+            except:
+                global_index = 0
+            if logger is not None:
+                logger( start_time.nanoseconds/10**6    , 0, global_index, temp_msg.data())
+                logger( (end_time_1 + end_time_2) / 2   , 1, global_index, temp_msg.data())
+
+            # Print the total processing time
+            # self.get_logger().info(f"Time to process message inside uni callback: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
             return
+        except Exception as e:
+            # Error detected during writing
+            # Current error handling policy (kai kala) is:
+            # if KinematicVariablesMsg: just dont send (only necessary for datalogger)
+            # if Controls/Health/SteeringParams: Enter AS Emergency
+            should_abort: bool = False
 
-        temp_msg = Message(msg)
-        out_bytes = temp_msg.to_CanMsg()
+            self.get_logger().error(f"Error during writing: {repr(e)}\n")
+            self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Error during writing: {repr(e)}\n')
 
-        if self.disable_send and type(msg)==ActuatorCommandsMsg.msg_type:
-            return
+            try:
+                tp = type(msg)
+            except Exception as f:
+                self.get_logger().error(f"Error during determining msg type: {repr(f)}\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Error during determining msg type: {repr(f)}\n"')
+                should_abort = True
+            
+            if tp == KinematicVariablesMsg.msg_type:
+                self.get_logger().error("Error is from Velocity msg. Not necessary to abort.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Error is from Velocity msg. Not necessary to abort.\n')
+                should_abort = False
+            else:
+                self.get_logger().error(f"Error is System Critical ({tp}). Necessary to abort.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Error is System Critical ({tp}). Necessary to abort.\n')
+                should_abort = True
 
-        # Write message to terminal and serial port
-        # self.get_logger().info(f"Outgoing Can message in bytes:\n{out_bytes}\n")
-        end_time_1 = self.get_clock().now().nanoseconds/10**6
-        if not self.only_logs:self._serial_port.write(out_bytes)
-        end_time_2 = self.get_clock().now().nanoseconds/10**6
+            if should_abort:
+                # Create Node Problem System Health msg and send it. The LV System will promptly return an AS Emergency Status
+                Message = SystemHealthMsg
+                to_send = TxSystemState()
+                to_send.dv_status.id = DriverlessStatus.NODE_PROBLEM
+                temp_msg = Message(to_send)
+                out_bytes = temp_msg.to_CanMsg()
 
-        logger = self._out_msgs_logger[type(msg)]
-        try:
-            global_index = msg.global_index
-        except:
-            global_index = 0
-        if logger is not None:
-              logger( start_time.nanoseconds/10**6    , 0, global_index, temp_msg.data())
-              logger( (end_time_1 + end_time_2) / 2   , 1, global_index, temp_msg.data())
+                if not self.only_logs:
+                    self._serial_port.write(out_bytes)
 
-        # Print the total processing time
-        # self.get_logger().info(f"Time to process message inside uni callback: {(self.get_clock().now() - start_time).nanoseconds / 10**6} ms")
-        return
+                self.get_logger().error(f"Sent Node Problem DV_Status Expecting AS Emergency soon\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Sent Node Problem DV_Status Expecting AS Emergency soon\n')
+
 
 
 
@@ -182,6 +243,7 @@ class CanInterface(Node):
         Checks for new messages finds their id and passes the data to the corresponding parser function
         '''
         try:
+            raise ValueError('0')
             if self.only_logs:return
             # self.get_logger().info("Started reading from serial")
             # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 
@@ -255,8 +317,94 @@ class CanInterface(Node):
                 return
             #      self.get_logger().info("Receiving empty stream")
             return
-        except:
-            return
+        except Exception as e:
+            # Error detected during reading
+            # Current error handling policy (kai kala) is:
+            # if WheelEncoders(for now) or SteeringAngle: just dont send (only necessary for velocity if encoders were available)
+            # if mission/sensor: send node error and wait for as emergency
+            # if as status: send node error out AND as emergency in (we consider an invalid as status msg as an as emergency msg)
+
+            should_abort: int  = 0
+
+            self.get_logger().error(f"Error during reading: {repr(e)}\n")
+            self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Error during reading: {repr(e)}\n')
+
+            if 'Message' not in locals():
+                self.get_logger().error(f"Unable to discern incoming message type.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Unable to discern incoming message type.\n')
+                should_abort = 2
+
+            elif Message in [WheelEncodersMsg, SteeringAngleMsg]:
+                self.get_logger().error("Error is from WheelEncoders or SteeringAngle msg. Not necessary to abort.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Error is from WheelEncoders or SteeringAngle msg. Not necessary to abort.\n')
+                should_abort = 0
+            elif Message in [MissionMsg, SensorVariablesMsg]:
+                self.get_logger().error(f"Error is System Critical ({Message}). Sending Node Error.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Error is System Critical ({Message}). Sending Node Error.\n')
+                should_abort = 1
+            else:
+                self.get_logger().error(f"Error is System Critical ({Message}). Sending Node Error AND enter AS Emergency AND abort.\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Error is System Critical ({Message}). Sending Node Error AND enter AS Emergency AND abort.\n')
+                should_abort = 2
+
+
+            if should_abort == 1:
+                # Create Node Problem System Health msg and send it. The LV System will promptly return an AS Emergency Status
+                Message = SystemHealthMsg
+                temp_msg = Message()
+                out_bytes = temp_msg.to_CanMsg()
+
+                if not self.only_logs:
+                    self._serial_port.write(out_bytes)
+
+                self.get_logger().error(f"Sent Node Problem DV_Status Expecting AS Emergency soon\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Sent Node Problem DV_Status Expecting AS Emergency soon\n')
+            elif should_abort == 2:
+                # Error is from as status so the above handling would not work. Instead we:
+                # - Send node problem outward so lv system enters as emergency
+                # - Send control command outward with full breaks so the last command stops being applied
+                # - Send AS emergency msg inward so lifecycle manager shuts down everyone else
+                # - Shutdown Can Interface to isolate systems
+                Message = SystemHealthMsg
+                to_send = TxSystemState()
+                to_send.dv_status.id = DriverlessStatus.NODE_PROBLEM
+                temp_msg = Message(to_send)
+                out_bytes = temp_msg.to_CanMsg()
+
+                if not self.only_logs:
+                    self._serial_port.write(out_bytes)
+
+                    self.get_logger().error(f"Sent Node Problem DV_Status\n")
+                    self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Sent Node Problem DV_Status\n')
+
+                # -
+
+                Message = ActuatorCommandsMsg
+                to_send = TxControlCommand()
+                to_send.brake_pressure_target = 20.0
+                temp_msg = Message(to_send)
+                out_bytes = temp_msg.to_CanMsg()
+
+                if not self.only_logs:
+                    self._serial_port.write(out_bytes)
+
+                self.get_logger().error(f"Sent Full brakes\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Sent Full brakes\n')
+
+                # - 
+
+                to_pub = AutonomousStatus()
+                to_pub.id = AutonomousStatus.AS_EMERGENCY
+                to_pub.label = "AS_EMERGENCY"
+
+                AsStatusMsg.ros_publisher.publish(to_pub)
+
+                self.get_logger().error(f"Sent AS_Emergency AS_Status\n")
+                self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t "Sent AS_Emergency AS_Status\n')
+
+                # -
+
+                exit(1)
 
 
 

@@ -31,7 +31,8 @@ class Logger:
     run_idx: int
     file: any
     error: Exception
-    def __init__(self, name):
+    run_path: str
+    def __init__(self, name) -> None:
         self.ok = True
         self.name = name
         # if name[0:6]!='canbus':
@@ -42,29 +43,30 @@ class Logger:
             base_path = os.path.join(path, "..", "..", "..", "..", "timestamp_logs")
             self.run_idx = len(os.listdir(base_path)) - 1
             self.file = open(os.path.join(base_path, "run_{:d}/{:s}_log.txt".format(self.run_idx, name)), "w")
+            self.run_path = os.path.join(base_path, f"run_{self.run_idx}")
         except Exception as e:
             self.ok = False
             self.error = e
         else:
             self.error = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.ok:
             self.file.close()
 
-    def check(self):
+    def check(self) -> str:
         if self.ok:
             return "Logger {:s} opened successfully".format(self.name)
         else:
             return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
 
-    def __call__(self, timestamp, type, index):
+    def __call__(self, timestamp, type, index) -> None:
         if not self.ok:
             return
 
         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
-    def __call__(self, timestamp, io, index, data = None):
+    def __call__(self, timestamp, io, index, data = None) -> None:
         if not self.ok:
             return
         try:
@@ -86,6 +88,12 @@ class Logger:
             print("Error during writing: {:s}".format(repr(e)))
             print("Aborting writing. Plz fix!")
             self.ok = False
+
+    def get_run_path(self) -> str | None:
+        if self.ok:
+            return self.run_path
+        else:
+            return None
 
 @dataclass
 class old_Logger:

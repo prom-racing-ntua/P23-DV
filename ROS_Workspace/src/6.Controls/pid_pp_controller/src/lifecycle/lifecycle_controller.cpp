@@ -440,12 +440,31 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         prev_lap = msg->lap_count;
         known_map_substitute(prev_lap, laps_to_do);
     }
-    if(should_exit)
+    if(should_exit && motor_control)
     {
         RCLCPP_WARN(get_logger(), "Path Planning has died due to bad path. Sending full breaks until Lifecycle Manager detects failure and activates EBS");
         custom_msgs::msg::TxControlCommand for_publish;
         for_publish.brake_pressure_target = 20.0;
         for_publish.motor_torque_target = model.max_negative_torque;
+        for_publish.steering_angle_target = 0;
+        for_publish.global_index = msg->velocity_state.global_index;
+        for_publish.speed_actual = v_x * 3.6;
+        for_publish.speed_target = 0;
+        
+        pub_time_1 = this->now().nanoseconds()/1e6;
+        pub_actuators->publish(for_publish);
+        pub_time_2 = this->now().nanoseconds()/1e6;
+
+        pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->velocity_state.global_index);
+        pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->velocity_state.global_index);
+        return;
+    }
+    else if(should_exit && !motor_control)
+    {
+        RCLCPP_WARN(get_logger(), "Path Planning has died due to bad path. Sending full breaks until Lifecycle Manager detects failure and activates EBS");
+        custom_msgs::msg::TxControlCommand for_publish;
+        for_publish.brake_pressure_target = 20.0;
+        for_publish.motor_torque_target = 0; //motor_torque_target := velocity target
         for_publish.steering_angle_target = 0;
         for_publish.global_index = msg->velocity_state.global_index;
         for_publish.speed_actual = v_x * 3.6;
@@ -466,6 +485,12 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     // std::cout<<"4.. ";
     // std::pair<double, double> projection = (*this->profile)(position, theta);
     std::pair<double, double> projection = this->profile->operator()(position, theta);
+
+    if(!dynamic_vp)
+    {
+        projection.first = projection.first > 0 ? max_speed : 0;
+    }
+
     // std::cout<<"5.. ";
     std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
     log << projection.first << " " << this->v_x << std::endl;
@@ -510,7 +535,14 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     last_torque = trq = std::min(last_torque + max_torque_difference, std::max(last_torque - max_torque_difference, trq));
 
-    for_publish.motor_torque_target = trq;
+    if(motor_control)
+    {
+        for_publish.motor_torque_target = trq;
+    }
+    else
+    {
+        for_publish.motor_torque_target = projection.first;
+    }
 
     // CALCULATING MIN RADIUS
     /*
@@ -654,6 +686,9 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<int>("Integral_max_output", 1500);
     declare_parameter<int>("spline_resolution_per_meter", 10);
     declare_parameter<int>("total_laps", 4);
+
+    declare_parameter<bool>("dynamic_vp", true);
+    declare_parameter<bool>("motor_control", true);
 
     declare_parameter<string>("discipline", "Skidpad");
     declare_parameter<string>("midpoints", "midpoints_from_pp.txt");

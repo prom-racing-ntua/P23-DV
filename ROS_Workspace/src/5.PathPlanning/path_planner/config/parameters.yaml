@@ -1,9 +1,9 @@
 path_planning:
   ros__parameters:
     #triangulation
-    maximum_angle: 90
+    maximum_angle: 60
     maximum_edge_angle: 60
-    maximum_distance: 4
+    maximum_distance: 3
     target_depth: 10
 
     #penalties

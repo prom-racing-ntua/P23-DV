@@ -11,3 +11,4 @@ ROS_Workspace/PerceptionRuns
 ROS_Workspace/spline_log.txt
 ROS_Workspace/timestamp_logs/**
 ROS_Workspace/src/6.Controls/simple_sim/data/**
+ROS_Workspace/src/3.VelocityEstimation/velocity_sim/data/**
