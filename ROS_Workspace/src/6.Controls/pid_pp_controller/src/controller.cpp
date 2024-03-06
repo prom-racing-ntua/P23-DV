@@ -695,7 +695,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
         for_publish.brake_pressure_target = 1;
         pub_actuators->publish(for_publish);
         std::cout << "Controls aborting" << std::endl;
-        exit(1); // Initiates the ABS. If there is a safer method than exit, it should be preferred
+        exit(1); // Initiates the EBS. If there is a safer method than exit, it should be preferred
     }
 
     pub_actuators->publish(for_publish);

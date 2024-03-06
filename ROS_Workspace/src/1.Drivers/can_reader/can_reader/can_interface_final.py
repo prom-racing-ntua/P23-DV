@@ -243,7 +243,6 @@ class CanInterface(Node):
         Checks for new messages finds their id and passes the data to the corresponding parser function
         '''
         try:
-            raise ValueError('0')
             if self.only_logs:return
             # self.get_logger().info("Started reading from serial")
             # Check serial port's buffer size. If a lot of messages have accumulated in the buffer we flush the old ones 

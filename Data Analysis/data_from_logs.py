@@ -4,12 +4,12 @@ import os
 from math import *
 
 def log_from_run(run):
-    paths = [f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/canbus_sensor_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/canbus_controls_log.txt", 
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/canbus_velocity_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/canbus_steering_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/vn300_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2/run_{run}/vn200_log.txt"
+    paths = [f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_sensor_log.txt",
+            #  f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_controls_log.txt", 
+            #  f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_velocity_log.txt",
+             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_steering_log.txt",
+             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/vn300_log.txt",
+             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/vn200_log.txt"
              ]
     data = []
     time_z = []
@@ -140,8 +140,8 @@ def log_from_run(run):
     # plt.show()
     # return
 
-    selected = [[], [0], [], [0]]
-    legends = [['actual'],['target', 'target_velocity'], ['vx'], ['actual']]
+    selected = [[], [], [], [0, 1, 2, 3]]
+    legends = [['rpm'],['target', 'target_velocity'], ['mode', 'vx'], ['ax', 'ay', 'az', 'yr']]
     if(max(data[3][0][1])==0):
         return
     # print(np.shape(data[4]))
@@ -152,7 +152,7 @@ def log_from_run(run):
         for k in range(len(selected[i])):
             j = selected[i][k]
             try:
-                plt.plot(data[i][j][0], np.array(data[i][j][1])/max(np.abs(data[i][j][1])**0), label =legends[i][k] )
+                plt.plot(data[i][j][0], np.array(data[i][j][1][0:len(data[i][j][0])])/max(np.abs(data[i][j][1])**1), label =legends[i][k] )
             except Exception as e:
                 print(f'{i} {j}: {repr(e)}')
 
@@ -165,7 +165,7 @@ def log_from_run(run):
     plt.grid()
     plt.show()
 
-runs = os.listdir('/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-2')
+runs = os.listdir('/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu')
 for run in runs:
     if 'run' not in run:continue
     run = int(run[4:6])

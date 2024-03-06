@@ -450,6 +450,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         for_publish.global_index = msg->velocity_state.global_index;
         for_publish.speed_actual = v_x * 3.6;
         for_publish.speed_target = 0;
+        for_publish.motor_control = 1;
         
         pub_time_1 = this->now().nanoseconds()/1e6;
         pub_actuators->publish(for_publish);
@@ -469,6 +470,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         for_publish.global_index = msg->velocity_state.global_index;
         for_publish.speed_actual = v_x * 3.6;
         for_publish.speed_target = 0;
+        for_publish.motor_control = 0;
         
         pub_time_1 = this->now().nanoseconds()/1e6;
         pub_actuators->publish(for_publish);
@@ -535,13 +537,15 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     last_torque = trq = std::min(last_torque + max_torque_difference, std::max(last_torque - max_torque_difference, trq));
 
+    for_publish.motor_control = motor_control;
+
     if(motor_control)
     {
         for_publish.motor_torque_target = trq;
     }
     else
     {
-        for_publish.motor_torque_target = projection.first;
+        for_publish.motor_torque_target = projection.first / (0.2 / (9.5493*3.9));
     }
 
     // CALCULATING MIN RADIUS
@@ -663,16 +667,16 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<float>("Fz_0", 1112.0554070627252);
     declare_parameter<float>("ld_min", 3);
     declare_parameter<float>("ld_max", 9);
-    declare_parameter<float>("max_positive_torque", 100);
+    declare_parameter<float>("max_positive_torque", 40);
     declare_parameter<float>("max_negative_torque", -40);
     declare_parameter<float>("minimum_weight_distribution_rear", 1);
     declare_parameter<float>("c_tire", 0.66);
-    declare_parameter<float>("v_min", 0);
+    declare_parameter<float>("v_min", 3);
     declare_parameter<float>("v_max", 15);
     declare_parameter<float>("emergency_factor", 0.75);
     declare_parameter<float>("emergency_threshold", 1.5);
     declare_parameter<float>("safety_factor", 1.0);
-    declare_parameter<float>("max_speed", 15);
+    declare_parameter<float>("max_speed", 7);
     declare_parameter<float>("dt", 0.025);
     declare_parameter<float>("safe_speed_to_break", 0.0);
     declare_parameter<float>("braking_distance", 1.0);
@@ -690,7 +694,7 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<bool>("dynamic_vp", true);
     declare_parameter<bool>("motor_control", true);
 
-    declare_parameter<string>("discipline", "Skidpad");
+    declare_parameter<string>("discipline", "Autocross");
     declare_parameter<string>("midpoints", "midpoints_from_pp.txt");
 }
 

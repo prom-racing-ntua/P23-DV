@@ -1,7 +1,7 @@
 lifecycle_manager:
   ros__parameters:
     managing_node_list: ["acquisition_left", "acquisition_right", "inference", "saltas", "velocity_estimation", "slam", "path_planning", "pure_pursuit", "mpc", "inspection"]
-    heartbeat_timeout_period: 1000  #heartbeat period in milliseconds
+    heartbeat_timeout_period: 100  #heartbeat period in milliseconds
     heartbeat_frequency:  5 # in Hz
     resurrect_failed_nodes: False
     heartbeat_failures_before_resurrection: 3

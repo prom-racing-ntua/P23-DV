@@ -42,6 +42,10 @@ def floatToBytes(num:float, byteorder:str='big', multiplier:int=256, signed=Fals
     :returns: The input value in bytes
     '''
     i_num = int(num * multiplier)
+    if signed:
+        np.clip(i_num, - 2**(8*num_bytes-1), 2**(8*num_bytes-1)-1)
+    else:
+        np.clip(i_num, 0, 2**(8*num_bytes)-1)
     return i_num.to_bytes(num_bytes, byteorder, signed=signed)
 
 def bitsToByte(bit_list:list) -> bytes:
@@ -235,14 +239,20 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
 
         out_msg[1:3] = floatToBytes(temp, multiplier=1024, signed=True)
         # out_msg[1:3] = floatToBytes(self._ros_msg.steering_angle_target, multiplier=1024, signed=True)
-        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target/2, multiplier=128,signed=True)
-        out_msg[5] = int(self._ros_msg.brake_pressure_target)
+
+        if not self._ros_msg.motor_control:
+            multiplier = 1
+        else:
+            multiplier = 128
+        out_msg[3:5] = floatToBytes(self._ros_msg.motor_torque_target, multiplier=multiplier,signed=True)
+        out_msg[5] = int(np.clip(self._ros_msg.brake_pressure_target, 0, 2**7-1))
         # floatToBytes(self._ros_msg.brake_pressure_target,multiplier=2,num_bytes=1, signed=True)
         # else: out_msg[5] = 0
 
         # Speed Actual and speed target
-        out_msg[6] = np.uint8(self._ros_msg.speed_actual*3.6)
-        out_msg[7] = np.uint8(self._ros_msg.speed_target*3.6)
+        out_msg[6] = np.uint8(np.clip(self._ros_msg.speed_actual*3.6, 0, 2**8-1))
+        out_msg[6] = out_msg[6] | (self._ros_msg.motor_control << 7)
+        out_msg[7] = np.uint8(np.clip(self._ros_msg.speed_target*3.6, 0, 2**8-1))
         return out_msg
 
 
