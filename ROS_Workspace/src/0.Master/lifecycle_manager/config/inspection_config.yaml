@@ -1,6 +1,7 @@
 inspection:
   ros__parameters:
     mode: 'inspection' #'inspection' or 'bench'
+    control_mode: 'velocity'
     max_torque: 30.0
     min_torque: -30.0
     torque_step: 20.0

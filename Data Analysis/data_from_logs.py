@@ -106,41 +106,43 @@ def log_from_run(run):
     #     vx_integ[i] = vx_integ[i-1] + ax_200[i] * 0.025
 
     # vx, vy, w, ax, ay = data[2]
-    # vx, vy, w, ax, ay = vx[1], vy[1], w[1], ax[1], ay[1]
-    # x, y, theta = [0], [0], [0]
-    # for i in range(len(vx)-1):
-    #     x_dot = vx[i]*cos(theta[i]) - vy[i]*sin(theta[i])
-    #     y_dot = vx[i]*sin(theta[i]) + vy[i]*sin(theta[i])
+    vx, vy = data[2][3:5]
+    ax, ay, w = data[3][0:3]
+    vx, vy, w, ax, ay = vx[1], vy[1], w[1], ax[1], ay[1]
+    x, y, theta = [0], [0], [0]
+    for i in range(min(len(vx)-1, len(ax)-1)):
+        x_dot = vx[i]*cos(theta[i]) - vy[i]*sin(theta[i])
+        y_dot = vx[i]*sin(theta[i]) + vy[i]*sin(theta[i])
 
-    #     x.append(x[-1] + 0.025 * x_dot)
-    #     y.append(y[-1] + 0.025 * y_dot)
-    #     theta.append(theta[-1] + 0.025 * w[i])
+        x.append(x[-1] + 0.025 * x_dot)
+        y.append(y[-1] + 0.025 * y_dot)
+        theta.append(theta[-1] + 0.025 * w[i])
 
-    # # map_file = open(f"/home/nick/Desktop/DV-Testing-2/run_{run}/mapLogLog.txt", 'r')
-    # # map_data = [np.array(line.split(), float) for line in map_file.readlines()]
-    # # add = False
-    # # for i in range(1, len(map_data)+1):
-    # #     try:
-    # #         # print((map_data[-i]))
-    # #         if len(map_data[-i])==1 and add:
-    # #             break
-    # #         if len(map_data[-i])==1 and not add:
-    # #             add = True
-    # #         if add:
-    # #             if map_data[-i][0]==0:
-    # #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'yellow')
-    # #             elif map_data[-i][0]==1:
-    # #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'blue')
-    # #     except:continue
+    # map_file = open(f"/home/nick/Desktop/DV-Testing-2/run_{run}/mapLogLog.txt", 'r')
+    # map_data = [np.array(line.split(), float) for line in map_file.readlines()]
+    # add = False
+    # for i in range(1, len(map_data)+1):
+    #     try:
+    #         # print((map_data[-i]))
+    #         if len(map_data[-i])==1 and add:
+    #             break
+    #         if len(map_data[-i])==1 and not add:
+    #             add = True
+    #         if add:
+    #             if map_data[-i][0]==0:
+    #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'yellow')
+    #             elif map_data[-i][0]==1:
+    #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'blue')
+    #     except:continue
 
-    # plt.scatter(x, y, c = ax, cmap='inferno')
-    # plt.title(f'Run {run}')
+    plt.plot(x, y)
+    plt.title(f'Run {run}')
     # plt.colorbar()
-    # plt.grid()
-    # plt.show()
-    # return
+    plt.grid()
+    plt.show()
+    return
 
-    selected = [[], [], [], [0, 1, 2, 3]]
+    selected = [[], [], [0, 3], []]
     legends = [['rpm'],['target', 'target_velocity'], ['mode', 'vx'], ['ax', 'ay', 'az', 'yr']]
     if(max(data[3][0][1])==0):
         return

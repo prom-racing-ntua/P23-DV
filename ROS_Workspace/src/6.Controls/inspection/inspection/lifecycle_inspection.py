@@ -17,6 +17,7 @@ TORQUE_COMMAND = 5.0            # [N*m]
 MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
+RPM_COMMAND = 500 /3.9          # [rpm]
 
 class InspectionMission(Node):
     def __init__(self,name=None) -> None:
@@ -25,7 +26,8 @@ class InspectionMission(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-            ('mode', 'bench'),
+            ('mode', 'inspection'),
+            ('control_mode', 'velocity'),
             ('max_torque', 10.0),
             ('min_torque', 0.0),
             ('torque_step', 1.0),
@@ -167,6 +169,8 @@ class InspectionMission(Node):
         self.brake_by_func = self.get_parameter('brake_by_function').get_parameter_value().bool_value
         self.brake_func = self.get_parameter('brake_function').get_parameter_value().string_value
         self.brake_freq = self.get_parameter('brake_frequency').get_parameter_value().double_value
+
+        self.control_mode = self.get_parameter("control_mode").get_parameter_value().string_value == 'torque'
         
     def timer_callback(self):
         msg = TxControlCommand()
@@ -196,6 +200,7 @@ class InspectionMission(Node):
 
         msg.speed_actual = 0.0
         msg.speed_target = 0.0
+        msg.motor_control = self.control_mode
         self._command_publisher.publish(msg)
         msg2.kp = self.kp
         msg2.kd = self.kd
@@ -304,7 +309,11 @@ class InspectionMission(Node):
         msg.speed_actual = 0.0
         msg.speed_target = 0.0
         # Constant torque and sinusoidal movement of the steering wheel
-        msg.motor_torque_target = TORQUE_COMMAND
+        msg.motor_control = self.control_mode
+        if self.control_mode:
+            msg.motor_torque_target = TORQUE_COMMAND
+        else:
+            msg.motor_torque_target = RPM_COMMAND
         msg.steering_angle_target = MAX_STEERING * sin(2*pi/STEERING_PERIOD * time)
    
         self._command_publisher.publish(msg)

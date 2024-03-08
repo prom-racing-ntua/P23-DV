@@ -146,6 +146,9 @@
     braking_distance: 30.0                  #EDIT BEFORE
     max_steering: 25.0
     max_torque_difference: 3.0
+    motor_control: false
+    dynamic_vp: true
+
 
     #PID
     kp: 1000
