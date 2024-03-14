@@ -3,25 +3,40 @@ from matplotlib import pyplot as plt
 import os
 from math import *
 
-def log_from_run(run):
-    paths = [f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_sensor_log.txt",
-            #  f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_controls_log.txt", 
-            #  f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_velocity_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/canbus_steering_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/vn300_log.txt",
-             f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu/run_{run}/vn200_log.txt"
+S=0
+
+def log_from_run(run: int, testing: int, base_path: str|None = None):
+    if base_path is None:
+        paths = [f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/canbus_sensor_log.txt",
+                 f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/canbus_controls_log.txt", 
+                 f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/canbus_velocity_log.txt",
+                 f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/canbus_steering_log.txt",
+                 f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/vn300_log.txt",
+                 f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/vn200_log.txt"
              ]
+    else:
+        paths = [f"{base_path}/run_{run}/canbus_sensor_log.txt",
+                 f"{base_path}/run_{run}/canbus_controls_log.txt", 
+                 f"{base_path}/run_{run}/canbus_velocity_log.txt",
+                 f"{base_path}/run_{run}/canbus_steering_log.txt",
+                 f"{base_path}/run_{run}/vn300_log.txt",
+                 f"{base_path}/run_{run}/vn200_log.txt"
+             ]
+
     data = []
     time_z = []
     # file
     # -> datapoints
     # -> -> time -> data 
-
+    # try:
     for path in paths:
         with open(path, 'r') as file:
             lines = file.readlines()
             for i in range(len(lines)): lines[i] = lines[i].split()
-            time_z.append(float(lines[0][0]))
+            try:
+                time_z.append(float(lines[0][0]))
+            except:
+                continue
             data.append([])
             for j in range(len(lines[0])-3):
                 data[-1].append([[],[]])     
@@ -32,7 +47,8 @@ def log_from_run(run):
                             data[-1][-1][1].append(float(line[j+3]))
                     except:
                         continue
-
+    # except:
+    #     return
 
     time_0 = min(time_z)
 
@@ -45,7 +61,6 @@ def log_from_run(run):
     # for i in range(len(data[5][0][0])):
     #     for j in range(len(data[5])):
     #         data[5][j][0][i] -= vt0
-
 
     # print(np.shape(np.array(data)))
     for i in range(len(data)):
@@ -106,46 +121,56 @@ def log_from_run(run):
     #     vx_integ[i] = vx_integ[i-1] + ax_200[i] * 0.025
 
     # vx, vy, w, ax, ay = data[2]
-    vx, vy = data[2][3:5]
-    ax, ay, w = data[3][0:3]
-    vx, vy, w, ax, ay = vx[1], vy[1], w[1], ax[1], ay[1]
-    x, y, theta = [0], [0], [0]
-    for i in range(min(len(vx)-1, len(ax)-1)):
-        x_dot = vx[i]*cos(theta[i]) - vy[i]*sin(theta[i])
-        y_dot = vx[i]*sin(theta[i]) + vy[i]*sin(theta[i])
+    # try:
+    #     # vx, vy = data[2][3:5]
+    #     # ax, ay, w = data[3][0:3]
+    #     vx, vy, w, ax, ay = data[2]
+    #     vx, vy, w, ax, ay = vx[1], vy[1], w[1], ax[1], ay[1]
+    #     x, y, theta = [0], [0], [0]
+    #     for i in range(min(len(vx)-1, len(ax)-1)):
+    #         x_dot = vx[i]*cos(theta[i]) - vy[i]*sin(theta[i])
+    #         y_dot = vx[i]*sin(theta[i]) + vy[i]*cos(theta[i])
 
-        x.append(x[-1] + 0.025 * x_dot)
-        y.append(y[-1] + 0.025 * y_dot)
-        theta.append(theta[-1] + 0.025 * w[i])
+    #         x_dot2 = ax[i]*cos(theta[i]) - ay[i]*sin(theta[i]) + y_dot * w[i]
+    #         y_dot2 = ax[i]*sin(theta[i]) + ay[i]*cos(theta[i]) + x_dot * w[i]
+    #         dt = 0.025
+    #         dx = dt * x_dot + 0.5 * x_dot2 * dt*dt
+    #         dy = dt * y_dot + 0.5 * y_dot2 * dt*dt
+    #         x.append(x[-1] + dx)
+    #         y.append(y[-1] + dy)
+    #         theta.append(theta[-1] + dt * w[i])
+    #         global S
+    #         S += (dx**2 + dy**2)**0.5
 
-    # map_file = open(f"/home/nick/Desktop/DV-Testing-2/run_{run}/mapLogLog.txt", 'r')
-    # map_data = [np.array(line.split(), float) for line in map_file.readlines()]
-    # add = False
-    # for i in range(1, len(map_data)+1):
-    #     try:
-    #         # print((map_data[-i]))
-    #         if len(map_data[-i])==1 and add:
-    #             break
-    #         if len(map_data[-i])==1 and not add:
-    #             add = True
-    #         if add:
-    #             if map_data[-i][0]==0:
-    #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'yellow')
-    #             elif map_data[-i][0]==1:
-    #                 plt.scatter(map_data[-i][1]+37, map_data[-i][2], color = 'blue')
-    #     except:continue
+    #     map_file = open(f"/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}/run_{run}/mapLogLog.txt", 'r')
+    #     map_data = [np.array(line.split(), float) for line in map_file.readlines()]
+    #     add = False
+    #     for i in range(1, len(map_data)+1):
+    #         try:
+    #             # print((map_data[-i]))
+    #             if len(map_data[-i])==1 and add:
+    #                 break
+    #             if len(map_data[-i])==1 and not add:
+    #                 add = True
+    #             if add:
+    #                 if map_data[-i][0]==0:
+    #                     plt.scatter(map_data[-i][1]+2, map_data[-i][2], color = 'yellow')
+    #                 elif map_data[-i][0]==1:
+    #                     plt.scatter(map_data[-i][1]+2, map_data[-i][2], color = 'blue')
+    #         except:continue
+    #     plt.plot(x, y)
+    #     plt.title(f'Testing {testing}, Run {run}')
+    #     # plt.colorbar()
+    #     plt.grid()
+    #     plt.show()
+    #     return
+    # except Exception as e:
+    #     print(repr(e), testing, run)
+    #     return
 
-    plt.plot(x, y)
-    plt.title(f'Run {run}')
-    # plt.colorbar()
-    plt.grid()
-    plt.show()
-    return
-
-    selected = [[], [], [0, 3], []]
-    legends = [['rpm'],['target', 'target_velocity'], ['mode', 'vx'], ['ax', 'ay', 'az', 'yr']]
-    if(max(data[3][0][1])==0):
-        return
+    selected = [[], [0], [0], [], []]
+    legends = [['actual rpm'], ['target'], ['actual'], ['1']]
+    
     # print(np.shape(data[4]))
     
     # for i in range(len(data[1][1][1])):
@@ -154,7 +179,7 @@ def log_from_run(run):
         for k in range(len(selected[i])):
             j = selected[i][k]
             try:
-                plt.plot(data[i][j][0], np.array(data[i][j][1][0:len(data[i][j][0])])/max(np.abs(data[i][j][1])**1), label =legends[i][k] )
+                plt.plot(data[i][j][0], np.array(data[i][j][1][0:len(data[i][j][0])])/max(np.abs(data[i][j][1])**0), label =legends[i][k] )
             except Exception as e:
                 print(f'{i} {j}: {repr(e)}')
 
@@ -162,13 +187,24 @@ def log_from_run(run):
     # plt.plot(data[1][1][0], vc[0]/max(np.abs(vc[0])), label='vx_comp')
     # plt.plot(data[1][1][0], vc[1]/max(np.abs(vc[0])), label='vy_comp')
     # plt.plot(t2, (np.diff(np.array(data[1][1][1]))/25e-3)/max(data[1][1][1]))
-    plt.title(f'Run {run}')
+    plt.title(f'Testing {testing}, Run {run}')
     plt.legend()
     plt.grid()
     plt.show()
 
-runs = os.listdir('/home/nick/Desktop/Prom Racing/Testing_Data/DV-aggaries/testing_inverter_endu')
+# testing = 1
+
+# for testing in range(3, 4):
+#     runs = os.listdir(f'/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-Testing-{testing}')
+#     for run in runs:
+#         if 'run' not in run:continue
+#         run = int(run[4:6])
+#         log_from_run(run, testing)
+
+# print(S)
+
+runs = os.listdir(f'/home/nick/Desktop/after_3_logs')
 for run in runs:
     if 'run' not in run:continue
     run = int(run[4:6])
-    log_from_run(run)
+    log_from_run(run, 1, f'/home/nick/Desktop/after_3_logs')

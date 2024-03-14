@@ -49,8 +49,9 @@ namespace pid_pp
         braking_distance = get_parameter("braking_distance").as_double();
         max_steering = get_parameter("max_steering").as_double();
         max_torque_difference = get_parameter("max_torque_difference").as_double();
-        motor_control = get_parameter("motor_control").as_bool();
-        dynamic_vp = get_parameter("dynamic_vp").as_bool();
+        motor_control = static_cast<Motor_control_mode>(get_parameter("motor_control").as_bool());
+        dynamic_vp = static_cast<Velocity_profile_mode>(get_parameter("dynamic_vp").as_bool());
+        lookahead_input = static_cast<Lookahead_input_mode>(get_parameter("lookahead_mode").as_int());
         
 
         is_end = false;

@@ -88,8 +88,9 @@ private:
     int laps_to_do;
     int prev_lap;
     string discipline, midpoints;
-    bool dynamic_vp; // from config. if false constant speed
-    bool motor_control; // torque=1 (default) or velocity=0 
+    Velocity_profile_mode dynamic_vp; // from config. if false constant speed
+    Motor_control_mode motor_control; // torque=1 (default) or velocity=0 
+    Lookahead_input_mode lookahead_input; // 0: target vel, 1: actual vel, 2:local radius
     std::ifstream mids;
     bool is_out_of_map, should_exit;
     std::ofstream log;

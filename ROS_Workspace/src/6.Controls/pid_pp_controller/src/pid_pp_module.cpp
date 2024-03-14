@@ -305,7 +305,7 @@ VelocityProfile::~VelocityProfile()
     // delete model;
 }
 
-std::pair<double, double> VelocityProfile::operator()(const Point &position, double theta)
+Projection VelocityProfile::operator()(const Point &position, double theta)
 {
     // return std::make_pair(0,0);
     int i = get_projection(position, theta);
@@ -313,7 +313,8 @@ std::pair<double, double> VelocityProfile::operator()(const Point &position, dou
     i = std::min(i+1, max_idx); //looking at next target
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
-    return std::make_pair(target, cross_track);
+    double curvature = spline_samples[i].k();
+    return Projection(target, curvature, cross_track);
 }
 
 int VelocityProfile::get_projection(const Point &position, double theta) const
@@ -417,7 +418,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     double g = model->g;
     double m = model->m;
     double mu = model->my_max(m * g);
-    mu = mu * safety_factor; //VP_SF1
+    mu = mu * safety_factor * safety_factor; //VP_SF1
     //log.open("k.txt", std::ios::app);
     for (int i = 0; i < resolution; i++)
     {

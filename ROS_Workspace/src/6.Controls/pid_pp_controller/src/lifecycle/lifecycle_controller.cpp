@@ -113,8 +113,8 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
             for (int i = 1; i <= 15; i++)
             {
-                midpoints(i + 5, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 30)));
-                midpoints(i + 5, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 30)));
+                midpoints(i + 5, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 30)));
+                midpoints(i + 5, 1) = (7.675 + 2) * (1 - std::cos(2 * PI * ((i * 1.0) / 30)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -140,8 +140,8 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 60; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 2) * (1 - std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -167,13 +167,13 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 40; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 2) * (1 - std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             for (int i = 0; i < 20; i++)
             {
-                midpoints(i + 40, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i + 40, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i + 40, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i + 40, 1) = (7.675 + 2) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -199,8 +199,8 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 60; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 2) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -226,8 +226,8 @@ void LifecyclePID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 40; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 2) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 2) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             for (int i = 0; i < 5; i++)
             {
@@ -427,6 +427,8 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     a_x = msg->velocity_state.acceleration_x;
     a_y = msg->velocity_state.acceleration_y;
 
+    int exit_flag = 0;
+
     if (!has_run_waypoints)
     {
         if (discipline == "Autocross")
@@ -440,7 +442,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         prev_lap = msg->lap_count;
         known_map_substitute(prev_lap, laps_to_do);
     }
-    if(should_exit && motor_control)
+    if(should_exit && motor_control == Motor_control_mode::TORQUE)
     {
         RCLCPP_WARN(get_logger(), "Path Planning has died due to bad path. Sending full breaks until Lifecycle Manager detects failure and activates EBS");
         custom_msgs::msg::TxControlCommand for_publish;
@@ -451,6 +453,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         for_publish.speed_actual = v_x * 3.6;
         for_publish.speed_target = 0;
         for_publish.motor_control = 1;
+        for_publish.exit_flag = 5;
         
         pub_time_1 = this->now().nanoseconds()/1e6;
         pub_actuators->publish(for_publish);
@@ -460,7 +463,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->velocity_state.global_index);
         return;
     }
-    else if(should_exit && !motor_control)
+    else if(should_exit && motor_control == Motor_control_mode::VELOCITY)
     {
         RCLCPP_WARN(get_logger(), "Path Planning has died due to bad path. Sending full breaks until Lifecycle Manager detects failure and activates EBS");
         custom_msgs::msg::TxControlCommand for_publish;
@@ -471,6 +474,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         for_publish.speed_actual = v_x * 3.6;
         for_publish.speed_target = 0;
         for_publish.motor_control = 0;
+        for_publish.exit_flag = 4;
         
         pub_time_1 = this->now().nanoseconds()/1e6;
         pub_actuators->publish(for_publish);
@@ -482,27 +486,32 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     }
 
     Point position(msg->position.x, msg->position.y);
-    // Point direction(std::cos(theta), std::sin(theta));
     double theta = msg->theta;
-    // std::cout<<"4.. ";
-    // std::pair<double, double> projection = (*this->profile)(position, theta);
-    std::pair<double, double> projection = this->profile->operator()(position, theta);
 
-    if(!dynamic_vp)
+    Projection projection = this->profile->operator()(position, theta);
+    /*
+    projection.velocity -> target velocity
+    projection.radius -> local radius (R)
+    prokection.cross_track_error -> distance from projected point
+    */
+
+    if(dynamic_vp == Velocity_profile_mode::CONSTANT)
     {
-        projection.first = projection.first > 0 ? max_speed : 0;
+        projection.velocity = projection.velocity > 0 ? max_speed : 0;
     }
 
-    // std::cout<<"5.. ";
-    std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
-    log << projection.first << " " << this->v_x << std::endl;
+    std::cout << "target : " << projection.velocity << ". speed : " << this->v_x << std::endl;
+    log << projection.velocity << " " << this->v_x << std::endl;
+
     custom_msgs::msg::TxControlCommand for_publish;
     for_publish.speed_actual = this->v_x;
-    for_publish.speed_target = projection.first ;
-    // std::cout<<"6.. ";
+    for_publish.speed_target = projection.velocity ;
+
+    double fx_next = pid_controller(projection.velocity, this->v_x);
+
+
     double min_radius;
     double fz = model.Fz_calc("full", 1, 0, v_x);
-    double fx_next = pid_controller(projection.first, this->v_x);
     // Checking Force
     double force = fx_next + 0.5 * v_x * v_x * model.cd_A + 0.05 * fz - v_y * r * model.m;
     double fx; // old fx, new fx
@@ -537,15 +546,15 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     last_torque = trq = std::min(last_torque + max_torque_difference, std::max(last_torque - max_torque_difference, trq));
 
-    for_publish.motor_control = motor_control;
+    for_publish.motor_control = static_cast<bool>(motor_control);
 
-    if(motor_control)
+    if(motor_control == Motor_control_mode::TORQUE)
     {
         for_publish.motor_torque_target = trq;
     }
     else
     {
-        for_publish.motor_torque_target = projection.first / (0.2 / (9.5493*3.9));
+        for_publish.motor_torque_target = projection.velocity * (30 / PI) * model.gr / model.R_wheel;
     }
 
     // CALCULATING MIN RADIUS
@@ -558,28 +567,47 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     */
 
     // min_radius = model.m * v_x * v_x / rem;
-    double mx_head = 3.14159 * max_steering / 180;
+    double mx_head = PI * max_steering / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3
     min_radius = std::min(v_x * v_x / (mu * model.g), mn_radius_wheel);
 
     Point tp;
-    double ld;
-    // std::cout<<"9.. ";
-    if (projection.second < emergency_threshold)
+    double ld, input;
+    switch (lookahead_input)
     {
-        ld = pp_controller.lookahead(v_x, false);
+        case TARGET_VELOCITY:
+            input = projection.velocity;
+            break;
+        case ACTUAL_VELOCITY:
+            input = v_x;
+            break;
+        case LOCAL_RADIUS:
+            input = projection.radius;
+            break;
+        case MAX_SPEED:
+            input = sqrt(model.g * projection.radius);
+            break;
+        default:
+            break;
+    }
+    // std::cout<<"9.. ";
+    if (projection.cross_track_error < emergency_threshold)
+    {
+        
+        ld = pp_controller.lookahead(input, false);
     }
     else if(!is_end)
     {
-        RCLCPP_INFO_STREAM(get_logger(), "Emergency Manouevre. Error = "<<projection.second<<"m");
+        RCLCPP_INFO_STREAM(get_logger(), "Emergency Manouevre. Error = "<<projection.cross_track_error<<"m");
         std::cout << "emergency manouevre" << std::endl;
         for_publish.motor_torque_target *= for_publish.motor_torque_target > 0 ? 0.25 : 1;
-        ld = pp_controller.lookahead(v_x, true);
+        ld = pp_controller.lookahead(input, true);
+        exit_flag = 2;
     }
-    // std::cout<<"10.. ";
-    // std::cout<<"Ld = "<<ld<<" with v_x = "<<v_x<<std::endl;
+    
+    
 
     tp = this->profile->get_target_point(ld, position, min_radius, theta);
     double heading_angle;
@@ -589,11 +617,15 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     {
         heading_angle = 0;
         RCLCPP_INFO_STREAM(get_logger(), "Target point error");
+        if(exit_flag==0)
+            exit_flag = 3;
+        else
+            exit_flag = 4;
     }
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
 
-    if (last_steering != 5)
+    if (last_steering != 5) // means that last_steering has not received an actual value
         heading_angle = std::min(last_steering + 0.25, std::max(last_steering - 0.25, heading_angle));
 
     last_steering = heading_angle;
@@ -603,7 +635,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     if(!switch_br && (force < 0 && v_x < safe_speed_to_break && is_end))RCLCPP_INFO_STREAM(get_logger(), "Initiated Braking Sequence");
 
-    switch_br = force < 0 && v_x < safe_speed_to_break && (is_end || projection.first < 0.1);
+    switch_br = force < 0 && v_x < safe_speed_to_break && (is_end || projection.velocity < 0.1);
     if(tp.error && !is_end)switch_br=1;
 
     for_publish.brake_pressure_target = switch_br ? 20.0 : 0;
@@ -621,21 +653,26 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pub_target->publish(tg);
 
     /* EXTRA SAFETY CHECKS */
-    // if(this->v_x > 1.5 * max_speed)
-    // {
-    //     for_publish.motor_torque_target = model.max_negative_torque;
-    //     for_publish.brake_pressure_target = 20;
-    //     RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
-    // }
-    // if(this->v_x > 2 * max_speed)
-    // {
-    //     for_publish.steering_angle_target = 0;
-    //     for_publish.motor_torque_target = model.max_negative_torque;
-    //     for_publish.brake_pressure_target = 20;
-    //     pub_actuators->publish(for_publish);
-    //     RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
-    //     exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
-    // }
+    if(this->v_x > std::max(1.5 * max_speed, max_speed + 1)) // if max_speed is very low (i.e 1m/s, this would get triggered at 1.5m/s)
+    {
+        for_publish.motor_torque_target = model.max_negative_torque;
+        for_publish.brake_pressure_target = 20;
+        RCLCPP_INFO_STREAM(get_logger(), "Speed 50% bigger than target. Braking...");
+        exit_flag = 6;
+    }
+    if(this->v_x > std::max(2 * max_speed, max_speed + 2))
+    {
+        for_publish.steering_angle_target = 0;
+        for_publish.motor_torque_target = model.max_negative_torque;
+        for_publish.brake_pressure_target = 20;
+        for_publish.exit_flag = 7;
+        pub_actuators->publish(for_publish);
+        RCLCPP_INFO_STREAM(get_logger(), "Speed 100% bigger than target. Exiting to initiate ABS...");
+        exit(1); //Initiates the ABS. If there is a safer method than exit, it should be preferred
+
+    }
+    if(exit_flag==0)
+        exit_flag = 1;
     pub_time_1 = this->now().nanoseconds()/1e6;
     pub_actuators->publish(for_publish);
     pub_time_2 = this->now().nanoseconds()/1e6;
@@ -650,6 +687,16 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     pose_timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->velocity_state.global_index);
     pose_timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->velocity_state.global_index);
 }
+/*  Exit Flag meaning:
+    0:  invalid
+    1:  all ok
+    2:  emergency manouevre
+    3:  Target Point error
+    4:  emergency manouevre & target point error
+    5:  path planning initiated stop
+    6:  50% more. braking
+    7:  100% more. ending
+*/
 
 void LifecyclePID_PP_Node::parameter_load()
 {
@@ -665,18 +712,18 @@ void LifecyclePID_PP_Node::parameter_load()
     declare_parameter<float>("wheel_radius", 0.2054);
     declare_parameter<float>("efficiency", 0.85);
     declare_parameter<float>("Fz_0", 1112.0554070627252);
-    declare_parameter<float>("ld_min", 3);
-    declare_parameter<float>("ld_max", 9);
-    declare_parameter<float>("max_positive_torque", 40);
-    declare_parameter<float>("max_negative_torque", -40);
+    declare_parameter<float>("ld_min", 2);
+    declare_parameter<float>("ld_max", 6);
+    declare_parameter<float>("max_positive_torque", 200);
+    declare_parameter<float>("max_negative_torque", -200);
     declare_parameter<float>("minimum_weight_distribution_rear", 1);
     declare_parameter<float>("c_tire", 0.66);
-    declare_parameter<float>("v_min", 3);
-    declare_parameter<float>("v_max", 15);
+    declare_parameter<float>("v_min", 2.5);
+    declare_parameter<float>("v_max", 7.5);
     declare_parameter<float>("emergency_factor", 0.75);
     declare_parameter<float>("emergency_threshold", 1.5);
     declare_parameter<float>("safety_factor", 1.0);
-    declare_parameter<float>("max_speed", 7);
+    declare_parameter<float>("max_speed", 10);
     declare_parameter<float>("dt", 0.025);
     declare_parameter<float>("safe_speed_to_break", 0.0);
     declare_parameter<float>("braking_distance", 1.0);
@@ -693,6 +740,7 @@ void LifecyclePID_PP_Node::parameter_load()
 
     declare_parameter<bool>("dynamic_vp", true);
     declare_parameter<bool>("motor_control", true);
+    declare_parameter<int>("lookahead_mode", 0);
 
     declare_parameter<string>("discipline", "Autocross");
     declare_parameter<string>("midpoints", "midpoints_from_pp.txt");

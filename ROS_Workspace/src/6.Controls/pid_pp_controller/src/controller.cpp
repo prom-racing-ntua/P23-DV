@@ -227,8 +227,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
             }
             for (int i = 1; i <= 15; i++)
             {
-                midpoints(i + 5, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 30)));
-                midpoints(i + 5, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 30)));
+                midpoints(i + 5, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 30)));
+                midpoints(i + 5, 1) = (7.675 + 1.75) * (1 - std::cos(2 * PI * ((i * 1.0) / 30)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -254,8 +254,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 60; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -281,13 +281,13 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 40; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (1 - std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             for (int i = 0; i < 20; i++)
             {
-                midpoints(i + 40, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i + 40, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i + 40, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i + 40, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -313,8 +313,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 60; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             path_planning::ArcLengthSpline *spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::Anchored);
             bool is_end = 0;
@@ -340,8 +340,8 @@ void PID_PP_Node::known_map_substitute(int lap, int total_laps)
 
             for (int i = 0; i < 40; i++)
             {
-                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * 3.14159 * ((i * 1.0) / 40)));
-                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * 3.14159 * ((i * 1.0) / 40)));
+                midpoints(i, 0) = (7.675 + 1.75) * (std::sin(2 * PI * ((i * 1.0) / 40)));
+                midpoints(i, 1) = (7.675 + 1.75) * (-1 + std::cos(2 * PI * ((i * 1.0) / 40)));
             }
             for (int i = 0; i < 5; i++)
             {
@@ -563,7 +563,8 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     double theta = msg->theta;
     // std::cout<<"4.. ";
     // std::pair<double, double> projection = (*this->profile)(position, theta);
-    std::pair<double, double> projection = this->profile->operator()(position, theta);
+    Projection projection_ = this->profile->operator()(position, theta);
+    std::pair<double, double> projection = std::make_pair(projection_.velocity, projection_.cross_track_error);
     // std::cout<<"5.. ";
     std::cout << "target : " << projection.first << ". speed : " << this->v_x << std::endl;
     log << projection.first << " " << this->v_x << std::endl;
@@ -619,7 +620,7 @@ void PID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr msg)
     */
 
     // min_radius = model.m * v_x * v_x / rem;
-    double mx_head = 3.14159 * 24 / 180;
+    double mx_head = PI * 24 / 180;
     double mn_radius_wheel = model.wb / std::tan(mx_head);
     double mu = model.my_max(fz);
     mu *= safety_factor; // C_SF3

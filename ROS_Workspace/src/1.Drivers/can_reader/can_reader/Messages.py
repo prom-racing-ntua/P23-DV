@@ -218,7 +218,9 @@ class ActuatorCommandsMsg(CanInterfaceMessage):
                 float(self._ros_msg.motor_torque_target),
                 float(self._ros_msg.brake_pressure_target),
                 float(self._ros_msg.speed_actual),
-                float(self._ros_msg.speed_target)]
+                float(self._ros_msg.speed_target),
+                  int(self._ros_msg.exit_flag)
+                ]
 
     def to_CanMsg(self) -> bytearray:
         out_msg = bytearray(self.byte_size)

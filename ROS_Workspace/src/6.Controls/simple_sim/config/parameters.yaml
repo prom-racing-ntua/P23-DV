@@ -15,7 +15,7 @@ sim_with_brake:
     sim_node_period: 25.0 # represents real time to simulate 25ms (default value(25) means sim-time==real-time)
     steering_model_integration_frequency: 100000.0 # Hz.  should be 1kHz or 10kHz. 100kHz breaks it 
 
-    perception_range: 10.0  # m
+    perception_range: 14.0  # m
     brake_response: 100.0   # ms
     brake_velocity: 100.0    # bars per s (=20bar / (time_to_reach - brake response)s)
     steering_response: 100.0 # ms

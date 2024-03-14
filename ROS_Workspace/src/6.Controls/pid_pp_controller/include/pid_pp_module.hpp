@@ -12,6 +12,28 @@
 
 namespace pid_pp
 {
+    typedef enum Motor_control_mode
+    {
+        VELOCITY = 0,
+        TORQUE = 1,
+    }Motor_control_mode;
+
+    typedef enum Velocity_profile_mode
+    {
+        CONSTANT = 0,
+        DYNAMIC = 1,
+    }Velocity_profile_mode;
+
+    typedef enum Lookahead_input_mode
+    {
+        TARGET_VELOCITY = 0,
+        ACTUAL_VELOCITY = 1,
+        LOCAL_RADIUS = 2,
+        MAX_SPEED = 3
+    }Lookahead_input_mode;
+
+    static const double PI = 3.141592653589793238;
+    
     typedef std::string string;
     class Point
     {
@@ -78,7 +100,7 @@ namespace pid_pp
         PurePursuit();
         void init(double ld_min, double ld_max, double v_min, double v_max, double wb, double emergency_factor);
         double operator()(const Point &target, double theta, double minimum_radius) const; // target coords should be in the reference frame of the rear axle
-        double lookahead(double velocity, bool emergency = 0) const;
+        double lookahead(double input, bool emergency = 0) const;
         ~PurePursuit();
     };
 
@@ -133,12 +155,21 @@ namespace pid_pp
         SplinePoint(Point pos, double s, double phi, double k);
     };
 
+    struct Projection
+    {
+        double velocity;
+        double radius;
+        double cross_track_error;
+        Projection(double _velocity, double _curvature, double _cross_track_error)
+            : velocity(_velocity), radius(1/_curvature), cross_track_error(_cross_track_error) {}
+    };
+
     class VelocityProfile
     {
     public:
         VelocityProfile() : model(nullptr), spline_samples(nullptr) {}
         VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed, int samples_per_meter, const Model &model, double initial_speed, bool is_end, bool is_first_lap, double safety_factor, double braking_distance);
-        std::pair<double, double> operator()(const Point &position, double theta) ; // returns target velocity and cross-track error
+        Projection operator()(const Point &position, double theta) ; // returns target velocity and cross-track error
         Point get_target_point(double ld, const Point &position, double min_radius, double theta) const;
         ~VelocityProfile();
         Point get_last_projection()const;

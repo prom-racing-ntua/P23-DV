@@ -8,7 +8,8 @@ float32     motor_torque_target     # [N*m]     - TODO(max and min values)
 float32     steering_angle_target   # [rad]     - TODO(max and min values)
 float32     brake_pressure_target   # [bar]
 
-bool        motor_control          # 0 for velocity control, 1 for torque control
+bool        motor_control           # 0 for velocity control, 1 for torque control
+uint8       exit_flag               # diagnostic tool
 
 uint32      global_index            # for logging
 
