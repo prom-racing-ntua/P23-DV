@@ -381,7 +381,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
         last_position = Point(msg->waypoints[0].x, msg->waypoints[0].y);
     }
     //bool is_end = msg->lap_count == laps_to_do;
-    double ms = msg->is_out_of_map ? 2 : max_speed;
+    double ms = msg->is_out_of_map ? max_speed / 4 : max_speed;
     this->is_out_of_map = msg->is_out_of_map;
     this->should_exit = msg->should_exit;
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;

@@ -243,6 +243,29 @@ def finalCoordinates(camera, classes, cropped_img_corners, predictions, OffsetY)
     #     reduced_classes.append(classes[j])
     # return rt, reduced_classes
 
+def create_mask(rgb_image, cone_type):
+    # Convert RGB image to HSV color space
+    hsv_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
+
+    if cone_type == 0:
+        lower_bound = np.array([0, 0.524*255, 0.176*255])
+        upper_bound = np.array([0.239*255, 255, 255])
+    elif cone_type == 1:
+        return None
+    else:
+        return None
+
+    # Create a mask for the yellow color
+    mask_yellow = cv2.inRange(hsv_image, lower_bound, upper_bound)
+
+    # Initialize output masked image based on input image
+    masked_rgb_image = np.copy(rgb_image)
+
+    # Set background pixels where the final mask is false to zero
+    masked_rgb_image[mask_yellow == 0] = [0, 0, 0]
+
+    return masked_rgb_image
+
 def initKeypoint2(small_modelpath):
     small_model = VGGLikeV3()
     small_model.load_state_dict(torch.load(small_modelpath,map_location=torch.device('cpu')))

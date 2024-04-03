@@ -1,7 +1,24 @@
-velocity_sim_node:
+velocity_sim:
   ros__parameters:
-    vn200_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/vn200_log.txt"
-    vn300_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/vn300_log.txt"
-    sensor_data_file: "/home/nick/Desktop/sprwxto-3-17-02-24/run_144/sensor_log.txt"
+    uniform_path: False
+    # if true uses base+test+run. if false uses individual file paths
 
-    node_relative_frequency: 1 # base frequency / velocity frequency. 1 for realtime
+    base: "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/"
+    test: 3
+    run: 47
+
+    vn200_data_file:      "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/vn200_log.txt"
+    vn300_data_file:      "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/vn300_log.txt"
+    sensor_data_file:     "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/canbus_sensor_log.txt"
+    perc_data_file:       "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/perceptionLog.txt"
+    perc_times_data_file: "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/slam_perception_log.txt"
+    velest_data_file:       "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/velocityLog.txt"
+    velest_times_data_file: "/home/nick/Desktop/Prom Racing/Testing_Data/DV-complete/DV-good-runs/T_2_run_53/slam_odometry_log.txt"
+
+    sim_velocity: False
+    # True:   Outputs raw logs to simulate velocity estimation
+    # False:  Outputs velocity results to simulate slam
+    sim_slam: True
+    # Determines whether perception logs are used
+
+    frequency: 1000

@@ -19,6 +19,13 @@ class Camera:
             print("No Devices Found")
             sys.exit(2)
 
+    def SetAutoExposure(self, autoexposure: int):
+        try:
+            self.cam.ExposureTime.set(int(autoexposure))
+        except Exception as e:
+            return e
+        return None
+
     def OnClickOpen(self):
         self.cam = self.device_manager.open_device_by_sn(self.serialNumber)
 

@@ -1,6 +1,7 @@
 # System related imports
 import os
 import time
+from math import sqrt, pow 
 
 # ROS2 Related Imports
 import rclpy
@@ -10,6 +11,7 @@ from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 
 from custom_msgs.msg import AcquisitionMessage, Perception2Slam
+from std_msgs.msg import Int32
 from cv_bridge import CvBridge, CvBridgeError
 from ament_index_python.packages import get_package_share_directory
 
@@ -46,6 +48,17 @@ class InferenceLifecycleNode(Node):
 
             # Create Perception/SLAM topic
             self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
+
+            self.right_autoexp_pub = self.create_lifecycle_publisher(Int32, 'autoexposure_right', 10)
+            self.left_autoexp_pub  = self.create_lifecycle_publisher(Int32, 'autoexposure_left', 10)
+
+            self.ideal_yellow = [0, 0, 0]   # RGB
+            self.ideal_blue   = [0, 0, 0]   # RGB
+            self.ideal_brightness = 150     # integer in range[0, 255](incl.)
+            self.kp = 1     # Pure number
+            self.ki = 0.1   # Pure number
+            self.error_integral = [0, 0, 0, 0]    # [0]: color left camera, [1]: color right camera, [2]: brightness left camera, [3]: brightness right camera
+            self.integration_frequency = 10
 
             self.subscription = self.create_subscription(
                 AcquisitionMessage,
@@ -139,6 +152,13 @@ class InferenceLifecycleNode(Node):
                     self.get_logger().error(f"Keypoints could not be determined from {cameraOrientation} camera")
                     return
                 
+                # Give autoexposure feedback to acquisition
+                if len(smallConesList)>2:
+                    self.find_autoexposure(cameraOrientation.lower(), smallConesList, classesList)
+                else:
+                    self.find_autoexposure(cameraOrientation.lower(), original_image = image)
+
+                
                 # Send message to SLAM Node
                 perception2slam_msg = Perception2Slam()
                 perception2slam_msg.global_index = globalIndex
@@ -164,6 +184,89 @@ class InferenceLifecycleNode(Node):
                 inferenceTiming = (time.time() - inferenceTiming)*1000.0 #Inference time in ms
                 # self.get_logger().info(f"Inference time is: {inferenceTime} ms")
                 self.log_data(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
+
+
+    def find_autoexposure(self, orientation, conesList = None, classesList = None, original_image = None) :
+        if conesList is not None and classesList is not None:
+            no_of_yellow = np.count_nonzero(np.array(classesList) == 0)
+            no_of_blue   = np.count_nonzero(np.array(classesList) == 1)
+            total_cones = no_of_blue + no_of_yellow
+
+            yellows = []
+            blues   = []
+
+
+            for i in range(len(classesList)):
+                if classesList[i] not in [0, 1]:
+                    continue
+
+                masked_image = create_mask(conesList[i], classesList[i])
+
+                pixels = [element for row in masked_image for element in row if np.any(np.array(element))!=0]
+                pixels = np.array(pixels)
+                average_color = [np.average(x) for x in pixels.transpose()]
+
+                (yellows if classesList[i] == 0 else blues).append(average_color)
+
+            avg_yellow = np.average(np.array(yellows))
+            avg_yellow_brightness = max(avg_yellow)
+            avg_blue = np.average(np.array(blues))
+            avg_blue_brightness   = max(avg_blue)
+
+            yellow_error = self.ideal_yellow[2] - avg_yellow_brightness
+            blue_error = self.ideal_blue[2] - avg_blue_brightness
+            
+            error = (yellow_error * no_of_yellow + blue_error * no_of_blue) / total_cones
+
+            if orientation == 'left':
+                self.error_integral[0] += error / self.integration_frequency
+
+                correction = error * self.kp + self.error_integral[0] * self.ki
+
+                if abs(correction) < 50: # microseconds
+                    return
+                else:
+                    self.left_autoexp_pub.publish(np.int32(correction))
+
+            if orientation == 'right':
+                self.error_integral[1] += error / self.integration_frequency
+
+                correction = error * self.kp + self.error_integral[1] * self.ki
+
+                if abs(correction) < 50: # microseconds
+                    return
+                else:
+                    self.right_autoexp_pub.publish(np.int32(correction))
+
+        elif original_image is not None:
+            b_pix = cv2.cvtColor(original_image, cv2.COLOR_BGR2HSV)[:, :, 2]
+            brightness = np.average(np.array(b_pix))
+
+            error = self.ideal_brightness - brightness
+
+            if orientation == 'left':
+                self.error_integral[2] += error / self.integration_frequency
+
+                correction = error * self.kp + self.error_integral[2] * self.ki
+
+                if abs(correction) < 50: # microseconds
+                    return
+                else:
+                    self.left_autoexp_pub.publish(np.int32(correction))
+
+            if orientation == 'right':
+                self.error_integral[3] += error / self.integration_frequency
+
+                correction = error * self.kp + self.error_integral[3] * self.ki
+
+                if abs(correction) < 50: # microseconds
+                    return
+                else:
+                    self.right_autoexp_pub.publish(np.int32(correction))
+
+        else:
+            self.get_logger().warn(f'Autoexposure algorithm has been given neither cones nor the original image. Plz fix!!!')
+
     
 def main(args=None):
     rclpy.init(args=args)

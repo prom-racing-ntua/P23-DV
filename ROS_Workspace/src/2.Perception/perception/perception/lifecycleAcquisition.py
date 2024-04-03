@@ -18,6 +18,7 @@ from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.timer import Timer
 
 from custom_msgs.msg import NodeSync, AcquisitionMessage
+from std_msgs.msg import Int32
 from cv_bridge import CvBridge, CvBridgeError
 
 from node_logger.node_logger import *
@@ -88,6 +89,15 @@ class AcquisitionLifecycleNode(Node):
                 10
             )
 
+            # Create Auto-exposure feedback topic
+            self.feedback_from_inference = self.create_subscription(
+                Int32,
+                f'autoexposure_{orientation.lower()}',
+                self.autoexposure_feedback,
+                10
+            )
+            self.current_exposure = exposureTime
+
             # Setup Publisher
             self.bridge = CvBridge()  #This is used to pass images as ros msgs
             self.publisher_ = self.create_publisher(AcquisitionMessage, 'acquisition_topic', 10)
@@ -100,6 +110,8 @@ class AcquisitionLifecycleNode(Node):
 
             self.timestamp_log = Logger("acquisition_{:s}".format(orientation))
             self.get_logger().info(self.timestamp_log.check())
+            self.autoexp_timestamp_log: Logger = Logger("autoecposure_{:s}".format(orientation))
+            self.get_logger().info(self.autoexp_timestamp_log.check())
 
             self.get_logger().warn(f"\n-- Acquisition Configured!")
         except Exception as e:
@@ -145,6 +157,23 @@ class AcquisitionLifecycleNode(Node):
 
         self.get_logger().info(f"\n-- Acquisition Shutdown!")
         return TransitionCallbackReturn.SUCCESS
+    
+    def autoexposure_feedback(self, msg) -> None:
+        if abs(msg)<1:
+            return
+
+        start_time = self.get_clock().now().nanoseconds / 10**6
+
+        self.current_exposure += msg
+        result = self.camera.SetAutoExposure(self.current_exposure)
+        
+        if result is not None:
+            self.get_logger().error(f'Error during setting exposure: {str(result)}')
+            self.autoexp_timestamp_log(start_time, 0, 0, [-1, -1])
+        else:
+            self.autoexp_timestamp_log(start_time, 0, 0, [msg, self.current_exposure])
+        
+
 
     def trigger_callback(self, msg):
         # Trigger camera and acquire image

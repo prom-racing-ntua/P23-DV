@@ -1,6 +1,8 @@
 # System Related Imports
 import sys
 import os
+import _io
+import math
 from pathlib import Path
 import time
 import numpy as np
@@ -13,7 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 
 
 from geometry_msgs.msg import Vector3
-from custom_msgs.msg import VelEstimation, RxVehicleSensors, Perception2Slam
+from custom_msgs.msg import VelEstimation, RxVehicleSensors, Perception2Slam, NodeSync
 from vectornav_msgs.msg import ImuGroup, InsGroup, InsStatus
 from node_logger.node_logger import *
 
@@ -32,7 +34,7 @@ class VelocitySimNode(Node):
             ('vn200_data_file', f'/home/nick/Desktop/DV-Testing-1/run_{run}/vn200_log.txt'),
             ('vn300_data_file', f'/home/nick/Desktop/DV-Testing-1/run_{run}/vn300_log.txt'),
             ('sensor_data_file', f'/home/nick/Desktop/DV-Testing-1/run_{run}/canbus_sensor_log.txt'),
-            ('perception_data_file', f'/home/nick/Desktop/DV-Testing-1/run_{run}/perceptionLog.txt'),
+            ('perc_data_file', f'/home/nick/Desktop/DV-Testing-1/run_{run}/perceptionLog.txt'),
             ('sim_relative_frequency', 1)
             ]
         )
@@ -40,15 +42,15 @@ class VelocitySimNode(Node):
         vn200_data_filename  = self.get_parameter('vn200_data_file').get_parameter_value().string_value
         vn300_data_filename  = self.get_parameter('vn300_data_file').get_parameter_value().string_value
         sensor_data_filename = self.get_parameter('sensor_data_file').get_parameter_value().string_value
-        perception_data_filename = self.get_parameter('perception_data_file').get_parameter_value().string_value
+        perception_data_filename = self.get_parameter('perc_data_file').get_parameter_value().string_value
         relative_frequency = self.get_parameter('sim_relative_frequency').get_parameter_value().integer_value
 
 
         # Publisher for the synchronization topic
-        self.vn200_publisher = self.create_publisher(ImuGroup, '/vn_200/raw/imu', 10)
-        self.vn300_publisher = self.create_publisher(InsGroup, '/vn_300/raw/ins', 10)
-        self.motor_publisher = self.create_publisher(RxVehicleSensors, '/canbus/sensor_data', 10)
-        self.perception_publisher = self.create_publisher(Perception2Slam, '/perception2slam', 10)
+        self.vn200_publisher = self.create_publisher(ImuGroup, '/vn_200/raw/imu_', 10)
+        self.vn300_publisher = self.create_publisher(InsGroup, '/vn_300/raw/ins_', 10)
+        self.motor_publisher = self.create_publisher(RxVehicleSensors, '/canbus/sensor_data_', 10)
+        self.perception_publisher = self.create_publisher(Perception2Slam, '/perception2slam_', 10)
 
         self.vectornav_clock = self.create_timer(0.025 / relative_frequency, self.vectornav_callback)
         self.motor_clock = self.create_timer(0.05 / relative_frequency, self.sensor_callback)
@@ -80,6 +82,11 @@ class VelocitySimNode(Node):
         # self.perception_data = self.get_data_from_file(perception_data_file)
         self.perception_data = [line.split() for line in perception_data_file.readlines()]
 
+        vn200_data_file.close()
+        vn300_data_file.close()
+        sensor_data_file.close()
+        perception_data_file.close()
+        
         self.end = False
 
         vn200_t0 = self.vn200_data[0][0][0]
@@ -170,7 +177,7 @@ class VelocitySimNode(Node):
         try:
             msg = RxVehicleSensors()
             msg.motor_torque_actual = (self.sensor_data[0][1][int(self.sensor_index/4)])
-            msg.motor_rpm = (self.sensor_data[1][1][int(self.sensor_index/4)]) * 3.9 * 9.5493 / 0.2054
+            msg.motor_rpm = int((self.sensor_data[1][1][int(self.sensor_index/4)]) * 3.9 * 9.5493 / 0.20540)
             msg.brake_pressure_front = self.sensor_data[2][1][int(self.sensor_index/4)]
             msg.brake_pressure_rear = self.sensor_data[3][1][int(self.sensor_index/4)]
 
@@ -218,19 +225,338 @@ class VelocitySimNode(Node):
 
         return data
 
+class VelocitySLAMSimNode(Node):
+    def __init__(self) -> None:
+        super().__init__('velocity_slam_sim_node')
+        
+        self.declare_parameters( namespace='',parameters=[
+            ('uniform_path', True),
+            ('base', ''),
+            ('test', 0),
+            ('run', 0),
+            ('vn200_data_file', ''),
+            ('vn300_data_file', ''),
+            ('sensor_data_file', ''),
+            ('perc_data_file', ''),
+            ('perc_times_data_file', ''),
+            ('velest_data_file', ''),
+            ('velest_times_data_file', ''),
+            ('sim_velocity', True),
+            ('sim_slam', False),
+            ('frequency', 1000)
+        ])
+
+        self.f_idx = {
+            'vn_200': 0,
+            'vn_300': 1,
+            'sensor': 2,
+            'perception': 3,
+            'perception_times':4,
+            'velest': 5,
+            'velest_times':6
+        }
+        self.f_name = [
+            'vn_200', 'vn_300', 'sensor', 'perception', 'perception_times', 'velest', 'velest_times'
+        ]
+
+        uniform_path = self.sim_slam = self.get_parameter('uniform_path').get_parameter_value().bool_value
+
+        if uniform_path:
+            base = self.get_parameter('base').get_parameter_value().string_value
+            test = self.get_parameter('test').get_parameter_value().integer_value
+            run = self.get_parameter('run').get_parameter_value().integer_value
+
+            base_path = f'{base}DV-Testing-{test}/run_{run}'
+
+            self.file_names = [
+                f'{base_path}/vn200_log.txt',
+                f'{base_path}/vn300_log.txt',
+                f'{base_path}/canbus_sensor_log.txt',
+                f'{base_path}/perceptionLog.txt',
+                f'{base_path}/slam_perception_log.txt',
+                f'{base_path}/velocityLog.txt',
+                f'{base_path}/slam_odometry_log.txt'
+            ]
+        else:
+            self.file_names = [
+                self.get_parameter('vn200_data_file').get_parameter_value().string_value,
+                self.get_parameter('vn300_data_file').get_parameter_value().string_value,
+                self.get_parameter('sensor_data_file').get_parameter_value().string_value,
+                self.get_parameter('perc_data_file').get_parameter_value().string_value,
+                self.get_parameter('perc_times_data_file').get_parameter_value().string_value,
+                self.get_parameter('velest_data_file').get_parameter_value().string_value,
+                self.get_parameter('velest_times_data_file').get_parameter_value().string_value
+            ]
+
+        self.sim_velocity = self.get_parameter('sim_velocity').get_parameter_value().bool_value
+        self.sim_slam = self.get_parameter('sim_slam').get_parameter_value().bool_value
+
+        self.master_frequency = self.get_parameter('frequency').get_parameter_value().integer_value
+        self.saltas_sub = self.create_subscription(NodeSync, 'saltas_clock', self.saltas_callback, 10)
+
+
+        self._publishers = [
+            self.create_publisher(ImuGroup, '/vn_200/raw/imu', 10),
+            self.create_publisher(InsGroup, '/vn_300/raw/ins', 10),
+            self.create_publisher(RxVehicleSensors, '/canbus/sensor_data', 10),
+            self.create_publisher(Perception2Slam, '/perception2slam', 10),
+            self.create_publisher(VelEstimation, '/velocity_estimation', 10)
+        ]
+
+        self.master_timer = self.create_timer(1/self.master_frequency, self.master_callback)
+
+        self.data_files: list[_io.TextIOWrapper] = []
+        self.data_files_check:list[bool] = []
+
+        for filename in self.file_names:
+            try:
+                tmp = open(filename, 'r')
+            except:
+                self.data_files_check.append(False)
+            else:
+                self.data_files_check.append(True)
+                self.data_files.append(tmp) 
+
+        self.data: list[list[Entry]] = []
+
+        for i in range(len(self.data_files)-4):
+            self.data.append(self.get_data_from_file(self.data_files[i], self.f_name[i]) if self.data_files_check[i] else None)
+
+        self.perception_data = [line.split() for line in self.data_files[self.f_idx['perception']].readlines()] if self.data_files_check[self.f_idx['perception']] else None
+
+        self.perception_data_times = [line.split() for line in self.data_files[self.f_idx['perception_times']].readlines()]if self.data_files_check[self.f_idx['perception_times']] else None
+
+        if self.perception_data is not None and self.perception_data_times is not None:
+            self.data.append(self.create_perc_entries())
+        else:
+            self.data.append(None)
+
+        self.velest_data = [line.split() for line in self.data_files[self.f_idx['velest']].readlines()] if self.data_files_check[self.f_idx['velest']] else None
+
+        self.velest_data_times = [line.split() for line in self.data_files[self.f_idx['velest_times']].readlines()]if self.data_files_check[self.f_idx['velest_times']] else None
+
+        if self.velest_data is not None and self.velest_data_times is not None:
+            self.data.append(self.create_vel_entries())
+        else:
+            self.data.append(None)
+
+
+        print(len(self.data))
+
+        for item in self.f_idx:
+            if item == 'perception_times' or item == 'velest_times':continue
+            idx = self.f_idx[item] if item!='velest' else 4
+
+            if(self.data[idx] is not None):
+                self.get_logger().info(f'{item} dataset is ok.')
+            else:
+                self.get_logger().warn(f'{item} dataset is not ok.')
+
+        for file in self.data_files:
+            file.close()
+
+
+        self.global_index = 0
+        self.read_index = [0, 0, 0, 0, 0]
+        self.max_idxs = [len(x)-1 for x in self.data]
+
+        _t0s = [x[0].get_time() for x in self.data]
+        self.t0 = max(_t0s)
+        self.time = self.t0
+        self.dt = 1000 / self.master_frequency
+        self.finish = False
+
+    def master_callback(self):
+        # if(self.time - self.t0>200):exit(0)
+        if self.finish:
+            exit(0)
+        lst = []
+        if self.sim_velocity:
+            lst = [0, 1, 2]
+        else:
+            lst = [4]
+        if self.sim_slam:
+            lst.append(3)
+        for i in lst:
+            # print(self.time, self.data[i][self.read_index[i]].get_time(math.log10(self.master_frequency)-3))
+            if self.time == self.data[i][self.read_index[i]].get_time(math.log10(self.master_frequency)-3):
+                msg = self.data[i][self.read_index[i]]._msg
+                if i==3:
+                    msg.global_index
+                self._publishers[i].publish(self.data[i][self.read_index[i]]._msg)
+                self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
+                self.read_index[i]+=1
+                if self.read_index[i]==self.max_idxs[i]:
+                    self.finish = True
+            else:
+                while self.time>self.data[i][self.read_index[i]].get_time(math.log10(self.master_frequency)-3):
+                    self.read_index[i]+=1
+                if self.time == self.data[i][self.read_index[i]].get_time(math.log10(self.master_frequency)-3):
+                    self._publishers[i].publish(self.data[i][self.read_index[i]]._msg)
+                    self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
+                    self.read_index[i]+=1
+                    if self.read_index[i]==self.max_idxs[i]:
+                        self.finish = True
+        self.time += self.dt
+        self.time = round(self.time, int(math.log10(self.master_frequency)-3))
+        return
+        
+    def saltas_callback(self, msg:NodeSync) -> None:
+        self.global_index = msg.global_index if msg.exec_perception else self.global_index
+
+    def create_perc_entries(self):
+        data:list[Entry] = []
+        l_d = len(self.perception_data)
+        l_t = len(self.perception_data_times)
+
+        for i in range(l_t-1):
+            t, g_idx_t = float(self.perception_data_times[i][0]), int(self.perception_data_times[i][2])
+            if(4*i+3>=l_d-1):
+                break
+            g_idx_d = int(self.perception_data[4*i][0])
+            classes = [int(x) for x in self.perception_data[4*i+1]]
+            ranges = [float(x) for x in self.perception_data[4*i+2]]
+            thetas = [float(x) for x in self.perception_data[4*i+3]]
+            if g_idx_d != g_idx_t:
+                continue
+
+            data.append(Entry(time = t, _data = [g_idx_d, classes, ranges, thetas], type = 'perception'))
+
+        return data
+    
+    def create_vel_entries(self):
+        data:list[Entry] = []
+        l_d = len(self.velest_data)
+        l_t = len(self.velest_data_times)
+
+        for i in range(int(l_t/2-1)):
+            t, g_idx_t = float(self.velest_data_times[2*i][0]), int(self.velest_data_times[2*i][2])
+            if(5*i+4>=l_d-1):
+                break
+            g_idx_d = int(self.velest_data[5*i][0])
+            vx = [float(x) for x in self.velest_data[5*i+1]][0]
+            vy = [float(x) for x in self.velest_data[5*i+2]][0]
+            r = [float(x) for x in self.velest_data[5*i+3]][0]
+            covs = [float(x) for x in self.velest_data[5*i+4]]
+            if g_idx_d != g_idx_t:
+                print(g_idx_d, g_idx_t, end='---')
+                continue
+
+            data.append(Entry(time = t, _data = [g_idx_d, vx, vy, r, covs], type = 'velest'))
+
+        return data
+    
+
+    def get_data_from_file(self, file, type):
+        data: list[Entry] = []
+        lines = file.readlines()
+        for i in range(len(lines)): lines[i] = lines[i].split()
+        # for j in range(len(lines[0])-3):
+        #     for line in lines: 
+        #         try:
+        #             if(int(line[1])==0):
+        #                 # data.append(Entry(float(line[0]), float(line[j+3])))
+        #                 data.append(Entry(float(line[0]), [float(x) for x in line[j+3:]]))
+        #         except:
+        #             continue
+        
+        for line in lines:
+            if(len(line)!=len(lines[0])):
+                continue
+            if(int(line[1])==1):
+                continue
+            # if type=='sensor':
+            #     print(line[1])
+            data.append(Entry(float(line[0]), [float(x) for x in line[3:]], type))
+
+        return data
+
+        
+
+class Entry:
+    timestamp: float = 0
+    data: list[float] = []
+    type: str = ''
+
+    def __init__(self, time: float, _data: list[float], type:str = '')->None:
+        self.timestamp = time
+        self.data = _data
+        self.type = type
+        if type!='':
+            self.create_msg()
+
+    def get_time(self, accuracy:int = 0)->float:
+        # print(accuracy)
+        return round(self.timestamp, int(accuracy))
+    
+    def create_msg(self) -> None:
+        if self.type == 'vn_200':
+            if len(self.data)!=4:
+                raise ValueError(f'Incorrect data length: Wanted 4, got {len(self.data)}')
+            self._msg = ImuGroup()
+            self._msg.accel.x = self.data[0]
+            self._msg.accel.y = self.data[1]
+            self._msg.accel.z = self.data[2]
+            self._msg.angularrate.z = self.data[3]
+
+        elif self.type == 'vn_300':
+            if len(self.data)!=7:
+                raise ValueError(f'Incorrect data length: Wanted 6, got {len(self.data)}')
+            self._msg = InsGroup()
+            self._msg.insstatus = InsStatus()
+            self._msg.insstatus.mode = int(self.data[0])
+            self._msg.insstatus.gps_heading_ins = bool(self.data[1])
+            self._msg.insstatus.gps_compass = bool(self.data[2])
+            self._msg.velbody.x = self.data[3]
+            self._msg.velbody.y = self.data[4]
+            self._msg.velbody.z = self.data[5]
+
+        elif self.type == 'sensor':
+            if len(self.data)!=5:
+                raise ValueError(f'Incorrect data length: Wanted 4, got {len(self.data)}')
+            self._msg = RxVehicleSensors()
+            self._msg.motor_torque_actual = self.data[0]
+            self._msg.motor_rpm = int(self.data[1] / (0.2 / (9.5493*3.9)))
+            self._msg.brake_pressure_front = self.data[2]
+            self._msg.brake_pressure_rear = self.data[3]
+
+        elif self.type=='perception':
+            if len(self.data)!=4:
+                raise ValueError(f'Incorrect data length: Wanted 4, got {len(self.data)}')
+            self._msg = Perception2Slam()
+            self._msg.global_index = self.data[0]
+            self._msg.class_list = self.data[1]
+            self._msg.range_list = self.data[2]
+            self._msg.theta_list = self.data[3]
+
+        elif self.type=='velest':
+            if len(self.data)!=5:
+                raise ValueError(f'Incorrect data length: Wanted 5, got {len(self.data)}')
+            self._msg = VelEstimation()
+            self._msg.global_index = self.data[0]
+            self._msg.velocity_x = self.data[1]
+            self._msg.velocity_y = self.data[2]
+            self._msg.yaw_rate = self.data[3]
+            self._msg.variance_matrix = self.data[4]
+
 
 def main(args=None):
     rclpy.init(args=args)
-    time.sleep(3)
     # Spin Master Node
-    p23_master_node = VelocitySimNode()
-    executor = SingleThreadedExecutor()
+    sim_node2 = VelocitySLAMSimNode()
+    # time.sleep(1)
+    # sim_node = VelocitySimNode()
+
+    # executor = SingleThreadedExecutor()
+    executor2 = SingleThreadedExecutor()
     try:
-        rclpy.spin(p23_master_node, executor)
+        # rclpy.spin(sim_node, executor)
+        rclpy.spin(sim_node2, executor2)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        p23_master_node.destroy_node()
+        sim_node2.destroy_node()
+        # sim_node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':

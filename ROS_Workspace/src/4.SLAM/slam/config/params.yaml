@@ -1,13 +1,14 @@
-slam_node:
+/slam_node:
   ros__parameters:
-    # This sets the mode of operation. Set true for slam and false for 
-    # localization
+    velocity_estimation_frequency: 40
+
+    # This sets the mode of operation. Set true for slam and false for localization
     mapping_mode: true
-    track_map: "/Tracks/skidpad_new.txt"
+    track_map: ""
 
     # Defines the starting position of the car
-    starting_position: [ -7.5, 0.0, 0.0 ]
-    starting_position_covariance: [ 0.5, 0.1, 0.01 ]
+    starting_position: [ -2.0, 0.0, 0.0 ] #before -7.5
+    starting_position_covariance: [ 0.5, 0.1, 0.1 ]
 
     # The max distance perception measurements are accepted
     perception_range: 13.0
@@ -23,15 +24,10 @@ slam_node:
     relinearize_threshold: 0.1
     relinearize_skip: 1
 
-    # Not used right now
-    odometry_covariance_weight: 10.0
-    perception_covariance_weight: 0.01
-
     # Big orange cones for starting/finish line
-    left_orange: [0.0, -1.5]
-    right_orange: [0.0, 1.5]
+    left_orange: [0.0, -2.5]
+    right_orange: [0.0, 2.5]
 
     lap_counter_cooldown: 10
 
     logger: true
-    velocity_estimation_frequency: 40
