@@ -10,8 +10,7 @@ from rclpy.lifecycle import Node
 from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 
-from custom_msgs.msg import AcquisitionMessage, Perception2Slam
-from std_msgs.msg import Int32
+from custom_msgs.msg import AcquisitionMessage, Perception2Slam, AutoExposureMessage
 from cv_bridge import CvBridge, CvBridgeError
 from ament_index_python.packages import get_package_share_directory
 
@@ -49,8 +48,8 @@ class InferenceLifecycleNode(Node):
             # Create Perception/SLAM topic
             self.publisher_ = self.create_lifecycle_publisher(Perception2Slam, 'perception2slam', 10)
 
-            self.right_autoexp_pub = self.create_lifecycle_publisher(Int32, 'autoexposure_right', 10)
-            self.left_autoexp_pub  = self.create_lifecycle_publisher(Int32, 'autoexposure_left', 10)
+            self.right_autoexp_pub = self.create_lifecycle_publisher(AutoExposureMessage, 'autoexposure_right', 10)
+            self.left_autoexp_pub  = self.create_lifecycle_publisher(AutoExposureMessage, 'autoexposure_left', 10)
 
             self.ideal_yellow = [0, 0, 0]   # RGB
             self.ideal_blue   = [0, 0, 0]   # RGB
@@ -187,7 +186,11 @@ class InferenceLifecycleNode(Node):
 
 
     def find_autoexposure(self, orientation, conesList = None, classesList = None, original_image = None) :
+        message = AutoExposureMessage()
+
         if conesList is not None and classesList is not None:
+            message.has_cones = True
+
             no_of_yellow = np.count_nonzero(np.array(classesList) == 0)
             no_of_blue   = np.count_nonzero(np.array(classesList) == 1)
             total_cones = no_of_blue + no_of_yellow
@@ -218,29 +221,39 @@ class InferenceLifecycleNode(Node):
             
             error = (yellow_error * no_of_yellow + blue_error * no_of_blue) / total_cones
 
+            message.brightness = (avg_yellow_brightness * no_of_yellow + avg_blue_brightness * no_of_blue) / total_cones
+
             if orientation == 'left':
                 self.error_integral[0] += error / self.integration_frequency
 
                 correction = error * self.kp + self.error_integral[0] * self.ki
 
+                message.delta_exposure = np.int32(correction)
+
                 if abs(correction) < 50: # microseconds
                     return
                 else:
-                    self.left_autoexp_pub.publish(np.int32(correction))
+                    self.left_autoexp_pub.publish(message)
 
             if orientation == 'right':
                 self.error_integral[1] += error / self.integration_frequency
 
                 correction = error * self.kp + self.error_integral[1] * self.ki
 
+                message.delta_exposure = np.int32(correction)
+
                 if abs(correction) < 50: # microseconds
                     return
                 else:
-                    self.right_autoexp_pub.publish(np.int32(correction))
+                    self.right_autoexp_pub.publish(message)
 
         elif original_image is not None:
+            message.has_cones = False
+
             b_pix = cv2.cvtColor(original_image, cv2.COLOR_BGR2HSV)[:, :, 2]
             brightness = np.average(np.array(b_pix))
+
+            message.brightness = brightness
 
             error = self.ideal_brightness - brightness
 
@@ -249,20 +262,24 @@ class InferenceLifecycleNode(Node):
 
                 correction = error * self.kp + self.error_integral[2] * self.ki
 
+                message.delta_exposure = np.int32(correction)
+
                 if abs(correction) < 50: # microseconds
                     return
                 else:
-                    self.left_autoexp_pub.publish(np.int32(correction))
+                    self.left_autoexp_pub.publish(message)
 
             if orientation == 'right':
                 self.error_integral[3] += error / self.integration_frequency
 
                 correction = error * self.kp + self.error_integral[3] * self.ki
 
+                message.delta_exposure = np.int32(correction)
+
                 if abs(correction) < 50: # microseconds
                     return
                 else:
-                    self.right_autoexp_pub.publish(np.int32(correction))
+                    self.right_autoexp_pub.publish(message)
 
         else:
             self.get_logger().warn(f'Autoexposure algorithm has been given neither cones nor the original image. Plz fix!!!')

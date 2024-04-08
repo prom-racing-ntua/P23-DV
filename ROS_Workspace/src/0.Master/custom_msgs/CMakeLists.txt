@@ -45,6 +45,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   ## Perception msgs
   "msg/AcquisitionMessage.msg"
   "msg/Perception2Slam.msg"
+  "msg/AutoExposureMessage.msg"
 
   ## P23 Status Messages
   "msg/MissionSelection.msg"

@@ -17,8 +17,7 @@ from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.timer import Timer
 
-from custom_msgs.msg import NodeSync, AcquisitionMessage
-from std_msgs.msg import Int32
+from custom_msgs.msg import NodeSync, AcquisitionMessage, AutoExposureMessage
 from cv_bridge import CvBridge, CvBridgeError
 
 from node_logger.node_logger import *
@@ -91,7 +90,7 @@ class AcquisitionLifecycleNode(Node):
 
             # Create Auto-exposure feedback topic
             self.feedback_from_inference = self.create_subscription(
-                Int32,
+                AutoExposureMessage,
                 f'autoexposure_{orientation.lower()}',
                 self.autoexposure_feedback,
                 10
@@ -158,20 +157,20 @@ class AcquisitionLifecycleNode(Node):
         self.get_logger().info(f"\n-- Acquisition Shutdown!")
         return TransitionCallbackReturn.SUCCESS
     
-    def autoexposure_feedback(self, msg) -> None:
+    def autoexposure_feedback(self, msg: AutoExposureMessage) -> None:
         if abs(msg)<1:
             return
 
         start_time = self.get_clock().now().nanoseconds / 10**6
 
-        self.current_exposure += msg
+        self.current_exposure += msg.delta_exposure
         result = self.camera.SetAutoExposure(self.current_exposure)
         
         if result is not None:
             self.get_logger().error(f'Error during setting exposure: {str(result)}')
-            self.autoexp_timestamp_log(start_time, 0, 0, [-1, -1])
+            self.autoexp_timestamp_log(start_time, 0, 0, [0, msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
         else:
-            self.autoexp_timestamp_log(start_time, 0, 0, [msg, self.current_exposure])
+            self.autoexp_timestamp_log(start_time, 0, 0, [1,msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
         
 
 
