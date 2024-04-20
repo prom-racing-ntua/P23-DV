@@ -1,0 +1,11 @@
+mpc_new:
+  ros__parameters:
+    max_velocity: 3.0
+    ds: 0.15
+    dt: 0.025
+    horizon: 30
+    F_init: 300.0
+    F_max: 500.0
+    F_min: -500.0
+    mission: "autocross"
+    laps: 2
