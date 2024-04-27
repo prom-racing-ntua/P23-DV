@@ -48,7 +48,7 @@ namespace mpc_new{
 
     //Load the known track for the respective mission
     if(mission == "skidpad" || mission == "acceleration"){
-      dynamic_ds = false; //No dynamic runtime parameters in these (symmetric track)
+      this->dynamic_ds = false; //No dynamic runtime parameters in these (symmetric track)
       
       //Extracting the midpoints
       Eigen::MatrixXd spline_input;
@@ -201,8 +201,10 @@ namespace mpc_new{
     //The lap i am in is given to me from the pose message (and/or the path planning)
     //Below we see in every case when should i start breaking
     if(mission == "skidpad"){
-      if(total_laps == 6)
+      if(total_laps == 5){
         finish = true;
+        break_distance += X[3]*dt;
+      }
     }
     else if(mission == "acceleration"){
       if(total_laps == 1)
@@ -626,10 +628,18 @@ namespace mpc_new{
     }
     else if(finish){
       //If we have to finish, just start slowing down smoothly
-      double decel = std::abs(F_min/m);
-      output_struct.speed_target = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
-      output_struct.speed_actual = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
-      output_struct.motor_torque_target = T_min;
+      if(mission == "skidpad" && break_distance > 30.0){
+        double decel = std::abs(F_min/m);
+        output_struct.speed_target = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+        output_struct.speed_actual = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+        output_struct.motor_torque_target = T_min;
+      }
+      else{
+        double decel = std::abs(F_min/m);
+        output_struct.speed_target = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+        output_struct.speed_actual = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+        output_struct.motor_torque_target = T_min;
+      }
     }
 
     //Steering angle output

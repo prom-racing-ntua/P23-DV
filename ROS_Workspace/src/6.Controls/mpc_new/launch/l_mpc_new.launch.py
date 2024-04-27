@@ -16,7 +16,7 @@ def generate_launch_description():
         emulate_tty=True,
         parameters=[os.path.join(mpc_dir, "config", "mpc_new_parameters.yaml")]
     )
-    #alvania
+
     ld.add_action(mpc_new)
 
     return ld

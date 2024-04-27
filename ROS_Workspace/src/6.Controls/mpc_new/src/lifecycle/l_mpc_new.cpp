@@ -96,6 +96,8 @@ void LifecycleHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr 
     X[6] = 0;
     X[7] = 0;
 
+    mpc_solver.total_laps = pose_msg->lap_count; 
+
     if(should_exit)
         return;
     else if(spline != nullptr || !(mpc_solver.mission == "autocross" || mpc_solver.mission == "trackdrive")){

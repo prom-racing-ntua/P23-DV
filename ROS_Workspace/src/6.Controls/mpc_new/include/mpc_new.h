@@ -74,7 +74,7 @@ namespace mpc_new{
         float steering_angle_target;
         float brake_pressure_target;
     };
-    //alvania
+
     class new_MpcSolver{
         public:
             //Constructors & Destructor
@@ -185,6 +185,7 @@ namespace mpc_new{
             double safety_factor = 0.8;
             int exitflag = 1; //Solver's flag
             bool finish = false; //Check if i must stop or not
+            double break_distance = 0;
             //Variables that will help me handle the solver
             FORCESNLPsolver_params params;
             FORCESNLPsolver_info info;
