@@ -10,6 +10,8 @@
 #include "custom_msgs/msg/tx_control_command.hpp"
 #include "custom_msgs/srv/set_total_laps.hpp"
 
+/*CHECK THE LIFECYCLE NODE, THIS ONE WAS USED FOR TESTS IN THE SIMULATION ONLY*/
+
 using namespace mpc_new;
 using namespace path_planning;
 using namespace std::chrono_literals;

@@ -1,9 +1,15 @@
 #include "mpc_new.h"
 
 namespace mpc_new{
+  //Default constructor: need it when building the class which handles the ROS part
   new_MpcSolver::new_MpcSolver(){}
 
-  new_MpcSolver::new_MpcSolver(double F_init, int horizonLength, double ds, double dt, double vel_max, double maxF, double minF, std::string mission, int laps){
+  new_MpcSolver::new_MpcSolver(double F_init, int horizonLength, double ds, double dt, double vel_max, double maxF, double minF, std::string mission,
+    double time_delay, double T_max, double T_min, double angle_max, double angle_min, double wb, double wd_front, double CdA,
+    double ClA, double p_air, double h_cog, double gr, double Rw, double m, double g, double Iz, int N_rear, double d_piston,
+    double R_disk_f, double R_disk_r, double mi_disk, bool dynamic_ds){
+
+    //Initializing everything i need
     this->horizonLength = horizonLength;
     this->dt = dt;
     s_interval_ = ds;
@@ -11,10 +17,41 @@ namespace mpc_new{
     X[6] = F_init;
     F_max = maxF;
     F_min = minF;
-    total_laps = laps;
-    mem = FORCESNLPsolver_internal_mem(0);
     this->mission = mission;
+    dynamic_ds = true;
+    mem = FORCESNLPsolver_internal_mem(0); //Solver's memory allocation
+    std::vector<double> aux(Z_SIZE, 0);
+    prevx0 = std::vector<std::vector<double>>(horizonLength, aux);
+    this->delay = time_delay;
+    this->T_max = T_max;
+    this->T_min = T_min;
+    this->angle_max = angle_max;
+    this->angle_min = angle_min;
+    this->wb = wb;
+    this->wd_front = wd_front;
+    this->CdA = CdA;
+    this->ClA = ClA;
+    this->p_air = p_air;
+    this->h_cog = h_cog;
+    this->gr = gr;
+    this->Rw = Rw;
+    this->m = m;
+    this->g = g;
+    this->Iz = Iz;
+    this->N_rear = N_rear;
+    this->d_piston = d_piston;
+    this->R_disk_f = R_disk_f;
+    this->R_disk_r = R_disk_r;
+    this->mi_disk = mi_disk;
+    this->dynamic_ds = dynamic_ds;
+    l_f = wb*(1-wd_front);
+    l_r = wb*wd_front;
+
+    //Load the known track for the respective mission
     if(mission == "skidpad" || mission == "acceleration"){
+      dynamic_ds = false; //No dynamic runtime parameters in these (symmetric track)
+      
+      //Extracting the midpoints
       Eigen::MatrixXd spline_input;
       if(mission == "skidpad")
         spline_input = readTrack("src/6.Controls/mpc_new/data/skidpad_all.txt");
@@ -22,6 +59,8 @@ namespace mpc_new{
         spline_input = readTrack("src/6.Controls/mpc_new/data/Acceleration.txt");
       path_planning::PointsArray midpoints{spline_input};
       midpoints.conservativeResize(midpoints.rows(), midpoints.cols());
+
+      //Building the spline and populating with more points
       path_planning::ArcLengthSpline *spline_init = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::NaturalSpline);
       int spline_resolution = int (spline_init->getApproximateLength()/s_interval_);
       whole_track = spline_init->getSplineData(spline_resolution);
@@ -29,7 +68,8 @@ namespace mpc_new{
   }
   new_MpcSolver::~new_MpcSolver(){}
 
-  double new_MpcSolver::getFy(double Fz,double sa) {
+  //Check the header file (VD function, dont care about how the parameters were extracted)
+  double new_MpcSolver::getFy(double Fz,double sa) {  
     const double C_tire=0.66;
     const double P [] = {1.45673747e+00, -1.94554660e-04,  2.68063018e+00,  3.19197941e+04, 2.58020549e+00, -7.13319396e-04};
     const double ex=0.00001;
@@ -42,6 +82,7 @@ namespace mpc_new{
     return Fy_out;
   }
 
+  //Check the header file (VD function, dont care about how the parameters were extracted)
   NormalForces new_MpcSolver::getFz(const double X[X_SIZE]) {
     double a_temp = (X[6]-0.5*CdA*p_air*std::pow(X[3],2))/m;
     double dw = (h_cog/(l_r+l_f))*(a_temp/g)*(m*g);
@@ -56,6 +97,7 @@ namespace mpc_new{
     return {saf,sar};
   }
 
+  //Check the header file (VD function, dont care about how the parameters were extracted)
   MuConstraints new_MpcSolver::getEllipseParams(const double &Fz) {
     const double Fz0=1112.0554070627252;
     const double dfz=(Fz-Fz0)/Fz0;
@@ -65,6 +107,7 @@ namespace mpc_new{
     return {mx_max,my_max};
   }
 
+  //Check the header file (VD function, dont care about how the parameters were extracted)
   double new_MpcSolver::convertForceToPressure(float Frx_) {
     double piston_area = 3.14159*std::pow(d_piston/2,2);
     double radius_ratio_r =  (R_disk_r/Rw);
@@ -94,6 +137,7 @@ namespace mpc_new{
     kappa[7] = U[1];
   }
 
+  //RK4 integration->https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
   void new_MpcSolver::Integrator() {
     getF(X,U,k1);
     for (int i = 0; i<X_SIZE;++i) {
@@ -114,25 +158,23 @@ namespace mpc_new{
     }
   }
 
+  //Main function
   void new_MpcSolver::build(const double X_data[X_SIZE]){
     //Current situation
     for(int i = 0; i < 6; i++)
       X[i] = X_data[i];
-    max_velocity_h = std::max(max_velocity_h, X[3]);
+
     //Solver initialization
     for (int i = 0; i < X_SIZE; i++) 
       params.xinit[i] = X[i];
 
-    //Storing the first point
-    if(global_counter == 0){
-      start_point[0] = X[0];
-      start_point[1] = X[1];
-    }
-    
     //Finding my closest point (whole_track(i)->[x, y, phi, curvature])
     double minimum = 100000;
     int index = 0;
+    //If the track is known, the whole spline is known, so search every time in a span of 90 points 
+    //to find the one closest to me and every time i am reaching the end of the window, move the window forward
     if(mission == "skidpad" || mission == "acceleration"){
+      //Find closest distance
       for(int i = 90*points; i < 90*(points+1); i++){
         double distance = std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0));
         if(distance < minimum){
@@ -140,14 +182,14 @@ namespace mpc_new{
           index = i;
         }
       }
+      //Move window
       if(90*(points+1)-index < 10)
         points++;
-      if(index > 1700){
-        finish = true;
-        std::cout << "The maximum velocity so far is: " << max_velocity_h << std::endl;
-      }
     }
-    else if(mission == "autocross" || mission == "trackdrive"){
+    else{
+      //In case the spline is just from some points (built from the path planning)
+      //check all these points and find the closest one to me
+      //Find closest distance
       for(int i = 0; i < (int)whole_track.rows(); i++){
         double distance = std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0));
         if(distance < minimum){
@@ -155,11 +197,29 @@ namespace mpc_new{
           index = i;
         }
       }
-      if(global_counter > 10000 && std::sqrt(std::pow((X[0]-start_point[0]),2.0) + std::pow((X[1]-start_point[1]),2.0)) < 0.5)
+    }
+
+    //The lap i am in is given to me from the pose message (and/or the path planning)
+    //Below we see in every case when should i start breaking
+    if(mission == "skidpad"){
+      if(total_laps == 6)
+        finish = true;
+    }
+    else if(mission == "acceleration"){
+      if(total_laps == 1)
+        finish = true;
+    }
+    else if(mission == "autocross"){
+      if(total_laps == 2)
+        finish = true;
+    }
+    else if(mission == "trackdrive"){
+      if(total_laps == 11)
         finish = true;
     }
 
-    if(minimum > 0.5){
+    //Checking if i am too far from the spline
+    if(minimum > 2.0){
       //Slow down if you are too far 
       if(X[3] >= 1.0){
         output_struct.brake_pressure_target = (double)(10);
@@ -191,6 +251,11 @@ namespace mpc_new{
         curv_data[i] = whole_track(u,3);
       }
       std::vector<double> v_data = velocity_profile(x_data, y_data, curv_data);
+      //You can change ds dynamically if you want to
+      std::vector<double> dynamic_all_s;
+      if(X[3] >= 1.0 && dynamic_ds){
+        dynamic_all_s = dynamic(x_data, y_data, curv_data, v_data, whole_track(index, 4));
+      }
 
       //Passing the data to the runtime parameters
       for(int i = 0; i < horizonLength; i++)
@@ -211,86 +276,82 @@ namespace mpc_new{
         }
 
       //Initial guess
-      for(int i = 0; i < horizonLength*Z_SIZE; i++)
-        params.x0[i] = 0;
+      for(int i = 0; i < horizonLength; i++){
+        for(int j = 0; j < Z_SIZE; j++)
+          if(exitflag == 1 || !(exitflag!=1 && counting_errors >= horizonLength))
+            params.x0[i*Z_SIZE+j] = prevx0[i][j];
+          else{
+            //No previous solutions available, reinitialize the problem
+            counting_errors = 0;
+            params.x0[i] = 0.0;
+          }
+      }
 
       //Calling the solver
       exitflag = FORCESNLPsolver_solve(&params, &output, &info, mem, NULL, extfunc_eval);
+      //Choosing solver output vector
+      double ij = X[3];
+      global_counter++;
+      //My system has a delay, so from the time i define my problem until the problem is solved, the time needed for the command to 
+      //reach the inverter is (delay_time+solve_time) and from the velocity i had when the problem was formulated, i know which output vector to choose
+      //In every case i use a small offset, to be a little be after in time
+      double q = ij*(delay+info.solvetime);
+      int t;
+      //Dynamic is used for a certain velocity and upper
+      if(!(X[3] >= 1.0 && dynamic_ds))
+        t = (int)(q/s_interval_)+2;
+      else{
+        int w = 0;
+        //Since ds changes, i have to see which vector corresponds to the distance computed above exhaustively
+        while(dynamic_all_s[w] < q && w < horizonLength)
+          w++;
+        t = w+2;
+      }
       if (exitflag == 1) {
           printf("\n\nFORCESNLPsolver returned optimal solution at step %d. Exiting.\n", global_counter);
 
-          //Choosing solver output vector
-          double ij = X[3];
-          global_counter++;
-          double q = ij*(0.1+info.solvetime);
-          int t = 0;
+          //In the beginning dont turn at all (bad behaviour in the beginning)
           if(global_counter < 60){
               t = (int)(q/s_interval_)+7;
               X[7] = 0;
           }   
-          else if((global_counter >= 60 && global_counter < 1100) || global_counter >= 1150)
-              t = (int)(q/s_interval_)+2;
-          else if(global_counter >= 1100 && global_counter < 1150)
-              t = (int)(q/s_interval_)+5; 
 
+          //If you are away from the spline, use a far vector because vectors which correspond to bigger distance avoid oscillations
           double minima = 10000; 
           for(int i = 0; i<whole_track.rows(); ++i) { 
               minima = std::min(std::sqrt(std::pow((X[0]-whole_track(i,0)),2.0) + std::pow((X[1] - whole_track(i,1)),2.0)), minima);
           }
-          if(minima > 0.6 && !(global_counter >= 1100 && global_counter < 1250)){
+          if(minima > 0.6){
               t = 8;
           }
-          choose(t);
-
-          //Producing instructions for the inverter
-          Integrator();
-          check_reliability();
-
-          if(X[6]>F_max) 
-            X[6]=F_max; 
-          if(X[6]<F_min) 
-            X[6]=F_min; 
-          if(X[7]>25.0/57.2958) 
-            X[7] = 25.0/57.2958;
-          if(X[7]<-(25.0/57.2958)) 
-            X[7] = -(25.0/57.2958);
-
-          if(!finish){
-            output_struct.speed_target = (float)std::min(X[3], vel_max);
-            output_struct.speed_actual = std::min(X[3], vel_max);
-            output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
-            if(output_struct.speed_actual<1.0) 
-              output_struct.motor_torque_target = (float)(22.5);
-            else if(output_struct.motor_torque_target>0.0 and output_struct.motor_torque_target<(float)(15.0)) 
-              output_struct.motor_torque_target = 2*output_struct.motor_torque_target;
-            output_struct.motor_torque_target = (float)std::min((double)output_struct.motor_torque_target,25.0);
-          }
-          else{
-            output_struct.speed_target = 0.0;
-            output_struct.speed_actual = 0.0;
-            output_struct.motor_torque_target = -25.0;
-          }
-          output_struct.steering_angle_target = (float)(X[7]);
-          if(X[6] >= 0)
-            output_struct.brake_pressure_target = (float)(0.0);  
-          else{
-            double press_out = convertForceToPressure(X[6]);
-            output_struct.brake_pressure_target = (double)(press_out);
-          }
+          counting_errors = 0; //Everything ok, assign to 0
+          choose_and_assign(t, exitflag); 
       }
       else {
-          std::cout << "Checking if im also out of track... " << exitflag << std::endl;
+        std::cout << "Checking if im also out of track... " << exitflag << std::endl;
+        counting_errors += t;
+        //If i have available previous solutions
+        if(counting_errors < horizonLength){
+          choose_and_assign(counting_errors, exitflag);
+        }
+        else{
+          //No available previous solutions, problem must be formulated from the beginning
           for(int k = 0; k < U_SIZE; k++) 
             U[k]=0.0;
+          std::vector<double> aux(Z_SIZE, 0);
+          prevx0 = std::vector<std::vector<double>>(horizonLength, aux);
+        }
       }
-
-      /*for(int i = 0; i < horizonLength; i++)
-        std::cout << params.all_parameters[4*i+3] << " ";
-      std::cout << std::endl;*/
+      //Produce the next predicted state using RK4 integrator
+      Integrator();
+      //Checking if this is reliable
+      check_reliability();
+      //Producing the proper output
+      produce_output();
     }
   }
 
-  std::vector<double> new_MpcSolver::velocity_profile(const std::vector<double> x, const std::vector<double> y, std::vector<double> curv){
+  std::vector<double> new_MpcSolver::velocity_profile(const std::vector<double> x, const std::vector<double> y, const std::vector<double> curv){
       struct NormalForces z = getFz(X);
       struct MuConstraints s = getEllipseParams(z.Frz);
       
@@ -304,17 +365,16 @@ namespace mpc_new{
       //Local variable to check the end state (in autocross)
       double vx_init = X[3]; //Keeping and the actual current velocity, i will need it to brake
 
-      double u_output = 0, Fx_remain, Fy_remain, F; //Just some helpful variables
+      double u_output = 0, Fx_remain, Fy_remain, F, accel, max_accel_eng; //Just some helpful variables
 
       int num = horizonLength;
       //Forward integration
       std::vector<double> u_forward_vector(num, 0);
-      double u_first, u_forward; //Just some helpful variables
+      double u_first = 100, u_forward; //Just some helpful variables
       for(int i = 0; i < num; i++){
         //Pretty much for the first iteration
-        if(std::abs(curv[i]) < 0.0001)
-            curv[i] = 0.0001;
-        u_first = std::sqrt(s.my_max*g/std::abs(curv[i]));
+        if(std::abs(curv[i]) != 0.0)
+          u_first = std::sqrt(s.my_max*g/std::abs(curv[i]));
         
         //Upper bound
         if(u_first > vel_max)
@@ -339,7 +399,9 @@ namespace mpc_new{
           double dy = y[i]-y[i-1];
           double ds = std::sqrt(std::pow(dx,2)+std::pow(dy,2));
 
-          u_forward = std::sqrt(std::pow(u_output,2)+2*Fx_remain/m*ds);
+          max_accel_eng = safety_factor*(F_max-0.5*CdA*p_air*std::pow(X[3],2)-0.1*m*g)/m;
+          accel = std::min(Fx_remain/m, max_accel_eng)*safety_factor;
+          u_forward = std::sqrt(std::pow(u_output,2)+2*accel*ds);
         }
         //And to sum up the above
         u_output = std::min(u_forward, u_first);
@@ -369,7 +431,9 @@ namespace mpc_new{
           double dy = y[num-i-1]-y[num-i-2];
           double ds = std::sqrt(std::pow(dx,2)+std::pow(dy,2));
 
-          u = std::pow(u_output, 2)-2*Fx_remain/m*ds;
+          max_accel_eng = safety_factor*(F_max-0.5*CdA*p_air*std::pow(X[3],2)-0.1*m*g)/m;
+          accel = std::min(Fx_remain/m, max_accel_eng)*safety_factor;
+          u = std::pow(u_output, 2)-2*accel*ds;
           if(u < 0)
               u_backward = u_output;
           else
@@ -388,114 +452,134 @@ namespace mpc_new{
         //If i should keep going
         if(!(finish))
           u_final[i] = u_backward_vector[i];
-        else
-          if(vx_init > 15.0)
-              u_final[i] = 10.0;
-          else 
-              u_final[i] = 0.0;
+        else{
+          double decel = std::abs(F_min/m);
+          u_final[i] = std::max(vx_init-decel*dt, 0.0);
+        }
       }
 
       return u_final;
     }
 
-  void new_MpcSolver::choose(int t){
-    double *p = new double[12];
-    switch(t){
-      case 0:
-          p = output.x01;
-          break;
-      case 1:
-          p = output.x02;
-          break;
-      case 2:
-          p = output.x03;
-          break;
-      case 3:
-          p = output.x04;
-          break;
-      case 4:
-          p = output.x05;
-          break;
-      case 5:
-          p = output.x06;
-          break;
-      case 6:
-          p = output.x07;
-          break;
-      case 7:
-          p = output.x08;
-          break;
-      case 8:
-          p = output.x09;
-          break;
-      case 9:
-          p = output.x10;
-          break;
-      case 10:
-          p = output.x11;
-          break;
-      case 11:
-          p = output.x12;
-          break; 
-      case 12:
-          p = output.x13;
-          break;
-      case 13:
-          p = output.x14;
-          break;
-      case 14:
-          p = output.x15;
-          break;
-      case 15:
-          p = output.x16;
-          break;
-      case 16:
-          p = output.x17;
-          break;
-      case 17:
-          p = output.x18;
-          break; 
-      case 18:
-          p = output.x19;
-          break;
-      case 19:
-          p = output.x20;
-          break;
-      case 20:
-          p = output.x21;
-          break;
-      case 21:
-          p = output.x22;
-          break;
-      case 22:
-          p = output.x23;
-          break;
-      case 23:
-          p = output.x24;
-          break; 
-      case 24:
-          p = output.x25;
-          break;
-      case 25:
-          p = output.x26;
-          break;
-      case 26:
-          p = output.x27;
-          break;
-      case 27:
-          p = output.x28;
-          break;
-      case 28:
-          p = output.x29;
-          break;
-      default:
-          p = output.x30;
-          break;     
+  void new_MpcSolver::choose_and_assign(int t, int u){
+    //Assignment part
+    if(u == 1){
+      double *p = new double[Z_SIZE];
+      for(int i = 0; i < horizonLength; i++){
+        switch(i+t){
+          case 0: 
+              p = output.x01;
+              break;
+          case 1:
+              p = output.x02;
+              break;
+          case 2:
+              p = output.x03;
+              break;
+          case 3:
+              p = output.x04;
+              break;
+          case 4:
+              p = output.x05;
+              break;
+          case 5:
+              p = output.x06;
+              break;
+          case 6:
+              p = output.x07;
+              break;
+          case 7:
+              p = output.x08;
+              break;
+          case 8:
+              p = output.x09;
+              break;
+          case 9:
+              p = output.x10;
+              break;
+          case 10:
+              p = output.x11;
+              break;
+          case 11:
+              p = output.x12;
+              break; 
+          case 12:
+              p = output.x13;
+              break;
+          case 13:
+              p = output.x14;
+              break;
+          case 14:
+              p = output.x15;
+              break;
+          case 15:
+              p = output.x16;
+              break;
+          case 16:
+              p = output.x17;
+              break;
+          case 17:
+              p = output.x18;
+              break; 
+          case 18:
+              p = output.x19;
+              break;
+          case 19:
+              p = output.x20;
+              break;
+          case 20:
+              p = output.x21;
+              break;
+          case 21:
+              p = output.x22;
+              break;
+          case 22:
+              p = output.x23;
+              break;
+          case 23:
+              p = output.x24;
+              break; 
+          case 24:
+              p = output.x25;
+              break;
+          case 25:
+              p = output.x26;
+              break;
+          case 26:
+              p = output.x27;
+              break;
+          case 27:
+              p = output.x28;
+              break;
+          case 28:
+              p = output.x29;
+              break;
+          default:
+              p = output.x30;
+              break;     
+        }
+        for(int j = 0; j < Z_SIZE; j++)
+          prevx0[i][j] = p[j];
+      }
     }
+    else{
+      std::vector<double> aux(Z_SIZE, 0);
+      std::vector<std::vector<double>> aux_prevx0(horizonLength-counting_errors, aux);
+      //Sliding by t on the previous used output
+      for(int i = 0; i < horizonLength-counting_errors; i++)
+        for(int j = 0; j < Z_SIZE; j++)
+          aux_prevx0[i][j] = prevx0[std::min(i+t, horizonLength-1)][j];
+      //Defining the next slided output
+      for(int i = 0; i < horizonLength; i++)
+        for(int j = 0; j < Z_SIZE; j++)
+          prevx0[i][j] = aux_prevx0[std::min(i, horizonLength-counting_errors-1)][j];
+    }
+    //Choose part
     for(int k = 0; k < U_SIZE; k++) 
-        U[k]=p[k];
+      U[k]=prevx0[0][k];
   }
 
+  //Pretty much just checking the ellipses parameters and in case of an emergency just doing proper assignments
   bool new_MpcSolver::check_reliability(){
     NormalForces Fz = getFz(X);
     MuConstraints mu = getEllipseParams(Fz.Frz);
@@ -513,6 +597,101 @@ namespace mpc_new{
       return false;
     }
     return true;
+  }
+
+  void new_MpcSolver::produce_output(){
+    //Clip the output to be within the boundaries i demand
+    if(X[6]>F_max) 
+    X[6]=F_max; 
+    if(X[6]<F_min) 
+      X[6]=F_min; 
+    if(X[7]>angle_max) 
+      X[7] = angle_max;
+    if(X[7]<angle_min) 
+      X[7] = angle_min;
+
+    //In case we dont have to stop
+    if(!finish){
+      //Clipping the output
+      output_struct.speed_target = (float)std::min(X[3], vel_max);
+      output_struct.speed_actual = std::min(X[3], vel_max);
+      //Convert force to torque
+      output_struct.motor_torque_target = (float)(X[6]*Rw/(gr*eff));
+      //Torque must not be very low when the velocity is small
+      if(output_struct.speed_actual<1.0) 
+        output_struct.motor_torque_target = (float)(22.5);
+      else if(output_struct.motor_torque_target>0.0 and output_struct.motor_torque_target<(float)(15.0)) 
+        output_struct.motor_torque_target = 2*output_struct.motor_torque_target;
+      //Clipping the torque
+      output_struct.motor_torque_target = (float)std::min((double)output_struct.motor_torque_target,T_max);
+    }
+    else if(finish){
+      //If we have to finish, just start slowing down smoothly
+      double decel = std::abs(F_min/m);
+      output_struct.speed_target = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+      output_struct.speed_actual = (float)std::max(std::min(X[3]-decel*dt, vel_max), 0.0);
+      output_struct.motor_torque_target = T_min;
+    }
+
+    //Steering angle output
+    output_struct.steering_angle_target = (float)(X[7]);
+    //Checking if we have to break or not
+    if(X[6] >= 0)
+      output_struct.brake_pressure_target = (float)(0.0);  
+    else if(finish){
+      //Enable this only when we have to stop (generally use regen)
+      double press_out = convertForceToPressure(X[6]);
+      output_struct.brake_pressure_target = (double)(press_out);
+    }
+  }
+
+  std::vector<double> new_MpcSolver::dynamic(std::vector<double> &x_data, std::vector<double> &y_data, std::vector<double> &phi_data, std::vector<double> &v_data, double current_s){
+    //First build the velocity spline
+    int rows = v_data.size(), cols = 2;
+    Eigen::MatrixXd v_result{ rows, cols };
+    for (int i{ 0 }; i < rows; i++){
+      v_result(i, 1) = v_data[i];
+      v_result(i, 0) = i+1;
+    }
+    path_planning::PointsArray midpoints{v_result};
+    midpoints.conservativeResize(midpoints.rows(), midpoints.cols());
+    path_planning::ArcLengthSpline *v_spline = new path_planning::ArcLengthSpline(midpoints, path_planning::BoundaryCondition::NaturalSpline);
+
+    //Now using the velocity profile to extract dynamic ds
+    std::vector<double> ds_params(horizonLength, 0);
+    double length = std::min(spline->getApproximateLength(), v_spline->getApproximateLength());
+    double s_aux = current_s*spline->getApproximateLength(), v_aux = v_data[0];
+    int count = 0;
+    //Starting from the closest point on the spline(s_aux is the initial progression uppon the spline)
+    //and computing the next progression: s_new = s_previous+v*dt, where v is the velocity corresponding 
+    //to the point of the spline where i am
+    while(s_aux < length && count < horizonLength){
+      if(s_aux < v_spline->getApproximateLength())
+        v_aux = v_spline->getPoint(s_aux/v_spline->getApproximateLength())(0);
+      else 
+        break;
+      v_data[count] = v_aux;
+      //Using 2*dt instead of dt due to better results
+      s_aux += 2*dt*v_aux;
+      //Stop if you reached the end of the spline
+      if(s_aux < length)
+        ds_params[count++] = s_aux;
+    }
+    //Populate if you dont have enough points
+    if(count < horizonLength){
+      double last = ds_params[count-1];
+      while(count < horizonLength)
+        ds_params[count++] = last;
+    }
+    //Finally using the dynamic ds in the ds_params to extract the new runtime parameters
+    for(int i = 0; i < horizonLength; i++){
+      double u = ds_params[i]/spline->getApproximateLength();
+      x_data[i] = spline->getPoint(u)(0);
+      y_data[i] = spline->getPoint(u)(1);
+      phi_data[i] = spline->getTangent(u);
+    }
+
+    return ds_params;
   }
 
 }

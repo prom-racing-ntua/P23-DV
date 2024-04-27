@@ -48,21 +48,25 @@ using namespace path_planning;
 
 namespace mpc_new{
 
+    //Ellipses parameters
     struct MuConstraints {
     double mx_max;
     double my_max;
     };
 
+    //z-Forces
     struct NormalForces {
         double Ffz;
         double Frz;
     };
 
+    //Slip angles
     struct SlipAngles{
         double saf;
         double sar;
     };
 
+    //Produced output to give instructions to the inverter
     struct output_data {
         float speed_target;
         float speed_actual;
@@ -73,44 +77,81 @@ namespace mpc_new{
 
     class new_MpcSolver{
         public:
+            //Constructors & Destructor
             new_MpcSolver();
-            new_MpcSolver(double F_init, int horizonLength, double ds, double dt, double vel_max, double maxF, double minF, std::string mission, int laps);
+            new_MpcSolver(double F_init, int horizonLength, double ds, double dt, double vel_max, double maxF, double minF, std::string mission,
+                double time_delay, double T_max, double T_min, double angle_max, double angle_min, double wb, double wd_front, double CdA,
+                double ClA, double p_air, double h_cog, double gr, double Rw, double m, double g, double Iz, int N_rear, double d_piston,
+                double R_disk_f, double R_disk_r, double mi_disk, bool dynamic_ds);
             ~new_MpcSolver();
 
             constexpr static int X_SIZE = 8; //X = [x, y, phi, vx, vy, w, F, delta]
             constexpr static int U_SIZE = 2; //Y = [dF, ddelta]
             constexpr static int Z_SIZE = X_SIZE + U_SIZE; //Z = [x, y, phi, vx, vy, w, F, delta, dF, ddelta]
-            double X[X_SIZE];
-            double U[U_SIZE];
-            int horizonLength;
-            double dt;
-            int points = 0;
-            double vel_max;
-            double s_interval_;
+            double X[X_SIZE]; //State vector
+            double U[U_SIZE]; //Input vector
             output_data output_struct;
-            double F_max;
-            double F_min;
-            int total_laps;
-            PointsData whole_track;
-            std::string mission;
+            int total_laps; //The lap on which i am 
+            PointsData whole_track; //The points (x, y, phi, curvature) pf the spline
+            bool is_out_of_map = false; //Path planning boolean
+            path_planning::ArcLengthSpline *spline;
             int global_counter = 0;
-            bool is_out_of_map = false;
+            double s_interval_; //ds on the spline
+            std::string mission; //The event i am on
 
+            //Extracting the z-Forces on the tires (VD)
             NormalForces getFz(const double X[X_SIZE]);
+
+            //Extracting the ellipse parameters on the tires (VD)
             MuConstraints getEllipseParams(const double &Fz);
+
+            //Extracting the slpi angles (VD)
             SlipAngles getSlipAngles(const double X[X_SIZE]);
+
+            //Extracting the y-Forces on the tires (VD)
             double getFy(double Fz, double sa);
+
+            //Converting the F i get from the model to pressure
             double convertForceToPressure(float Frx_);
+
+            //Helpful function for the RK4 integration
             void getF(double X[X_SIZE],double U[U_SIZE], double (&kappa)[X_SIZE]);
+
+            //RK4 integration
             void Integrator();
+
+            //A small check on the ellipses
             bool check_reliability();
 
-            std::vector<double> velocity_profile(const std::vector<double> x, const std::vector<double> y, std::vector<double> curv);
+            //The velocity profile 
+            std::vector<double> velocity_profile(const std::vector<double> x, const std::vector<double> y, const std::vector<double> curv);
+            
+            //The main function which combines the data(taking data from sensors, extracting the runtime parameters, calling the solver 
+            //and producing the output)
             void build(const double X_data[X_SIZE]);
-            void choose(int t);
+
+            //A function which helps me choose which output vector i want and assigns a helpful vector 
+            void choose_and_assign(int t, int u);
+
+            //The function which produces the output (on the output struct)
+            void produce_output();
+
+            //The function which builds dynamic ds (and gives runtime parameters with dynamic distances)
+            std::vector<double> dynamic(std::vector<double> &x_data, std::vector<double> &y_data, std::vector<double> &phi_data, std::vector<double> &v_data, double current_s);
         private:
-            double start_point[2];//first element is the x and second is y
-            double max_velocity_h = 0; 
+            int horizonLength; //Horizon (N)
+            double dt; //Frequency (0.025)
+            int points = 0; //For the sliding window to find the closest vertex
+            double vel_max; //Maximum velocity allowed
+            double F_max; //Maximum force allowed
+            double F_min; //Minimum force allowed
+            bool dynamic_ds; //Allowing dynamic ds
+            double delay; //The delay on the system
+            double T_max; //Maximum torque
+            double T_min; //Minimum torque
+            double angle_max; //Maximum steering angle
+            double angle_min; //Minimum steering angle
+            //For the RK4 integration
             double X2[X_SIZE];
             double X3[X_SIZE];
             double X4[X_SIZE];
@@ -118,37 +159,39 @@ namespace mpc_new{
             double k2[X_SIZE];
             double k3[X_SIZE];
             double k4[X_SIZE];
-            double wb = 1.590;
-            double wd_front = 0.467;
-            double l_f = wb*(1-wd_front);
-            double l_r = wb*wd_front;
-            double CdA = 2.0; 
-            double ClA = 7.0; 
-            double p_air = 1.225;
-            double h_cog = 0.27;
-            double gr = 3.9;
-            double Rw = 0.2;
-            double m = 190.0; 
-            double g = 9.81;
-            double Iz = 110.0;
-            double ts = 0.025;
-            double fr_par = 0.03;
-            double wing = 0.874;
-            int N_front = 4;
-            int N_rear = 2;
-            double d_piston = 0.025;
-            double R_disk_f = 0.079;
-            double R_disk_r = 0.0735;
-            double mi_disk = 0.6;
+            //Model parameters
+            double wb;
+            double wd_front;
+            double l_f; 
+            double l_r; 
+            double CdA; 
+            double ClA; 
+            double p_air;
+            double h_cog;
+            double gr;
+            double Rw;
+            double m; 
+            double g;
+            double Iz;
+            int N_rear;
+            double d_piston;
+            double R_disk_f;
+            double R_disk_r;
+            double mi_disk;
+            //For the blended model
             double umin=4.0;
             double umax=7.0;
             double eff = 0.85;
-            int exitflag;
-            bool finish = false;
+            double safety_factor = 0.8;
+            int exitflag = 1; //Solver's flag
+            bool finish = false; //Check if i must stop or not
+            //Variables that will help me handle the solver
             FORCESNLPsolver_params params;
             FORCESNLPsolver_info info;
             FORCESNLPsolver_output output;
             FORCESNLPsolver_extfunc extfunc_eval = &FORCESNLPsolver_adtool2forces;
             FORCESNLPsolver_mem *mem;
+            int counting_errors = 0; //Helpful variable for when the solver does not solve the problem
+            std::vector<std::vector<double>> prevx0; //Helpful vector to handle the solver's data
     };
 }

@@ -1,3 +1,4 @@
+#A script to produce the solver
 import casadi
 import numpy as np
 import forcespro

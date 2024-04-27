@@ -209,22 +209,23 @@ PointsArray CubicSpline::getSplineCurve(const long int resolution) {
 }
 
 PointsData CubicSpline::getSplineData(const long int resolution) {
-    PointsData spline_data{ resolution, 4 };
+    PointsData spline_data{ resolution, 5 };
     // Iterate through all points and data of interest (X,Y,tang,curv)
     for (long int i{ 0 }; i <= resolution - 1; i++)
     {
         double param{ static_cast<double>(i) / static_cast<double>(resolution - 1) };
         Point temp1 = getPoint(param);
         double temp2 = getTangent(param);
-        double temp3 = getVelocity(param,1.5,5);
+        double temp3 = getCurvature(param);
+
         spline_data(i, 0) = temp1(0);
         spline_data(i, 1) = temp1(1);
         spline_data(i, 2) = temp2;
         spline_data(i, 3) = temp3;
+        spline_data(i, 4) = param;
     }
     return spline_data;
 }
-
 
 double CubicSpline::getCurvature(double parameter) {
     Point first_der{ getFirstDerivative(parameter) };
@@ -234,19 +235,6 @@ double CubicSpline::getCurvature(double parameter) {
         (first_der(0) * second_der(1) - first_der(1) * second_der(0)) / (std::pow(std::pow(first_der(0), 2) + std::pow(first_der(1), 2), 3.0 / 2.0))
     };
     return curvature;
-}
-
-double CubicSpline::getVelocity(double parameter,double a,double v_limit_) {
-    Point first_der{ getFirstDerivative(parameter) };
-    Point second_der{ getSecondDerivative(parameter) };
-    // Should probably be checked again if it is correct
-    double curvature{
-        (first_der(0) * second_der(1) - first_der(1) * second_der(0)) / (std::pow(std::pow(first_der(0), 2) + std::pow(first_der(1), 2), 3.0 / 2.0))
-    };
-    if(curvature<0.01) curvature=0.01;
-    double velocity = std::sqrt(a*9.81/curvature); 
-    if(velocity>v_limit_) velocity=v_limit_;
-    return velocity;
 }
 
 double CubicSpline::getTangent(double parameter) {

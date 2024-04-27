@@ -14,8 +14,31 @@ namespace mpc_new
         double maxF = get_parameter("F_max").as_double();
         double minF = get_parameter("F_min").as_double();
         std::string mission = get_parameter("mission").as_string();
-        int laps = get_parameter("laps").as_int();
-        mpc_solver = new_MpcSolver(F_init, horizonLength, ds, dt, vel_max, maxF, minF, mission, laps);
+        double time_delay = get_parameter("time_delay").as_double();
+        double T_max = get_parameter("T_max").as_double();
+        double T_min = get_parameter("T_min").as_double();
+        double angle_max = get_parameter("angle_max").as_double();
+        double angle_min = get_parameter("angle_min").as_double();
+        double wb = get_parameter("wb").as_double();
+        double wd_front = get_parameter("wd_front").as_double();
+        double CdA = get_parameter("CdA").as_double();
+        double ClA = get_parameter("ClA").as_double();
+        double p_air = get_parameter("p_air").as_double();
+        double h_cog = get_parameter("h_cog").as_double();
+        double gr = get_parameter("gr").as_double();
+        double Rw = get_parameter("Rw").as_double();
+        double m = get_parameter("m").as_double();
+        double g = get_parameter("g").as_double();
+        double Iz = get_parameter("Iz").as_double();
+        int N_rear = get_parameter("N_rear").as_int();
+        double d_piston = get_parameter("d_piston").as_double();
+        double R_disk_f = get_parameter("R_disk_f").as_double();
+        double R_disk_r = get_parameter("R_disk_r").as_double();
+        double mi_disk = get_parameter("mi_disk").as_double();
+        bool dynamic_ds = get_parameter("dynamic_ds").as_bool();
+
+        mpc_solver = new_MpcSolver(F_init, horizonLength, ds, dt, vel_max, maxF, minF, mission, time_delay, T_max, T_min, angle_max, angle_min,
+            wb, wd_front, CdA, ClA, p_air, h_cog, gr, Rw, m, g, Iz, N_rear, d_piston, R_disk_f, R_disk_r, mi_disk, dynamic_ds);
 
         //Next build the publishers and the subscibers
         auto sub_opt = rclcpp::SubscriptionOptions();

@@ -38,12 +38,18 @@ namespace mpc_new{
             rclcpp_lifecycle::LifecyclePublisher<custom_msgs::msg::TxControlCommand>::SharedPtr dc_publisher;
             // CLIENT
             rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedPtr total_laps_cli;
+            //My object to solve
             new_MpcSolver mpc_solver;
+            //The spline i am using (helpful for autocross/trackdrive)
             path_planning::ArcLengthSpline *spline;
+            //Some Logger things
             ::Logger waypoints_timestamp_log, pose_timestamp_log;
             double pub_time_1, pub_time_2;
+
             bool should_exit = false;
+            double total_execution_time;
         protected:
+            //Lifecycle events
             mpc_new::CallbackReturn on_configure(const rclcpp_lifecycle::State &state);
             mpc_new::CallbackReturn on_activate(const rclcpp_lifecycle::State &state);
             mpc_new::CallbackReturn on_deactivate(const rclcpp_lifecycle::State &state);
