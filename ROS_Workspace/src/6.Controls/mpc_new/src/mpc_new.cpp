@@ -18,7 +18,6 @@ namespace mpc_new{
     F_max = maxF;
     F_min = minF;
     this->mission = mission;
-    dynamic_ds = true;
     mem = FORCESNLPsolver_internal_mem(0); //Solver's memory allocation
     std::vector<double> aux(Z_SIZE, 0);
     prevx0 = std::vector<std::vector<double>>(horizonLength, aux);

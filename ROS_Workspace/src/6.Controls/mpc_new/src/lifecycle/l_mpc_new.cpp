@@ -9,7 +9,7 @@ void LifecycleHandler::parameterload(){
     declare_parameter<double>("F_init", 300.0);
     declare_parameter<double>("F_max", 1000.0);
     declare_parameter<double>("F_min", -1000.0);
-    declare_parameter<std::string>("mission", "skidpad");
+    declare_parameter<std::string>("mission", "autocross");
     declare_parameter<double>("time_delay", 0.1);
     declare_parameter<double>("T_max", 25.0);
     declare_parameter<double>("T_min", -25.0);
@@ -31,7 +31,7 @@ void LifecycleHandler::parameterload(){
     declare_parameter<double>("R_disk_f", 0.079);
     declare_parameter<double>("R_disk_r", 0.0735);
     declare_parameter<double>("mi_disk", 0.6);
-    declare_parameter<bool>("dynamic_ds", false);
+    declare_parameter<bool>("dynamic_ds", true);
 }
 
 LifecycleHandler::LifecycleHandler() : LifecycleNode("NewMPC_Controller"){
@@ -103,6 +103,7 @@ void LifecycleHandler::pose_callback(const custom_msgs::msg::PoseMsg::SharedPtr 
         if(mpc_solver.mission == "autocross" || mpc_solver.mission == "trackdrive"){
             int spline_resolution = int (spline->getApproximateLength()/mpc_solver.s_interval_);
             mpc_solver.whole_track = this->spline->getSplineData(spline_resolution);
+            mpc_solver.spline = spline;
         }
         //Solve
         mpc_solver.build(X);

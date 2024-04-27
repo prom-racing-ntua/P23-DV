@@ -1,4 +1,4 @@
-mpc_new:
+l_mpc_new:
   ros__parameters:
     max_velocity: 4.0
     ds: 0.15
@@ -7,7 +7,7 @@ mpc_new:
     F_init: 300.0
     F_max: 500.0
     F_min: -500.0
-    mission: "trackdrive" 
+    mission: "autocross" 
     time_delay: 0.1
     T_max: 25.0
     T_min: -25.0
