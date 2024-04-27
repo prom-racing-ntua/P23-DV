@@ -69,7 +69,7 @@ Handler::Handler() : Node("NewMPC_Controller"){
     double R_disk_r = get_parameter("R_disk_r").as_double();
     double mi_disk = get_parameter("mi_disk").as_double();
     bool dynamic_ds = get_parameter("dynamic_ds").as_bool();
-
+    //alvania
     mpc_solver = new_MpcSolver(F_init, horizonLength, ds, dt, vel_max, maxF, minF, mission, time_delay, T_max, T_min, angle_max, angle_min,
         wb, wd_front, CdA, ClA, p_air, h_cog, gr, Rw, m, g, Iz, N_rear, d_piston, R_disk_f, R_disk_r, mi_disk, dynamic_ds);
 

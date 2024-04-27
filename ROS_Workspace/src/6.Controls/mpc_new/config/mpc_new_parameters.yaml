@@ -13,7 +13,7 @@ l_mpc_new:
     T_min: -25.0
     angle_max: 0.436332157 #25 degrees
     angle_min: -0.436332157 #-25 degrees
-    dynamic_ds: true
+    dynamic_ds: true #alvania
 
     #Model
     wb: 1590.0
