@@ -18,6 +18,18 @@ namespace pid_pp
         TORQUE = 1,
     }Motor_control_mode;
 
+    typedef enum MISSION
+    {
+        UNLOCK = 0,
+        ACCELERATION = 1,
+        SKIDPAD = 2,
+        AUTOX = 3,
+        TRACKDRIVE = 4,
+        EBS_TEST = 5,
+        INSPECTION = 6,
+        MANUAL = 7
+    }MISSION;
+
     typedef enum Velocity_profile_mode
     {
         CONSTANT = 0,
@@ -168,7 +180,7 @@ namespace pid_pp
     {
     public:
         VelocityProfile() : model(nullptr), spline_samples(nullptr) {}
-        VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed, int samples_per_meter, const Model &model, double initial_speed, bool is_end, bool is_first_lap, double safety_factor, double braking_distance);
+        VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed, int samples_per_meter, const Model &model, double initial_speed, bool is_end, bool is_first_lap, double safety_factor, double braking_distance, bool is_accel=false);
         Projection operator()(const Point &position, double theta) ; // returns target velocity and cross-track error
         Point get_target_point(double ld, const Point &position, double min_radius, double theta) const;
         ~VelocityProfile();
@@ -185,6 +197,7 @@ namespace pid_pp
         double safety_factor;
         int max_idx;
         bool unknown;
+        bool is_accel;
         void solve_profile(int resolution, double initial_speed, bool is_end, double braking_distance = 0);
     };
 

@@ -44,6 +44,18 @@ struct Cone {
     Cone(Point x): coords(x), color(-1) {}
 };
 
+typedef enum MISSION
+{
+    UNLOCK = 0,
+    ACCELERATION = 1,
+    SKIDPAD = 2,
+    AUTOX = 3,
+    TRACKDRIVE = 4,
+    EBS_TEST = 5,
+    INSPECTION = 6,
+    MANUAL = 7
+}MISSION;
+
 class my_edge {
 private:
     Cone a_priv;
@@ -61,6 +73,10 @@ public:
     }
     Point midpoint() const {
         return midpoint_priv;
+    }
+    Point weighted_midpoint(int weight_a, int weight_b) const{
+        float r = (weight_a * 1.0) / ((weight_a +weight_b) * 1.0);
+        return Point(r * a_priv.coords.x() + (1-r) * b_priv.coords.x(), r * a_priv.coords.y() + (1-r) * b_priv.coords.y());
     }
 };
 //bridge function

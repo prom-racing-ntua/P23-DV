@@ -347,8 +347,8 @@ class VelocitySLAMSimNode(Node):
             if item == 'perception_times' or item == 'velest_times':continue
             idx = self.f_idx[item] if item!='velest' else 4
 
-            if(self.data[idx] is not None):
-                self.get_logger().info(f'{item} dataset is ok.')
+            if(self.data[idx] is not None and len(self.data[idx])!=0):
+                self.get_logger().info(f'{item} dataset is ok. Length is {len(self.data[idx])}')
             else:
                 self.get_logger().warn(f'{item} dataset is not ok.')
 
@@ -409,20 +409,42 @@ class VelocitySLAMSimNode(Node):
         l_d = len(self.perception_data)
         l_t = len(self.perception_data_times)
 
-        for i in range(l_t-1):
-            t, g_idx_t = float(self.perception_data_times[i][0]), int(self.perception_data_times[i][2])
-            if(4*i+3>=l_d-1):
-                break
+        # print(f' Perc lens is {l_d}, {l_t}')
+
+        # for i in range(l_t-1):
+        #     t, g_idx_t = float(self.perception_data_times[i][0]), int(self.perception_data_times[i][2])
+        #     if(4*i+3>=l_d-1):
+        #         break
+        #     g_idx_d = int(self.perception_data[4*i][0])
+        #     classes = [int(x) for x in self.perception_data[4*i+1]]
+        #     ranges = [float(x) for x in self.perception_data[4*i+2]]
+        #     thetas = [float(x) for x in self.perception_data[4*i+3]]
+        #     if g_idx_d != g_idx_t:
+        #         print(g_idx_d, g_idx_t)
+        #         continue
+
+        #     data.append(Entry(time = t, _data = [g_idx_d, classes, ranges, thetas], type = 'perception'))
+
+        # return data
+        for i in range(int(l_d/4)-1):
             g_idx_d = int(self.perception_data[4*i][0])
             classes = [int(x) for x in self.perception_data[4*i+1]]
             ranges = [float(x) for x in self.perception_data[4*i+2]]
             thetas = [float(x) for x in self.perception_data[4*i+3]]
-            if g_idx_d != g_idx_t:
-                continue
 
-            data.append(Entry(time = t, _data = [g_idx_d, classes, ranges, thetas], type = 'perception'))
+            done = False
 
+            for j in range(len(self.perception_data_times)-1):
+                # print(self.perception_data_times[j][2] , g_idx_d, end='\t||\t')
+                if int(self.perception_data_times[j][2]) == int(g_idx_d):
+                    data.append(Entry(time = float(self.perception_data_times[j][0]), _data = [g_idx_d, classes, ranges, thetas], type = 'perception'))
+                    self.perception_data_times.pop(j)
+                    done = True
+                    break
         return data
+
+    
+
     
     def create_vel_entries(self):
         data:list[Entry] = []

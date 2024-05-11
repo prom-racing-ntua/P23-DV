@@ -293,8 +293,8 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
         /*if(!first or selected_edges.size()==1)*/ out.push_back(edge.midpoint());
         
     }
-    if (out.size() >= 3)
-        out.erase(out.begin() + 1);
+    // if (out.size() >= 3)
+    //     out.erase(out.begin());
     last_calculated_path = out;
     if (out.size() == 1)
     {
@@ -465,7 +465,7 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
     {
         // if(total_number_of_edges == 21)std::cout << '(' << selected_edges[i].midpoint().x() << "," << selected_edges[i].midpoint().y() << "),";
         /* 1 */
-        if (selected_edges[i].a().color == selected_edges[i].b().color)
+        if ((selected_edges[i].a().color == selected_edges[i].b().color) && (selected_edges[i].a().color<=1))
         {
             // std::cout<<'*';
             cost += 2 * same_edge_penalty;
@@ -502,7 +502,7 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
             {
                 if (verbose)
                     std::cout << "Max angle: "<<i<<" , "<<angle<<" deg"<< '(' << selected_edges[i].a().coords.x() << "," << selected_edges[i].a().coords.y() << "),"<<'(' << selected_edges[i].b().coords.x() << "," << selected_edges[i].b().coords.y() << ")"<<std::endl;
-                cost += same_edge_penalty; // if angle exceeds max angle, the penalty is applied to the total cost(to avoid scaling it by total_number_of_edges)
+                cost += 10*same_edge_penalty; // if angle exceeds max angle, the penalty is applied to the total cost(to avoid scaling it by total_number_of_edges)
             }
         }
         /*correct orientation TBD*/
@@ -511,28 +511,28 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
         {
             if(CGAL::orientation(selected_edges[i-1].midpoint(), selected_edges[i].midpoint(), selected_edges[i].a().coords)==CGAL::RIGHT_TURN)
             {
-                if(selected_edges[i].a().color!=1)
+                if(selected_edges[i].a().color==0)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             else if(CGAL::orientation(selected_edges[i-1].midpoint(), selected_edges[i].midpoint(), selected_edges[i].a().coords)==CGAL::LEFT_TURN)
             {
-                if(selected_edges[i].a().color!=0)
+                if(selected_edges[i].a().color==1)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             if(CGAL::orientation(selected_edges[i-1].midpoint(), selected_edges[i].midpoint(), selected_edges[i].b().coords)==CGAL::RIGHT_TURN)
             {
-                if(selected_edges[i].b().color!=1)
+                if(selected_edges[i].b().color==0)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             else if(CGAL::orientation(selected_edges[i-1].midpoint(), selected_edges[i].midpoint(), selected_edges[i].b().coords)==CGAL::LEFT_TURN)
             {
-                if(selected_edges[i].b().color!=0)
+                if(selected_edges[i].b().color==1)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
@@ -542,28 +542,28 @@ int Triangulation::cost_function_advanced(const std::vector<my_edge> &selected_e
         {
             if(CGAL::orientation(starting_position, selected_edges[i].midpoint(), selected_edges[i].a().coords)==CGAL::RIGHT_TURN)
             {
-                if(selected_edges[i].a().color!=1)
+                if(selected_edges[i].a().color==0)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             else if(CGAL::orientation(starting_position, selected_edges[i].midpoint(), selected_edges[i].a().coords)==CGAL::LEFT_TURN)
             {
-                if(selected_edges[i].a().color!=0)
+                if(selected_edges[i].a().color==1)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             if(CGAL::orientation(starting_position, selected_edges[i].midpoint(), selected_edges[i].b().coords)==CGAL::RIGHT_TURN)
             {
-                if(selected_edges[i].b().color!=1)
+                if(selected_edges[i].b().color==0)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }
             }
             else if(CGAL::orientation(starting_position, selected_edges[i].midpoint(), selected_edges[i].b().coords)==CGAL::LEFT_TURN)
             {
-                if(selected_edges[i].b().color!=0)
+                if(selected_edges[i].b().color==1)
                 {
                     cost += 2*same_edge_penalty;    f=1;
                 }

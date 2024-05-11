@@ -28,6 +28,14 @@ namespace path_planner
         sub_mapper = this->create_subscription<custom_msgs::msg::LocalMapMsg>("local_map", 10, std::bind(&LifecyclePathPlanner::mapping_callback, this, _1));
         pub_waypoints = this->create_publisher<custom_msgs::msg::WaypointsMsg>("waypoints", 10);
 
+        selection_radius_small = get_parameter("selection_radius_small").as_int();
+        selection_radius_big = get_parameter("selection_radius_big").as_int();
+        selection_angle = get_parameter("selection_angle").as_int();
+
+        mission = static_cast<MISSION>(get_parameter("mission").as_int());
+
+        RCLCPP_INFO_STREAM(get_logger(), "Path Planning sees mission: "<<static_cast<int>(mission));
+
         // Timestamp logging
         this->timestamp_log.init("path_planning");
         RCLCPP_INFO_STREAM(get_logger(), timestamp_log.check());

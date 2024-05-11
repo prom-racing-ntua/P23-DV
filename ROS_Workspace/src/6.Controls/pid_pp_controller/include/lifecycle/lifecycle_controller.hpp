@@ -84,10 +84,14 @@ private:
     double safe_speed_to_break, braking_distance;
     double last_steering, last_torque;
     double max_torque_difference;
+
+    bool accel_x_axis; // Determines if the x-axis is used as a target in the accel mission. If false, the controller uses the path planning output, augmented with straight line prediction 
+
     Point last_position; // used to implement braking distance
     int laps_to_do;
     int prev_lap;
     string discipline, midpoints;
+    MISSION mission;
     Velocity_profile_mode dynamic_vp; // from config. if false constant speed
     Motor_control_mode motor_control; // torque=1 (default) or velocity=0 
     Lookahead_input_mode lookahead_input; // 0: target vel, 1: actual vel, 2:local radius

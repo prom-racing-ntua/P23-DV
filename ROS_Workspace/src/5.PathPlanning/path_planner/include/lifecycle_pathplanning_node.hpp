@@ -33,8 +33,12 @@ namespace path_planner
             void loadParameters();
             double total_execution_time;
             custom_msgs::msg::WaypointsMsg last_path;
+            MISSION mission;
+            int last_visited_index;
+            std::vector<custom_msgs::msg::Point2Struct> skidpad_midpoints(const std::vector<custom_msgs::msg::ConeStruct> &local_map, const Point &current_position, int local_map_size, int lap);
             float last_length;
             Point last_position;
+            int prev_lap;
             float average_angle;
             float get_length(std::vector<Point> path)const;
             float get_angle_avg(std::vector<Point> path)const;

@@ -6,7 +6,7 @@
 
 namespace path_planner
 {
-    LifecyclePathPlanner::LifecyclePathPlanner() : LifecycleNode("path_planner"), waymaker(), total_execution_time(0)
+    LifecyclePathPlanner::LifecyclePathPlanner() : LifecycleNode("path_planner"), waymaker(), total_execution_time(0), mission(MISSION::UNLOCK), prev_lap(-1)
     {
         loadParameters();
         RCLCPP_WARN(get_logger(), "\n-- Path Planner Node Created");
@@ -14,9 +14,9 @@ namespace path_planner
 
     void LifecyclePathPlanner::loadParameters()
     {
-        selection_radius_small = declare_parameter<int>("selection_radius_small", 5);
-        selection_radius_big = declare_parameter<int>("selection_radius_big", 10);
-        selection_angle = declare_parameter<int>("selection_angle", 90);
+        declare_parameter<int>("selection_radius_small", 5);
+        declare_parameter<int>("selection_radius_big", 10);
+        declare_parameter<int>("selection_angle", 90);
         declare_parameter<int>("maximum_angle", 90);
         declare_parameter<int>("maximum_edge_angle", 90);
         declare_parameter<int>("maximum_distance", 5);
@@ -27,6 +27,8 @@ namespace path_planner
         declare_parameter<float>("length_penalty", 0.1);
         declare_parameter<float>("angle_penalty", 0.1);
         declare_parameter<float>("total_length_reward", 0.075);
+
+        declare_parameter<int>("mission", 4);
     }
 
     std::vector<Cone> select_cones_by_dist_and_angle(const std::vector<Cone> &full_map, const Point &position, const Point &direction, int radius_small, int radius_big, int angle)
@@ -35,10 +37,10 @@ namespace path_planner
         selected.reserve(full_map.size());
         for (Cone cone : full_map)
         {
-            if (cone.color != 0 && cone.color != 1)
-            {
-                continue;
-            }
+            // if (cone.color == 3)
+            // {
+            //     continue;
+            // }
             if (CGAL::squared_distance(cone.coords, position) <= radius_small * radius_small)
             {
                 selected.push_back(cone);
@@ -53,7 +55,7 @@ namespace path_planner
         return selected;
     }
 
-    std::pair<int, int> count_cones_by_color(const std::vector<Cone> &local_map)
+    std::tuple<int, int, int> count_cones_by_color(const std::vector<Cone> &local_map)
     {
         int counter[] = {0, 0, 0, 0};
 
@@ -61,12 +63,198 @@ namespace path_planner
         {
             counter[cone.color]++;
         }
-        return std::make_pair(counter[0], counter[1]);
+        return std::make_tuple(counter[0], counter[1], counter[2]);
+    }
+
+    std::vector<custom_msgs::msg::Point2Struct> LifecyclePathPlanner::skidpad_midpoints(const std::vector<custom_msgs::msg::ConeStruct> &local_map, const Point &current_position,  int local_map_size, int lap)
+    {
+        Cone cones[local_map_size];
+        double x0, y0;
+        for(int i=0; i<local_map_size; i++)
+        {
+            x0 = local_map[i].coords.x;
+            y0 = local_map[i].coords.y;
+            // std::cout<<i<<"= ("<<x0<<", "<<y0<<")\n";
+            cones[i] = Cone(Point(x0, y0), local_map[i].color);
+        }
+        // std::cout<<std::endl;
+
+        std::vector<custom_msgs::msg::Point2Struct> waypoints_ros;
+        Point waypoint;
+        int midpoints_size, initial_waypoints_size;
+        int *outer_idxs, *inner_idxs;
+        int closest_index = -1;
+        float closest_distance = DBL_MAX;
+        int wa, wb=1;
+        switch (lap)
+        {
+        case 0:
+            {
+            midpoints_size = 4 + 8;
+            initial_waypoints_size = 4;
+            wa = 1;
+            outer_idxs = new int[midpoints_size]{59, 61, 28, 44,
+                                                 30, 57, 56, 55, 54, 53, 52, 51
+            };
+            inner_idxs = new int[midpoints_size]{58, 60, 45,  9, 
+                                                  7,  6,  5,  4,  3,  2,  1,  0
+            };
+            }break;
+        case 1:
+            {
+            midpoints_size = 15 + 8;
+            initial_waypoints_size = 15;
+            wa = 2;
+            outer_idxs = new int[midpoints_size]{30, 57, 56, 55, 54, 53, 52, 51,
+                                                 50, 49, 48, 47, 46, 45, 44, 
+                                                 30, 57, 56, 55, 54, 53, 52, 51
+            };
+            inner_idxs = new int[midpoints_size]{ 7,  6,  5,  4,  3,  2,  1,  0,
+                                                 15, 14, 13, 12, 11, 10,  9,
+                                                  7,  6,  5,  4,  3,  2,  1,  0
+            };
+            }break;
+        case 2:
+            {
+            midpoints_size = 15 + 8;
+            initial_waypoints_size = 15;
+            wa = 2;
+            outer_idxs = new int[midpoints_size]{30, 57, 56, 55, 54, 53, 52, 51,
+                                                 50, 49, 48, 47, 46, 45, 44, 
+                                                  7, 16, 17, 18, 19, 20, 21, 22
+            };
+            inner_idxs = new int[midpoints_size]{ 7,  6,  5,  4,  3,  2,  1,  0,
+                                                 15, 14, 13, 12, 11, 10,  9,
+                                                 30, 31, 32, 33, 34, 35, 36, 37
+            };
+            }break;
+        case 3:
+            {
+            midpoints_size = 15 + 8;
+            initial_waypoints_size = 15;
+            wa = 2;
+            outer_idxs = new int[midpoints_size]{ 7, 16, 17, 18, 19, 20, 21, 22,
+                                                 23, 24, 25, 26, 27, 28,  9,
+                                                  7, 16, 17, 18, 19, 20, 21, 22
+            };
+            inner_idxs = new int[midpoints_size]{30, 31, 32, 33, 34, 35, 36, 37,
+                                                 38, 39, 40, 41, 42, 43, 44, 
+                                                 30, 31, 32, 33, 34, 35, 36, 37
+            };
+            }break;
+        case 4:
+            {
+            midpoints_size = 15 + 6;
+            initial_waypoints_size = 15;
+            wa = 2;
+            outer_idxs = new int[midpoints_size]{ 7, 16, 17, 18, 19, 20, 21, 22,
+                                                 23, 24, 25, 26, 27, 28,  9,
+                                                  7, 57, 62, 64, 67, 68
+            };
+            inner_idxs = new int[midpoints_size]{30, 31, 32, 33, 34, 35, 36, 37,
+                                                 38, 39, 40, 41, 42, 43, 44,
+                                                 30, 16, 63, 65, 66, 71
+            };
+            }break;
+        case 5:
+            {
+            midpoints_size = 6;
+            initial_waypoints_size = 6;
+            wa = 1;
+            outer_idxs = new int[midpoints_size]{ 7, 57, 62, 64, 67, 68};
+            inner_idxs = new int[midpoints_size]{30, 16, 63, 65, 66, 71};
+            }break;
+        default:
+            break;
+        }
+        custom_msgs::msg::Point2Struct sample;
+        
+        float distance;
+        for(int i=last_visited_index; i<(last_visited_index==0 ? initial_waypoints_size/2 : initial_waypoints_size); i++)
+        {
+            waypoint = my_edge(cones[outer_idxs[i]], cones[inner_idxs[i]]).midpoint();
+            distance = std::sqrt(std::pow(current_position.x() - waypoint.x(), 2) + std::pow(current_position.y() - waypoint.y(), 2));
+            if(distance < closest_distance)
+            {
+                closest_index = i;
+                closest_distance = distance;
+            }
+        }
+
+        if(closest_index == -1)
+        {
+            closest_index = last_visited_index;
+        }
+        else
+        {
+            last_visited_index = closest_index;
+        }
+
+        // std::cout<<closest_index<<" "<<closest_distance<<" "<<lap<<" "<<std::endl;
+
+        waypoints_ros.reserve(midpoints_size - closest_index + 1);
+        sample.x = current_position.x();
+        sample.y = current_position.y();
+        waypoints_ros.push_back(sample);
+
+        for(int i=closest_index; i<midpoints_size; i++)
+        {
+            waypoint = my_edge(cones[outer_idxs[i]], cones[inner_idxs[i]]).weighted_midpoint(wa, wb);
+
+            sample.x = waypoint.x();
+            sample.y = waypoint.y();
+            waypoints_ros.push_back(sample);
+        } 
+        return waypoints_ros;
     }
 
     void LifecyclePathPlanner::mapping_callback(const custom_msgs::msg::LocalMapMsg::SharedPtr msg)
     {
         rclcpp::Time starting_time = this->now();
+        
+        switch (mission)
+        {
+        case MISSION::SKIDPAD:
+            {
+            int lap = static_cast<int>(msg->lap_count);
+            if(lap != prev_lap)
+            {
+                prev_lap = lap;
+                last_visited_index = 0;
+            }
+            std::vector<custom_msgs::msg::Point2Struct> waypoints_ros;
+            waypoints_ros = skidpad_midpoints(msg->local_map, Point(msg->pose.position.x, msg->pose.position.y), msg->local_map.size(), lap);
+
+            custom_msgs::msg::WaypointsMsg for_pub;
+
+            for_pub.count = waypoints_ros.size();
+            for_pub.waypoints = waypoints_ros;
+
+            for_pub.initial_v_x = msg->pose.velocity_state.global_index == 0 ? -1 : msg->pose.velocity_state.velocity_x;
+            for_pub.lap_count = msg->lap_count;
+
+            for_pub.is_out_of_map = false;
+            for_pub.should_exit   = false;
+
+            for_pub.global_index =  msg->pose.velocity_state.global_index;
+
+            pub_time_1 = this->now().nanoseconds()/1e6;
+            pub_waypoints->publish(for_pub);
+            pub_time_2 = this->now().nanoseconds()/1e6;
+
+            // Timestamp Logging
+            timestamp_log.log(starting_time.nanoseconds()/1e6, 0, msg->pose.velocity_state.global_index);
+            timestamp_log.log((pub_time_2 + pub_time_1)/2, 1, msg->pose.velocity_state.global_index);
+
+            return;
+            }break;
+        case MISSION::UNLOCK:
+            RCLCPP_WARN(get_logger(), "Error in getting mission!");
+            return;
+            break;
+        default:
+            break;
+        }
         int cone_count = msg->local_map.size();
         std::vector<Cone> full_map, local_map;
         double x0, y0;
@@ -90,8 +278,8 @@ namespace path_planner
             return;
         }
 
-        std::pair<int, int> b_y_count = count_cones_by_color(local_map);
-        if(b_y_count.first < 1 || b_y_count.second < 1)
+        std::tuple<int, int, int> color_count = count_cones_by_color(local_map);
+        if((std::get<0>(color_count) < 1 || std::get<1>(color_count) < 1) && (std::get<2>(color_count) < 3))
         {
             RCLCPP_INFO_STREAM(get_logger(), "Too few cones...");
             return;

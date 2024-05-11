@@ -4,7 +4,7 @@ path_planning:
     maximum_angle: 60
     maximum_edge_angle: 60
     maximum_distance: 3
-    target_depth: 10
+    target_depth: 15
 
     #penalties
     same_edge_penalty: 100
@@ -14,6 +14,8 @@ path_planning:
     filtering_threshold: 90
 
     #local map selection
-    selection_radius_small: 5
-    selection_radius_big: 12
+    selection_radius_small: 8
+    selection_radius_big: 15
     selection_angle: 75
+
+    mission: 2

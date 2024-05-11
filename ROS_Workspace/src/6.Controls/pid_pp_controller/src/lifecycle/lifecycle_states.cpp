@@ -53,6 +53,7 @@ namespace pid_pp
         dynamic_vp = static_cast<Velocity_profile_mode>(get_parameter("dynamic_vp").as_bool());
         lookahead_input = static_cast<Lookahead_input_mode>(get_parameter("lookahead_mode").as_int());
         
+        accel_x_axis = get_parameter("accel_x_axis").as_bool();
 
         is_end = false;
 
@@ -60,6 +61,31 @@ namespace pid_pp
         pub_target = this->create_publisher<custom_msgs::msg::Point2Struct>("pp_target_point", 10);
 
         total_laps_cli = this->create_client<custom_msgs::srv::SetTotalLaps>("/p23_status/set_total_laps");
+
+        if(discipline == "Acceleration")
+            mission = MISSION::ACCELERATION;
+        else if(discipline == "Skidpad")
+            mission = MISSION::SKIDPAD;
+        else if(discipline == "Autocross")
+            mission = MISSION::AUTOX;
+        else if(discipline == "Trackdrive")
+            mission = MISSION::TRACKDRIVE;
+        else if(discipline == "EBS_Test")
+            mission = MISSION::EBS_TEST;
+        else if(discipline == "Inspection")
+            mission = MISSION::INSPECTION;
+        else
+            mission = MISSION::UNLOCK;
+
+        if(mission == MISSION::UNLOCK)
+        {
+            RCLCPP_WARN(get_logger(), "PID-PP not seeing mission!!!");
+            return pid_pp::CallbackReturn::FAILURE;
+        }
+        else
+        {
+            RCLCPP_INFO_STREAM(get_logger(), "PID-PP sees mission "<<discipline);
+        }
 
         // Callback Function
         auto response_received_callback = [this](rclcpp::Client<custom_msgs::srv::SetTotalLaps>::SharedFuture future)

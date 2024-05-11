@@ -41,13 +41,13 @@ namespace lifecycle_manager_namespace{
             case(p23::ACCELERATION):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/acceleration_config.yaml");
-                nodesToShutdown = {"inspection","path_planning", "mpc"};
+                nodesToShutdown = {"inspection", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::SKIDPAD):
                 status_array = {1, 1, 1, 1, 1, 0, 0, 1, 0, 1};
                 configurationFileSelected += std::string("/skidpad_config.yaml");
-                nodesToShutdown = {"inspection","path_planning", "mpc"};
+                nodesToShutdown = {"inspection", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::AUTOX):
@@ -59,13 +59,13 @@ namespace lifecycle_manager_namespace{
             case(p23::TRACKDRIVE):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/trackdrive_config.yaml");
-                nodesToShutdown = {"inspection","mpc", "path_planning"};
+                nodesToShutdown = {"inspection","mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::EBS_TEST):
                 status_array = {1, 1, 1, 1, 1, 0, 1, 0, 0, 1};
                 configurationFileSelected += std::string("/ebs_test_config.yaml");
-                nodesToShutdown = {"inspection", "path_planning", "mpc"};
+                nodesToShutdown = {"inspection", "mpc"};
                 controlsNode = {"pure_pursuit"};
                 break;
             case(p23::INSPECTION):

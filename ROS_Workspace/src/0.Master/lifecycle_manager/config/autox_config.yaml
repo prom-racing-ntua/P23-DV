@@ -133,6 +133,8 @@
     selection_radius_big: 15
     selection_angle: 45
 
+    mission: 3
+
 
 /pure_pursuit:
   ros__parameters:

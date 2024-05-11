@@ -87,18 +87,18 @@ sim_node::sim_node() : Node("Simple_Simulation"), state(), constants(193.5, 250.
 	*/
 	if (discipline == 0 or discipline == 1)
 	{
-		fs.open("src/6.Controls/simple_sim/data/map4.txt");
-		state.x = -5.5;
-			}
+		fs.open("src/6.Controls/simple_sim/data/map.txt");
+		state.x = -6.7;
+	}
 	else if (discipline == 2 or discipline == 4)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Acceleration.txt");
-		state.x = -1;
+		state.x = -2;
 	}
 	else if (discipline == 3)
 	{
 		fs.open("src/6.Controls/simple_sim/data/Skidpad.txt");
-		state.x = -16;
+		state.x = -16.7;
 	}
 
 	std::cout<<"Discipline: "<<d<<" "<<discipline<<std::endl;
@@ -217,7 +217,11 @@ bool sim_node::lap_change() const
 	}
 	if(discipline == 3)
 	{
-		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) or ( x >= 10 && x <= 11 && y >= -3 && y <= 3);
+		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) /*or ( x >= 10 && x <= 11 && y >= -3 && y <= 3)*/;
+	}
+	if (discipline == 2)
+	{
+		return x >= 20 && x <= 25;
 	}
 	return 0;
 }
@@ -279,9 +283,10 @@ void sim_node::timer_callback()
 		brake_model.propagate(dt_, state.t*1e3);
 		motor_model.propagate(dt_, state.t*1e3);
 
-		if (lap_change() && global_idx - idx_of_last_lap > 2500)
+		if (lap_change() && (global_idx - idx_of_last_lap)*state.v_x*1e-3 > 10)
 		{
-			std::cout << "----- Lap: " << ++state.lap << " -----" << std::endl;
+			std::cout << "----- Lap: " << ++state.lap << "\t-----" << std::endl;
+			std::cout << "----- T = "  << state.t<<      "\t-----" << std::endl;
 			idx_of_last_lap = global_idx;
 		}
 	}
@@ -370,8 +375,11 @@ void sim_node::timer_callback()
 			Cone cone = seen_cones[i];
 			if(has_hit_cone(sin, cos, state.x, state.y, cone.x, cone.y))
 			{
-				seen_cones.erase(seen_cones.begin()+i);
-				i--;
+				if(discipline!=3)
+				{
+					seen_cones.erase(seen_cones.begin()+i);
+					i--;
+				}
 				total_doo++;
 				RCLCPP_WARN(get_logger(), "A cone has bin hit. Total count: %d", total_doo);
 			}
@@ -380,11 +388,18 @@ void sim_node::timer_callback()
 
 	if (global_idx % 250 == 0)
 	{
+		double perc_r;
 		std::cout << "Lap: "<< state.lap<< "\t\t" << state.t << "\t\t" << state.v_x << std::endl;
 		for (int i = 0; i < unseen_cones.size(); i++)
 		{
 			double dsq = std::pow(state.x - unseen_cones[i].x, 2) + std::pow(state.y - unseen_cones[i].y, 2);
-			if (dsq < perception_range * perception_range && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
+			// if(unseen_cones[i].color==0)
+			// 	perc_r = 7;
+			// else if(unseen_cones[i].color==1)
+			// 	perc_r = 12;
+			// else
+				perc_r = perception_range;
+			if (dsq < perc_r * perc_r && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);
@@ -397,12 +412,12 @@ void sim_node::timer_callback()
 		std::vector<custom_msgs::msg::ConeStruct> cs;
 		cs.reserve(int(seen_cones.size()));
 
-		for (auto i : seen_cones)
+		for (int i=0; i<seen_cones.size(); i++)
 		{
-			o.x = i.x;
-			o.y = i.y;
+			o.x = seen_cones[i].x;
+			o.y = seen_cones[i].y;
 			s.coords = o;
-			s.color = i.color;
+			s.color = seen_cones[i].color;
 			cs.push_back(s);
 		}
 		msg2.local_map = cs;

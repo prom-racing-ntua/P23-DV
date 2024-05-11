@@ -490,10 +490,11 @@ void GraphSLAM<T>::addLandmarkMeasurementsLocalization(const unsigned long globa
 			gtsam::noiseModel::Gaussian::shared_ptr noise_model{
 				gtsam::noiseModel::Gaussian::Covariance(cone.observation_noise)
 			};
+			
+			new_factors_.add(gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+			observation_pose_symbol, best_match->symbol, gtsam::Rot2(cone.theta), cone.range, noise_model)
+			);
 
-			new_factors_.add(UnaryFactor(
-				observation_pose_symbol, cone.range, cone.theta, best_match->estimated_pose[0], best_match->estimated_pose[1], noise_model
-			));
 		}
 	}
 }
@@ -514,6 +515,7 @@ void GraphSLAM<T>::loadMap(std::string& map_file_path) {
 		map_file >> cone.estimated_pose[1];
 
 		landmark_id_map_[landmark_counter_++] = cone;
+		new_variable_values_.insert(cone_symbol, gtsam::Point2(cone.estimated_pose[0], cone.estimated_pose[1]));
 	}
 	cone_count_ = landmark_id_map_.size();
 	map_file.close();
@@ -564,17 +566,8 @@ int GraphSLAM<T>::findNearestNeighbor(PerceptionMeasurement& observed_landmark, 
 template <class T>
 void GraphSLAM<T>::optimizeFactorGraph(gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_variable_values) {
 	// Update the current estimated robot pose
-	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
-	gkaou1 << "0";
-	gkaou1.close();
 	isam_->update(new_factors, new_variable_values);
-	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
-	gkaou1 << "1";
-	gkaou1.close();
 	estimated_global_state_ = isam_->calculateEstimate();
-	gkaou1.open("/home/prom/gkaou_file.txt",std::fstream::in);
-	gkaou1 << "2";
-	gkaou1.close();
 }
 
 // Used to be part of optimization, split for ROS purposes
@@ -602,7 +595,7 @@ void GraphSLAM<T>::imposeOptimization(gtsam::Symbol& optimization_symbol, gtsam:
 	estimated_car_pose_ = gtsam::Pose2(new_x, new_y, new_theta);
 
 	// For every landmark that has been optimized update its estimated position
-	if (node_handler_->get_parameter("mapping_mode").as_bool()) 
+	if (node_handler_->get_parameter("mapping_mode").as_bool()||1) 
 	{
 		for (auto& it : landmark_id_map_)
 		{
@@ -634,15 +627,16 @@ std::vector<gtsam::Vector3> GraphSLAM<T>::getEstimatedMap() {
 	std::vector<gtsam::Vector3> estimated_map;
 
 	// Iterate through the HashMap of cones and add them to the return vector if the cone is verified
-	for (auto& it : landmark_id_map_)
+	for (int i=0; i<landmark_counter_; i++)
 	{
-		LandmarkInfo& cone{ it.second };
+		LandmarkInfo& cone{ landmark_id_map_[i] };
 		if (cone.is_verified)
 		{
-			gtsam::Vector3 mapped_cone{ static_cast<double>(cone.color), cone.estimated_pose[0], cone.estimated_pose[1] };
+			gtsam::Vector3 mapped_cone{ static_cast<double>(cone.color), cone.estimated_pose[0], cone.estimated_pose[1]};
 			estimated_map.push_back(mapped_cone);
 		}
 	}
+
 	cone_count_ = estimated_map.size();
 	return estimated_map;
 }

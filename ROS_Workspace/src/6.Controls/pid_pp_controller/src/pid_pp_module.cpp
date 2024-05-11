@@ -271,8 +271,8 @@ void SplinePoint::set_target_speed(double v)
 }
 
 // class VelocityProfile TBD
-VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap, double _safety_factor, double braking_distance)
-    : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0), unknown(is_first_lap), safety_factor(_safety_factor)
+VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap, double _safety_factor, double braking_distance, bool _is_accel)
+    : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0), unknown(is_first_lap), safety_factor(_safety_factor), is_accel(_is_accel)
 {
     this->total_length = spline.getApproximateLength();
     // std::cout<<"TOTAL LENGTH = "<<total_length<<std::endl;
@@ -310,7 +310,14 @@ Projection VelocityProfile::operator()(const Point &position, double theta)
     // return std::make_pair(0,0);
     int i = get_projection(position, theta);
     last_visited_index = i;
-    i = std::min(i+1, max_idx); //looking at next target
+    /*
+        target point is the point we expect to be when the motor command reaches the motor
+        delta_idx = delta index = (distance until motor) * (samples per meter)
+                         approx.= (target at projection) * (motor ETA) * (sample_per_meter)
+    */
+    int delta_idx = spline_samples[i].target_speed() * 0.1 * samples_per_meter;
+    std::cout<<delta_idx<<std::endl;
+    i = std::min(i+delta_idx, max_idx); //looking at next target
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
     double curvature = spline_samples[i].k();
@@ -340,7 +347,7 @@ int VelocityProfile::get_projection(const Point &position, double theta) const
         {
             min_error = error;
             min_error_index = i;
-            if(error <= 0.05 * 0.05)break;
+            if(error <= 0.1 * 0.1)break;
         }
     }
     if (min_error_index == -1)
@@ -369,7 +376,7 @@ Point VelocityProfile::get_target_point(double ld, const Point &position, double
             closest_d = std::abs(ld - dist);
             closest_p = trans;
             sel_idx = i;
-            if(closest_d<=0.05)break;
+            if(closest_d<=0.1)break;
         }
     }
     if (closest_d < DBL_MAX)

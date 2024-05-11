@@ -114,6 +114,27 @@
     front_axle: 0.76            # [m]
     rear_axle: 0.89             # [m]
 
+/path_planning:
+  ros__parameters:
+    #triangulation
+    maximum_angle: 60
+    maximum_edge_angle: 60
+    maximum_distance: 5
+    target_depth: 14
+
+    #penalties
+    same_edge_penalty: 100
+    length_penalty: 0.1
+    angle_penalty: 0.1
+    total_length_reward: 0.5
+    filtering_threshold: 90
+
+    #local map selection
+    selection_radius_small: 12
+    selection_radius_big: 15
+    selection_angle: 45
+
+    mission: 5
 
 /pure_pursuit:
   ros__parameters:
