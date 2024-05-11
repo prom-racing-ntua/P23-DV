@@ -1,10 +1,10 @@
-inspection:
+/inspection:
   ros__parameters:
-    mode: 'inspection' #'inspection' or 'bench'
+    mode: 'bench' #'inspection' or 'bench'
     control_mode: 'velocity'
-    max_torque: 30.0
-    min_torque: -30.0
-    torque_step: 20.0
+    max_torque: 3000.0
+    min_torque: 0.0
+    torque_step: 200.0
     # [ 24.0mm,       (23.96173 + 27.01392) / 2 = 25.4878 deg = 0.4448rad],
     max_steering: 0.448
     # [-24.0mm,       (-27.01392 -23.96173) / 2 = -25.4878 deg = -0.4448rad]
@@ -24,7 +24,7 @@ inspection:
     motor_by_function: False   # True or False
     motor_function: 'square'    # 'sine' or 'square'
     motor_frequency: 0.5     # float Hz
-    steer_by_function: True  # True or False
+    steer_by_function: False  # True or False
     steer_function: 'square'    # 'sine' or 'square'
     steer_frequency: 0.5     # float Hz
     brake_by_function: False   # True or False

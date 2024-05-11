@@ -4,6 +4,7 @@
     exposureTime: 1500 #xx
     autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
+    customAutoexposure: False # an autoExposure==True kai custom==True tote yperisxyei to custom
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
@@ -16,6 +17,7 @@
     serialNumber: "KE0220030138"
     exposureTime: 1500 #xx
     autoExposure: False
+    customAutoexposure: False # an autoExposure==True kai custom==True tote yperisxyei to custom
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
@@ -116,20 +118,20 @@
     discipline: "Trackdrive"
     midpoints: ""                           #MUST ENTER BEFORE RUN
     #model
-    mass: 250.0
+    mass: 193.5
     gravitational_acceleration: 9.81
     wheelbase: 1.59
     weight_distribution: 0.467
     h_cog: 0.27
     air_density: 1.225
-    Cd*A: 0.05
-    Cl*A: -0.2
+    Cd*A: 2.0
+    Cl*A: 7.0
     gear_ratio: 3.9
     wheel_radius: 0.2054
     efficiency: 0.85
     Fz_0: 1112.0554070627252
-    max_positive_torque:  46.0 #186.2              #EDIT BEFORE
-    max_negative_torque:  -30.0 # -186.2             #EDIT BEFORE
+    max_positive_torque: 60.2              #EDIT BEFORE
+    max_negative_torque: -30.2             #EDIT BEFORE
     minimum_weight_distribution_rear: 1.0  
     c_tire: 0.66
 

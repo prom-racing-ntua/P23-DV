@@ -51,7 +51,8 @@ class AcquisitionLifecycleNode(Node):
             ('expectedGrayValue', 50),
             ('ROIx', 1280),
             ('ROIy', 1024),
-            ('log_photos', False)
+            ('log_photos', False),
+            ('customAutoexposure', False)
             ]
         )
         self.get_logger().warn(f"\n-- Aquisition Node Created")
@@ -68,9 +69,13 @@ class AcquisitionLifecycleNode(Node):
             ROIx = self.get_parameter('ROIx').get_parameter_value().integer_value
             ROIy = self.get_parameter('ROIy').get_parameter_value().integer_value
             self.log_photos = self.get_parameter("log_photos").get_parameter_value().bool_value
+            self.customAutoexposure = self.get_parameter('customAutoexposure').get_parameter_value().bool_value
 
-            self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {expectedGrayValue}, {autoExposure}")
+            if self.customAutoexposure:
+                autoExposure = False
 
+            self.get_logger().info(f"{serialNumber}, {orientation}, {exposureTime}, {ROIx}, {ROIy}, {expectedGrayValue}, {autoExposure}, {self.customAutoexposure}")
+            self.orientation = orientation
             # Initialize camera class
             self.camera = Camera(resolution=(ROIx, ROIy), serialNumber=serialNumber,
                                     orientation=orientation, exposureTime=exposureTime,
@@ -89,13 +94,14 @@ class AcquisitionLifecycleNode(Node):
             )
 
             # Create Auto-exposure feedback topic
-            self.feedback_from_inference = self.create_subscription(
-                AutoExposureMessage,
-                f'autoexposure_{orientation.lower()}',
-                self.autoexposure_feedback,
-                10
-            )
-            self.current_exposure = exposureTime
+            if self.customAutoexposure:
+                self.feedback_from_inference = self.create_subscription(
+                    AutoExposureMessage,
+                    f'autoexposure_{orientation.lower()}',
+                    self.autoexposure_feedback,
+                    10
+                )
+                self.current_exposure = exposureTime
 
             # Setup Publisher
             self.bridge = CvBridge()  #This is used to pass images as ros msgs
@@ -109,12 +115,20 @@ class AcquisitionLifecycleNode(Node):
 
             self.timestamp_log = Logger("acquisition_{:s}".format(orientation))
             self.get_logger().info(self.timestamp_log.check())
-            self.autoexp_timestamp_log: Logger = Logger("autoecposure_{:s}".format(orientation))
-            self.get_logger().info(self.autoexp_timestamp_log.check())
+            if self.customAutoexposure:
+                self.autoexp_timestamp_log: Logger = Logger("autoexposure_{:s}".format(orientation))
+                self.get_logger().info(self.autoexp_timestamp_log.check())
+            
+            if self.log_photos:
+                try:
+                    self.log_dir = self.timestamp_log.get_run_path()
+                    os.mkdir(os.path.join(self.log_dir, f'photos_{orientation}'))
+                except Exception as e:
+                    self.get_logger().warn(f'Error creating photo {orientation} logging directory: {repr(e)}')
 
             self.get_logger().warn(f"\n-- Acquisition Configured!")
         except Exception as e:
-            self.get_logger().error(">>> ", repr(e))
+            self.get_logger().error(f"Error in Acquisition {orientation} configuration", repr(e))
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: State) -> TransitionCallbackReturn:
@@ -158,20 +172,27 @@ class AcquisitionLifecycleNode(Node):
         return TransitionCallbackReturn.SUCCESS
     
     def autoexposure_feedback(self, msg: AutoExposureMessage) -> None:
-        if abs(msg)<1:
-            return
+        try:
+            if abs(msg.delta_exposure)<1:
+                return
 
-        start_time = self.get_clock().now().nanoseconds / 10**6
+            start_time = self.get_clock().now().nanoseconds / 10**6
 
-        self.current_exposure += msg.delta_exposure
-        result = self.camera.SetAutoExposure(self.current_exposure)
-        
-        if result is not None:
+            
+            result = self.camera.SetAutoExposure(self.current_exposure)
+            self.current_exposure += msg.delta_exposure if result is None else 0
+
+            # self.get_logger().warn(f'{repr(result) if result is not None else "Success"}, {msg.delta_exposure}, {msg.brightness}, {msg.has_cones}, {self.camera.GetExposure()}')
+            
+            if result is not None:
+                self.get_logger().error(f'Error during setting exposure: {str(result)}')
+                self.autoexp_timestamp_log(start_time, 0, 0, [0, msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
+            else:
+                self.autoexp_timestamp_log(start_time, 0, 0, [1,msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
+        except:
             self.get_logger().error(f'Error during setting exposure: {str(result)}')
-            self.autoexp_timestamp_log(start_time, 0, 0, [0, msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
-        else:
-            self.autoexp_timestamp_log(start_time, 0, 0, [1,msg.delta_exposure, msg.brightness, msg.has_cones, self.current_exposure])
-        
+            return
+            
 
 
     def trigger_callback(self, msg):
@@ -186,19 +207,6 @@ class AcquisitionLifecycleNode(Node):
             self.camera.TriggerCamera()
             numpyImage = self.camera.AcquireImage()
 
-            if self.log_photos:
-                try:
-                    #path to save the image
-                    path = '/home/prom/Desktop/Image'
-                    #name the image based on the global index and give the path to save
-                    path = os.path.join(path, f'image_{global_index}.jpg')
-                    if global_index%40 == 0:                    #save the numpy image to the folder
-                        cv2.imwrite(path, numpyImage)
-                except Exception as z:
-                    self.get_logger().info("Photo logger error: {:s}".format(repr(z)))
-                    self.log_photos = False
-
-
             # Send Image to Perception Node
             imageMessage = AcquisitionMessage()
             imageMessage.global_index = global_index
@@ -208,6 +216,19 @@ class AcquisitionLifecycleNode(Node):
             pub_time_1 = self.get_clock().now().nanoseconds / 10**6
             self.publisher_.publish(imageMessage)
             pub_time_2 = self.get_clock().now().nanoseconds / 10**6
+
+
+            if self.log_photos and global_index%(4 * 10)==0 and 0:
+                try:
+                    #path to save the image
+                    path = os.path.join(self.log_dir, f'photos_{self.orientation}')
+                    #name the image based on the global index and give the path to save
+                    path = os.path.join(path, f'image_{global_index}_{self.orientation}.jpg')
+                    numpyImage = cv2.cvtColor(numpyImage, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(path, numpyImage)
+                except Exception as z:
+                    self.get_logger().info("Photo logger error: {:s}".format(repr(z)))
+                    self.log_photos = False
 
             #Timestamp logging
             self.timestamp_log(start_time, 0, global_index)

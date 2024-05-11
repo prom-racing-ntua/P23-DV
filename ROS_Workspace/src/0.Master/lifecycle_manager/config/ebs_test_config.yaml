@@ -1,9 +1,10 @@
 /acquisition_left:
   ros__parameters:
     serialNumber: "KE0220040188"
-    exposureTime: 1500 #xx
-    autoExposure: False # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
+    exposureTime: 400 #xx
+    autoExposure: True # Mporoun na mpoun kai True kai exposureTime, ta exw kanei handle sthn
     # klash ths cameras, ola komple
+    customAutoexposure: False # an autoExposure==True kai custom==True tote yperisxyei to custom
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
@@ -14,8 +15,9 @@
 /acquisition_right:
   ros__parameters:
     serialNumber: "KE0220030138"
-    exposureTime: 1500 #xx
-    autoExposure: False
+    exposureTime: 400 #xx
+    autoExposure: True
+    customAutoexposure: False # an autoExposure==True kai custom==True tote yperisxyei to custom
     expectedGrayValue: 50
     ROIx: 1280
     ROIy: 1024
@@ -28,9 +30,9 @@
     velocity_estimation_frequency: 40
 
     # This sets the mode of operation. Set true for slam and false for localization
-    mapping_mode: false
+    mapping_mode: False
     track_map: "/Tracks/Acceleration.txt"
-    dynamic_accel_map: false
+    dynamic_accel_map: False
 
     # Defines the starting position of the car
     starting_position: [ -2.01, 0.0, 0.0 ]
@@ -117,37 +119,39 @@
   ros__parameters:
     discipline: "EBS_Test"
     #model
-    mass: 250.0
+    mass: 193.5
     gravitational_acceleration: 9.81
     wheelbase: 1.59
     weight_distribution: 0.467
     h_cog: 0.27
     air_density: 1.225
-    Cd*A: 0.05
-    Cl*A: -0.2
+    Cd*A: 2.0
+    Cl*A: 7.0
     gear_ratio: 3.9
     wheel_radius: 0.2054
     efficiency: 0.85
     Fz_0: 1112.0554070627252
-    max_positive_torque:  46.0 #186.2              #EDIT BEFORE
-    max_negative_torque:  -30.0 # -186.2             #EDIT BEFORE
+    max_positive_torque: 70.0              #EDIT BEFORE
+    max_negative_torque: -100.0             #EDIT BEFORE
     minimum_weight_distribution_rear: 1.0  
     c_tire: 0.66
 
     #Pure Pursuit
-    ld_min: 1.0                             #EDIT BEFORE
+    ld_min: 6.0                             #EDIT BEFORE
     ld_max: 14.0                             #EDIT BEFORE
-    v_min: 0.0                              #EDIT BEFORE
+    v_min: 3.0                              #EDIT BEFORE
     v_max: 14.0                             #EDIT BEFORE
     emergency_factor: 0.75
-    emergency_threshold: 0.75
-    safety_factor: 0.75
-    max_speed: 14.0                         #EDIT BEFORE 14m/s = 50.4kmh
+    emergency_threshold: 5.0
+    safety_factor: 0.85
+    max_speed: 11.11                        #EDIT BEFORE 14m/s = 50.4km/h, 40km/h = 11.111m/s
     dt: 0.025
-    safe_speed_to_break: 3.0
-    braking_distance: 5.0
+    safe_speed_to_break: 0.1
+    braking_distance: 50.0
     max_steering: 25.0
-    max_torque_difference: 3.0
+    max_torque_difference: 2.0
+    dynamic_vp: True
+    motor_control: False
 
     #PID
     kp: 1000

@@ -113,7 +113,7 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
     /* If we are on manual and then we reselect, then stop the PC from shutting down */
     if (pcToBeShutdown) {
         pcToBeShutdown = false;
-        std::system("shutdown -c");
+        // std::system("shutdown -c");
     }
 
     currentMission = static_cast<p23::Mission>(msg->mission_selected);
@@ -146,7 +146,7 @@ void P23StatusNode::updateMission(const custom_msgs::msg::MissionSelection::Shar
         break;
     case(p23::MANUAL):
         // The PC will shutdown so no one cares what happens here...
-        std::system("shutdown -h 30 sec");
+        // std::system("shutdown -h 30 sec");
         pcToBeShutdown = true;
         // TODO: Command to cancel is "shutdown -c". Create a flag that sets shutdown and cancels it if we change mission"
         return;

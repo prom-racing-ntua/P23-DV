@@ -20,11 +20,14 @@ class Camera:
             sys.exit(2)
 
     def SetAutoExposure(self, autoexposure: int):
-        try:
-            self.cam.ExposureTime.set(int(autoexposure))
-        except Exception as e:
-            return e
-        return None
+        # try:
+        self.cam.ExposureTime.set(int(autoexposure))
+        # except Exception as e:
+        #     return e
+        # return None
+    
+    def GetExposure(self):
+        return self.cam.ExposureTime.get()
 
     def OnClickOpen(self):
         self.cam = self.device_manager.open_device_by_sn(self.serialNumber)
@@ -40,6 +43,7 @@ class Camera:
         if self.autoExposure:
             self.cam.ExposureAuto.set(gx.GxAutoEntry.CONTINUOUS)
         else:
+            self.cam.ExposureAuto.set(gx.GxAutoEntry.OFF)
             self.cam.ExposureTime.set(self.exposureTime)
         
         # Set Expected Gray Value

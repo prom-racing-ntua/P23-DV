@@ -481,6 +481,8 @@ class MissionMsg(CanInterfaceMessage):
                 self.node_handle._locked_mission = mission
                 self.node_handle.get_logger().warn(f"Mission Confirmed {hex(self.node_handle._locked_mission)}")
                 self.node_handle.time_of_lock = self.node_handle.get_clock().now().nanoseconds / 10**9
+                if self.node_handle.error_file:
+                    self.node_handle.error_file.write(f'{hex(self.node_handle._locked_mission)}')
             
             else:
                 # Received mission the first time

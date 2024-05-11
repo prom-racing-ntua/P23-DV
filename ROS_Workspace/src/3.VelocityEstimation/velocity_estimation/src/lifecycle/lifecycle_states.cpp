@@ -42,6 +42,9 @@ namespace ns_vel_est
         measurement_vector_.setZero();
         updated_sensors_.fill(false);
         pub_->on_activate();
+
+        this->time_of_activate = now().nanoseconds()/1e9;
+
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Activated!");
         return ns_vel_est::CallbackReturn::SUCCESS;
     }

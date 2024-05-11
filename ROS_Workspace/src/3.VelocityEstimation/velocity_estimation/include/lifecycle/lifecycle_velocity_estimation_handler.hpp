@@ -65,6 +65,12 @@ namespace ns_vel_est
 
         Eigen::Matrix<double, 3, 3> vn_200_rotation_matrix_;
         Eigen::Matrix<double, 3, 3> vn_300_rotation_matrix_;
+        double time_of_activate;
+        double vn_200_sums[3];
+        int vn_200_occs;
+        double vn_300_sums[3];
+        int vn_300_occs;
+        bool rot_comp_200, rot_comp_300;
 
         Eigen::Matrix<double, 3, 3> getRotationMatrix(double roll, double pitch, double yaw = 0.0);
 

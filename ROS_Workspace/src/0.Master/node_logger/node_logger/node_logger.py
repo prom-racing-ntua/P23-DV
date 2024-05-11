@@ -2,6 +2,64 @@
 import os
 from dataclasses import dataclass
 from ament_index_python.packages import get_package_share_directory
+import shutil
+
+class enabled_logs:
+    logs:dict[str, bool] = {
+        'saltas':             False, 
+        'acquisition_left':   False,
+        'acquisition_right':  False,
+        'inference_left':     True,
+        'inference_right':    True,
+        # C++ 'slam_perception':    False,
+        # C++ 'slam_odometry':      False,
+        # C++ 'slam_optim':         True,
+        # C++ 'velocity':           False,
+        # C++ 'pid_pp_waypoints':   False,
+        # C++ 'pid_pp_pose'  :      False,
+        # C++ 'path_planning':      False,
+        'vn200':              True,
+        'vn300':              False,
+        'canbus_sensor':      True,
+        'canbus_velocity':    True,
+        'canbus_wheel':       False,
+        'canbus_steering':    True,
+        'canbus_controls':    True,
+        'autoexposure_left':  False,
+        'autoexposure_right': False,
+        'cone_data':          False
+    }
+    def __init__(self) -> None:
+        self.logs = {
+        'saltas':             False, 
+        'acquisition_left':   False,
+        'acquisition_right':  False,
+        'inference_left':     True,
+        'inference_right':    True,
+        # C++ 'slam_perception':    False,
+        # C++ 'slam_odometry':      False,
+        # C++ 'slam_optim':         True,
+        # C++ 'velocity':           False,
+        # C++ 'pid_pp_waypoints':   False,
+        # C++ 'pid_pp_pose'  :      False,
+        # C++ 'path_planning':      False,
+        'vn200':              True,
+        'vn300':              False,
+        'canbus_sensor':      True,
+        'canbus_velocity':    True,
+        'canbus_wheel':       False,
+        'canbus_steering':    True,
+        'canbus_controls':    True,
+        'autoexposure_left':  False,
+        'autoexposure_right': False,
+        'cone_data':          False
+        }
+    def __call__(self, log: str) -> bool:
+        try:
+            return self.logs[log]
+        except KeyError:
+            return False
+        
 
 def create_new_run_log() -> str:
     try:
@@ -12,32 +70,47 @@ def create_new_run_log() -> str:
         return str(repr(e))
     
     if(current_runs!=0):
-        if(len(os.listdir(os.path.join(base_path, "run_{:d}".format(current_runs-1))))==0):
+        lsd = os.listdir(os.path.join(base_path, "run_{:d}".format(current_runs-1)))
+        if(len(lsd)==0 or (len(lsd)==1 and 'config' in lsd)):
             return "New dir exists."
         
     try:
-        os.mkdir(os.path.join(base_path, "run_{:d}".format(current_runs)))
+        new_path = os.path.join(base_path, "run_{:d}".format(current_runs))
+        os.mkdir(new_path)
     except FileExistsError:
         return "New dir exists."
     except Exception as e:
         return "Error while creating new run dir:{:s}".format(repr(e))
     else:
+        try:
+            config_path = os.path.join(base_path, '..', 'src', '0.Master', 'lifecycle_manager', 'config')
+            shutil.copytree(config_path, os.path.join(new_path, 'config'))
+        except Exception as e:
+            pass
         return "New run dir created successfully."
+    
+    
     
 @dataclass
 class Logger:
     ok: bool
+    enabled: bool
     name: str
     run_idx: int
     file: any
     error: Exception
     run_path: str
     def __init__(self, name) -> None:
+        ENABLED_LOGS = enabled_logs()
+        if not ENABLED_LOGS(name):
+            self.enabled = False
+            self.ok = False
+            self.name = name
+            return
+        self.enabled = True
         self.ok = True
         self.name = name
-        # if name[0:6]!='canbus':
-        #   self.ok = False
-        #   self.error = Exception()
+
         try:
             path = get_package_share_directory("node_logger")
             base_path = os.path.join(path, "..", "..", "..", "..", "timestamp_logs")
@@ -55,19 +128,21 @@ class Logger:
             self.file.close()
 
     def check(self) -> str:
+        if not self.enabled:
+            return "Logger {:s} has been disabled".format(self.name)
         if self.ok:
             return "Logger {:s} opened successfully".format(self.name)
         else:
             return "Couldn't open logger {:s}: {:s}".format(self.name, repr(self.error))
 
     def __call__(self, timestamp, type, index) -> None:
-        if not self.ok:
+        if not self.ok or not self.enabled:
             return
 
         self.file.write("{:0.8f}\t{:d}\t{:d}\n".format(timestamp, type, index))
 
     def __call__(self, timestamp, io, index, data = None) -> None:
-        if not self.ok:
+        if not self.ok or not self.enabled:
             return
         try:
             string = ""

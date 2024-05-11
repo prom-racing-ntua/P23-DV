@@ -7,7 +7,7 @@
 
 namespace ns_vel_est
 {
-    LifecycleVelocityEstimationHandler::LifecycleVelocityEstimationHandler(): LifecycleNode("velocity_estimation"), estimator_{ this } {
+    LifecycleVelocityEstimationHandler::LifecycleVelocityEstimationHandler(): LifecycleNode("velocity_estimation"), estimator_{ this }, time_of_activate(-1), rot_comp_200(true), rot_comp_300(true), vn_200_sums{}, vn_200_occs(0), vn_300_sums{}, vn_300_occs(0) {
         loadParameters();
         RCLCPP_WARN(get_logger(), "\n-- Velocity Estimation Node Created");
     }
@@ -238,6 +238,35 @@ namespace ns_vel_est
     // }
 
     void LifecycleVelocityEstimationHandler::imuCallback(const vectornav_msgs::msg::ImuGroup::SharedPtr msg) {
+        if(rot_comp_200)
+        {
+            if(time_of_activate==-1 || (this->now().nanoseconds()/1e9)-time_of_activate<=5)
+            {
+                vn_200_occs++;
+                vn_200_sums[0] += msg->accel.x;
+                vn_200_sums[1] += msg->accel.y;
+                vn_200_sums[2] += msg->accel.z;
+                // RCLCPP_WARN(get_logger(), "Set new VN200 rotation matrix.");
+                return;
+            }
+            else
+            {
+                rot_comp_200 = false;
+                if(vn_200_occs!=0)
+                {
+                    for(int i=0; i<3; i++)
+                        vn_200_sums[i] = -vn_200_sums[i] / vn_200_occs;
+
+                    double roll = std::atan2(vn_200_sums[1], vn_200_sums[2]);
+                    double pitch = std::atan2(-vn_200_sums[0], std::sqrt(std::pow(vn_200_sums[1], 2) + std::pow(vn_200_sums[2], 2)));
+
+                    this->vn_200_rotation_matrix_ = getRotationMatrix(roll * 180 / M_PI, pitch * 180 / M_PI, 0);
+
+                    RCLCPP_WARN(get_logger(), "Set new VN200 rotation matrix.");
+                    RCLCPP_INFO_STREAM(get_logger(), roll<<" "<<pitch);
+                }
+            }
+        }
         // Write measurements to corresponding node vector
         Eigen::Matrix<double, 3, 1> yaw_rate_vec{};
         yaw_rate_vec << static_cast<double>(msg->angularrate.x), static_cast<double>(msg->angularrate.y), static_cast<double>(msg->angularrate.z);
@@ -309,6 +338,11 @@ namespace ns_vel_est
         // Approach with hall sensor substitution working
         measurement_vector_(ObservationVhall_rear) = msg->motor_rpm / 3.9; // gearbox reduction
         updated_sensors_[RearWheelEncoders] = true;
+
+        // measurement_vector_(ObservationVx) = measurement_vector_(ObservationVhall_rear) * 0.2054 / 9.5493;
+        // measurement_vector_(ObservationVy) = 0; //velocity_vec(1);
+        // // Set the update vector indices
+        // updated_sensors_[VelocitySensor] = true;
     }
 
     void LifecycleVelocityEstimationHandler::steeringCallback(const custom_msgs::msg::RxSteeringAngle::SharedPtr msg) {

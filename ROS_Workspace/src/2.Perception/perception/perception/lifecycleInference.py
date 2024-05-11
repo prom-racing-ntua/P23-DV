@@ -51,11 +51,11 @@ class InferenceLifecycleNode(Node):
             self.right_autoexp_pub = self.create_lifecycle_publisher(AutoExposureMessage, 'autoexposure_right', 10)
             self.left_autoexp_pub  = self.create_lifecycle_publisher(AutoExposureMessage, 'autoexposure_left', 10)
 
-            self.ideal_yellow = [0, 0, 0]   # RGB
-            self.ideal_blue   = [0, 0, 0]   # RGB
-            self.ideal_brightness = 150     # integer in range[0, 255](incl.)
-            self.kp = 1     # Pure number
-            self.ki = 0.1   # Pure number
+            self.ideal_yellow = [179, 145, 29]   # RGB
+            self.ideal_blue   = [33, 81, 157]   # RGB
+            self.ideal_brightness = 168     # integer in range[0, 255](incl.)
+            self.kp = 50    # Pure number
+            self.ki = 5   # Pure number
             self.error_integral = [0, 0, 0, 0]    # [0]: color left camera, [1]: color right camera, [2]: brightness left camera, [3]: brightness right camera
             self.integration_frequency = 10
 
@@ -69,9 +69,11 @@ class InferenceLifecycleNode(Node):
             try:
                 self.timestamp_log_right = Logger("inference_right")
                 self.timestamp_log_left = Logger("inference_left")
+                self.autoexp_log = Logger("cone_data")
                 self.log_data = old_Logger("inference")
                 self.get_logger().info(self.timestamp_log_right.check())
                 self.get_logger().info(self.timestamp_log_left.check())
+                self.get_logger().info(self.autoexp_log.check())
                 self.get_logger().info(self.log_data.check())
             except Exception as e:
                 print("mpa"+str(e))
@@ -140,6 +142,7 @@ class InferenceLifecycleNode(Node):
             # self.get_logger().info(f"{cameraOrientation} results: {len(results)}")
             if results.size == 0:
                 self.get_logger().info(f"No cones found from {cameraOrientation} camera")
+                # self.find_autoexposure(cameraOrientation.lower(), original_image = image)
             else:
                 smallConesList, classesList, croppedImagesCorners = cropResizeCones(results, image, 3)
                 keypointsPredictions, inf_t = runKeypoints(smallConesList, self.smallModel)
@@ -151,11 +154,6 @@ class InferenceLifecycleNode(Node):
                     self.get_logger().error(f"Keypoints could not be determined from {cameraOrientation} camera")
                     return
                 
-                # Give autoexposure feedback to acquisition
-                if len(smallConesList)>2:
-                    self.find_autoexposure(cameraOrientation.lower(), smallConesList, classesList)
-                else:
-                    self.find_autoexposure(cameraOrientation.lower(), original_image = image)
 
                 
                 # Send message to SLAM Node
@@ -169,6 +167,25 @@ class InferenceLifecycleNode(Node):
                 self.publisher_.publish(perception2slam_msg)
                 pub_time_2 = self.get_clock().now().nanoseconds / 10**6
 
+
+                # # Give autoexposure feedback to acquisition
+                if (globalIndex % (4 * 2)) and 0:
+                    if len(smallConesList)>0:
+                        try:
+                            colors = self.find_autoexposure(cameraOrientation.lower(), conesList= smallConesList, keypoints= keypointsPredictions, classesList= classesList)
+                        except Exception as e:
+                            self.get_logger().error(f'Error in Autoexposure: {repr(e)}')
+                        if len(rangeList)==len(smallConesList) and colors is not None:
+                            for i in range(len(rangeList)):
+                                # self.get_logger().info(f'({[rangeList[i], thetaList[i], int(classesList[i]), colors[i][0], colors[i][1], colors[i][2]]})')
+                                try:
+                                    self.autoexp_log(pub_time_2, 0, globalIndex, ['\t'.join([f'{rangeList[i]:.2f}', f'{thetaList[i]:.2f}', f'{int(classesList[i])}', f'{colors[i][0]:.2f}', f'{colors[i][1]:.2f}', f'{colors[i][2]:.2f}'])])
+                                except:
+                                    pass
+                    else:
+                        self.find_autoexposure(cameraOrientation.lower(), original_image = image)
+                
+                # self.get_logger().info(f'{cameraOrientation}: {self.get_clock().now().nanoseconds / 10**6-pub_time_2}ms')
                 #Timestamp logging
                 if cameraOrientation=="right" or cameraOrientation=="Right":
                     self.timestamp_log_right(start_time, 0, globalIndex)
@@ -185,10 +202,14 @@ class InferenceLifecycleNode(Node):
                 self.log_data(f'GlobalIndex: {globalIndex} cameraOrientation: {cameraOrientation} InferenceTime: {inferenceTiming}')
 
 
-    def find_autoexposure(self, orientation, conesList = None, classesList = None, original_image = None) :
+    def brightness(self, pixel):
+        return 0.2 * pixel[0] + 0.7 * pixel[1] + 0.1 * pixel[2]
+ 
+    def find_autoexposure(self, orientation, conesList = None, classesList = None, keypoints = None, original_image = None) :
         message = AutoExposureMessage()
+        # self.get_logger().info('hello')
 
-        if conesList is not None and classesList is not None:
+        if conesList is not None and classesList is not None and keypoints is not None:
             message.has_cones = True
 
             no_of_yellow = np.count_nonzero(np.array(classesList) == 0)
@@ -197,89 +218,116 @@ class InferenceLifecycleNode(Node):
 
             yellows = []
             blues   = []
+            total   = []
+            # self.get_logger().info(f'{np.shape(conesList)}')
 
+            # self.get_logger().info(f'{classesList}\n {conesList}')
+            try:
+                for i in range(len(classesList)):
+                    if classesList[i]!=0 and classesList[i]!=1:
+                        continue
 
-            for i in range(len(classesList)):
-                if classesList[i] not in [0, 1]:
-                    continue
+                    # masked_image = create_mask(conesList[i], classesList[i])
 
-                masked_image = create_mask(conesList[i], classesList[i])
+                    # pixels = [element for row in masked_image for element in row if np.any(np.array(element))!=0]
+                    # pixels = np.array(pixels)
+                    pixels = np.array([conesList[i][j%64][int(j/64)] for j in range(64*48) if contains2(keypoints[i], [j%64, int(j/64)]) in [1, 3]])
+                    if(len(pixels)==0):
+                        return
+                    
+                    average_color = [np.average(x) for x in pixels.transpose()]
+                    # self.get_logger().info(f'{average_color}')
+                    try:
+                        (yellows if classesList[i] == 0 else blues).append(self.brightness(average_color))
+                        total.append(average_color)
+                    except Exception as e:
+                        self.get_logger().error(f'{repr(e)}\n {average_color}\t{pixels}\t{np.shape(conesList[i])}\t{(classesList[i])}\t{np.shape(keypoints[i])}')
+                        raise e
+            except Exception as e:
+                raise e
+            # avg_yellow = [np.average(np.array(yellows).transpose()[0]), np.average(np.array(yellows).transpose()[1]), np.average(np.array(yellows).transpose()[2])] if len(yellows)!=0 else [0, 0, 0] 
+            # avg_blue = [np.average(np.array(blues).transpose()[0]), np.average(np.array(blues).transpose()[1]), np.average(np.array(blues).transpose()[2])] if len(blues)!=0 else [0, 0, 0]
 
-                pixels = [element for row in masked_image for element in row if np.any(np.array(element))!=0]
-                pixels = np.array(pixels)
-                average_color = [np.average(x) for x in pixels.transpose()]
+            avg_yellow_brightness = self.brightness(self.ideal_yellow)
+            avg_blue_brightness = self.brightness(self.ideal_blue)
 
-                (yellows if classesList[i] == 0 else blues).append(average_color)
+            if len(yellows) != 0:
+                avg_yellow_brightness = np.average(np.array(yellows))
+            if len(blues)!=0:
+                avg_blue_brightness   = np.average(np.array(blues))
 
-            avg_yellow = np.average(np.array(yellows))
-            avg_yellow_brightness = max(avg_yellow)
-            avg_blue = np.average(np.array(blues))
-            avg_blue_brightness   = max(avg_blue)
+            try:
+                yellow_error = self.brightness(self.ideal_yellow) - avg_yellow_brightness
+                blue_error = self.brightness(self.ideal_blue) - avg_blue_brightness
+                
+                error = (yellow_error * no_of_yellow + blue_error * no_of_blue) / total_cones
 
-            yellow_error = self.ideal_yellow[2] - avg_yellow_brightness
-            blue_error = self.ideal_blue[2] - avg_blue_brightness
-            
-            error = (yellow_error * no_of_yellow + blue_error * no_of_blue) / total_cones
+                message.brightness = (avg_yellow_brightness * no_of_yellow + avg_blue_brightness * no_of_blue) / total_cones
+            except Exception as e:
+                raise e
 
-            message.brightness = (avg_yellow_brightness * no_of_yellow + avg_blue_brightness * no_of_blue) / total_cones
+            try:
+                if orientation == 'left':
+                    self.error_integral[0] += error / self.integration_frequency
 
-            if orientation == 'left':
-                self.error_integral[0] += error / self.integration_frequency
+                    correction = error * self.kp + self.error_integral[0] * self.ki
 
-                correction = error * self.kp + self.error_integral[0] * self.ki
+                    message.delta_exposure = int(correction)
 
-                message.delta_exposure = np.int32(correction)
+                    if abs(correction) > 50:
+                        self.left_autoexp_pub.publish(message)
 
-                if abs(correction) < 50: # microseconds
-                    return
-                else:
-                    self.left_autoexp_pub.publish(message)
+                elif orientation == 'right':
+                    self.error_integral[1] += error / self.integration_frequency
 
-            if orientation == 'right':
-                self.error_integral[1] += error / self.integration_frequency
+                    correction = error * self.kp + self.error_integral[1] * self.ki
 
-                correction = error * self.kp + self.error_integral[1] * self.ki
+                    message.delta_exposure = int(correction)
 
-                message.delta_exposure = np.int32(correction)
+                    if abs(correction) > 50:
+                        self.right_autoexp_pub.publish(message)
+            except Exception as e:
+                raise e
 
-                if abs(correction) < 50: # microseconds
-                    return
-                else:
-                    self.right_autoexp_pub.publish(message)
+            return total
 
+        
         elif original_image is not None:
-            message.has_cones = False
+            try:
+                message.has_cones = False
 
-            b_pix = cv2.cvtColor(original_image, cv2.COLOR_BGR2HSV)[:, :, 2]
-            brightness = np.average(np.array(b_pix))
+                b_pix = cv2.cvtColor(original_image, cv2.COLOR_RGB2HSV)[:, :, 2]
+                brightness = np.average(np.array(b_pix))
 
-            message.brightness = brightness
+                message.brightness = brightness
 
-            error = self.ideal_brightness - brightness
+                error = self.ideal_brightness - brightness
 
-            if orientation == 'left':
-                self.error_integral[2] += error / self.integration_frequency
+                if orientation == 'left':
+                    self.error_integral[2] += error / self.integration_frequency
 
-                correction = error * self.kp + self.error_integral[2] * self.ki
+                    correction = error * self.kp + self.error_integral[2] * self.ki
 
-                message.delta_exposure = np.int32(correction)
+                    message.delta_exposure = int(correction)
 
-                if abs(correction) < 50: # microseconds
-                    return
-                else:
-                    self.left_autoexp_pub.publish(message)
+                    if abs(correction) < 50: # microseconds
+                        return
+                    else:
+                        self.left_autoexp_pub.publish(message)
 
-            if orientation == 'right':
-                self.error_integral[3] += error / self.integration_frequency
+                if orientation == 'right':
+                    self.error_integral[3] += error / self.integration_frequency
 
-                correction = error * self.kp + self.error_integral[3] * self.ki
+                    correction = error * self.kp + self.error_integral[3] * self.ki
 
-                message.delta_exposure = np.int32(correction)
+                    message.delta_exposure = int(correction)
 
-                if abs(correction) < 50: # microseconds
-                    return
-                else:
-                    self.right_autoexp_pub.publish(message)
+                    if abs(correction) < 50: # microseconds
+                        return
+                    else:
+                        self.right_autoexp_pub.publish(message)
+            except Exception as e:
+                raise e
 
         else:
             self.get_logger().warn(f'Autoexposure algorithm has been given neither cones nor the original image. Plz fix!!!')

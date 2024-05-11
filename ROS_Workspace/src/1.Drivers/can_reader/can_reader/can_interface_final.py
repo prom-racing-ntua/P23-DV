@@ -331,7 +331,7 @@ class CanInterface(Node):
             if 'Message' not in locals():
                 self.get_logger().error(f"Unable to discern incoming message type.\n")
                 self.error_file.write(f'{self.get_clock().now().nanoseconds/10**6:0.3f}\t Unable to discern incoming message type.\n')
-                should_abort = 2
+                should_abort = 0
 
             elif Message in [WheelEncodersMsg, SteeringAngleMsg]:
                 self.get_logger().error("Error is from WheelEncoders or SteeringAngle msg. Not necessary to abort.\n")

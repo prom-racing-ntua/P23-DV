@@ -51,35 +51,40 @@ void P23StatusNode::updateSLAMInformation(const custom_msgs::msg::LocalMapMsg::S
 void P23StatusNode::checkVectornav() {
     using namespace std::chrono_literals;
     using VectornavServiceResponseFuture = rclcpp::Client<custom_msgs::srv::InsMode>::SharedFuture;
-    auto vn300_request{ std::make_shared<custom_msgs::srv::InsMode::Request>() };
+    // auto vn300_request{ std::make_shared<custom_msgs::srv::InsMode::Request>() };
     auto vn200_request{ std::make_shared<custom_msgs::srv::InsMode::Request>() };
 
-    auto vn300_heartbeat_callback = [this](VectornavServiceResponseFuture future) {
-        auto result = future.get();
-        nodeStatusMap["vn_300"] = !result->sensor_connected;
-        if (result->sensor_connected)
-        {
-            // insMode = 2; //HARD CODED FOR LAB
-            // If in mission inspection set ins mode to 2
-            if (currentMission == p23::INSPECTION || !wait_for_mode_2) {
-                insMode = 2;
-            }
-            // Check if we received the same mode as before
-            else if (insMode != result->ins_mode)
-            {
-                insMode = result->ins_mode;
-                // insMode = 2;
-                // RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
-            }
+    // auto vn300_heartbeat_callback = [this](VectornavServiceResponseFuture future) {
+    //     auto result = future.get();
+    //     nodeStatusMap["vn_300"] = !result->sensor_connected;
+    //     if (result->sensor_connected)
+    //     {
+    //         // insMode = 2; //HARD CODED FOR LAB
+    //         // If in mission inspection set ins mode to 2
+    //         if (currentMission == p23::INSPECTION || !wait_for_mode_2) {
+    //             insMode = 2;
+    //         }
+    //         // Check if we received the same mode as before
+    //         else if (insMode != result->ins_mode)
+    //         {
+    //             insMode = result->ins_mode;
+    //             // insMode = 2;
+    //             // RCLCPP_INFO(get_logger(), "Received INS Mode from VN-300: %u", insMode);
+    //         }
 
-            // If in mode 2 and all nodes configured transition to DV Ready State
-            if ((insMode == 2) and nodesReady and (currentDvStatus == p23::MISSION_SELECTED) and (currentAsStatus == p23::AS_OFF)) {
-                RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
-                currentDvStatus = p23::DV_READY;
-            }
-        }
-        else { insMode = 0; }
-    };
+    //         // If in mode 2 and all nodes configured transition to DV Ready State
+    //         if ((insMode == 2) and nodesReady and (currentDvStatus == p23::MISSION_SELECTED) and (currentAsStatus == p23::AS_OFF)) {
+    //             RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
+    //             currentDvStatus = p23::DV_READY;
+    //         }
+    //     }
+    //     else { insMode = 0; }
+    // };
+
+    if (nodesReady && (currentDvStatus == p23::MISSION_SELECTED) && (currentAsStatus == p23::AS_OFF)) {
+        RCLCPP_WARN(get_logger(), "INS in mode 2 and DV System ready. Transitioning to DV_READY");
+        currentDvStatus = p23::DV_READY; 
+    }
 
     auto vn200_heartbeat_callback = [this](VectornavServiceResponseFuture future) {
         auto result = future.get();
@@ -88,12 +93,12 @@ void P23StatusNode::checkVectornav() {
 
     // Send request to vn-300
     // Wait for service for 0.2 sec
-    if (!ins_mode_client_->wait_for_service(std::chrono::milliseconds(200)))
-    {
-        nodeStatusMap["vn_300"] = true;
-        RCLCPP_WARN(get_logger(), "VN-300 service is not available");
-    }
-    else { auto future_result = ins_mode_client_->async_send_request(vn300_request, vn300_heartbeat_callback); }
+    // if (!ins_mode_client_->wait_for_service(std::chrono::milliseconds(200)))
+    // {
+    //     nodeStatusMap["vn_300"] = true;
+    //     RCLCPP_WARN(get_logger(), "VN-300 service is not available");
+    // }
+    // else { auto future_result = ins_mode_client_->async_send_request(vn300_request, vn300_heartbeat_callback); }
 
     // Send request to vn-200
     // Wait for service for 0.2 sec

@@ -5,7 +5,7 @@ Description=P23 Initialization Service
 Type=simple
 User=prom
 RemainAfterExit=yes
-ExecStart=/bin/bash /home/prom/P23-DV/scripts/initializeP23.sh
+ExecStart=/bin/bash /home/prom/P23-DV/scripts/initializeP23-EV.sh
 TimeoutStartSec=0
 
 [Install]

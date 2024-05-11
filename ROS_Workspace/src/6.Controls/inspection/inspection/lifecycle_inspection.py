@@ -5,19 +5,24 @@ from rclpy.lifecycle import State
 from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy._rclpy_pybind11 import InvalidHandle
-from pynput import keyboard
 from std_msgs.msg import String, UInt32
 import time
 from custom_msgs.msg import *
 from custom_msgs.srv import SetTotalLaps
 from math import sin, cos, pi, radians
+try:
+    from pynput import keyboard
+except:
+    NOT_BENCH = True
+else:
+    NOT_BENCH = False
 
 COMMAND_FREQUENCY = 40          # [Hz]
-TORQUE_COMMAND = 5.0            # [N*m]
+TORQUE_COMMAND = 180.0            # [N*m]
 MAX_STEERING = radians(15.0)    # [rad]
 STEERING_PERIOD = 8             # [sec]
 MISSION_DURATION = 24           # [sec]
-RPM_COMMAND = 500 /3.9          # [rpm]
+RPM_COMMAND = 1100          # [rpm]
 
 class InspectionMission(Node):
     def __init__(self,name=None) -> None:
@@ -74,6 +79,9 @@ class InspectionMission(Node):
             # self._command_timer = self.create_timer(1/COMMAND_FREQUENCY, self.send_commands)
             self.get_logger().warn("Inspection Configured on mode {}".format(self.mode))
         else:
+            if NOT_BENCH:
+                self.get_logger().error(f'Unable to use mode bench, failed to load package keyboard')
+                exit(1)
             self.load_from_config()
             self._steering_command = 0.0  #[mm]
             self._brake_command = 0.0  #[bar]
