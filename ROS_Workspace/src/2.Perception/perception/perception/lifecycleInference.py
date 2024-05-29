@@ -169,21 +169,21 @@ class InferenceLifecycleNode(Node):
 
 
                 # # Give autoexposure feedback to acquisition
-                if (globalIndex % (4 * 2)) and 0:
-                    if len(smallConesList)>0:
-                        try:
-                            colors = self.find_autoexposure(cameraOrientation.lower(), conesList= smallConesList, keypoints= keypointsPredictions, classesList= classesList)
-                        except Exception as e:
-                            self.get_logger().error(f'Error in Autoexposure: {repr(e)}')
-                        if len(rangeList)==len(smallConesList) and colors is not None:
-                            for i in range(len(rangeList)):
-                                # self.get_logger().info(f'({[rangeList[i], thetaList[i], int(classesList[i]), colors[i][0], colors[i][1], colors[i][2]]})')
-                                try:
-                                    self.autoexp_log(pub_time_2, 0, globalIndex, ['\t'.join([f'{rangeList[i]:.2f}', f'{thetaList[i]:.2f}', f'{int(classesList[i])}', f'{colors[i][0]:.2f}', f'{colors[i][1]:.2f}', f'{colors[i][2]:.2f}'])])
-                                except:
-                                    pass
-                    else:
-                        self.find_autoexposure(cameraOrientation.lower(), original_image = image)
+                # if (globalIndex % (4 * 2)) and 0:
+                #     if len(smallConesList)>0:
+                #         try:
+                #             colors = self.find_autoexposure(cameraOrientation.lower(), conesList= smallConesList, keypoints= keypointsPredictions, classesList= classesList)
+                #         except Exception as e:
+                #             self.get_logger().error(f'Error in Autoexposure: {repr(e)}')
+                #         if len(rangeList)==len(smallConesList) and colors is not None:
+                #             for i in range(len(rangeList)):
+                #                 # self.get_logger().info(f'({[rangeList[i], thetaList[i], int(classesList[i]), colors[i][0], colors[i][1], colors[i][2]]})')
+                #                 try:
+                #                     self.autoexp_log(pub_time_2, 0, globalIndex, ['\t'.join([f'{rangeList[i]:.2f}', f'{thetaList[i]:.2f}', f'{int(classesList[i])}', f'{colors[i][0]:.2f}', f'{colors[i][1]:.2f}', f'{colors[i][2]:.2f}'])])
+                #                 except:
+                #                     pass
+                #     else:
+                #         self.find_autoexposure(cameraOrientation.lower(), original_image = image)
                 
                 # self.get_logger().info(f'{cameraOrientation}: {self.get_clock().now().nanoseconds / 10**6-pub_time_2}ms')
                 #Timestamp logging

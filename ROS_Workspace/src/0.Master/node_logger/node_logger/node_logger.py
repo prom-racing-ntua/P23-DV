@@ -25,6 +25,7 @@ class enabled_logs:
         'canbus_wheel':       False,
         'canbus_steering':    True,
         'canbus_controls':    True,
+        'canbus_health' :     True,
         'autoexposure_left':  False,
         'autoexposure_right': False,
         'cone_data':          False
