@@ -290,7 +290,7 @@ class SystemHealthMsg(CanInterfaceMessage):
     def data(self):
         return [
             self._ros_msg.dv_status.id,
-            self._ros_msg.lap_counter << 4,
+            self._ros_msg.lap_counter,
             self.sensor_status,
             self.node_status,
             self.pc_temp
@@ -481,8 +481,8 @@ class MissionMsg(CanInterfaceMessage):
                 self.node_handle._locked_mission = mission
                 self.node_handle.get_logger().warn(f"Mission Confirmed {hex(self.node_handle._locked_mission)}")
                 self.node_handle.time_of_lock = self.node_handle.get_clock().now().nanoseconds / 10**9
-                if self.node_handle.error_file:
-                    self.node_handle.error_file.write(f'{hex(self.node_handle._locked_mission)}')
+                # if self.node_handle.error_file is not None:
+                #     self.node_handle.error_file.write(f'{hex(self.node_handle._locked_mission)}')
             
             else:
                 # Received mission the first time

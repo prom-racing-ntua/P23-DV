@@ -93,7 +93,7 @@ namespace path_planner
             {
             midpoints_size = 4 + 8;
             initial_waypoints_size = 4;
-            wa = 1;
+            wa = 2;
             outer_idxs = new int[midpoints_size]{59, 61, 28, 44,
                                                  30, 57, 56, 55, 54, 53, 52, 51
             };
@@ -105,7 +105,7 @@ namespace path_planner
             {
             midpoints_size = 15 + 8;
             initial_waypoints_size = 15;
-            wa = 2;
+            wa = 3;
             outer_idxs = new int[midpoints_size]{30, 57, 56, 55, 54, 53, 52, 51,
                                                  50, 49, 48, 47, 46, 45, 44, 
                                                  30, 57, 56, 55, 54, 53, 52, 51
@@ -119,7 +119,7 @@ namespace path_planner
             {
             midpoints_size = 15 + 8;
             initial_waypoints_size = 15;
-            wa = 2;
+            wa = 3;
             outer_idxs = new int[midpoints_size]{30, 57, 56, 55, 54, 53, 52, 51,
                                                  50, 49, 48, 47, 46, 45, 44, 
                                                   7, 16, 17, 18, 19, 20, 21, 22
@@ -133,7 +133,7 @@ namespace path_planner
             {
             midpoints_size = 15 + 8;
             initial_waypoints_size = 15;
-            wa = 2;
+            wa = 3;
             outer_idxs = new int[midpoints_size]{ 7, 16, 17, 18, 19, 20, 21, 22,
                                                  23, 24, 25, 26, 27, 28,  9,
                                                   7, 16, 17, 18, 19, 20, 21, 22
@@ -147,7 +147,7 @@ namespace path_planner
             {
             midpoints_size = 15 + 6;
             initial_waypoints_size = 15;
-            wa = 2;
+            wa = 3;
             outer_idxs = new int[midpoints_size]{ 7, 16, 17, 18, 19, 20, 21, 22,
                                                  23, 24, 25, 26, 27, 28,  9,
                                                   7, 57, 62, 64, 67, 68
