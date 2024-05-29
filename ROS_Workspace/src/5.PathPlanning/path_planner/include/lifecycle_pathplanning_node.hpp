@@ -38,12 +38,20 @@ namespace path_planner
             std::vector<custom_msgs::msg::Point2Struct> skidpad_midpoints(const std::vector<custom_msgs::msg::ConeStruct> &local_map, const Point &current_position, int local_map_size, int lap);
             float last_length;
             Point last_position;
-            int prev_lap;
             float average_angle;
             float get_length(std::vector<Point> path)const;
             float get_angle_avg(std::vector<Point> path)const;
             Logger timestamp_log;
             double pub_time_1, pub_time_2;
+
+            /* Waypoints total path creation */
+            std::vector<Point> added_waypoints;
+            std::ofstream save_total_path;
+            bool has_completed_total_path;
+            int prev_lap;
+            custom_msgs::msg::WaypointsMsg finalized;
+
+
         public:
             explicit LifecyclePathPlanner();
             ~LifecyclePathPlanner();

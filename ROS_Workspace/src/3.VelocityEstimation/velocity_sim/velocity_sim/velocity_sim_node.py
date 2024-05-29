@@ -320,6 +320,9 @@ class VelocitySLAMSimNode(Node):
         self.data: list[list[Entry]] = []
 
         for i in range(len(self.data_files)-4):
+            if i==1:
+                self.data.append(None)
+                continue
             self.data.append(self.get_data_from_file(self.data_files[i], self.f_name[i]) if self.data_files_check[i] else None)
 
         self.perception_data = [line.split() for line in self.data_files[self.f_idx['perception']].readlines()] if self.data_files_check[self.f_idx['perception']] else None
@@ -358,9 +361,9 @@ class VelocitySLAMSimNode(Node):
 
         self.global_index = 0
         self.read_index = [0, 0, 0, 0, 0]
-        self.max_idxs = [len(x)-1 for x in self.data]
+        self.max_idxs = [(len(x)-1 if type(x)!=type(None) else 999999999) for x in self.data]
 
-        _t0s = [x[0].get_time() for x in self.data]
+        _t0s = [(x[0].get_time() if type(x)!=type(None) else 0) for x in self.data]
         self.t0 = max(_t0s)
         self.time = self.t0
         self.dt = 1000 / self.master_frequency
@@ -368,6 +371,8 @@ class VelocitySLAMSimNode(Node):
 
     def master_callback(self):
         # if(self.time - self.t0>200):exit(0)
+        if self.time % 1000 ==0:
+            self.get_logger().info(f't = {(self.time-self.t0)/1000}')
         if self.finish:
             exit(0)
         lst = []
@@ -384,7 +389,7 @@ class VelocitySLAMSimNode(Node):
                 if i==3:
                     msg.global_index
                 self._publishers[i].publish(self.data[i][self.read_index[i]]._msg)
-                self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
+                # self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
                 self.read_index[i]+=1
                 if self.read_index[i]==self.max_idxs[i]:
                     self.finish = True
@@ -393,7 +398,7 @@ class VelocitySLAMSimNode(Node):
                     self.read_index[i]+=1
                 if self.time == self.data[i][self.read_index[i]].get_time(math.log10(self.master_frequency)-3):
                     self._publishers[i].publish(self.data[i][self.read_index[i]]._msg)
-                    self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
+                    # self.get_logger().info(f'--- \nPublished {self.f_name[i]} msg. \n----')
                     self.read_index[i]+=1
                     if self.read_index[i]==self.max_idxs[i]:
                         self.finish = True

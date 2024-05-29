@@ -1,7 +1,7 @@
 #include "lifecycle_controller.hpp"
 #include <iomanip>
 
-LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false), should_exit(false), last_torque(0), mission(MISSION::UNLOCK)
+LifecyclePID_PP_Node::LifecyclePID_PP_Node() : LifecycleNode("pure_pursuit"), profile(nullptr), model(), pp_controller(), spline(nullptr), pid_controller(), has_run_waypoints(false), count_wp(0), prev_lap(1), switch_br(false), should_exit(false), last_torque(0), mission(MISSION::UNLOCK), last_steering(0)
 {
     parameter_load();
     RCLCPP_WARN(get_logger(), "\n-- Pure Pursuit Node Created");
@@ -402,9 +402,10 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
     {
         /*
             The idea for the new Accel controller is to use the path planning result to determine the centerline of the accel track.
-            The path planning midpoints will most likely consist of 3-4 midpoints (ranged at 10m max). Using the last 2 points, we will add a final midpoint located at a distance from the vehicle, on the line defined by the last 2 points. With that, we will have an extended path which will enable better velocities and smoother accelerations.        
+            The path planning midpoints will most likely consist of 3-4 midpoints (ranged at 10m max). Using the last 2 points, we will add some midpoint located at a distance from the vehicle, on the line defined by the last 2 points. With that, we will have an extended path which will enable better velocities and smoother accelerations.        
         */
-        path_planning::PointsArray midpoints(std::max(3, int(msg->count)), 2);
+        int no_of_midpoints = std::max(3, int(msg->count));
+        path_planning::PointsArray midpoints(no_of_midpoints + 2, 2);
 
         if (msg->count >= 3)
         {
@@ -420,12 +421,12 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
         };
 
         // last midpoint
-        float l1_x = midpoints(std::max(3, int(msg->count))-2, 0);
-        float l1_y = midpoints(std::max(3, int(msg->count))-2, 1);
+        float l1_x = midpoints(no_of_midpoints-2, 0);
+        float l1_y = midpoints(no_of_midpoints-2, 1);
 
         // second to last midpoint
-        float l2_x = midpoints(std::max(3, int(msg->count))-3, 0);
-        float l2_y = midpoints(std::max(3, int(msg->count))-3, 1);
+        float l2_x = midpoints(no_of_midpoints-3, 0);
+        float l2_y = midpoints(no_of_midpoints-3, 1);
 
         // direction vector
         float d_x  = l1_x - l2_x;
@@ -436,12 +437,19 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
         d_y = d_y / (std::sqrt(std::pow(d_x, 2)+std::pow(d_y, 2)));
 
         // form additional point
-        float add_x = l1_x + d_x * 75;
-        float add_y = l1_y + d_y * 75;
-        // std::cout<<".--------"<<add_x<<" "<<add_y<<std::endl;
+        float add1_x = l1_x + d_x * 5;
+        float add1_y = l1_y + d_y * 5;
+        float add2_x = l1_x + d_x * 20;
+        float add2_y = l1_y + d_y * 20;
+        float add3_x = l1_x + d_x * 60;
+        float add3_y = l1_y + d_y * 60;
 
-        midpoints(std::max(3, int(msg->count))-1, 0) = add_x;
-        midpoints(std::max(3, int(msg->count))-1, 1) = add_y;
+        midpoints(no_of_midpoints-1, 0) = add1_x;
+        midpoints(no_of_midpoints-1, 1) = add1_y;
+        midpoints(no_of_midpoints, 0) = add2_x;
+        midpoints(no_of_midpoints, 1) = add2_y;
+        midpoints(no_of_midpoints+1, 0) = add3_x;
+        midpoints(no_of_midpoints+1, 1) = add3_y;
 
         // for (int i = 0; i < std::max(3, int(msg->count)+1); i++)
         // {
@@ -499,7 +507,7 @@ void LifecyclePID_PP_Node::waypoints_callback(const custom_msgs::msg::WaypointsM
 
     double v_init = msg->initial_v_x == -1 ? this->v_x : msg->initial_v_x;
 
-    VelocityProfile *profile = new VelocityProfile(*spline, ms, spline_res_per_meter, model, v_init, is_end, (msg->lap_count < 2)&&((mission==MISSION::AUTOX)) , safety_factor, braking_distance, mission==MISSION::ACCELERATION); // last available speed is used. Alternatively should be in waypoints msg
+    VelocityProfile *profile = new VelocityProfile(*spline, 10 * ms, spline_res_per_meter, model, v_init, is_end, (msg->lap_count < 2)&&((mission==MISSION::AUTOX)) , safety_factor, braking_distance, mission==MISSION::ACCELERATION); // last available speed is used. Alternatively should be in waypoints msg
     /*
         To minimize time spent with locked object variables, we make it so that the bare minimum of operations is done. We store the modifiable objects(spline, profile) as pointers. Thus we achieve 2 things
         (a) The new objects can be constructed locally and the modification required is only the copying of the pointer address
@@ -602,6 +610,9 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
     double theta = msg->theta;
 
     Projection projection = this->profile->operator()(position, theta);
+
+    projection.velocity = std::min(max_speed, std::max(0.0, projection.velocity));
+
     /*
     projection.velocity -> target velocity
     projection.radius -> local radius (R)
@@ -613,7 +624,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
         projection.velocity = projection.velocity > 0 ? max_speed : 0;
     }
 
-    std::cout << "target : " << projection.velocity << ". speed : " << this->v_x << std::endl;
+    std::cout << "target : " << projection.velocity << ". speed : " << this->v_x<< ". max_speed : "<< projection.max_velocity << std::endl;
     log << projection.velocity << " " << this->v_x << std::endl;
 
     custom_msgs::msg::TxControlCommand for_publish;
@@ -699,7 +710,7 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
             input = projection.radius;
             break;
         case MAX_SPEED:
-            input = sqrt(model.g * projection.radius);
+            input = projection.max_velocity;
             break;
         default:
             break;
@@ -737,8 +748,8 @@ void LifecyclePID_PP_Node::pose_callback(const custom_msgs::msg::PoseMsg::Shared
 
     heading_angle = std::min(mx_head, std::max(-mx_head, heading_angle));
 
-    if (last_steering != 5) // means that last_steering has not received an actual value
-        heading_angle = std::min(last_steering + 0.25, std::max(last_steering - 0.25, heading_angle));
+    // if (last_steering != 5) // means that last_steering has not received an actual value
+    heading_angle = std::min(last_steering + 0.25, std::max(last_steering - 0.25, heading_angle));
 
     last_steering = heading_angle;
 

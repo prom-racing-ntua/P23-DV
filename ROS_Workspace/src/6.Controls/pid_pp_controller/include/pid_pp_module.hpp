@@ -155,6 +155,7 @@ namespace pid_pp
         double phi_priv;
         double k_priv;
         double target_speed_priv;
+        double max_speed_priv;  // almost same as target speed, without the initial velocity contraint
 
     public:
         Point position() const;
@@ -162,7 +163,9 @@ namespace pid_pp
         double phi() const;
         double k() const;
         void set_target_speed(double v);
+        void set_max_speed(double v);
         double target_speed()const;
+        double max_speed()const;
         SplinePoint();
         SplinePoint(Point pos, double s, double phi, double k);
     };
@@ -172,8 +175,9 @@ namespace pid_pp
         double velocity;
         double radius;
         double cross_track_error;
-        Projection(double _velocity, double _curvature, double _cross_track_error)
-            : velocity(_velocity), radius(1/_curvature), cross_track_error(_cross_track_error) {}
+        double max_velocity;
+        Projection(double _velocity, double _curvature, double _cross_track_error, double _max_velcoity)
+            : velocity(_velocity), radius(1/_curvature), cross_track_error(_cross_track_error), max_velocity(_max_velcoity) {}
     };
 
     class VelocityProfile

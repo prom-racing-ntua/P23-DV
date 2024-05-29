@@ -59,6 +59,13 @@ struct Cone
         x(a), y(b), color(c) {}
 };
 
+// class Model
+// {
+//     public:
+//         double x, y, vx, vy, ax, ay, theta, r;
+//         void init(Constants vehicle_constants) = 0;
+//         void next(double dt, double bp, double delta, double trq_rl, double trq_rr, double trq_fl = 0, double trq_fr = 0) = 0;
+// };
 
 
 class State

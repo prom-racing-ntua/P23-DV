@@ -172,13 +172,9 @@ void LifecycleSlamHandler::optimizationCallback() {
     gtsam::Vector3 pre_optimization_pose{ slam_object_.getEstimatedCarPose() };
     gtsam::Symbol optimization_pose_symbol{ slam_object_.getCurrentPoseSymbol() };
     slam_object_.resetTemporaryGraph();
-    pthread_spin_unlock(&global_lock_);
 
-    // RCLCPP_WARN(get_logger(), "Starting Optimization");
     slam_object_.optimizeFactorGraph(opt_new_factors, opt_new_variable_values);
-    // RCLCPP_WARN(get_logger(), "Finished Optimization");
 
-    pthread_spin_lock(&global_lock_);
     slam_object_.imposeOptimization(optimization_pose_symbol, pre_optimization_pose);
     std::vector<gtsam::Vector3> track{ slam_object_.getEstimatedMap() };
     gtsam::Vector3 current_pose{ slam_object_.getEstimatedCarPose() };

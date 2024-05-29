@@ -287,11 +287,24 @@ std::pair<std::vector<Point>, int> Triangulation::new_batch(const std::vector<Co
     out.reserve(selected_edges.size() + 1);
     out.push_back(position);
     bool first = 1;
-    for (my_edge edge : best_best_path.first)
+    // for (my_edge edge : best_best_path.first)
+    // {
+    //     no_of_midpoints++;
+    //     /*if(!first or selected_edges.size()==1)*/ out.push_back(edge.midpoint());
+    // }
+    int last_selected_index = 0;
+    for(int i=0; i<best_best_path.first.size(); i++)
     {
-        no_of_midpoints++;
-        /*if(!first or selected_edges.size()==1)*/ out.push_back(edge.midpoint());
+        my_edge edge = best_best_path.first[i];
         
+        if(i>0 && CGAL::squared_distance(edge.midpoint(), best_best_path.first[last_selected_index].midpoint()) < 2*2)
+        {
+            continue;
+        }
+
+        last_selected_index = i;
+        no_of_midpoints++;
+        out.push_back(edge.midpoint());
     }
     // if (out.size() >= 3)
     //     out.erase(out.begin());

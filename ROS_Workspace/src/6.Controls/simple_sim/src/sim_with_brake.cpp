@@ -219,7 +219,7 @@ bool sim_node::lap_change() const
 	{
 		return (x >= 0 && x <= 3 && y >= -3 && y <= 3) /*or ( x >= 10 && x <= 11 && y >= -3 && y <= 3)*/;
 	}
-	if (discipline == 2)
+	if (discipline == 4)
 	{
 		return x >= 20 && x <= 25;
 	}
@@ -228,6 +228,7 @@ bool sim_node::lap_change() const
 
 double add_noise(double x, double perc = 0.001)
 {
+	return x;
 	static std::default_random_engine generator;
 	std::normal_distribution<double> distribution(0.0, perc);
 	double add = distribution(generator);
@@ -386,7 +387,7 @@ void sim_node::timer_callback()
 		}
 	}
 
-	if (global_idx % 250 == 0)
+	if (global_idx % 100 == 0)
 	{
 		double perc_r;
 		std::cout << "Lap: "<< state.lap<< "\t\t" << state.t << "\t\t" << state.v_x << std::endl;
@@ -399,7 +400,7 @@ void sim_node::timer_callback()
 			// 	perc_r = 12;
 			// else
 				perc_r = perception_range;
-			if (dsq < perc_r * perc_r && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * 105 / 180))
+			if (dsq < perc_r * perc_r && dsq > 4 && std::acos((std::cos(state.theta) * (-state.x + unseen_cones[i].x) + std::sin(state.theta) * (-state.y + unseen_cones[i].y)) / std::sqrt(dsq)) < (3.14159 * (105.0 / 2) / 180))
 			{
 				seen_cones.push_back(unseen_cones[i]);
 				unseen_cones.erase(unseen_cones.begin() + i);

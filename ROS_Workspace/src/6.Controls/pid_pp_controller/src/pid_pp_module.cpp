@@ -270,6 +270,16 @@ void SplinePoint::set_target_speed(double v)
     target_speed_priv = v;
 }
 
+double SplinePoint::max_speed() const
+{
+    return max_speed_priv;
+}
+
+void SplinePoint::set_max_speed(double v)
+{
+    max_speed_priv = v;
+}
+
 // class VelocityProfile TBD
 VelocityProfile::VelocityProfile(path_planning::ArcLengthSpline &spline, double max_speed_, int samples_per_meter_, const Model &model_, double initial_speed, bool is_end, bool is_first_lap, double _safety_factor, double braking_distance, bool _is_accel)
     : model(&model_), max_speed(max_speed_), samples_per_meter(samples_per_meter_), last_visited_index(0), unknown(is_first_lap), safety_factor(_safety_factor), is_accel(_is_accel)
@@ -316,12 +326,13 @@ Projection VelocityProfile::operator()(const Point &position, double theta)
                          approx.= (target at projection) * (motor ETA) * (sample_per_meter)
     */
     int delta_idx = spline_samples[i].target_speed() * 0.1 * samples_per_meter;
-    std::cout<<delta_idx<<std::endl;
+    delta_idx = std::max(5, delta_idx);
     i = std::min(i+delta_idx, max_idx); //looking at next target
     double cross_track = Point::distance(spline_samples[i].position(), position);
     double target = spline_samples[i].target_speed();
     double curvature = spline_samples[i].k();
-    return Projection(target, curvature, cross_track);
+    double max_speed = spline_samples[i].max_speed();
+    return Projection(target, curvature, cross_track, max_speed);
 }
 
 int VelocityProfile::get_projection(const Point &position, double theta) const
@@ -437,23 +448,44 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         double k = std::abs(spline_samples[i].k());
         if(k!=0)
         {
-            spline_samples[i].set_target_speed(std::min(max_speed, std::sqrt(mu * g / k)));
+            double curve_velocity = std::min(max_speed, std::sqrt(mu * g / k));
+            spline_samples[i].set_target_speed(curve_velocity);
+            spline_samples[i].set_max_speed(curve_velocity);
             //log<<mu*g/k<<std::endl;
         }
         else
         {
             spline_samples[i].set_target_speed(max_speed);
+            spline_samples[i].set_max_speed(max_speed);
             //log<<DBL_MAX<<std::endl;
-        }
-        if(spline_samples[i].s()*total_length>80)
-        {
-            //spline_samples[i].set_target_speed(0);
-            //std::cout<<spline_samples[i].s()*total_length<<std::endl;
         }
     }
     //log.close();
     spline_samples[0].set_target_speed(std::max(1.0, initial_speed));
-    if(unknown)spline_samples[resolution - 1].set_target_speed(0); // Safety Check
+    if(unknown)
+    {
+        spline_samples[resolution - 1].set_target_speed(0); // Safety Check
+        spline_samples[resolution - 1].set_max_speed(0);
+    }
+
+    
+    /* INTERMEDIARY PASS */
+    /*
+        To obtain smoother changes, we pass a rolling average filter through the results of the first pass
+    */
+    double sum;
+    int count, a = 5;
+    for(int i=1; i<resolution-1; i++)
+    {
+        sum = count = 0;
+        for(int j = std::max(0, i-a); j<std::min(resolution, i+a); j++)
+        {
+            sum += spline_samples[j].target_speed();
+            count++;
+        }
+        spline_samples[i].set_target_speed(sum / count);
+    }
+
     /* SECOND PASS */
     /*
         The ellipse constraints will be calculated using single axis, so as to calculate the total a_x of the vehicle.
@@ -474,7 +506,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
     */
     double ds;
     double max_accel_eng, drag; //= model->max_positive_force / m;
-    double local_accel, fy_req, fz_avail, local_speed, u_accel, fx_rem, fz_rear_avail, fx_rear_rem;
+    double local_accel, fy_req, fz_avail, local_speed, u_accel, fx_rem, fz_rear_avail, fx_rear_rem, u_max_accel;
     for (int i = 0; i < resolution - 1; i++)
     {
         local_speed = spline_samples[i].target_speed();
@@ -501,8 +533,10 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         
         ds = (spline_samples[i + 1].s() - spline_samples[i].s()) * total_length;
         u_accel = std::sqrt(local_speed * local_speed + 2 * local_accel * ds);
+        u_max_accel = std::sqrt(spline_samples[i].max_speed() * spline_samples[i].max_speed() + 2 * local_accel * ds);
 
         spline_samples[i + 1].set_target_speed(std::min(u_accel, spline_samples[i + 1].target_speed()));
+        spline_samples[i + 1].set_max_speed(std::min(u_max_accel, spline_samples[i + 1].max_speed()));
         
     }
     /* THIRD PASS */
@@ -513,7 +547,7 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
         Drag and downforce should be calculated with u=local speed (the one obtained by passes 1 and 2) because at each step, the effect of the 3rd pass has already been calculated so local_speed = final speed.
     */
     double max_decel_eng = model->max_negative_force / m;
-    double local_decel, u_decel;
+    double local_decel, u_decel, u_max_decel;
     for (int i = resolution - 1; i > 0; i--)
     {
         local_speed = spline_samples[i].target_speed();
@@ -542,8 +576,10 @@ void VelocityProfile::solve_profile(int resolution, double initial_speed, bool i
 
         //std::cout<<local_speed - u_decel<<std::endl;
         u_decel = std::sqrt(local_speed * local_speed - 2 * local_decel * ds);
+        u_max_decel = std::sqrt(spline_samples[i].max_speed() * spline_samples[i].max_speed() - 2 * local_decel * ds);
         
         spline_samples[i - 1].set_target_speed(std::min(u_decel, spline_samples[i - 1].target_speed()));
+        spline_samples[i - 1].set_max_speed(std::min(u_max_decel, spline_samples[i - 1].max_speed()));
     }
 
     

@@ -256,7 +256,7 @@ void GraphSLAM<T>::initializeFactorGraph() {
 
 	// Set the initial car_pose and create a Prior Factor for it
 	auto initial_pose{ node_handler_->get_parameter("starting_position").as_double_array() };
-	estimated_car_pose_ = gtsam::Pose2(initial_pose[0], initial_pose[1], initial_pose[2]);
+		estimated_car_pose_ = gtsam::Pose2(initial_pose[0], initial_pose[1], initial_pose[2]);
 
 	// Create the Gaussian noise model as a diagonal matrix
 	auto initial_variances{ node_handler_->get_parameter("starting_position_covariance").as_double_array() };
@@ -281,7 +281,7 @@ bool GraphSLAM<T>::addOdometryMeasurement(OdometryMeasurement& odometry) {
 	gtsam::Symbol next_car_pose_symbol{ 'X', odometry.global_index };
 
 	// Calculate time interval from last received odometry measurement
-	double time_interval{ (odometry.global_index - previous_global_index_) * delta_time_ };
+	double time_interval{ delta_time_ };
 	if (previous_global_index_ == 0) time_interval = delta_time_;
 	previous_global_index_ = odometry.global_index;
 
@@ -400,7 +400,7 @@ void GraphSLAM<T>::addLandmarkMeasurementSLAM(const unsigned long global_index, 
 		LandmarkInfo* best_match{ &landmark_id_map_.at(best_match_id) };
 
 		// Check how many times the landmark has been observed before
-		best_match->times_observed++;
+		best_match->times_observed+= (cone.range <= 10.0) ? 2 : 1;
 		if (best_match->times_observed >= min_observations_) { best_match->is_verified = true; }
 
 		// Construct the current landmark observation Factor and add it to the temporary variable
